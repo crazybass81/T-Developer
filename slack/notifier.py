@@ -188,9 +188,8 @@ class SlackNotifier:
             }
         ]
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -238,9 +237,8 @@ class SlackNotifier:
             }
         ]
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -284,9 +282,8 @@ class SlackNotifier:
             }
         ]
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -365,9 +362,8 @@ class SlackNotifier:
             ]
         })
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -411,9 +407,8 @@ class SlackNotifier:
             }
         ]
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -453,9 +448,8 @@ class SlackNotifier:
             }
         ]
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -502,9 +496,8 @@ class SlackNotifier:
             }
         ]
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -549,9 +542,8 @@ class SlackNotifier:
             }
         ]
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -591,9 +583,8 @@ class SlackNotifier:
             }
         ]
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -669,9 +660,8 @@ class SlackNotifier:
             ]
         })
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -730,9 +720,8 @@ class SlackNotifier:
             ]
         })
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -801,9 +790,8 @@ class SlackNotifier:
             ]
         })
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
@@ -850,9 +838,8 @@ class SlackNotifier:
             }
         ]
         
-        # 스레드 타임스탬프 가져오기 (실제 구현에서는 작업 객체에서 가져옴)
-        # thread_ts = task.metadata.get("slack_thread_ts")
-        thread_ts = None
+        # 스레드 타임스탬프 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
         
         # 메시지 전송
         if thread_ts:
