@@ -28,7 +28,7 @@ class GitHubTool:
         self.repo = settings.GITHUB_REPO
         self.owner = settings.GITHUB_OWNER
         self.api_base = "https://api.github.com"
-        self.repo_url = f"https://{self.token}@github.com/{self.owner}/{self.repo}.git"
+        self.repo_url = f"https://github.com/{self.owner}/{self.repo}.git"
         self.workspace_dir = settings.Q_DEVELOPER_WORKSPACE
         
         # 작업 디렉토리 초기화
@@ -261,13 +261,22 @@ class GitHubTool:
         """
         logger.debug(f"Running git command: {' '.join(command)}")
         
+        # GitHub 토큰이 필요한 명령어인 경우 환경 변수 설정
+        env = os.environ.copy()
+        if self.token and (command[0] == "git" and command[1] in ["clone", "push", "pull", "fetch"]):
+            # Git 자격 증명 도우미 설정
+            env["GIT_ASKPASS"] = "echo"
+            env["GIT_USERNAME"] = self.token
+            env["GIT_PASSWORD"] = "x-oauth-basic"
+        
         try:
             result = subprocess.run(
                 command,
                 cwd=self.workspace_dir,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                env=env
             )
             return result.stdout
         except subprocess.CalledProcessError as e:
