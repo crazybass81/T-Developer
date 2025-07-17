@@ -22,19 +22,28 @@ class GitHubTool:
     코드 저장소 클론, 브랜치 생성, 커밋, PR 생성 등의 기능을 제공합니다.
     """
     
-    def __init__(self):
-        """GitHubTool 초기화"""
+    def __init__(self, task_id: str = None):
+        """GitHubTool 초기화
+        
+        Args:
+            task_id: 작업 ID (지정된 경우 작업별 워크스페이스 사용)
+        """
         self.token = settings.GITHUB_TOKEN
         self.repo = settings.GITHUB_REPO
         self.owner = settings.GITHUB_OWNER
         self.api_base = "https://api.github.com"
         self.repo_url = f"https://github.com/{self.owner}/{self.repo}.git"
-        self.workspace_dir = settings.Q_DEVELOPER_WORKSPACE
+        
+        # 작업별 워크스페이스 사용
+        if task_id:
+            self.workspace_dir = os.path.join(settings.Q_DEVELOPER_WORKSPACE, task_id)
+        else:
+            self.workspace_dir = settings.Q_DEVELOPER_WORKSPACE
         
         # 작업 디렉토리 초기화
         self._init_workspace()
         
-        logger.info(f"GitHubTool initialized for repo: {self.owner}/{self.repo}")
+        logger.info(f"GitHubTool initialized for repo: {self.owner}/{self.repo} in workspace: {self.workspace_dir}")
     
     def _init_workspace(self) -> None:
         """
@@ -87,6 +96,10 @@ class GitHubTool:
         
         # 브랜치 전환
         self._run_git_command(["git", "checkout", branch_name])
+        
+        # 민감 파일 제외
+        for pattern in settings.RESTRICTED_FILES:
+            self._run_git_command(["git", "rm", "--cached", pattern], ignore_errors=True)
         
         # 변경사항 스테이징
         self._run_git_command(["git", "add", "."])
@@ -177,6 +190,9 @@ class GitHubTool:
                 "url": f"https://github.com/{self.owner}/{self.repo}/tree/main"
             }
             
+            # 머지된 브랜치 정리
+            self._cleanup_branch(head)
+            
             logger.info(f"PR #{pr_number} merged successfully")
             return result
         except requests.exceptions.HTTPError as e:
@@ -249,12 +265,13 @@ class GitHubTool:
             logger.error(f"Failed to find related files: {str(e)}", exc_info=True)
             return []
     
-    def _run_git_command(self, command: List[str]) -> str:
+    def _run_git_command(self, command: List[str], ignore_errors: bool = False) -> str:
         """
         Git 명령 실행
         
         Args:
             command: 실행할 Git 명령 (리스트)
+            ignore_errors: 오류 무시 여부
             
         Returns:
             명령 실행 결과
@@ -280,8 +297,36 @@ class GitHubTool:
             )
             return result.stdout
         except subprocess.CalledProcessError as e:
-            logger.error(f"Git command failed: {e.stderr}", exc_info=True)
-            raise
+            if ignore_errors:
+                logger.warning(f"Git command failed (ignored): {e.stderr}")
+                return ""
+            else:
+                logger.error(f"Git command failed: {e.stderr}", exc_info=True)
+                raise
+    
+    def _cleanup_branch(self, branch_name: str) -> None:
+        """
+        머지된 브랜치 정리
+        
+        Args:
+            branch_name: 정리할 브랜치 이름
+        """
+        try:
+            # 로컬 브랜치 정리
+            self._run_git_command(["git", "checkout", "main"], ignore_errors=True)
+            self._run_git_command(["git", "branch", "-D", branch_name], ignore_errors=True)
+            
+            # 원격 브랜치 삭제 (GitHub API 사용)
+            url = f"{self.api_base}/repos/{self.owner}/{self.repo}/git/refs/heads/{branch_name}"
+            headers = {
+                "Authorization": f"token {self.token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            
+            requests.delete(url, headers=headers)
+            logger.info(f"Branch {branch_name} cleaned up")
+        except Exception as e:
+            logger.warning(f"Failed to clean up branch {branch_name}: {str(e)}")
     
     def _get_latest_version(self) -> str:
         """

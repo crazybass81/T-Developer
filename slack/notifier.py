@@ -140,8 +140,15 @@ class SlackNotifier:
         # 메시지 전송
         ts = self.send_message(text, blocks)
         
-        # 작업 객체에 스레드 타임스탬프 저장 (실제 구현에서는 작업 객체 업데이트)
-        # task.metadata["slack_thread_ts"] = ts
+        # 작업 객체에 스레드 타임스탬프 저장
+        if ts:
+            task.metadata["slack_thread_ts"] = ts
+            try:
+                # TaskStore를 통해 Task 업데이트 (스레드 ts 저장)
+                from context.dynamo.task_store import TaskStore
+                TaskStore().update_task(task)
+            except Exception as e:
+                logger.error(f"Failed to save Slack thread_ts for {task.task_id}: {e}")
         
         return ts
     

@@ -64,18 +64,79 @@ class QDeveloperAgent:
         """
         logger.info("Running tests")
         
-        # 실제 구현에서는 테스트 명령 실행
-        # 예: subprocess.run(["pytest", "-v"], cwd=self.workspace_dir, ...)
-        
-        # 임시 구현: 가상의 테스트 결과 반환
-        result = {
-            "success": True,
-            "total": 10,
-            "passed": 10,
-            "failed": 0,
-            "log": "All tests passed successfully.\n...\nTest session summary: 10 passed in 1.2s",
-            "failures": []
-        }
+        try:
+            # pytest 실행
+            import subprocess
+            import re
+            
+            # pytest 명령 실행
+            process = subprocess.run(
+                ["pytest", "-v"],
+                cwd=self.workspace_dir,
+                capture_output=True,
+                text=True
+            )
+            
+            # 결과 로그
+            log_output = process.stdout + process.stderr
+            
+            # 테스트 결과 파싱
+            # 예: "5 passed, 2 failed in 1.2s"
+            summary_match = re.search(r'(\d+) passed(?:, (\d+) failed)? in', log_output)
+            
+            if summary_match:
+                passed = int(summary_match.group(1))
+                failed = int(summary_match.group(2)) if summary_match.group(2) else 0
+                total = passed + failed
+                success = failed == 0
+                
+                # 실패한 테스트 추출
+                failures = []
+                if not success:
+                    # 실패한 테스트 함수 이름 추출
+                    failure_matches = re.finditer(r'FAILED ([\w\./]+)::(\w+)', log_output)
+                    for match in failure_matches:
+                        file_path = match.group(1)
+                        test_name = match.group(2)
+                        failures.append({
+                            "file": file_path,
+                            "test": test_name,
+                            "message": "Test failure"
+                        })
+                
+                result = {
+                    "success": success,
+                    "total": total,
+                    "passed": passed,
+                    "failed": failed,
+                    "log": log_output,
+                    "failures": failures
+                }
+            else:
+                # 테스트 결과를 파싱할 수 없는 경우
+                result = {
+                    "success": process.returncode == 0,
+                    "total": 0,
+                    "passed": 0,
+                    "failed": 0 if process.returncode == 0 else 1,
+                    "log": log_output,
+                    "failures": []
+                }
+        except Exception as e:
+            # 오류 발생 시 가상의 테스트 결과 반환
+            logger.error(f"Error running tests: {str(e)}", exc_info=True)
+            result = {
+                "success": False,
+                "total": 0,
+                "passed": 0,
+                "failed": 1,
+                "log": f"Error running tests: {str(e)}",
+                "failures": [{
+                    "file": "test_runner",
+                    "test": "execution",
+                    "message": str(e)
+                }]
+            }
         
         logger.info(f"Tests completed: {result['passed']}/{result['total']} passed")
         return result

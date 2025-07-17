@@ -49,15 +49,46 @@ class AgnoAgent:
         # 프롬프트 구성
         prompt = self._build_planning_prompt(request, context)
         
-        # 실제 구현에서는 Agno 에이전트 호출
-        # result = self.agent.run(prompt)
-        
-        # 임시 구현: 가상의 계획 반환
-        # 실제 구현에서는 Agno의 응답을 파싱하여 구조화된 계획 반환
-        plan = self._mock_plan_generation(request, context)
-        
-        logger.info(f"Plan created with {len(plan.get('steps', []))} steps")
-        return plan
+        try:
+            # OpenAI API 호출
+            if settings.OPENAI_API_KEY:
+                import openai
+                import json
+                
+                openai.api_key = settings.OPENAI_API_KEY
+                
+                # API 호출
+                response = openai.chat.completions.create(
+                    model="gpt-4",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7,
+                    max_tokens=2000
+                )
+                
+                # 응답을 구조화된 JSON으로 파싱
+                plan_text = response.choices[0].message.content
+                
+                try:
+                    # JSON 파싱 시도
+                    plan = json.loads(plan_text)
+                    logger.info(f"Plan created with {len(plan.get('steps', []))} steps from OpenAI")
+                    return plan
+                except json.JSONDecodeError:
+                    # JSON 파싱 실패 시 텍스트에서 계획 추출 시도
+                    logger.warning("Failed to parse OpenAI response as JSON, using fallback")
+                    # 임시 구현: 가상의 계획 반환
+                    plan = self._mock_plan_generation(request, context)
+                    return plan
+            else:
+                # OpenAI API 키가 없는 경우 가상의 계획 반환
+                logger.warning("No OpenAI API key provided, using mock plan generation")
+                plan = self._mock_plan_generation(request, context)
+                return plan
+        except Exception as e:
+            # 오류 발생 시 가상의 계획 반환
+            logger.error(f"Error calling OpenAI API: {str(e)}", exc_info=True)
+            plan = self._mock_plan_generation(request, context)
+            return plan
     
     def answer_question(self, question: str, context: Dict[str, Any]) -> str:
         """

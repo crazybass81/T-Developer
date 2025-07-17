@@ -74,8 +74,8 @@ async def create_task(task_request: TaskRequest):
     logger.info(f"Received task request: {task_request.request}")
     
     try:
-        # MAO에 작업 처리 요청
-        task_id = mao.process_request(task_request.request, task_request.user_id)
+        # MAO에 작업 비동기 처리 요청
+        task_id = mao.process_request_async(task_request.request, task_request.user_id)
         
         return TaskResponse(
             task_id=task_id,
@@ -133,6 +133,43 @@ async def slack_events(request: Request):
         응답 메시지
     """
     try:
+        # Slack 서명 검증
+        if settings.SLACK_SIGNING_SECRET:
+            import hmac
+            import hashlib
+            import time
+            
+            # 요청 본문 가져오기
+            body_bytes = await request.body()
+            body_text = body_bytes.decode()
+            
+            # 서명 헤더 가져오기
+            timestamp = request.headers.get("X-Slack-Request-Timestamp")
+            signature = request.headers.get("X-Slack-Signature")
+            
+            # 타임스태프 검증 (재사용 공격 방지)
+            if not timestamp or abs(time.time() - float(timestamp)) > 60 * 5:
+                logger.warning("Slack request timestamp is invalid or too old")
+                raise HTTPException(status_code=401, detail="Invalid timestamp")
+            
+            # 서명 검증
+            if not signature:
+                logger.warning("No Slack signature provided")
+                raise HTTPException(status_code=401, detail="No signature provided")
+            
+            # 서명 계산
+            sig_basestring = f"v0:{timestamp}:{body_text}"
+            my_signature = "v0=" + hmac.new(
+                settings.SLACK_SIGNING_SECRET.encode(),
+                sig_basestring.encode(),
+                hashlib.sha256
+            ).hexdigest()
+            
+            # 서명 비교
+            if not hmac.compare_digest(my_signature, signature):
+                logger.warning("Invalid Slack signature")
+                raise HTTPException(status_code=401, detail="Invalid signature")
+        
         # 요청 본문 파싱
         body = await request.json()
         
@@ -158,8 +195,8 @@ async def slack_events(request: Request):
                     # 작업 요청 추출
                     request_text = text.split(":", 1)[1].strip() if ":" in text else text.replace("@T-Developer", "").strip()
                     
-                    # MAO에 작업 처리 요청
-                    task_id = mao.process_request(request_text, user)
+                    # MAO에 작업 비동기 처리 요청
+                    task_id = mao.process_request_async(request_text, user)
                     
                     return {"status": "ok", "task_id": task_id}
         

@@ -36,12 +36,12 @@ class MAO:
         self.artifact_store = ArtifactStore()
         self.agno_agent = AgnoAgent()
         self.q_developer = QDeveloperAgent()
-        self.github_tool = GitHubTool()
         self.slack = SlackNotifier()
+        # GitHubTool은 작업별로 생성
         
     def process_request(self, request_text: str, user_id: str) -> str:
         """
-        사용자 요청을 처리하는 메인 함수
+        사용자 요청을 처리하는 메인 함수 (동기식)
         
         Args:
             request_text: 사용자가 요청한 텍스트
@@ -66,9 +66,43 @@ class MAO:
         # Slack에 작업 접수 알림
         self.slack.send_acknowledgment(task)
         
-        # 비동기로 작업 처리 시작 (실제 구현에서는 비동기 처리)
-        # 여기서는 동기식으로 처리
+        # 동기식으로 작업 처리
         self._execute_task(task)
+        
+        return task_id
+        
+    def process_request_async(self, request_text: str, user_id: str) -> str:
+        """
+        사용자 요청을 비동기적으로 처리하는 함수
+        
+        Args:
+            request_text: 사용자가 요청한 텍스트
+            user_id: 요청한 사용자의 ID
+            
+        Returns:
+            생성된 작업 ID
+        """
+        import threading
+        
+        # 작업 ID 생성 (TASK-날짜-일련번호 형식)
+        task_id = f"TASK-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}"
+        
+        # 작업 생성 및 저장
+        task = Task(
+            task_id=task_id,
+            request=request_text,
+            user_id=user_id,
+            status=TaskStatus.RECEIVED,
+            created_at=datetime.now().isoformat()
+        )
+        self.task_store.save_task(task)
+        
+        # Slack에 작업 접수 알림
+        self.slack.send_acknowledgment(task)
+        
+        # 별도 스레드에서 작업 실행
+        threading.Thread(target=self._execute_task, args=(task,), daemon=True).start()
+        logger.info(f"Started background thread for task {task_id}")
         
         return task_id
     
@@ -166,9 +200,12 @@ class MAO:
         plan = json.loads(self.artifact_store.get_artifact(task.plan_s3_key))
         context = self._gather_context(task)
         
+        # 작업별 GitHubTool 생성
+        github_tool = GitHubTool(task_id=task.task_id)
+        
         # GitHub 브랜치 생성
         branch_name = f"{settings.GITHUB_BRANCH_PREFIX}{task.task_id}"
-        self.github_tool.create_branch(branch_name)
+        github_tool.create_branch(branch_name)
         
         # Q Developer에 작업 지시
         try:
@@ -184,7 +221,7 @@ class MAO:
             
             # 변경사항 커밋
             commit_message = f"feat: {task.request} [Task {task.task_id}]"
-            commit_hash = self.github_tool.commit_changes(branch_name, commit_message)
+            commit_hash = github_tool.commit_changes(branch_name, commit_message)
             
             # 작업 업데이트
             task.branch_name = branch_name
@@ -249,9 +286,12 @@ class MAO:
                     # 수정된 결과 저장
                     self.artifact_store.save_artifact(test_log_s3_key, test_result.get("log", ""))
                     
+                    # 작업별 GitHubTool 생성
+                    github_tool = GitHubTool(task_id=task.task_id)
+                    
                     # 변경사항 커밋
                     commit_message = f"fix: test failures in {task.task_id} (attempt {retry_count})"
-                    commit_hash = self.github_tool.commit_changes(task.branch_name, commit_message)
+                    commit_hash = github_tool.commit_changes(task.branch_name, commit_message)
                     
                     # 테스트 성공 시 종료
                     if test_result.get("success", False):
@@ -291,13 +331,16 @@ class MAO:
         self.slack.send_deploying(task)
         
         try:
+            # 작업별 GitHubTool 생성
+            github_tool = GitHubTool(task_id=task.task_id)
+            
             # GitHub PR 생성 및 머지
             pr_title = f"Feature: {task.request} [Task {task.task_id}]"
             pr_body = self._generate_pr_description(task)
-            pr_url = self.github_tool.create_pull_request(task.branch_name, "main", pr_title, pr_body)
+            pr_url = github_tool.create_pull_request(task.branch_name, "main", pr_title, pr_body)
             
             # PR 자동 머지 (설정에 따라)
-            merge_result = self.github_tool.merge_pull_request(pr_url)
+            merge_result = github_tool.merge_pull_request(pr_url)
             
             # 배포 결과 저장
             task.pr_url = pr_url
@@ -352,7 +395,8 @@ class MAO:
         
         # 코드베이스 관련 파일 검색 (키워드 기반)
         # 실제 구현에서는 코드 검색 도구 사용
-        related_files = self.github_tool.find_related_files(task.request)
+        github_tool = GitHubTool()
+        related_files = github_tool.find_related_files(task.request)
         if related_files:
             context["related_files"] = related_files
         
