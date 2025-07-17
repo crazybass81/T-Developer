@@ -28,12 +28,13 @@ class QDeveloperAgent:
         os.makedirs(self.workspace_dir, exist_ok=True)
         logger.info(f"Q Developer Agent initialized with workspace: {self.workspace_dir}")
     
-    def execute_task(self, instruction: Dict[str, Any]) -> Dict[str, Any]:
+    def execute_task(self, instruction: Dict[str, Any], workspace_dir: str) -> Dict[str, Any]:
         """
         코드 구현 작업 실행
         
         Args:
             instruction: 작업 지시 정보
+            workspace_dir: 작업 디렉토리
             
         Returns:
             작업 결과 정보
@@ -42,8 +43,11 @@ class QDeveloperAgent:
         feature_name = instruction.get("feature_name", "")
         logger.info(f"Executing task {task_id}: {feature_name}")
         
+        # 작업 디렉토리 설정
+        logger.info(f"Using workspace directory: {workspace_dir}")
+        
         # 작업 지시 JSON 파일로 저장
-        instruction_file = os.path.join(self.workspace_dir, f"{task_id}_instruction.json")
+        instruction_file = os.path.join(workspace_dir, f"{task_id}_instruction.json")
         with open(instruction_file, 'w') as f:
             json.dump(instruction, f, indent=2)
         
@@ -52,8 +56,8 @@ class QDeveloperAgent:
             logger.info(f"Calling Amazon Q Developer CLI for task {task_id}")
             
             # 출력 파일 경로 설정
-            output_file = os.path.join(self.workspace_dir, f"{task_id}_output.json")
-            diff_file = os.path.join(self.workspace_dir, f"{task_id}_diff.patch")
+            output_file = os.path.join(workspace_dir, f"{task_id}_output.json")
+            diff_file = os.path.join(workspace_dir, f"{task_id}_diff.patch")
             
             # Q Developer CLI 명령 실행
             process = subprocess.run(
@@ -61,9 +65,9 @@ class QDeveloperAgent:
                     "amazonq", "developer", "/dev",
                     "--instruction-file", instruction_file,
                     "--output-file", output_file,
-                    "--workspace-dir", self.workspace_dir
+                    "--workspace-dir", workspace_dir
                 ],
-                cwd=self.workspace_dir,
+                cwd=workspace_dir,
                 capture_output=True,
                 text=True
             )
@@ -80,7 +84,7 @@ class QDeveloperAgent:
                 # diff 생성 (git diff 명령 사용)
                 diff_process = subprocess.run(
                     ["git", "diff", "--no-color"],
-                    cwd=self.workspace_dir,
+                    cwd=workspace_dir,
                     capture_output=True,
                     text=True
                 )
@@ -95,7 +99,7 @@ class QDeveloperAgent:
                 # 변경된 파일 목록 추출 (git status 사용)
                 status_process = subprocess.run(
                     ["git", "status", "--porcelain"],
-                    cwd=self.workspace_dir,
+                    cwd=workspace_dir,
                     capture_output=True,
                     text=True
                 )
@@ -128,14 +132,20 @@ class QDeveloperAgent:
             result = self._mock_code_implementation(instruction)
             return result
     
-    def run_tests(self) -> Dict[str, Any]:
+    def run_tests(self, workspace_dir: str) -> Dict[str, Any]:
         """
         테스트 실행
         
+        Args:
+            workspace_dir: 작업 디렉토리
+            
         Returns:
             테스트 결과 정보
         """
         logger.info("Running tests")
+        
+        # 작업 디렉토리 설정
+        logger.info(f"Using workspace directory for tests: {workspace_dir}")
         
         try:
             # pytest 실행
@@ -145,7 +155,7 @@ class QDeveloperAgent:
             # pytest 명령 실행
             process = subprocess.run(
                 ["pytest", "-v"],
-                cwd=self.workspace_dir,
+                cwd=workspace_dir,
                 capture_output=True,
                 text=True
             )
@@ -167,7 +177,7 @@ class QDeveloperAgent:
                 failures = []
                 if not success:
                     # 실패한 테스트 함수 이름 추출
-                    failure_matches = re.finditer(r'FAILED ([\w\./]+)::(\w+)', log_output)
+                    failure_matches = re.finditer(r'FAILED ([\w\./]+)::([\w]+)', log_output)
                     for match in failure_matches:
                         file_path = match.group(1)
                         test_name = match.group(2)
@@ -214,12 +224,13 @@ class QDeveloperAgent:
         logger.info(f"Tests completed: {result['passed']}/{result['total']} passed")
         return result
     
-    def fix_test_failures(self, failures: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def fix_test_failures(self, failures: List[Dict[str, Any]], workspace_dir: str) -> Dict[str, Any]:
         """
         테스트 실패 수정
         
         Args:
             failures: 실패한 테스트 정보 목록
+            workspace_dir: 작업 디렉토리
             
         Returns:
             수정 결과 정보
@@ -230,9 +241,12 @@ class QDeveloperAgent:
         
         logger.info(f"Fixing {len(failures)} test failures")
         
+        # 작업 디렉토리 설정
+        logger.info(f"Using workspace directory for test fixes: {workspace_dir}")
+        
         try:
             # 실패 정보를 JSON 파일로 저장
-            failures_file = os.path.join(self.workspace_dir, "test_failures.json")
+            failures_file = os.path.join(workspace_dir, "test_failures.json")
             with open(failures_file, 'w') as f:
                 json.dump(failures, f, indent=2)
             
@@ -248,21 +262,21 @@ class QDeveloperAgent:
             }
             
             # 지시 파일 저장
-            instruction_file = os.path.join(self.workspace_dir, "fix_tests_instruction.json")
+            instruction_file = os.path.join(workspace_dir, "fix_tests_instruction.json")
             with open(instruction_file, 'w') as f:
                 json.dump(instruction, f, indent=2)
             
             # Q Developer CLI 호출
-            output_file = os.path.join(self.workspace_dir, "fix_tests_output.json")
+            output_file = os.path.join(workspace_dir, "fix_tests_output.json")
             
             process = subprocess.run(
                 [
                     "amazonq", "developer", "/dev",
                     "--instruction-file", instruction_file,
                     "--output-file", output_file,
-                    "--workspace-dir", self.workspace_dir
+                    "--workspace-dir", workspace_dir
                 ],
-                cwd=self.workspace_dir,
+                cwd=workspace_dir,
                 capture_output=True,
                 text=True
             )
@@ -279,7 +293,7 @@ class QDeveloperAgent:
                 # 변경된 파일 목록 추출 (git status 사용)
                 status_process = subprocess.run(
                     ["git", "status", "--porcelain"],
-                    cwd=self.workspace_dir,
+                    cwd=workspace_dir,
                     capture_output=True,
                     text=True
                 )
@@ -424,8 +438,7 @@ class QDeveloperAgent:
             modified_files.append("routes/api.py")
             created_files.append("tests/test_auth.py")
             
-            diff = """
-diff --git a/utils/jwt_util.py b/utils/jwt_util.py
+            diff = """diff --git a/utils/jwt_util.py b/utils/jwt_util.py
 new file mode 100644
 index 0000000..1234567
 --- /dev/null
@@ -452,7 +465,7 @@ index 0000000..1234567
 +    except jwt.PyJWTError:
 +        return None
 +
-diff --git a/services/auth_service.py b/services/auth_service.py
++diff --git a/services/auth_service.py b/services/auth_service.py
 index abcdef0..1234567 100644
 --- a/services/auth_service.py
 +++ b/services/auth_service.py
@@ -489,15 +502,14 @@ index abcdef0..1234567 100644
 +        return JSONResponse(status_code=401, content={'error': 'Invalid credentials'})
 +    
 +    return {'token': token}
- """
+"""
         elif "api" in description or "endpoint" in description:
             # API 엔드포인트 구현 시뮬레이션
             modified_files.append("routes/api.py")
             created_files.append("services/feature_service.py")
             created_files.append("tests/test_feature_api.py")
             
-            diff = """
-diff --git a/routes/api.py b/routes/api.py
+            diff = """diff --git a/routes/api.py b/routes/api.py
 index abcdef0..1234567 100644
 --- a/routes/api.py
 +++ b/routes/api.py
@@ -516,14 +528,13 @@ index abcdef0..1234567 100644
 +    """Create new feature"""
 +    data = request.json()
 +    return feature_service.create(data)
- """
+"""
         else:
             # 기본 구현 시뮬레이션
             modified_files.append("main.py")
             created_files.append("utils/helper.py")
             
-            diff = """
-diff --git a/main.py b/main.py
+            diff = """diff --git a/main.py b/main.py
 index abcdef0..1234567 100644
 --- a/main.py
 +++ b/main.py
@@ -535,7 +546,7 @@ index abcdef0..1234567 100644
 +@app.get('/health')
 +def health_check():
 +    return {'status': 'ok'}
- """
+"""
         
         return {
             "success": True,

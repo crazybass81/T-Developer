@@ -154,12 +154,13 @@ class GitHubTool:
         logger.info(f"PR #{pr_number} created: {pr_url}")
         return pr_url
     
-    def merge_pull_request(self, pr_url: str) -> Dict[str, Any]:
+    def merge_pull_request(self, pr_url: str, head: str) -> Dict[str, Any]:
         """
         Pull Request 병합
         
         Args:
             pr_url: PR URL
+            head: 병합 후 정리할 브랜치 이름
             
         Returns:
             병합 결과 정보

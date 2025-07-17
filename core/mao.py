@@ -213,7 +213,7 @@ class MAO:
             instruction = self._create_q_developer_instruction(task, plan, context)
             
             # Q Developer 실행
-            result = self.q_developer.execute_task(instruction)
+            result = self.q_developer.execute_task(instruction, workspace_dir=github_tool.workspace_dir)
             
             # 결과 저장
             diff_s3_key = f"artifacts/{task.task_id}-diff.patch"
@@ -255,8 +255,11 @@ class MAO:
         self.slack.send_testing_started(task)
         
         try:
+            # 작업별 GitHubTool 생성 (루프 밖에서 한 번만 생성)
+            github_tool = GitHubTool(task_id=task.task_id)
+            
             # Q Developer에 테스트 실행 요청
-            test_result = self.q_developer.run_tests()
+            test_result = self.q_developer.run_tests(workspace_dir=github_tool.workspace_dir)
             
             # 테스트 결과 저장
             test_log_s3_key = f"logs/{task.task_id}-test.log"
@@ -278,18 +281,15 @@ class MAO:
                     self.slack.send_test_fix_attempt(task, retry_count)
                     
                     # Q Developer에 수정 요청
-                    fix_result = self.q_developer.fix_test_failures(test_result.get("failures", []))
+                    fix_result = self.q_developer.fix_test_failures(test_result.get("failures", []), workspace_dir=github_tool.workspace_dir)
                     
                     # 수정 후 다시 테스트
-                    test_result = self.q_developer.run_tests()
+                    test_result = self.q_developer.run_tests(workspace_dir=github_tool.workspace_dir)
                     
                     # 수정된 결과 저장
                     self.artifact_store.save_artifact(test_log_s3_key, test_result.get("log", ""))
                     
-                    # 작업별 GitHubTool 생성
-                    github_tool = GitHubTool(task_id=task.task_id)
-                    
-                    # 변경사항 커밋
+                    # 변경사항 커밋 (동일한 GitHubTool 사용)
                     commit_message = f"fix: test failures in {task.task_id} (attempt {retry_count})"
                     commit_hash = github_tool.commit_changes(task.branch_name, commit_message)
                     
@@ -340,7 +340,7 @@ class MAO:
             pr_url = github_tool.create_pull_request(task.branch_name, "main", pr_title, pr_body)
             
             # PR 자동 머지 (설정에 따라)
-            merge_result = github_tool.merge_pull_request(pr_url)
+            merge_result = github_tool.merge_pull_request(pr_url, task.branch_name)
             
             # 배포 결과 저장
             task.pr_url = pr_url
@@ -351,6 +351,9 @@ class MAO:
             
             if not task.deployed:
                 task.error = "Deployment failed: " + merge_result.get("message", "Unknown error")
+                # 병합 실패 시에도 브랜치 정리
+                github_tool._cleanup_branch(task.branch_name)
+                logger.info(f"Cleaned up branch {task.branch_name} after merge failure")
             
             self.task_store.update_task(task)
             
@@ -511,6 +514,18 @@ class MAO:
         # 계획 요약 추가
         if task.plan_summary:
             description += f"### Plan\n{task.plan_summary}\n\n"
+            
+            # 계획 상세 내용 추가 (있는 경우)
+            if task.plan_s3_key:
+                try:
+                    plan_json = json.loads(self.artifact_store.get_artifact(task.plan_s3_key))
+                    if "acceptance_criteria" in plan_json and isinstance(plan_json["acceptance_criteria"], list):
+                        description += "#### Acceptance Criteria\n"
+                        for criteria in plan_json["acceptance_criteria"]:
+                            description += f"- {criteria}\n"
+                        description += "\n"
+                except Exception as e:
+                    logger.warning(f"Failed to load plan details for PR description: {str(e)}")
         
         # 변경된 파일 목록 추가
         if task.modified_files:
@@ -528,7 +543,31 @@ class MAO:
         
         # 테스트 결과 추가
         if task.test_success:
-            description += "### Tests\n✅ All tests passed\n\n"
+            description += "### Tests\n✅ All tests passed\n"
+            
+            # 테스트 로그 요약 추가 (있는 경우)
+            if task.test_log_s3_key:
+                try:
+                    test_log = self.artifact_store.get_artifact(task.test_log_s3_key)
+                    # 테스트 로그에서 요약 정보만 추출 (처음 500자 정도)
+                    if test_log and len(test_log) > 0:
+                        summary = test_log[:500] + "..." if len(test_log) > 500 else test_log
+                        description += f"\n```\n{summary}\n```\n"
+                except Exception as e:
+                    logger.warning(f"Failed to load test log for PR description: {str(e)}")
+            
+            description += "\n"
+        
+        # diff 요약 추가 (있는 경우)
+        if task.diff_s3_key:
+            try:
+                diff = self.artifact_store.get_artifact(task.diff_s3_key)
+                if diff and len(diff) > 0:
+                    # diff의 일부만 표시 (처음 1000자 정도)
+                    summary = diff[:1000] + "..." if len(diff) > 1000 else diff
+                    description += f"### Code Changes Preview\n```diff\n{summary}\n```\n\n"
+            except Exception as e:
+                logger.warning(f"Failed to load diff for PR description: {str(e)}")
         
         description += "Generated by T-Developer"
         

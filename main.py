@@ -189,9 +189,16 @@ async def slack_events(request: Request):
                 text = event.get("text", "")
                 user = event.get("user", "unknown")
                 channel = event.get("channel", "")
+                bot_id = event.get("bot_id")
+                
+                # 봇 자신의 메시지는 무시
+                if bot_id:
+                    logger.debug(f"Ignoring bot message from bot_id: {bot_id}")
+                    return {"status": "ok"}
                 
                 # T-Developer 호출 확인 (예: "@T-Developer: 작업 요청")
-                if "@T-Developer" in text or "T-Developer:" in text:
+                # 멘션이 문장 시작부에 있거나 콜론으로 구분되는 경우만 처리
+                if text.startswith("<@") and ">:" in text or text.startswith("T-Developer:"):
                     # 작업 요청 추출
                     request_text = text.split(":", 1)[1].strip() if ":" in text else text.replace("@T-Developer", "").strip()
                     
