@@ -39,13 +39,14 @@ class MAO:
         self.slack = SlackNotifier()
         # GitHubTool은 작업별로 생성
         
-    def process_request(self, request_text: str, user_id: str) -> str:
+    def process_request(self, request_text: str, user_id: str, project_id: str = None) -> str:
         """
         사용자 요청을 처리하는 메인 함수 (동기식)
         
         Args:
             request_text: 사용자가 요청한 텍스트
             user_id: 요청한 사용자의 ID
+            project_id: 프로젝트 ID (선택적)
             
         Returns:
             생성된 작업 ID
@@ -58,6 +59,7 @@ class MAO:
             task_id=task_id,
             request=request_text,
             user_id=user_id,
+            project_id=project_id,
             status=TaskStatus.RECEIVED,
             created_at=datetime.now().isoformat()
         )
@@ -71,13 +73,14 @@ class MAO:
         
         return task_id
         
-    def process_request_async(self, request_text: str, user_id: str) -> str:
+    def process_request_async(self, request_text: str, user_id: str, project_id: str = None) -> str:
         """
         사용자 요청을 비동기적으로 처리하는 함수
         
         Args:
             request_text: 사용자가 요청한 텍스트
             user_id: 요청한 사용자의 ID
+            project_id: 프로젝트 ID (선택적)
             
         Returns:
             생성된 작업 ID
@@ -92,6 +95,7 @@ class MAO:
             task_id=task_id,
             request=request_text,
             user_id=user_id,
+            project_id=project_id,
             status=TaskStatus.RECEIVED,
             created_at=datetime.now().isoformat()
         )

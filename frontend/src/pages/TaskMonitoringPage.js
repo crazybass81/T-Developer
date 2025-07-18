@@ -45,8 +45,8 @@ function TaskMonitoringPage() {
 
     fetchTask();
 
-    // 주기적으로 작업 상태 업데이트 (5초마다)
-    const interval = setInterval(fetchTask, 5000);
+    // 주기적으로 작업 상태 업데이트 (3초마다)
+    const interval = setInterval(fetchTask, 3000);
     
     return () => clearInterval(interval);
   }, [taskId]);
@@ -205,10 +205,10 @@ function TaskMonitoringPage() {
   // 작업 완료 시 리뷰 페이지로 이동
   useEffect(() => {
     if (task && (task.status === 'completed' || task.status === 'deployed')) {
-      // 5초 후 리뷰 페이지로 자동 이동
+      // 3초 후 리뷰 페이지로 자동 이동
       const timer = setTimeout(() => {
         navigate(`/tasks/${taskId}/review`);
-      }, 5000);
+      }, 3000);
       
       return () => clearTimeout(timer);
     }

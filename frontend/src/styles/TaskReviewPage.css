@@ -134,6 +134,45 @@
   margin: 0;
 }
 
+/* Diff 하이라이트 스타일 */
+.code-block .diff-added {
+  background-color: #e6ffed;
+  color: #22863a;
+  display: block;
+  width: 100%;
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.code-block .diff-removed {
+  background-color: #ffeef0;
+  color: #cb2431;
+  display: block;
+  width: 100%;
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.code-block .diff-chunk {
+  background-color: #f1f8ff;
+  color: #0366d6;
+  display: block;
+  width: 100%;
+  padding: 0 4px;
+  border-radius: 2px;
+  margin: 8px 0;
+}
+
+.code-block .diff-header {
+  color: #6a737d;
+  display: block;
+  width: 100%;
+  padding: 0 4px;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
 .no-file-selected {
   padding: 20px;
   text-align: center;
@@ -200,6 +239,40 @@
   background-color: #0b7dda;
 }
 
+.view-details-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.view-details-button:hover {
+  background-color: #45a049;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.view-details-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.view-details-button:before {
+  content: '👁️';
+  margin-right: 6px;
+  font-size: 16px;
+}
+
 .loading {
   text-align: center;
   padding: 20px;
@@ -213,4 +286,40 @@
   padding: 15px;
   border-radius: 4px;
   margin: 20px 0;
+}
+
+/* 추가 diff 하이라이트 스타일 */
+.diff-added {
+  background-color: #e6ffed;
+  color: #22863a;
+  padding: 2px 0;
+  border-radius: 2px;
+  display: block;
+  width: 100%;
+}
+
+.diff-removed {
+  background-color: #ffeef0;
+  color: #cb2431;
+  padding: 2px 0;
+  border-radius: 2px;
+  display: block;
+  width: 100%;
+}
+
+.diff-chunk {
+  background-color: #f1f8ff;
+  color: #0366d6;
+  padding: 2px 0;
+  border-radius: 2px;
+  margin: 8px 0;
+  font-weight: bold;
+}
+
+.diff-header {
+  color: #6a737d;
+  padding: 2px 0;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 8px;
+  font-weight: bold;
 }

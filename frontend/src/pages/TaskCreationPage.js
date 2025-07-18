@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../styles/TaskCreationPage.css';
@@ -8,6 +8,26 @@ function TaskCreationPage() {
   const [request, setRequest] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [selectedProject, setSelectedProject] = useState('');
+
+  // 프로젝트 목록 가져오기
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await axios.get('/api/projects');
+        setProjects(response.data);
+        if (response.data.length > 0) {
+          setSelectedProject(response.data[0].project_id);
+        }
+      } catch (err) {
+        console.error('Error fetching projects:', err);
+        setError('프로젝트 목록을 가져오는 중 오류가 발생했습니다.');
+      }
+    };
+    
+    fetchProjects();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,7 +38,8 @@ function TaskCreationPage() {
       // API 호출
       const response = await axios.post('/api/tasks', {
         request,
-        user_id: 'web-user' // 실제 구현에서는 인증된 사용자 ID 사용
+        user_id: 'web-user', // 실제 구현에서는 인증된 사용자 ID 사용
+        project_id: selectedProject
       });
       
       // 작업 ID를 받아 모니터링 페이지로 이동
@@ -39,6 +60,31 @@ function TaskCreationPage() {
       {error && <div className="error-message">{error}</div>}
       
       <form onSubmit={handleSubmit} className="task-form">
+        <div className="form-group">
+          <label htmlFor="project">프로젝트 선택</label>
+          <select
+            id="project"
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            required
+          >
+            {projects.length === 0 ? (
+              <option value="">프로젝트가 없습니다</option>
+            ) : (
+              projects.map(project => (
+                <option key={project.project_id} value={project.project_id}>
+                  {project.name}
+                </option>
+              ))
+            )}
+          </select>
+          {projects.length === 0 && (
+            <div className="form-hint">
+              <a href="/">프로젝트를 먼저 생성해주세요</a>
+            </div>
+          )}
+        </div>
+        
         <div className="form-group">
           <label htmlFor="request">기능 요청 내용</label>
           <textarea

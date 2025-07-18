@@ -33,13 +33,14 @@ class SlackNotifier:
         else:
             logger.warning("SlackNotifier initialized without token, notifications will be logged only")
     
-    def send_message(self, text: str, blocks: Optional[List[Dict[str, Any]]] = None) -> Optional[str]:
+    def send_message(self, text: str, blocks: Optional[List[Dict[str, Any]]] = None, channel: Optional[str] = None) -> Optional[str]:
         """
         Slack 메시지 전송
         
         Args:
             text: 메시지 텍스트
             blocks: 메시지 블록 (옵션)
+            channel: 메시지를 보낼 채널 (옵션, 지정하지 않으면 기본 채널 사용)
             
         Returns:
             메시지 타임스탬프 또는 None
@@ -50,22 +51,26 @@ class SlackNotifier:
             logger.info(f"Slack notification (simulated): {text}")
             return None
         
+        # 채널이 지정되지 않으면 기본 채널 사용
+        target_channel = channel or self.channel
+        
         try:
             # Slack API로 메시지 전송
             response = self.client.chat_postMessage(
-                channel=self.channel,
+                channel=target_channel,
                 text=text,
                 blocks=blocks
             )
             
-            logger.info(f"Slack message sent successfully")
+            logger.info(f"Slack message sent successfully to {target_channel}")
             return response["ts"]
         except SlackApiError as e:
             logger.error(f"Failed to send Slack message: {str(e)}", exc_info=True)
             return None
     
     def send_thread_message(self, thread_ts: str, text: str, 
-                           blocks: Optional[List[Dict[str, Any]]] = None) -> Optional[str]:
+                           blocks: Optional[List[Dict[str, Any]]] = None,
+                           channel: Optional[str] = None) -> Optional[str]:
         """
         Slack 스레드 메시지 전송
         
@@ -73,6 +78,7 @@ class SlackNotifier:
             thread_ts: 스레드 타임스탬프
             text: 메시지 텍스트
             blocks: 메시지 블록 (옵션)
+            channel: 메시지를 보낼 채널 (옵션, 지정하지 않으면 기본 채널 사용)
             
         Returns:
             메시지 타임스탬프 또는 None
@@ -83,16 +89,19 @@ class SlackNotifier:
             logger.info(f"Slack thread notification (simulated): {text}")
             return None
         
+        # 채널이 지정되지 않으면 기본 채널 사용
+        target_channel = channel or self.channel
+        
         try:
             # Slack API로 스레드 메시지 전송
             response = self.client.chat_postMessage(
-                channel=self.channel,
+                channel=target_channel,
                 text=text,
                 thread_ts=thread_ts,
                 blocks=blocks
             )
             
-            logger.info(f"Slack thread message sent successfully")
+            logger.info(f"Slack thread message sent successfully to {target_channel}")
             return response["ts"]
         except SlackApiError as e:
             logger.error(f"Failed to send Slack thread message: {str(e)}", exc_info=True)
@@ -137,12 +146,26 @@ class SlackNotifier:
             }
         ]
         
-        # 메시지 전송
-        ts = self.send_message(text, blocks)
+        # 프로젝트에 따른 Slack 채널 가져오기
+        channel = None
+        if task.project_id:
+            try:
+                from context.dynamo.project_store import ProjectStore
+                project = ProjectStore().get_project(task.project_id)
+                if project and 'slack_channel' in project:
+                    channel = project['slack_channel']
+                    logger.info(f"Using project-specific Slack channel: {channel}")
+            except Exception as e:
+                logger.error(f"Failed to get project Slack channel: {e}")
         
-        # 작업 객체에 스레드 타임스탬프 저장
+        # 메시지 전송
+        ts = self.send_message(text, blocks, channel=channel)
+        
+        # 작업 객체에 스레드 타임스탬프와 채널 저장
         if ts:
             task.metadata["slack_thread_ts"] = ts
+            if channel:
+                task.metadata["slack_channel"] = channel
             try:
                 # TaskStore를 통해 Task 업데이트 (스레드 ts 저장)
                 from context.dynamo.task_store import TaskStore
@@ -188,63 +211,15 @@ class SlackNotifier:
             }
         ]
         
-        # 스레드 타임스탬프 가져오기
+        # 스레드 타임스탬프와 채널 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
-    
-    def send_plan_created(self, task: Task, plan_summary: str) -> Optional[str]:
-        """
-        계획 수립 완료 알림
-        
-        Args:
-            task: 작업 객체
-            plan_summary: 계획 요약
-            
-        Returns:
-            메시지 타임스탬프 또는 None
-        """
-        text = f"📋 Plan created for task {task.task_id}: {plan_summary}"
-        
-        # 메시지 블록 구성
-        blocks = [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"*Plan created*"
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Plan: {plan_summary}"
-                }
-            },
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f"Task {task.task_id} | Status: {task.status.value}"
-                    }
-                ]
-            }
-        ]
-        
-        # 스레드 타임스탬프 가져오기
-        thread_ts = task.metadata.get("slack_thread_ts")
-        
-        # 메시지 전송
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_coding_started(self, task: Task) -> Optional[str]:
         """
@@ -284,12 +259,13 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_coding_completed(self, task: Task) -> Optional[str]:
         """
@@ -364,12 +340,13 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_testing_started(self, task: Task) -> Optional[str]:
         """
@@ -409,12 +386,13 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_tests_passed(self, task: Task) -> Optional[str]:
         """
@@ -450,12 +428,13 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_test_failure(self, task: Task) -> Optional[str]:
         """
@@ -498,12 +477,13 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_test_fix_attempt(self, task: Task, attempt: int) -> Optional[str]:
         """
@@ -544,12 +524,13 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_deploying(self, task: Task) -> Optional[str]:
         """
@@ -585,12 +566,13 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_deployment_success(self, task: Task) -> Optional[str]:
         """
@@ -662,12 +644,13 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_deployment_failure(self, task: Task) -> Optional[str]:
         """
@@ -722,12 +705,13 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_completion(self, task: Task) -> Optional[str]:
         """
@@ -792,12 +776,13 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
     
     def send_error(self, task: Task) -> Optional[str]:
         """
@@ -840,9 +825,60 @@ class SlackNotifier:
         
         # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
         
         # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
         else:
-            return self.send_message(text, blocks)
+            return self.send_message(text, blocks, channel=channel)
+            
+    def send_plan_created(self, task: Task, plan_summary: str) -> Optional[str]:
+        """
+        계획 수립 완료 알림
+        
+        Args:
+            task: 작업 객체
+            plan_summary: 계획 요약
+            
+        Returns:
+            메시지 타임스탬프 또는 None
+        """
+        text = f"📋 Plan created for task {task.task_id}: {plan_summary}"
+        
+        # 메시지 블록 구성
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Plan created*"
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"Plan: {plan_summary}"
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"Task {task.task_id} | Status: {task.status.value}"
+                    }
+                ]
+            }
+        ]
+        
+        # 스레드 타임스탬프와 채널 가져오기
+        thread_ts = task.metadata.get("slack_thread_ts")
+        channel = task.metadata.get("slack_channel")
+        
+        # 메시지 전송
+        if thread_ts:
+            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+        else:
+            return self.send_message(text, blocks, channel=channel)

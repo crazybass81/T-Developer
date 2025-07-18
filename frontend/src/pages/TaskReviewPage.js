@@ -37,20 +37,23 @@ function TaskReviewPage() {
 
   // 선택된 파일 내용 가져오기
   useEffect(() => {
-    if (!selectedFile) return;
+    if (!selectedFile || !task) return;
     
-    // 실제 구현에서는 파일 내용을 가져오는 API 호출
-    // 여기서는 임시 데이터 사용
-    setFileContent(`// ${selectedFile} 파일 내용
-// 이 부분은 실제 구현에서 API를 통해 가져온 파일 내용으로 대체됩니다.
-
-function exampleCode() {
-  console.log("This is a placeholder for the actual file content");
-  return "File: " + "${selectedFile}";
-}
-
-// 파일 끝`);
-  }, [selectedFile]);
+    const fetchFileDiff = async () => {
+      try {
+        setFileContent('파일 내용을 불러오는 중...');
+        // 파일 경로를 URL 인코딩하여 API 호출
+        const encodedPath = encodeURIComponent(selectedFile);
+        const response = await axios.get(`/api/tasks/${taskId}/diff/${encodedPath}`);
+        setFileContent(response.data.diff);
+      } catch (err) {
+        console.error('Error fetching file diff:', err);
+        setFileContent(`// ${selectedFile} 파일의 diff를 가져오는 중 오류가 발생했습니다.\n// ${err.message}`);
+      }
+    };
+    
+    fetchFileDiff();
+  }, [selectedFile, taskId, task]);
 
   if (loading) {
     return <div className="loading">작업 정보를 불러오는 중...</div>;
@@ -63,6 +66,30 @@ function exampleCode() {
   if (!task) {
     return <div className="error-message">작업을 찾을 수 없습니다.</div>;
   }
+
+  // diff 텍스트에 하이라이트 적용
+  const formatDiff = (diffText) => {
+    if (!diffText) return '';
+    
+    // 줄 단위로 분할
+    const lines = diffText.split('\n');
+    
+    // 각 줄에 하이라이트 적용
+    return lines.map((line, index) => {
+      if (line.startsWith('+') && !line.startsWith('+++')) {
+        return <div key={index} className="diff-added">{line}</div>;
+      } else if (line.startsWith('-') && !line.startsWith('---')) {
+        return <div key={index} className="diff-removed">{line}</div>;
+      } else if (line.startsWith('@@ ')) {
+        return <div key={index} className="diff-chunk">{line}</div>;
+      } else if (line.startsWith('diff ') || line.startsWith('index ') || 
+                line.startsWith('--- ') || line.startsWith('+++ ')) {
+        return <div key={index} className="diff-header">{line}</div>;
+      } else {
+        return <div key={index}>{line}</div>;
+      }
+    });
+  };
 
   return (
     <div className="task-review-container">
@@ -81,6 +108,14 @@ function exampleCode() {
       <div className="plan-summary">
         <h3>계획 요약:</h3>
         <p>{task.plan_summary || '계획 정보가 없습니다.'}</p>
+        {task.plan_s3_key && (
+          <button 
+            className="view-details-button"
+            onClick={() => window.open(`/api/tasks/${taskId}/plan`, '_blank')}
+          >
+            계획 상세 보기
+          </button>
+        )}
       </div>
       
       <div className="code-review-section">
@@ -127,7 +162,9 @@ function exampleCode() {
             {selectedFile ? (
               <>
                 <h4>{selectedFile}</h4>
-                <pre className="code-block">{fileContent}</pre>
+                <div className="code-block">
+                  {formatDiff(fileContent)}
+                </div>
               </>
             ) : (
               <div className="no-file-selected">파일을 선택하세요</div>
@@ -147,6 +184,14 @@ function exampleCode() {
             ❌ 테스트 실패
             <p>{task.error || '자세한 오류 정보가 없습니다.'}</p>
           </div>
+        )}
+        {task.test_log_s3_key && (
+          <button 
+            className="view-details-button"
+            onClick={() => window.open(`/api/tasks/${taskId}/test-log`, '_blank')}
+          >
+            테스트 로그 보기
+          </button>
         )}
       </div>
       

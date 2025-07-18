@@ -33,6 +33,7 @@ class Task(BaseModel):
     task_id: str
     request: str
     user_id: str
+    project_id: Optional[str] = None
     status: TaskStatus = TaskStatus.RECEIVED
     
     # 시간 정보

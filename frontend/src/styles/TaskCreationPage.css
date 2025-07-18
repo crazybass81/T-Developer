@@ -31,6 +31,42 @@
   resize: vertical;
 }
 
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  background-color: white;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.form-hint {
+  margin-top: 5px;
+  font-size: 14px;
+  color: #666;
+}
+
+.form-hint a {
+  color: #2196F3;
+  text-decoration: none;
+}
+
+.form-hint a:hover {
+  text-decoration: underline;
+}
+
 .submit-button {
   background-color: #2196F3;
   color: white;
@@ -58,4 +94,37 @@
   padding: 10px;
   border-radius: 4px;
   margin-bottom: 20px;
+}
+.form-hint {
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 5px;
+}
+
+.form-hint a {
+  color: #2196F3;
+  text-decoration: none;
+}
+
+.form-hint a:hover {
+  text-decoration: underline;
+}
+
+.project-selection {
+  margin-bottom: 20px;
+}
+
+.project-selection select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-top: 5px;
+}
+
+.project-selection select:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
 }

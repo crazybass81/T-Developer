@@ -28,11 +28,15 @@ function ProjectCreationPage() {
     setError(null);
 
     try {
-      // API 호출 (실제 구현에서는 프로젝트 생성 API 호출)
-      // const response = await axios.post('/api/projects', projectData);
+      // API 호출 - 프로젝트 생성 API 호출
+      const response = await axios.post('/api/projects', {
+        name: projectData.name,
+        description: projectData.description,
+        github_repo: projectData.githubRepo,
+        slack_channel: projectData.slackChannel
+      });
       
-      // 임시 구현: 성공 가정
-      console.log('Project created:', projectData);
+      console.log('Project created:', response.data);
       
       // 프로젝트 생성 후 작업 생성 페이지로 이동
       navigate('/tasks/new');
