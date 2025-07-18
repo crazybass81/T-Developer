@@ -1,0 +1,121 @@
+{
+  "task_id": "TASK-20250718-0ae1a3c7",
+  "feature_name": "Add a simple logging utility function",
+  "description": "Add a simple logging utility function",
+  "plan": {
+    "summary": "\uc694\uccad\ub41c \uae30\ub2a5 \uad6c\ud604 \uacc4\ud68d",
+    "steps": [
+      "\uc694\uad6c\uc0ac\ud56d \ubd84\uc11d",
+      "\uc124\uacc4 \ubc0f \uc544\ud0a4\ud14d\ucc98 \uacb0\uc815",
+      "\ucf54\ub4dc \uad6c\ud604",
+      "\ub2e8\uc704 \ud14c\uc2a4\ud2b8 \uc791\uc131",
+      "\ud1b5\ud569 \ud14c\uc2a4\ud2b8 \uc218\ud589"
+    ],
+    "acceptance_criteria": [
+      "\uae30\ub2a5\uc774 \uc694\uad6c\uc0ac\ud56d\uc5d0 \ub9de\uac8c \ub3d9\uc791\ud568",
+      "\ucf54\ub4dc\uac00 \ud504\ub85c\uc81d\ud2b8 \uc2a4\ud0c0\uc77c \uac00\uc774\ub4dc\ub97c \uc900\uc218\ud568",
+      "\ubaa8\ub4e0 \ud14c\uc2a4\ud2b8\uac00 \ud1b5\uacfc\ud568"
+    ],
+    "considerations": [
+      "\uc131\ub2a5 \ucd5c\uc801\ud654",
+      "\ubcf4\uc548 \uace0\ub824\uc0ac\ud56d",
+      "\uc720\uc9c0\ubcf4\uc218\uc131"
+    ]
+  },
+  "context": {
+    "global_context": {
+      "framework": "FastAPI",
+      "coding_style": "PEP8",
+      "test_framework": "pytest",
+      "deployment_target": "AWS Lambda"
+    },
+    "related_tasks": [
+      {
+        "task_id": "TASK-20250718-0ae1a3c7",
+        "request": "Add a simple logging utility function",
+        "user_id": "test-user",
+        "status": "coding",
+        "created_at": "2025-07-18T11:26:29.325982",
+        "plan_summary": "\uc694\uccad\ub41c \uae30\ub2a5 \uad6c\ud604 \uacc4\ud68d",
+        "plan_s3_key": "plans/TASK-20250718-0ae1a3c7.json",
+        "branch_name": "feature/TASK-20250718-0ae1a3c7",
+        "metadata": {
+          "slack_thread_ts": "1752837989.462869"
+        }
+      },
+      {
+        "task_id": "TASK-20250718-18f0de76",
+        "request": "Add a simple error handling middleware",
+        "user_id": "test-user",
+        "status": "error",
+        "created_at": "2025-07-18T11:13:50.988577",
+        "plan_summary": "\uc694\uccad\ub41c \uae30\ub2a5 \uad6c\ud604 \uacc4\ud68d",
+        "plan_s3_key": "plans/TASK-20250718-18f0de76.json",
+        "branch_name": "feature/TASK-20250718-18f0de76",
+        "commit_hash": "e6af4b2b8b809955ec9bafb02c602b1dbc8ba8ab",
+        "modified_files": [
+          "main.py"
+        ],
+        "created_files": [
+          "utils/helper.py"
+        ],
+        "diff_s3_key": "diffs/TASK-20250718-18f0de76.patch",
+        "test_success": true,
+        "test_log_s3_key": "test_logs/TASK-20250718-18f0de76.txt",
+        "pr_url": "https://github.com/crazybass81/T-Developer/pull/1",
+        "error": "Deployment error: Error merging PR via API"
+      },
+      {
+        "task_id": "TASK-20250718-7103a1f3",
+        "request": "Add a simple logging function to the API",
+        "user_id": "test-user",
+        "status": "error",
+        "created_at": "2025-07-18T10:58:52.235989",
+        "plan_summary": "\uc0c8\ub85c\uc6b4 API \uc5d4\ub4dc\ud3ec\uc778\ud2b8 \uad6c\ud604 \uacc4\ud68d",
+        "plan_s3_key": "plans/TASK-20250718-7103a1f3.json",
+        "branch_name": "feature/TASK-20250718-7103a1f3",
+        "modified_files": [
+          "routes/api.py"
+        ],
+        "created_files": [
+          "services/feature_service.py",
+          "tests/test_feature_api.py"
+        ],
+        "diff_s3_key": "diffs/TASK-20250718-7103a1f3.patch",
+        "test_success": true,
+        "test_log_s3_key": "test_logs/TASK-20250718-7103a1f3.txt",
+        "error": "Deployment error: Failed to create pull request"
+      },
+      {
+        "task_id": "TASK-20250718-ee1f4b6d",
+        "request": "Add a function to validate JWT tokens",
+        "user_id": "test-user",
+        "status": "error",
+        "created_at": "2025-07-18T10:57:26.411775",
+        "plan_summary": "\uc694\uccad\ub41c \uae30\ub2a5 \uad6c\ud604 \uacc4\ud68d",
+        "plan_s3_key": "plans/TASK-20250718-ee1f4b6d.json",
+        "branch_name": "feature/TASK-20250718-ee1f4b6d",
+        "modified_files": [
+          "main.py"
+        ],
+        "created_files": [
+          "utils/helper.py"
+        ],
+        "diff_s3_key": "diffs/TASK-20250718-ee1f4b6d.patch",
+        "test_success": true,
+        "test_log_s3_key": "test_logs/TASK-20250718-ee1f4b6d.txt",
+        "error": "Deployment error: Failed to create pull request"
+      }
+    ],
+    "related_files": [
+      {
+        "path": "app.py",
+        "description": "\uc560\ud50c\ub9ac\ucf00\uc774\uc158 \uc9c4\uc785\uc810"
+      },
+      {
+        "path": "config.py",
+        "description": "\uc124\uc815 \ubaa8\ub4c8"
+      }
+    ]
+  }
+}
