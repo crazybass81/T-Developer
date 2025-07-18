@@ -1,0 +1,149 @@
+{
+  "task_id": "TASK-20250718-ddc0a51b",
+  "feature_name": "Add a health check endpoint to the API",
+  "description": "Add a health check endpoint to the API",
+  "plan": {
+    "summary": "\uc0c8\ub85c\uc6b4 API \uc5d4\ub4dc\ud3ec\uc778\ud2b8 \uad6c\ud604 \uacc4\ud68d",
+    "steps": [
+      "\ub370\uc774\ud130 \ubaa8\ub378 \uc815\uc758",
+      "\uc11c\ube44\uc2a4 \ub808\uc774\uc5b4 \uad6c\ud604",
+      "API \uc5d4\ub4dc\ud3ec\uc778\ud2b8 \uad6c\ud604",
+      "\uc785\ub825 \uc720\ud6a8\uc131 \uac80\uc0ac \ucd94\uac00",
+      "\ub2e8\uc704 \ud14c\uc2a4\ud2b8 \uc791\uc131"
+    ],
+    "acceptance_criteria": [
+      "API\uac00 \uc62c\ubc14\ub978 \uc751\ub2f5 \ud615\uc2dd\uc744 \ubc18\ud658\ud568",
+      "\uc720\ud6a8\ud558\uc9c0 \uc54a\uc740 \uc785\ub825\uc5d0 \ub300\ud574 \uc801\uc808\ud55c \uc624\ub958 \uc751\ub2f5\uc744 \ubc18\ud658\ud568",
+      "\ubaa8\ub4e0 \ud14c\uc2a4\ud2b8\uac00 \ud1b5\uacfc\ud568"
+    ],
+    "considerations": [
+      "API \ubb38\uc11c\ud654 (Swagger/OpenAPI)",
+      "\uc131\ub2a5 \ucd5c\uc801\ud654",
+      "\uc5d0\ub7ec \ucc98\ub9ac \uc77c\uad00\uc131"
+    ]
+  },
+  "context": {
+    "global_context": {
+      "framework": "FastAPI",
+      "coding_style": "PEP8",
+      "test_framework": "pytest",
+      "deployment_target": "AWS Lambda"
+    },
+    "related_tasks": [
+      {
+        "task_id": "TASK-20250718-ddc0a51b",
+        "request": "Add a health check endpoint to the API",
+        "user_id": "test-user",
+        "status": "coding",
+        "created_at": "2025-07-18T11:28:01.864661",
+        "plan_summary": "\uc0c8\ub85c\uc6b4 API \uc5d4\ub4dc\ud3ec\uc778\ud2b8 \uad6c\ud604 \uacc4\ud68d",
+        "plan_s3_key": "plans/TASK-20250718-ddc0a51b.json",
+        "branch_name": "feature/TASK-20250718-ddc0a51b",
+        "metadata": {
+          "slack_thread_ts": "1752838081.965819"
+        }
+      },
+      {
+        "task_id": "TASK-20250718-0ae1a3c7",
+        "request": "Add a simple logging utility function",
+        "user_id": "test-user",
+        "status": "completed",
+        "created_at": "2025-07-18T11:26:29.325982",
+        "completed_at": "2025-07-18T11:26:55.495659",
+        "plan_summary": "\uc694\uccad\ub41c \uae30\ub2a5 \uad6c\ud604 \uacc4\ud68d",
+        "plan_s3_key": "plans/TASK-20250718-0ae1a3c7.json",
+        "branch_name": "feature/TASK-20250718-0ae1a3c7",
+        "commit_hash": "0635e4d959d0a08fd02710983e62fbba465b00ed",
+        "modified_files": [
+          "main.py"
+        ],
+        "created_files": [
+          "utils/helper.py"
+        ],
+        "diff_s3_key": "diffs/TASK-20250718-0ae1a3c7.patch",
+        "test_success": true,
+        "test_log_s3_key": "test_logs/TASK-20250718-0ae1a3c7.txt",
+        "deployed": true,
+        "deployed_version": "v1.0.0",
+        "deployed_url": "https://github.com/crazybass81/T-Developer/tree/main",
+        "pr_url": "https://github.com/crazybass81/T-Developer/pull/2",
+        "metadata": {
+          "slack_thread_ts": "1752837989.462869"
+        }
+      },
+      {
+        "task_id": "TASK-20250718-18f0de76",
+        "request": "Add a simple error handling middleware",
+        "user_id": "test-user",
+        "status": "error",
+        "created_at": "2025-07-18T11:13:50.988577",
+        "plan_summary": "\uc694\uccad\ub41c \uae30\ub2a5 \uad6c\ud604 \uacc4\ud68d",
+        "plan_s3_key": "plans/TASK-20250718-18f0de76.json",
+        "branch_name": "feature/TASK-20250718-18f0de76",
+        "commit_hash": "e6af4b2b8b809955ec9bafb02c602b1dbc8ba8ab",
+        "modified_files": [
+          "main.py"
+        ],
+        "created_files": [
+          "utils/helper.py"
+        ],
+        "diff_s3_key": "diffs/TASK-20250718-18f0de76.patch",
+        "test_success": true,
+        "test_log_s3_key": "test_logs/TASK-20250718-18f0de76.txt",
+        "pr_url": "https://github.com/crazybass81/T-Developer/pull/1",
+        "error": "Deployment error: Error merging PR via API"
+      },
+      {
+        "task_id": "TASK-20250718-7103a1f3",
+        "request": "Add a simple logging function to the API",
+        "user_id": "test-user",
+        "status": "error",
+        "created_at": "2025-07-18T10:58:52.235989",
+        "plan_summary": "\uc0c8\ub85c\uc6b4 API \uc5d4\ub4dc\ud3ec\uc778\ud2b8 \uad6c\ud604 \uacc4\ud68d",
+        "plan_s3_key": "plans/TASK-20250718-7103a1f3.json",
+        "branch_name": "feature/TASK-20250718-7103a1f3",
+        "modified_files": [
+          "routes/api.py"
+        ],
+        "created_files": [
+          "services/feature_service.py",
+          "tests/test_feature_api.py"
+        ],
+        "diff_s3_key": "diffs/TASK-20250718-7103a1f3.patch",
+        "test_success": true,
+        "test_log_s3_key": "test_logs/TASK-20250718-7103a1f3.txt",
+        "error": "Deployment error: Failed to create pull request"
+      },
+      {
+        "task_id": "TASK-20250718-ee1f4b6d",
+        "request": "Add a function to validate JWT tokens",
+        "user_id": "test-user",
+        "status": "error",
+        "created_at": "2025-07-18T10:57:26.411775",
+        "plan_summary": "\uc694\uccad\ub41c \uae30\ub2a5 \uad6c\ud604 \uacc4\ud68d",
+        "plan_s3_key": "plans/TASK-20250718-ee1f4b6d.json",
+        "branch_name": "feature/TASK-20250718-ee1f4b6d",
+        "modified_files": [
+          "main.py"
+        ],
+        "created_files": [
+          "utils/helper.py"
+        ],
+        "diff_s3_key": "diffs/TASK-20250718-ee1f4b6d.patch",
+        "test_success": true,
+        "test_log_s3_key": "test_logs/TASK-20250718-ee1f4b6d.txt",
+        "error": "Deployment error: Failed to create pull request"
+      }
+    ],
+    "related_files": [
+      {
+        "path": "api.py",
+        "description": "API \ub77c\uc6b0\ud130"
+      },
+      {
+        "path": "controllers/api_controller.py",
+        "description": "API \ucee8\ud2b8\ub864\ub7ec"
+      }
+    ]
+  }
+}
