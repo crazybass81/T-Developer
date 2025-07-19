@@ -35,13 +35,35 @@ class SlackNotifier:
             self.client = None
             logger.warning("SlackNotifier initialized without token, notifications will be logged only")
     
-    def send_message(self, text: str, blocks: List[Dict[str, Any]] = None) -> Optional[str]:
+    def _send_task_message(self, task: Task, text: str, blocks: List[Dict[str, Any]]) -> Optional[str]:
+        """
+        프로젝트별 채널을 고려하여 메시지 전송
+        
+        Args:
+            task: Task 객체
+            text: 메시지 텍스트
+            blocks: 메시지 블록
+            
+        Returns:
+            메시지 타임스탬프
+        """
+        # 프로젝트별 Slack 채널 확인
+        project_slack_channel = task.metadata.get("slack_channel")
+        thread_ts = task.metadata.get("slack_thread_ts")
+        
+        if thread_ts:
+            return self.send_thread_message(thread_ts, text, blocks, channel=project_slack_channel)
+        else:
+            return self.send_message(text, blocks, channel=project_slack_channel)
+    
+    def send_message(self, text: str, blocks: List[Dict[str, Any]] = None, channel: str = None) -> Optional[str]:
         """
         Slack 메시지 전송
         
         Args:
             text: 메시지 텍스트
             blocks: 메시지 블록 (Slack Block Kit)
+            channel: 메시지를 보낼 채널 (지정하지 않으면 기본 채널 사용)
             
         Returns:
             메시지 타임스탬프 (스레드 ID로 사용)
@@ -50,19 +72,22 @@ class SlackNotifier:
             logger.info(f"[SLACK MESSAGE] {text}")
             return None
         
+        # 채널이 지정되지 않으면 기본 채널 사용
+        target_channel = channel or self.channel
+        
         try:
             response = self.client.chat_postMessage(
-                channel=self.channel,
+                channel=target_channel,
                 text=text,
                 blocks=blocks
             )
-            logger.info(f"Slack message sent to {self.channel}")
+            logger.info(f"Slack message sent to {target_channel}")
             return response['ts']
         except SlackApiError as e:
             logger.error(f"Error sending Slack message: {e}")
             return None
     
-    def send_thread_message(self, thread_ts: str, text: str, blocks: List[Dict[str, Any]] = None) -> Optional[str]:
+    def send_thread_message(self, thread_ts: str, text: str, blocks: List[Dict[str, Any]] = None, channel: str = None) -> Optional[str]:
         """
         Slack 스레드 메시지 전송
         
@@ -70,6 +95,7 @@ class SlackNotifier:
             thread_ts: 스레드 타임스탬프
             text: 메시지 텍스트
             blocks: 메시지 블록 (Slack Block Kit)
+            channel: 메시지를 보낼 채널 (지정하지 않으면 기본 채널 사용)
             
         Returns:
             메시지 타임스탬프
@@ -78,14 +104,17 @@ class SlackNotifier:
             logger.info(f"[SLACK THREAD MESSAGE] {text}")
             return None
         
+        # 채널이 지정되지 않으면 기본 채널 사용
+        target_channel = channel or self.channel
+        
         try:
             response = self.client.chat_postMessage(
-                channel=self.channel,
+                channel=target_channel,
                 text=text,
                 blocks=blocks,
                 thread_ts=thread_ts
             )
-            logger.info(f"Slack thread message sent to {self.channel}")
+            logger.info(f"Slack thread message sent to {target_channel}")
             return response['ts']
         except SlackApiError as e:
             logger.error(f"Error sending Slack thread message: {e}")
@@ -122,11 +151,18 @@ class SlackNotifier:
             }
         ]
         
-        ts = self.send_message(text, blocks)
+        # 프로젝트별 Slack 채널 확인 및 저장
+        project_slack_channel = task.metadata.get("slack_channel") or None
+        
+        # 프로젝트별 채널이 있으면 해당 채널을 사용
+        ts = self.send_message(text, blocks, channel=project_slack_channel)
         
         # 스레드 타임스탬프 저장
         if ts:
             task.metadata["slack_thread_ts"] = ts
+            # 사용한 채널도 저장
+            if project_slack_channel:
+                task.metadata["slack_channel"] = project_slack_channel
             try:
                 # TaskStore를 통해 Task 업데이트 (스레드 ts 저장)
                 from context.dynamo.task_store import TaskStore
@@ -171,11 +207,7 @@ class SlackNotifier:
             }
         ]
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_plan_created(self, task: Task) -> Optional[str]:
         """
@@ -208,11 +240,7 @@ class SlackNotifier:
             }
         ]
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_coding_started(self, task: Task) -> Optional[str]:
         """
@@ -249,11 +277,7 @@ class SlackNotifier:
             }
         ]
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_coding_completed(self, task: Task) -> Optional[str]:
         """
@@ -311,11 +335,7 @@ class SlackNotifier:
             ]
         })
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_testing_started(self, task: Task) -> Optional[str]:
         """
@@ -352,11 +372,7 @@ class SlackNotifier:
             }
         ]
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_tests_passed(self, task: Task) -> Optional[str]:
         """
@@ -389,11 +405,7 @@ class SlackNotifier:
             }
         ]
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_test_failure(self, task: Task, failures: List[Dict[str, Any]]) -> Optional[str]:
         """
@@ -442,11 +454,7 @@ class SlackNotifier:
             ]
         })
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_test_fix_attempt(self, task: Task, attempt: int, max_retries: int) -> Optional[str]:
         """
@@ -485,11 +493,7 @@ class SlackNotifier:
             }
         ]
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_deploying(self, task: Task) -> Optional[str]:
         """
@@ -526,11 +530,7 @@ class SlackNotifier:
             }
         ]
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_deployment_success(self, task: Task) -> Optional[str]:
         """
@@ -584,11 +584,7 @@ class SlackNotifier:
             ]
         })
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_deployment_failure(self, task: Task, error_message: str) -> Optional[str]:
         """
@@ -622,11 +618,7 @@ class SlackNotifier:
             }
         ]
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_completion(self, task: Task) -> Optional[str]:
         """
@@ -680,11 +672,7 @@ class SlackNotifier:
             ]
         })
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)
     
     def send_error(self, task: Task) -> Optional[str]:
         """
@@ -717,8 +705,4 @@ class SlackNotifier:
             }
         ]
         
-        thread_ts = task.metadata.get("slack_thread_ts")
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks)
-        else:
-            return self.send_message(text, blocks)
+        return self._send_task_message(task, text, blocks)

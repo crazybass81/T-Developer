@@ -51,6 +51,7 @@ class Task:
         deployed_url: str = None,
         pr_url: str = None,
         error: str = None,
+        project_id: str = None,
         metadata: Dict[str, Any] = None
     ):
         """
@@ -99,6 +100,7 @@ class Task:
         self.deployed_url = deployed_url
         self.pr_url = pr_url
         self.error = error
+        self.project_id = project_id
         self.metadata = metadata or {}
     
     def to_dict(self) -> Dict[str, Any]:
@@ -147,6 +149,8 @@ class Task:
             result['pr_url'] = self.pr_url
         if self.error:
             result['error'] = self.error
+        if self.project_id:
+            result['project_id'] = self.project_id
         if self.metadata:
             result['metadata'] = self.metadata
         
@@ -188,5 +192,6 @@ class Task:
             deployed_url=data.get('deployed_url'),
             pr_url=data.get('pr_url'),
             error=data.get('error'),
+            project_id=data.get('project_id'),
             metadata=data.get('metadata')
         )

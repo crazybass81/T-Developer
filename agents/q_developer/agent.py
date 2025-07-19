@@ -25,9 +25,9 @@ class QDeveloperAgent:
     def __init__(self):
         """Q Developer 에이전트 초기화"""
         # 기본 작업공간 경로
-        self.default_workspace_dir = settings.Q_DEVELOPER_WORKSPACE
-        os.makedirs(self.default_workspace_dir, exist_ok=True)
-        logger.info(f"Q Developer Agent initialized with default workspace: {self.default_workspace_dir}")
+        self.workspace_dir = settings.Q_DEVELOPER_WORKSPACE
+        os.makedirs(self.workspace_dir, exist_ok=True)
+        logger.info(f"Q Developer Agent initialized with workspace: {self.workspace_dir}")
     
     def execute_task(self, instruction: Dict[str, Any], workspace_dir: str) -> Dict[str, Any]:
         """
@@ -396,7 +396,7 @@ class QDeveloperAgent:
         
         # 작업 디렉토리 설정
         if workspace_dir is None:
-            workspace_dir = self.default_workspace_dir
+            workspace_dir = self.workspace_dir
         
         logger.info(f"Using workspace directory for deployment: {workspace_dir}")
         

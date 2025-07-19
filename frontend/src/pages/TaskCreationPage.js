@@ -24,14 +24,6 @@ function TaskCreationPage() {
       } catch (err) {
         console.error('Error fetching projects:', err);
         setError('프로젝트 목록을 가져오는 중 오류가 발생했습니다.');
-        
-        // API 오류 시 더미 데이터 사용 (테스트용)
-        const dummyProjects = [
-          { project_id: 'PROJ-DEFAULT', name: 'GovChat' },
-          { project_id: 'proj-2', name: '테스트 프로젝트' }
-        ];
-        setProjects(dummyProjects);
-        setSelectedProject('PROJ-DEFAULT');
       }
     };
     

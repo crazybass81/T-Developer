@@ -258,7 +258,7 @@ class GitHubTool:
         
         Args:
             pr_url: PR URL
-            head: 소스 브랜치 이름 (선택적)
+            head: 소스 브랜치 이름
             
         Returns:
             병합 결과 정보
@@ -280,10 +280,20 @@ class GitHubTool:
             # PR 번호 추출
             pr_number = pr_url.split("/")[-1]
             
-            # GitHub에서는 신규 PR이 생성되자마자 병합할 수 없으므로,
-            # 실제 환경에서는 이 부분을 개선해야 하지만, 현재는 시뮬레이션으로 성공으로 처리
-            logger.info(f"Simulating PR merge for PR #{pr_number} due to GitHub limitations")
-            merge_success = True
+            # GitHub API를 통해 실제 PR 병합 수행
+            url = f"{self.api_base}/repos/{self.owner}/{self.repo}/pulls/{pr_number}/merge"
+            headers = {
+                "Authorization": f"token {self.token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            data = {
+                "merge_method": "squash",
+                "commit_title": f"Merge PR #{pr_number}",
+                "commit_message": "Automatically merged by T-Developer"
+            }
+            
+            response = requests.put(url, headers=headers, json=data)
+            merge_success = response.status_code == 200
             
             # 브랜치 정리 (성공 여부와 관계없이 정리 시도)
             if head:
@@ -295,17 +305,19 @@ class GitHubTool:
             version = self._get_latest_version()
             
             if merge_success:
-                logger.info(f"Pull request {pr_number} merged successfully (simulated)")
+                logger.info(f"Pull request {pr_number} merged successfully")
                 return {
                     "merged": True,
-                    "message": "PR merged successfully (simulated)",
+                    "message": "PR merged successfully",
                     "version": version,
                     "url": f"https://github.com/{self.owner}/{self.repo}/tree/main"
                 }
             else:
+                error_message = response.json().get("message", "Error merging PR via API")
+                logger.error(f"Failed to merge PR: {error_message}")
                 return {
                     "merged": False,
-                    "message": "Error merging PR via API"
+                    "message": error_message
                 }
         except Exception as e:
             logger.error(f"Error in merge_pull_request: {e}")

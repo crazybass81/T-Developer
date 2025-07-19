@@ -42,7 +42,7 @@ app = FastAPI(
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # 프론트엔드 개발 서버 주소
+    allow_origins=["http://localhost:3000", "http://localhost:8000", "*"],  # 프론트엔드 개발 서버 주소
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
@@ -294,11 +294,16 @@ async def slack_events(request: Request, background_tasks: BackgroundTasks):
             text = event.get("text", "")
             user = event.get("user", "unknown")
             
-            # T-Developer 멘션 확인
-            if text.startswith("<@T-Developer>:") or text.startswith("T-Developer:"):
+            # T-Developer 멘션 확인 (정확한 패턴 매칭)
+            # 문장 시작에 멘션이 있고 콜론으로 구분된 경우에만 명령으로 인식
+            if (text.startswith("<@T-Developer>:") or 
+                text.startswith("T-Developer:") or 
+                text.startswith("@T-Developer:")):
                 # 멘션 제거하고 요청 추출
                 if text.startswith("<@T-Developer>:"):
                     request_text = text[len("<@T-Developer>:"):].strip()
+                elif text.startswith("@T-Developer:"):
+                    request_text = text[len("@T-Developer:"):].strip()
                 else:
                     request_text = text[len("T-Developer:"):].strip()
                 
