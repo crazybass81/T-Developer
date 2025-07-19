@@ -88,9 +88,7 @@ function ProjectCreationPage() {
       
       console.log('Submitting to API:', api.defaults.baseURL + '/api/projects');
       
-      // 임시 처리: API 호출 없이 다음 페이지로 이동
-      // 실제 API가 준비되면 아래 주석을 해제하세요
-      /*
+      // 실제 API 호출
       const response = await api.post('/api/projects', {
         name: projectData.name,
         description: projectData.description,
@@ -99,7 +97,6 @@ function ProjectCreationPage() {
       });
       
       console.log('Project created:', response.data);
-      */
       
       // 프로젝트 생성 후 작업 생성 페이지로 이동
       navigate('/tasks/new');

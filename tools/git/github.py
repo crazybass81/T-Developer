@@ -252,7 +252,7 @@ class GitHubTool:
             logger.error(f"Error creating pull request: {e}")
             return None
     
-    def merge_pull_request(self, pr_url: str, head: str = None) -> Dict[str, Any]:
+    def merge_pull_request(self, pr_url: str, head: str) -> Dict[str, Any]:
         """
         Pull Request 병합
         

@@ -326,16 +326,47 @@ async def create_project(project_request: ProjectRequest):
     # 프로젝트 ID 생성
     project_id = f"PROJ-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}"
     
-    # 프로젝트 정보 저장 (실제 구현에서는 DynamoDB에 저장)
-    # 현재는 임시 구현으로 로그만 남김
-    logger.info(f"Project created: {project_id}, {project_request.name}")
+    # 프로젝트 정보 저장 (DynamoDB에 저장)
+    from context.dynamo.project_store import ProjectStore
+    project_store = ProjectStore()
     
-    # 프로젝트 설정을 글로벌 컨텍스트에 반영 (실제 구현에서는 프로젝트별 설정 관리)
-    # 현재는 임시 구현으로 로그만 남김
-    if project_request.github_repo:
-        logger.info(f"Setting GitHub repo: {project_request.github_repo}")
-    if project_request.slack_channel:
-        logger.info(f"Setting Slack channel: {project_request.slack_channel}")
+    # 프로젝트 데이터 구성
+    project_data = {
+        "project_id": project_id,
+        "name": project_request.name,
+        "description": project_request.description,
+        "github_repo": project_request.github_repo,
+        "slack_channel": project_request.slack_channel,
+        "created_at": datetime.now().isoformat()
+    }
+    
+    # 프로젝트 저장
+    project_store.save_project(project_data)
+    logger.info(f"Project created and saved: {project_id}, {project_request.name}")
+    
+    # 프로젝트 설정을 글로벌 컨텍스트에 반영
+    if project_request.github_repo or project_request.slack_channel:
+        try:
+            # 글로벌 컨텍스트 업데이트
+            global_context = mao.task_store.get_global_context()
+            if project_request.github_repo:
+                repo_parts = project_request.github_repo.strip().split('/')
+                if len(repo_parts) >= 2:
+                    # github.com/owner/repo 형식에서 추출
+                    owner = repo_parts[-2]
+                    repo = repo_parts[-1]
+                    global_context["github_owner"] = owner
+                    global_context["github_repo"] = repo
+                    logger.info(f"Setting GitHub repo: {owner}/{repo}")
+            
+            if project_request.slack_channel:
+                global_context["slack_channel"] = project_request.slack_channel
+                logger.info(f"Setting Slack channel: {project_request.slack_channel}")
+            
+            # 글로벌 컨텍스트 저장
+            mao.task_store.save_global_context(global_context)
+        except Exception as e:
+            logger.error(f"Failed to update global context: {e}")
     
     return ProjectResponse(
         project_id=project_id,
@@ -354,19 +385,45 @@ async def get_projects():
     """
     logger.info("Getting projects")
     
-    # 임시 프로젝트 목록 (실제 구현에서는 DynamoDB에서 조회)
-    projects = [
-        {
-            "project_id": "PROJ-20250101-12345678",
-            "name": "GovChat",
-            "description": "정부 지원사업 매칭 챗봇",
-            "github_repo": "user/govchat",
-            "slack_channel": "#govchat-dev",
-            "created_at": "2025-01-01T00:00:00Z"
-        }
-    ]
+    # DynamoDB에서 프로젝트 목록 조회
+    from context.dynamo.project_store import ProjectStore
+    project_store = ProjectStore()
     
-    return projects
+    try:
+        projects = project_store.list_projects()
+        logger.info(f"Retrieved {len(projects)} projects from database")
+        
+        # 프로젝트가 없으면 기본 프로젝트 제공 (새 사용자를 위한 기본값)
+        if not projects:
+            default_project = {
+                "project_id": "PROJ-DEFAULT",
+                "name": "GovChat",
+                "description": "정부 지원사업 매칭 챗봇 (기본 프로젝트)",
+                "github_repo": settings.GITHUB_OWNER + "/" + settings.GITHUB_REPO,
+                "slack_channel": settings.SLACK_CHANNEL,
+                "created_at": datetime.now().isoformat()
+            }
+            projects = [default_project]
+            
+            # 기본 프로젝트 저장 (선택사항)
+            try:
+                project_store.save_project(default_project)
+                logger.info("Created default project")
+            except Exception as e:
+                logger.warning(f"Failed to save default project: {e}")
+        
+        return projects
+    except Exception as e:
+        logger.error(f"Error retrieving projects: {e}")
+        # 오류 발생 시 기본 프로젝트 반환
+        return [{
+            "project_id": "PROJ-ERROR",
+            "name": "GovChat",
+            "description": "정부 지원사업 매칭 챗봇 (오류 발생)",
+            "github_repo": settings.GITHUB_OWNER + "/" + settings.GITHUB_REPO,
+            "slack_channel": settings.SLACK_CHANNEL,
+            "created_at": datetime.now().isoformat()
+        }]
 
 @app.get("/health")
 async def health_check():

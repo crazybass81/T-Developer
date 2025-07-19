@@ -487,7 +487,7 @@ class MAO:
             self.task_store.update_task(task)
             
             # PR 병합
-            merge_result = github_tool.merge_pull_request(pr_url, head=task.branch_name)
+            merge_result = github_tool.merge_pull_request(pr_url, task.branch_name)
             
             if not merge_result.get("merged", False):
                 # 병합 실패
