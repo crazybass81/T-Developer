@@ -1,15 +1,12 @@
 """
-Agno Agent - T-Developer의 계획 및 지식 에이전트
+Agno Agent - T-Developer의 계획 수립 에이전트
 
-이 모듈은 Agno 프레임워크를 사용하여 작업 계획 및 지식 검색을 수행하는 에이전트를 구현합니다.
+이 모듈은 Agno 프레임워크를 사용하여 계획 수립, 지식 검색 등을 수행하는 에이전트를 구현합니다.
 """
 import logging
 import json
+import os
 from typing import Dict, List, Any, Optional
-
-# 실제 구현에서는 Agno 프레임워크 임포트
-# from agno.agent import Agent
-# from agno.tools import ReasoningTools, KnowledgeTools
 
 from config import settings
 
@@ -18,42 +15,184 @@ logger = logging.getLogger(__name__)
 
 class AgnoAgent:
     """
-    Agno 기반 계획 및 지식 에이전트
+    Agno 기반 계획 수립 에이전트
     
-    작업 계획 수립, 지식 검색, 컨텍스트 분석 등을 담당합니다.
+    계획 수립, 지식 검색 등을 담당합니다.
     """
     
     def __init__(self):
         """Agno 에이전트 초기화"""
-        # 실제 구현에서는 Agno 에이전트 초기화
-        # self.agent = Agent(
-        #     model="gpt-4",
-        #     api_key=settings.OPENAI_API_KEY,
-        #     tools=[ReasoningTools(), KnowledgeTools()]
-        # )
+        self.api_key = settings.AGNO_API_KEY
+        self.openai_api_key = settings.OPENAI_API_KEY
+        
+        # Agno 에이전트 초기화 (실제 구현에서는 Agno 프레임워크 사용)
         logger.info("Agno Agent initialized")
+        
+        # 실제 Agno 에이전트 초기화 코드 (주석 처리)
+        # try:
+        #     from agno import Agent
+        #     self.agent = Agent(model="gpt-4", api_key=self.openai_api_key)
+        #     logger.info("Agno Agent initialized with GPT-4")
+        # except ImportError:
+        #     logger.warning("Agno package not found, using mock implementation")
+        #     self.agent = None
     
-    def create_plan(self, request: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _build_planning_prompt(self, request: str, context: Dict[str, Any]) -> str:
         """
-        작업 계획 수립
+        계획 수립 프롬프트 생성
         
         Args:
-            request: 사용자 요청 텍스트
+            request: 요청 내용
             context: 컨텍스트 정보
             
         Returns:
-            계획 정보를 담은 딕셔너리
+            프롬프트 문자열
         """
-        logger.info(f"Creating plan for request: {request[:50]}...")
+        # 글로벌 컨텍스트 추출
+        global_context = context.get("global_context", {})
+        framework = global_context.get("framework", "FastAPI")
+        coding_style = global_context.get("coding_style", "PEP8")
+        test_framework = global_context.get("test_framework", "pytest")
+        
+        # 관련 작업 추출
+        related_tasks = context.get("related_tasks", [])
+        related_tasks_text = ""
+        if related_tasks:
+            related_tasks_text = "## Related Tasks\n"
+            for task in related_tasks:
+                related_tasks_text += f"- Task {task.get('task_id')}: {task.get('request')}\n"
+                if task.get('plan_summary'):
+                    related_tasks_text += f"  Summary: {task.get('plan_summary')}\n"
+        
+        # 관련 파일 추출
+        related_files = context.get("related_files", [])
+        related_files_text = ""
+        if related_files:
+            related_files_text = "## Related Files\n"
+            for file in related_files:
+                related_files_text += f"- {file.get('path')}: {file.get('description')}\n"
         
         # 프롬프트 구성
+        prompt = f"""
+        # Planning Task
+        
+        You are a senior software architect tasked with creating a detailed implementation plan for a feature request.
+        
+        ## Feature Request
+        {request}
+        
+        ## Project Context
+        - Framework: {framework}
+        - Coding Style: {coding_style}
+        - Test Framework: {test_framework}
+        
+        {related_tasks_text}
+        
+        {related_files_text}
+        
+        ## Instructions
+        1. Analyze the feature request and create a detailed implementation plan.
+        2. Break down the implementation into clear, logical steps.
+        3. Define acceptance criteria for the feature.
+        4. Identify any potential challenges or considerations.
+        
+        ## Output Format
+        Provide your response as a JSON object with the following structure:
+        ```json
+        {{
+            "summary": "Brief summary of the implementation plan",
+            "steps": [
+                "Step 1: Description of the first implementation step",
+                "Step 2: Description of the second implementation step",
+                ...
+            ],
+            "acceptance_criteria": [
+                "Criterion 1: Description of the first acceptance criterion",
+                "Criterion 2: Description of the second acceptance criterion",
+                ...
+            ],
+            "considerations": [
+                "Consideration 1: Description of the first consideration",
+                "Consideration 2: Description of the second consideration",
+                ...
+            ]
+        }}
+        ```
+        
+        Ensure your plan is detailed, practical, and follows the project's coding style and framework conventions.
+        """
+        
+        return prompt
+    
+    def _build_qa_prompt(self, question: str, context: Dict[str, Any]) -> str:
+        """
+        질문 응답 프롬프트 생성
+        
+        Args:
+            question: 질문 내용
+            context: 컨텍스트 정보
+            
+        Returns:
+            프롬프트 문자열
+        """
+        # 글로벌 컨텍스트 추출
+        global_context = context.get("global_context", {})
+        framework = global_context.get("framework", "FastAPI")
+        
+        # 관련 지식 추출
+        knowledge = context.get("knowledge", [])
+        knowledge_text = ""
+        if knowledge:
+            knowledge_text = "## Relevant Knowledge\n"
+            for item in knowledge:
+                knowledge_text += f"- {item}\n"
+        
+        # 프롬프트 구성
+        prompt = f"""
+        # Question Answering Task
+        
+        You are a technical expert assisting with a software development project.
+        
+        ## Question
+        {question}
+        
+        ## Project Context
+        - Framework: {framework}
+        
+        {knowledge_text}
+        
+        ## Instructions
+        1. Answer the question based on the provided context.
+        2. If you don't have enough information, state what additional information would be helpful.
+        3. Provide code examples when relevant.
+        
+        Be concise, accurate, and helpful in your response.
+        """
+        
+        return prompt
+    
+    def create_plan(self, request: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        계획 수립
+        
+        Args:
+            request: 요청 내용
+            context: 컨텍스트 정보
+            
+        Returns:
+            계획 정보
+        """
+        logger.info(f"Creating plan for request: {request}")
+        logger.info(f"OpenAI API Key 존재 여부: {bool(settings.OPENAI_API_KEY)}")
+        logger.info(f"Agno API Key 존재 여부: {bool(settings.AGNO_API_KEY)}")
+        
+        # 프롬프트 생성
         prompt = self._build_planning_prompt(request, context)
         
         try:
-            # OpenAI API 호출
+            # OpenAI API 호출 (실제 구현)
             if settings.OPENAI_API_KEY:
                 import openai
-                import json
                 
                 openai.api_key = settings.OPENAI_API_KEY
                 
@@ -81,241 +220,174 @@ class AgnoAgent:
                     return plan
             else:
                 # OpenAI API 키가 없는 경우 가상의 계획 반환
-                logger.warning("No OpenAI API key provided, using mock plan generation")
+                logger.warning("OpenAI API key not provided, using mock implementation")
                 plan = self._mock_plan_generation(request, context)
                 return plan
         except Exception as e:
+            logger.error(f"Error creating plan: {e}")
             # 오류 발생 시 가상의 계획 반환
-            logger.error(f"Error calling OpenAI API: {str(e)}", exc_info=True)
             plan = self._mock_plan_generation(request, context)
             return plan
     
-    def answer_question(self, question: str, context: Dict[str, Any]) -> str:
+    def _mock_plan_generation(self, request: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """
-        질문에 대한 답변 생성
+        가상의 계획 생성 (테스트용)
         
         Args:
-            question: 질문 텍스트
+            request: 요청 내용
             context: 컨텍스트 정보
             
         Returns:
-            답변 텍스트
+            계획 정보
         """
-        logger.info(f"Answering question: {question[:50]}...")
+        # 요청 내용에 따라 다른 계획 반환
+        if "auth" in request.lower() or "authentication" in request.lower():
+            return {
+                "summary": "JWT 인증 기능 구현 계획",
+                "steps": [
+                    "JWT 유틸리티 모듈 구현 (토큰 생성, 검증)",
+                    "사용자 인증 엔드포인트 구현 (/api/auth)",
+                    "미들웨어 구현 (토큰 검증)",
+                    "보호된 엔드포인트에 미들웨어 적용",
+                    "단위 테스트 작성"
+                ],
+                "acceptance_criteria": [
+                    "유효한 자격 증명으로 로그인하면 JWT 토큰이 발급됨",
+                    "유효한 토큰으로 보호된 엔드포인트에 접근 가능",
+                    "유효하지 않은 토큰으로는 접근 불가",
+                    "모든 테스트가 통과함"
+                ],
+                "considerations": [
+                    "토큰 만료 시간 설정",
+                    "환경 변수로 시크릿 키 관리",
+                    "CORS 설정 확인"
+                ]
+            }
+        elif "api" in request.lower() or "endpoint" in request.lower():
+            return {
+                "summary": "새로운 API 엔드포인트 구현 계획",
+                "steps": [
+                    "데이터 모델 정의",
+                    "서비스 레이어 구현",
+                    "API 엔드포인트 구현",
+                    "입력 유효성 검사 추가",
+                    "단위 테스트 작성"
+                ],
+                "acceptance_criteria": [
+                    "API가 올바른 응답 형식을 반환함",
+                    "유효하지 않은 입력에 대해 적절한 오류 응답을 반환함",
+                    "모든 테스트가 통과함"
+                ],
+                "considerations": [
+                    "API 문서화 (Swagger/OpenAPI)",
+                    "성능 최적화",
+                    "에러 처리 일관성"
+                ]
+            }
+        elif "database" in request.lower() or "db" in request.lower():
+            return {
+                "summary": "데이터베이스 연동 기능 구현 계획",
+                "steps": [
+                    "데이터베이스 연결 설정",
+                    "모델 스키마 정의",
+                    "CRUD 작업 구현",
+                    "마이그레이션 스크립트 작성",
+                    "단위 테스트 작성"
+                ],
+                "acceptance_criteria": [
+                    "데이터베이스 연결이 성공적으로 이루어짐",
+                    "CRUD 작업이 정상적으로 동작함",
+                    "마이그레이션이 오류 없이 실행됨",
+                    "모든 테스트가 통과함"
+                ],
+                "considerations": [
+                    "데이터베이스 자격 증명 보안",
+                    "인덱싱 전략",
+                    "트랜잭션 관리"
+                ]
+            }
+        else:
+            # 기본 계획
+            return {
+                "summary": "요청된 기능 구현 계획",
+                "steps": [
+                    "요구사항 분석",
+                    "설계 및 아키텍처 결정",
+                    "코드 구현",
+                    "단위 테스트 작성",
+                    "통합 테스트 수행"
+                ],
+                "acceptance_criteria": [
+                    "기능이 요구사항에 맞게 동작함",
+                    "코드가 프로젝트 스타일 가이드를 준수함",
+                    "모든 테스트가 통과함"
+                ],
+                "considerations": [
+                    "성능 최적화",
+                    "보안 고려사항",
+                    "유지보수성"
+                ]
+            }
+    
+    def answer_question(self, question: str, context: Dict[str, Any]) -> str:
+        """
+        질문 응답
         
-        # 프롬프트 구성
+        Args:
+            question: 질문 내용
+            context: 컨텍스트 정보
+            
+        Returns:
+            응답 내용
+        """
+        logger.info(f"Answering question: {question}")
+        
+        # 프롬프트 생성
         prompt = self._build_qa_prompt(question, context)
         
-        # 실제 구현에서는 Agno 에이전트 호출
-        # answer = self.agent.run(prompt)
-        
-        # 임시 구현: 가상의 답변 반환
-        answer = f"This is a simulated answer to the question: {question}"
-        
-        logger.info(f"Answer generated: {answer[:50]}...")
-        return answer
+        # 실제 구현에서는 OpenAI API 호출
+        # 임시 구현: 가상의 응답 반환
+        if "framework" in question.lower():
+            return "이 프로젝트는 FastAPI 프레임워크를 사용합니다. FastAPI는 Python 기반의 고성능 웹 프레임워크로, 자동 문서화, 타입 힌트 기반의 유효성 검사 등의 기능을 제공합니다."
+        elif "database" in question.lower():
+            return "이 프로젝트는 PostgreSQL 데이터베이스를 사용하며, SQLAlchemy ORM을 통해 데이터베이스와 상호작용합니다."
+        elif "test" in question.lower():
+            return "이 프로젝트는 pytest를 사용하여 단위 테스트와 통합 테스트를 수행합니다. 테스트 파일은 tests/ 디렉토리에 위치하며, 'test_'로 시작하는 파일명과 함수명을 사용합니다."
+        else:
+            return "질문에 대한 정확한 정보를 찾을 수 없습니다. 더 구체적인 질문을 해주시면 도움을 드릴 수 있습니다."
     
-    def search_knowledge(self, query: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def search_knowledge(self, query: str, context: Dict[str, Any]) -> List[str]:
         """
         지식 검색
         
         Args:
-            query: 검색 쿼리
+            query: 검색어
             context: 컨텍스트 정보
             
         Returns:
             검색 결과 목록
         """
-        logger.info(f"Searching knowledge for: {query[:50]}...")
+        logger.info(f"Searching knowledge for: {query}")
         
-        # 실제 구현에서는 Agno의 KnowledgeTools 사용
-        # results = self.agent.tools.knowledge.search(query)
-        
+        # 실제 구현에서는 벡터 데이터베이스 등을 사용한 검색
         # 임시 구현: 가상의 검색 결과 반환
-        results = [
-            {"title": "Sample result 1", "content": "This is a sample search result"},
-            {"title": "Sample result 2", "content": "Another sample search result"}
-        ]
-        
-        logger.info(f"Found {len(results)} knowledge results")
-        return results
-    
-    def _build_planning_prompt(self, request: str, context: Dict[str, Any]) -> str:
-        """
-        계획 수립을 위한 프롬프트 구성
-        
-        Args:
-            request: 사용자 요청 텍스트
-            context: 컨텍스트 정보
-            
-        Returns:
-            프롬프트 텍스트
-        """
-        prompt = f"""
-        You are a senior software architect. Your task is to create a detailed plan for implementing the following feature:
-        
-        REQUEST: {request}
-        
-        """
-        
-        # 컨텍스트 정보 추가
-        if context:
-            prompt += "\nCONTEXT INFORMATION:\n"
-            
-            # 글로벌 컨텍스트
-            if "global" in context:
-                prompt += "Project Guidelines:\n"
-                for key, value in context["global"].items():
-                    prompt += f"- {key}: {value}\n"
-            
-            # 관련 파일
-            if "related_files" in context:
-                prompt += "\nRelevant Files:\n"
-                for file in context["related_files"]:
-                    prompt += f"- {file.get('path', '')}: {file.get('description', '')}\n"
-            
-            # 관련 작업
-            if "related_tasks" in context:
-                prompt += "\nRelated Previous Tasks:\n"
-                for task in context["related_tasks"]:
-                    prompt += f"- {task.get('task_id', '')}: {task.get('request', '')}\n"
-        
-        prompt += """
-        Please provide a detailed plan with the following:
-        
-        1. A list of steps to implement this feature
-        2. Acceptance criteria for the implementation
-        3. Deliverables expected
-        
-        Format your response as a structured JSON with the following keys:
-        - steps: array of strings, each describing one implementation step
-        - acceptance_criteria: array of strings, each describing one criterion
-        - deliverables: array of strings, each describing one deliverable
-        - summary: a brief summary of the plan
-        """
-        
-        return prompt
-    
-    def _build_qa_prompt(self, question: str, context: Dict[str, Any]) -> str:
-        """
-        질문 답변을 위한 프롬프트 구성
-        
-        Args:
-            question: 질문 텍스트
-            context: 컨텍스트 정보
-            
-        Returns:
-            프롬프트 텍스트
-        """
-        prompt = f"""
-        You are a knowledgeable software development assistant. Please answer the following question:
-        
-        QUESTION: {question}
-        
-        """
-        
-        # 컨텍스트 정보 추가
-        if context:
-            prompt += "\nCONTEXT INFORMATION:\n"
-            
-            # 관련 정보 추가
-            for key, value in context.items():
-                if isinstance(value, str):
-                    prompt += f"{key}: {value}\n"
-                elif isinstance(value, list):
-                    prompt += f"{key}:\n"
-                    for item in value:
-                        if isinstance(item, str):
-                            prompt += f"- {item}\n"
-                        elif isinstance(item, dict):
-                            for k, v in item.items():
-                                prompt += f"- {k}: {v}\n"
-        
-        prompt += """
-        Provide a clear, concise answer based on the information available. If you don't know the answer, say so.
-        """
-        
-        return prompt
-    
-    def _mock_plan_generation(self, request: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        가상의 계획 생성 (실제 구현에서는 Agno 응답 파싱)
-        
-        Args:
-            request: 사용자 요청 텍스트
-            context: 컨텍스트 정보
-            
-        Returns:
-            계획 정보를 담은 딕셔너리
-        """
-        # 요청에 따라 간단한 계획 생성
-        if "authentication" in request.lower() or "auth" in request.lower():
-            return {
-                "steps": [
-                    "Create JWT utility functions for token generation and verification",
-                    "Implement user authentication endpoint",
-                    "Add middleware for protected routes",
-                    "Update configuration for JWT secret",
-                    "Write unit tests for authentication flow"
-                ],
-                "acceptance_criteria": [
-                    "Users can authenticate and receive a valid JWT",
-                    "Protected routes reject requests without valid token",
-                    "JWT includes appropriate claims (user ID, expiration)",
-                    "All tests pass"
-                ],
-                "deliverables": [
-                    "JWT utility module",
-                    "Authentication endpoint",
-                    "Auth middleware",
-                    "Updated configuration",
-                    "Unit tests"
-                ],
-                "summary": "Implement JWT authentication with protected routes"
-            }
-        elif "api" in request.lower() or "endpoint" in request.lower():
-            return {
-                "steps": [
-                    "Define API route and controller",
-                    "Implement request validation",
-                    "Create service layer for business logic",
-                    "Connect to data source if needed",
-                    "Write unit and integration tests"
-                ],
-                "acceptance_criteria": [
-                    "API returns correct response format",
-                    "Input validation handles edge cases",
-                    "Error handling follows project standards",
-                    "All tests pass"
-                ],
-                "deliverables": [
-                    "API route definition",
-                    "Controller implementation",
-                    "Service layer",
-                    "Unit and integration tests"
-                ],
-                "summary": "Implement new API endpoint with validation and testing"
-            }
+        if "auth" in query.lower():
+            return [
+                "JWT 인증은 JSON Web Token을 사용한 인증 방식입니다.",
+                "인증 토큰은 Header, Payload, Signature로 구성됩니다.",
+                "FastAPI에서는 OAuth2PasswordBearer를 사용하여 JWT 인증을 구현할 수 있습니다."
+            ]
+        elif "api" in query.lower():
+            return [
+                "RESTful API는 HTTP 메서드를 사용하여 리소스를 조작하는 아키텍처 스타일입니다.",
+                "FastAPI에서는 @app.get(), @app.post() 등의 데코레이터를 사용하여 엔드포인트를 정의합니다.",
+                "Pydantic 모델을 사용하여 요청 및 응답 스키마를 정의할 수 있습니다."
+            ]
+        elif "database" in query.lower():
+            return [
+                "SQLAlchemy는 Python용 SQL 툴킷 및 ORM입니다.",
+                "데이터베이스 마이그레이션은 Alembic을 사용하여 관리할 수 있습니다.",
+                "FastAPI에서는 Depends를 사용하여 데이터베이스 세션을 주입할 수 있습니다."
+            ]
         else:
-            # 기본 계획
-            return {
-                "steps": [
-                    "Analyze requirements",
-                    "Design solution",
-                    "Implement core functionality",
-                    "Write tests",
-                    "Document changes"
-                ],
-                "acceptance_criteria": [
-                    "Functionality meets requirements",
-                    "Code follows project standards",
-                    "All tests pass",
-                    "Documentation is updated"
-                ],
-                "deliverables": [
-                    "Implemented code",
-                    "Tests",
-                    "Documentation updates"
-                ],
-                "summary": "Implement requested feature with testing and documentation"
-            }
+            return []

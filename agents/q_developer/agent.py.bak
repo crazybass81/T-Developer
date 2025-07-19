@@ -24,10 +24,9 @@ class QDeveloperAgent:
     
     def __init__(self):
         """Q Developer 에이전트 초기화"""
-        # 기본 작업공간 경로
-        self.default_workspace_dir = settings.Q_DEVELOPER_WORKSPACE
-        os.makedirs(self.default_workspace_dir, exist_ok=True)
-        logger.info(f"Q Developer Agent initialized with default workspace: {self.default_workspace_dir}")
+        self.workspace_dir = settings.Q_DEVELOPER_WORKSPACE
+        os.makedirs(self.workspace_dir, exist_ok=True)
+        logger.info(f"Q Developer Agent initialized with workspace: {self.workspace_dir}")
     
     def execute_task(self, instruction: Dict[str, Any], workspace_dir: str) -> Dict[str, Any]:
         """
@@ -43,17 +42,6 @@ class QDeveloperAgent:
         task_id = instruction.get("task_id", "unknown")
         feature_name = instruction.get("feature_name", "")
         logger.info(f"Executing task {task_id}: {feature_name}")
-        
-        # Amazon Q Developer CLI 존재 여부 확인
-        try:
-            import subprocess
-            result = subprocess.run(["which", "amazonq"], capture_output=True, text=True)
-            if result.returncode == 0:
-                logger.info(f"Amazon Q Developer CLI 경로: {result.stdout.strip()}")
-            else:
-                logger.warning("Amazon Q Developer CLI가 설치되지 않았습니다. Mock 구현으로 폴백됩니다.")
-        except Exception as e:
-            logger.warning(f"Amazon Q Developer CLI 확인 중 오류: {str(e)}")
         
         # 작업 디렉토리 설정
         logger.info(f"Using workspace directory: {workspace_dir}")
@@ -160,115 +148,77 @@ class QDeveloperAgent:
         logger.info(f"Using workspace directory for tests: {workspace_dir}")
         
         try:
-            # tests 디렉토리 존재 확인
-            import os
-            tests_dir = os.path.join(workspace_dir, "tests")
-            has_tests = os.path.isdir(tests_dir) and any(f.endswith(".py") for f in os.listdir(tests_dir)) if os.path.exists(tests_dir) else False
+            # pytest 실행
+            import subprocess
+            import re
             
-            if not has_tests:
-                # 테스트 파일이 없는 경우 - 성공으로 처리
-                logger.info("No test files found in the workspace, considering tests passed")
-                return {
-                    "success": True,
-                    "total": 0,
-                    "passed": 0,
-                    "failed": 0,
-                    "log": "No test files found in the workspace",
-                    "failures": []
-                }
+            # pytest 명령 실행
+            process = subprocess.run(
+                ["pytest", "-v"],
+                cwd=workspace_dir,
+                capture_output=True,
+                text=True
+            )
             
-            # pytest 명령 실행 시도
-            try:
-                import subprocess
-                import re
-                process = subprocess.run(
-                    ["pytest", "-v"],
-                    cwd=workspace_dir,
-                    capture_output=True,
-                    text=True,
-                    timeout=30  # 타임아웃 추가
-                )
+            # 결과 로그
+            log_output = process.stdout + process.stderr
+            
+            # 테스트 결과 파싱
+            # 예: "5 passed, 2 failed in 1.2s"
+            summary_match = re.search(r'(\d+) passed(?:, (\d+) failed)? in', log_output)
+            
+            if summary_match:
+                passed = int(summary_match.group(1))
+                failed = int(summary_match.group(2)) if summary_match.group(2) else 0
+                total = passed + failed
+                success = failed == 0
                 
-                # 결과 로그
-                log_output = process.stdout + process.stderr
+                # 실패한 테스트 추출
+                failures = []
+                if not success:
+                    # 실패한 테스트 함수 이름 추출
+                    failure_matches = re.finditer(r'FAILED ([\w\./]+)::([\w]+)', log_output)
+                    for match in failure_matches:
+                        file_path = match.group(1)
+                        test_name = match.group(2)
+                        failures.append({
+                            "file": file_path,
+                            "test": test_name,
+                            "message": "Test failure"
+                        })
                 
-                # 테스트 결과 파싱
-                summary_match = re.search(r'(\d+) passed(?:, (\d+) failed)? in', log_output)
-                
-                if summary_match:
-                    passed = int(summary_match.group(1))
-                    failed = int(summary_match.group(2)) if summary_match.group(2) else 0
-                    total = passed + failed
-                    success = failed == 0
-                    
-                    # 실패한 테스트 추출
-                    failures = []
-                    if not success:
-                        failure_matches = re.finditer(r'FAILED ([\w\.\/]+)::([\w]+)', log_output)
-                        for match in failure_matches:
-                            file_path = match.group(1)
-                            test_name = match.group(2)
-                            failures.append({
-                                "file": file_path,
-                                "test": test_name,
-                                "message": "Test failure"
-                            })
-                    
-                    result = {
-                        "success": success,
-                        "total": total,
-                        "passed": passed,
-                        "failed": failed,
-                        "log": log_output,
-                        "failures": failures
-                    }
-                else:
-                    # 테스트 결과를 파싱할 수 없는 경우
-                    result = {
-                        "success": process.returncode == 0,
-                        "total": 0,
-                        "passed": 0,
-                        "failed": 0 if process.returncode == 0 else 1,
-                        "log": log_output,
-                        "failures": []
-                    }
-            except FileNotFoundError:
-                # pytest가 설치되지 않은 경우
-                logger.warning("pytest command not found, considering tests passed for testing purposes")
-                return {
-                    "success": True,
-                    "total": 0,
-                    "passed": 0,
-                    "failed": 0,
-                    "log": "pytest command not found in the environment",
-                    "failures": []
+                result = {
+                    "success": success,
+                    "total": total,
+                    "passed": passed,
+                    "failed": failed,
+                    "log": log_output,
+                    "failures": failures
                 }
-            except subprocess.TimeoutExpired:
-                # 테스트 실행 타임아웃
-                logger.error("Test execution timed out after 30 seconds")
-                return {
-                    "success": False,
+            else:
+                # 테스트 결과를 파싱할 수 없는 경우
+                result = {
+                    "success": process.returncode == 0,
                     "total": 0,
                     "passed": 0,
-                    "failed": 1,
-                    "log": "Test execution timed out after 30 seconds",
-                    "failures": [{
-                        "file": "test_runner",
-                        "test": "execution",
-                        "message": "Timeout"
-                    }]
+                    "failed": 0 if process.returncode == 0 else 1,
+                    "log": log_output,
+                    "failures": []
                 }
         except Exception as e:
-            # 오류 발생 시 로그 기록 후 성공으로 처리 (테스트 환경에서만)
+            # 오류 발생 시 가상의 테스트 결과 반환
             logger.error(f"Error running tests: {str(e)}", exc_info=True)
-            logger.warning("Test environment issue detected, considering tests passed for testing purposes")
             result = {
-                "success": True,
+                "success": False,
                 "total": 0,
                 "passed": 0,
-                "failed": 0,
-                "log": f"Test environment issue: {str(e)}. Tests considered passed for testing purposes.",
-                "failures": []
+                "failed": 1,
+                "log": f"Error running tests: {str(e)}",
+                "failures": [{
+                    "file": "test_runner",
+                    "test": "execution",
+                    "message": str(e)
+                }]
             }
         
         logger.info(f"Tests completed: {result['passed']}/{result['total']} passed")
@@ -381,28 +331,21 @@ class QDeveloperAgent:
             logger.info(f"Fixed {result['fixed']} test failures (mock)")
             return result
     
-    def deploy(self, deployment_info: Dict[str, Any], workspace_dir: str = None) -> Dict[str, Any]:
+    def deploy(self, deployment_info: Dict[str, Any]) -> Dict[str, Any]:
         """
         코드 배포
         
         Args:
             deployment_info: 배포 정보
-            workspace_dir: 작업 디렉토리 (선택적)
             
         Returns:
             배포 결과 정보
         """
         logger.info(f"Deploying with info: {deployment_info}")
         
-        # 작업 디렉토리 설정
-        if workspace_dir is None:
-            workspace_dir = self.default_workspace_dir
-        
-        logger.info(f"Using workspace directory for deployment: {workspace_dir}")
-        
         try:
             # 배포 정보 파일로 저장
-            deploy_file = os.path.join(workspace_dir, "deployment_info.json")
+            deploy_file = os.path.join(self.workspace_dir, "deployment_info.json")
             with open(deploy_file, 'w') as f:
                 json.dump(deployment_info, f, indent=2)
             
@@ -416,21 +359,21 @@ class QDeveloperAgent:
             }
             
             # 지시 파일 저장
-            instruction_file = os.path.join(workspace_dir, "deploy_instruction.json")
+            instruction_file = os.path.join(self.workspace_dir, "deploy_instruction.json")
             with open(instruction_file, 'w') as f:
                 json.dump(instruction, f, indent=2)
             
             # Q Developer CLI 호출 (배포 모드)
-            output_file = os.path.join(workspace_dir, "deploy_output.json")
+            output_file = os.path.join(self.workspace_dir, "deploy_output.json")
             
             process = subprocess.run(
                 [
                     "amazonq", "developer", "/deploy",
                     "--instruction-file", instruction_file,
                     "--output-file", output_file,
-                    "--workspace-dir", workspace_dir
+                    "--workspace-dir", self.workspace_dir
                 ],
-                cwd=workspace_dir,
+                cwd=self.workspace_dir,
                 capture_output=True,
                 text=True
             )
@@ -445,7 +388,7 @@ class QDeveloperAgent:
                     result = json.load(f)
                 
                 # 배포 로그 파일 저장
-                log_file = os.path.join(workspace_dir, "deploy.log")
+                log_file = os.path.join(self.workspace_dir, "deploy.log")
                 with open(log_file, 'w') as f:
                     f.write(result.get("log", ""))
                 
@@ -501,27 +444,27 @@ index 0000000..1234567
 --- /dev/null
 +++ b/utils/jwt_util.py
 @@ -0,0 +1,25 @@
-+import jwt
-+from datetime import datetime, timedelta
-+from config import settings
-+
-+def generate_token(user_id, role, expiration_hours=24):
-+    # Generate JWT token for user
-+    payload = {
-+        'sub': str(user_id),
-+        'role': role,
-+        'exp': datetime.utcnow() + timedelta(hours=expiration_hours),
-+        'iat': datetime.utcnow()
-+    }
-+    return jwt.encode(payload, settings.JWT_SECRET, algorithm='HS256')
-+
-+def verify_token(token):
-+    # Verify JWT token and return payload
-+    try:
-+        return jwt.decode(token, settings.JWT_SECRET, algorithms=['HS256'])
-+    except jwt.PyJWTError:
-+        return None
-+
+import jwt
+from datetime import datetime, timedelta
+from config import settings
+
+def generate_token(user_id, role, expiration_hours=24):
+    """Generate JWT token for user"""
+    payload = {
+        'sub': str(user_id),
+        'role': role,
+        'exp': datetime.utcnow() + timedelta(hours=expiration_hours),
+        'iat': datetime.utcnow()
+    }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm='HS256')
+
+def verify_token(token):
+    """Verify JWT token and return payload"""
+    try:
+        return jwt.decode(token, settings.JWT_SECRET, algorithms=['HS256'])
+    except jwt.PyJWTError:
+        return None
+
 +diff --git a/services/auth_service.py b/services/auth_service.py
 index abcdef0..1234567 100644
 --- a/services/auth_service.py
@@ -531,7 +474,7 @@ index abcdef0..1234567 100644
          return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
  
 +    def authenticate(self, username, password):
-+        # Authenticate user and return JWT token
++        """Authenticate user and return JWT token"""
 +        user = self.user_repository.find_by_username(username)
 +        if not user or not self.verify_password(password, user.password_hash):
 +            return None
@@ -549,7 +492,7 @@ index abcdef0..1234567 100644
 +
 +@router.post('/api/authenticate')
 +def authenticate(request):
-+    # Authenticate user and return JWT token
++    """Authenticate user and return JWT token"""
 +    data = request.json()
 +    username = data.get('username')
 +    password = data.get('password')
@@ -558,7 +501,8 @@ index abcdef0..1234567 100644
 +    if not token:
 +        return JSONResponse(status_code=401, content={'error': 'Invalid credentials'})
 +    
-+    return {'token': token}"""
++    return {'token': token}
+"""
         elif "api" in description or "endpoint" in description:
             # API 엔드포인트 구현 시뮬레이션
             modified_files.append("routes/api.py")
@@ -576,14 +520,15 @@ index abcdef0..1234567 100644
 +
 +@router.get('/api/features')
 +def get_features():
-+    # Get all features
++    """Get all features"""
 +    return feature_service.get_all()
 +
 +@router.post('/api/features')
 +def create_feature(request):
-+    # Create new feature
++    """Create new feature"""
 +    data = request.json()
-+    return feature_service.create(data)"""
++    return feature_service.create(data)
+"""
         else:
             # 기본 구현 시뮬레이션
             modified_files.append("main.py")
@@ -600,7 +545,8 @@ index abcdef0..1234567 100644
 +
 +@app.get('/health')
 +def health_check():
-+    return {'status': 'ok'}"""
++    return {'status': 'ok'}
+"""
         
         return {
             "success": True,

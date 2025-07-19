@@ -1,10 +1,10 @@
 """
-SlackNotifier - Slack 알림 도구
+SlackNotifier - Slack 알림 모듈
 
-이 모듈은 Slack을 통해 T-Developer 작업 상태 및 결과를 알리는 기능을 제공합니다.
+작업 상태 변화를 Slack 채널에 알리는 기능을 제공합니다.
 """
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any, Optional
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
@@ -16,95 +16,79 @@ logger = logging.getLogger(__name__)
 
 class SlackNotifier:
     """
-    Slack 알림 도구
+    Slack 알림 모듈
     
-    작업 상태 및 결과를 Slack 채널에 알리는 기능을 제공합니다.
+    작업 상태 변화를 Slack 채널에 알리는 기능을 제공합니다.
     """
     
     def __init__(self):
         """SlackNotifier 초기화"""
         self.token = settings.SLACK_BOT_TOKEN
         self.channel = settings.SLACK_CHANNEL
-        self.client = WebClient(token=self.token) if self.token else None
         self.notification_level = settings.NOTIFICATION_LEVEL
         
-        if self.client:
+        # Slack 클라이언트 초기화
+        if self.token:
+            self.client = WebClient(token=self.token)
             logger.info(f"SlackNotifier initialized for channel: {self.channel}")
         else:
+            self.client = None
             logger.warning("SlackNotifier initialized without token, notifications will be logged only")
     
-    def send_message(self, text: str, blocks: Optional[List[Dict[str, Any]]] = None, channel: Optional[str] = None) -> Optional[str]:
+    def send_message(self, text: str, blocks: List[Dict[str, Any]] = None) -> Optional[str]:
         """
         Slack 메시지 전송
         
         Args:
             text: 메시지 텍스트
-            blocks: 메시지 블록 (옵션)
-            channel: 메시지를 보낼 채널 (옵션, 지정하지 않으면 기본 채널 사용)
+            blocks: 메시지 블록 (Slack Block Kit)
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프 (스레드 ID로 사용)
         """
-        logger.info(f"Sending Slack message: {text[:50]}...")
-        
         if not self.client:
-            logger.info(f"Slack notification (simulated): {text}")
+            logger.info(f"[SLACK MESSAGE] {text}")
             return None
         
-        # 채널이 지정되지 않으면 기본 채널 사용
-        target_channel = channel or self.channel
-        
         try:
-            # Slack API로 메시지 전송
             response = self.client.chat_postMessage(
-                channel=target_channel,
+                channel=self.channel,
                 text=text,
                 blocks=blocks
             )
-            
-            logger.info(f"Slack message sent successfully to {target_channel}")
-            return response["ts"]
+            logger.info(f"Slack message sent to {self.channel}")
+            return response['ts']
         except SlackApiError as e:
-            logger.error(f"Failed to send Slack message: {str(e)}", exc_info=True)
+            logger.error(f"Error sending Slack message: {e}")
             return None
     
-    def send_thread_message(self, thread_ts: str, text: str, 
-                           blocks: Optional[List[Dict[str, Any]]] = None,
-                           channel: Optional[str] = None) -> Optional[str]:
+    def send_thread_message(self, thread_ts: str, text: str, blocks: List[Dict[str, Any]] = None) -> Optional[str]:
         """
         Slack 스레드 메시지 전송
         
         Args:
             thread_ts: 스레드 타임스탬프
             text: 메시지 텍스트
-            blocks: 메시지 블록 (옵션)
-            channel: 메시지를 보낼 채널 (옵션, 지정하지 않으면 기본 채널 사용)
+            blocks: 메시지 블록 (Slack Block Kit)
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        logger.info(f"Sending Slack thread message: {text[:50]}...")
-        
         if not self.client:
-            logger.info(f"Slack thread notification (simulated): {text}")
+            logger.info(f"[SLACK THREAD MESSAGE] {text}")
             return None
         
-        # 채널이 지정되지 않으면 기본 채널 사용
-        target_channel = channel or self.channel
-        
         try:
-            # Slack API로 스레드 메시지 전송
             response = self.client.chat_postMessage(
-                channel=target_channel,
+                channel=self.channel,
                 text=text,
-                thread_ts=thread_ts,
-                blocks=blocks
+                blocks=blocks,
+                thread_ts=thread_ts
             )
-            
-            logger.info(f"Slack thread message sent successfully to {target_channel}")
-            return response["ts"]
+            logger.info(f"Slack thread message sent to {self.channel}")
+            return response['ts']
         except SlackApiError as e:
-            logger.error(f"Failed to send Slack thread message: {str(e)}", exc_info=True)
+            logger.error(f"Error sending Slack thread message: {e}")
             return None
     
     def send_acknowledgment(self, task: Task) -> Optional[str]:
@@ -112,27 +96,19 @@ class SlackNotifier:
         작업 접수 알림
         
         Args:
-            task: 접수된 작업 객체
+            task: Task 객체
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        text = f"✅ Received task {task.task_id}: {task.request}"
+        text = f"✅ 작업 접수: {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Task {task.task_id} received*"
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Request: {task.request}"
+                    "text": f"*작업 접수됨*\n*ID:* {task.task_id}\n*요청:* {task.request}"
                 }
             },
             {
@@ -140,32 +116,17 @@ class SlackNotifier:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"Status: {task.status.value} | Created: {task.created_at}"
+                        "text": f"요청자: {task.user_id} | 상태: {task.status.value}"
                     }
                 ]
             }
         ]
         
-        # 프로젝트에 따른 Slack 채널 가져오기
-        channel = None
-        if task.project_id:
-            try:
-                from context.dynamo.project_store import ProjectStore
-                project = ProjectStore().get_project(task.project_id)
-                if project and 'slack_channel' in project:
-                    channel = project['slack_channel']
-                    logger.info(f"Using project-specific Slack channel: {channel}")
-            except Exception as e:
-                logger.error(f"Failed to get project Slack channel: {e}")
+        ts = self.send_message(text, blocks)
         
-        # 메시지 전송
-        ts = self.send_message(text, blocks, channel=channel)
-        
-        # 작업 객체에 스레드 타임스탬프와 채널 저장
+        # 스레드 타임스탬프 저장
         if ts:
             task.metadata["slack_thread_ts"] = ts
-            if channel:
-                task.metadata["slack_channel"] = channel
             try:
                 # TaskStore를 통해 Task 업데이트 (스레드 ts 저장)
                 from context.dynamo.task_store import TaskStore
@@ -180,24 +141,23 @@ class SlackNotifier:
         계획 수립 시작 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        # 최소 알림 모드에서는 전송하지 않음
+        # minimal 모드에서는 시작 알림 생략
         if self.notification_level == "minimal":
             return None
         
-        text = f"🔄 Planning task {task.task_id}..."
+        text = f"🔄 계획 수립 시작: {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Planning in progress*"
+                    "text": f"*계획 수립 시작*\n*ID:* {task.task_id}\n*요청:* {task.request}"
                 }
             },
             {
@@ -205,45 +165,77 @@ class SlackNotifier:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"Task {task.task_id} | Status: {task.status.value}"
+                        "text": f"상태: {task.status.value}"
                     }
                 ]
             }
         ]
         
-        # 스레드 타임스탬프와 채널 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
+    
+    def send_plan_created(self, task: Task) -> Optional[str]:
+        """
+        계획 수립 완료 알림
+        
+        Args:
+            task: Task 객체
+            
+        Returns:
+            메시지 타임스탬프
+        """
+        text = f"📋 계획 수립 완료: {task.task_id}"
+        
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*계획 수립 완료*\n*ID:* {task.task_id}\n*요약:* {task.plan_summary}"
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"상태: {task.status.value}"
+                    }
+                ]
+            }
+        ]
+        
+        thread_ts = task.metadata.get("slack_thread_ts")
+        if thread_ts:
+            return self.send_thread_message(thread_ts, text, blocks)
+        else:
+            return self.send_message(text, blocks)
     
     def send_coding_started(self, task: Task) -> Optional[str]:
         """
-        코딩 시작 알림
+        코드 구현 시작 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        # 최소 알림 모드에서는 전송하지 않음
+        # minimal 모드에서는 시작 알림 생략
         if self.notification_level == "minimal":
             return None
         
-        text = f"💻 Coding in progress for task {task.task_id}..."
+        text = f"💻 코드 구현 시작: {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Coding in progress*"
+                    "text": f"*코드 구현 시작*\n*ID:* {task.task_id}\n*브랜치:* {task.branch_name}"
                 }
             },
             {
@@ -251,126 +243,102 @@ class SlackNotifier:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"Task {task.task_id} | Status: {task.status.value}"
+                        "text": f"상태: {task.status.value}"
                     }
                 ]
             }
         ]
         
-        # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
     
     def send_coding_completed(self, task: Task) -> Optional[str]:
         """
-        코딩 완료 알림
+        코드 구현 완료 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        # 파일 변경 요약
-        modified_summary = f"{len(task.modified_files)} files modified"
-        created_summary = f"{len(task.created_files)} files created"
+        modified_count = len(task.modified_files)
+        created_count = len(task.created_files)
         
-        text = f"✅ Coding complete for task {task.task_id}: {modified_summary}, {created_summary}"
+        text = f"💾 코드 구현 완료: {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Coding complete*"
+                    "text": f"*코드 구현 완료*\n*ID:* {task.task_id}\n*수정된 파일:* {modified_count}개\n*생성된 파일:* {created_count}개"
                 }
             }
         ]
         
-        # 상세 정보 추가 (verbose 모드)
+        # verbose 모드에서는 파일 목록 추가
         if self.notification_level == "verbose":
-            # 수정된 파일 목록
+            file_list = ""
             if task.modified_files:
-                modified_files_text = "\n".join([f"• {file}" for file in task.modified_files])
-                blocks.append({
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"*Modified files:*\n{modified_files_text}"
-                    }
-                })
-            
-            # 생성된 파일 목록
+                file_list += "*수정된 파일:*\n"
+                for file in task.modified_files:
+                    file_list += f"• {file}\n"
             if task.created_files:
-                created_files_text = "\n".join([f"• {file}" for file in task.created_files])
+                file_list += "*생성된 파일:*\n"
+                for file in task.created_files:
+                    file_list += f"• {file}\n"
+            
+            if file_list:
                 blocks.append({
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"*Created files:*\n{created_files_text}"
+                        "text": file_list
                     }
                 })
-        else:
-            # 간단한 요약
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"{modified_summary}, {created_summary}"
-                }
-            })
         
-        # 상태 정보
         blocks.append({
             "type": "context",
             "elements": [
                 {
                     "type": "mrkdwn",
-                    "text": f"Task {task.task_id} | Status: {task.status.value} | Branch: {task.branch_name}"
+                    "text": f"커밋: {task.commit_hash} | 상태: {task.status.value}"
                 }
             ]
         })
         
-        # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
     
     def send_testing_started(self, task: Task) -> Optional[str]:
         """
         테스트 시작 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        # 최소 알림 모드에서는 전송하지 않음
+        # minimal 모드에서는 시작 알림 생략
         if self.notification_level == "minimal":
             return None
         
-        text = f"🧪 Running tests for task {task.task_id}..."
+        text = f"🧪 테스트 시작: {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Running tests*"
+                    "text": f"*테스트 시작*\n*ID:* {task.task_id}\n*브랜치:* {task.branch_name}"
                 }
             },
             {
@@ -378,41 +346,36 @@ class SlackNotifier:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"Task {task.task_id} | Status: {task.status.value}"
+                        "text": f"상태: {task.status.value}"
                     }
                 ]
             }
         ]
         
-        # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
     
     def send_tests_passed(self, task: Task) -> Optional[str]:
         """
         테스트 통과 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        text = f"✅ All tests passed for task {task.task_id}"
+        text = f"✅ 테스트 통과: {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*All tests passed*"
+                    "text": f"*테스트 통과*\n*ID:* {task.task_id}\n*브랜치:* {task.branch_name}"
                 }
             },
             {
@@ -420,95 +383,95 @@ class SlackNotifier:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"Task {task.task_id} | Status: {task.status.value}"
+                        "text": f"상태: {task.status.value}"
                     }
                 ]
             }
         ]
         
-        # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
     
-    def send_test_failure(self, task: Task) -> Optional[str]:
+    def send_test_failure(self, task: Task, failures: List[Dict[str, Any]]) -> Optional[str]:
         """
         테스트 실패 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
+            failures: 실패한 테스트 정보
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        text = f"❌ Tests failed for task {task.task_id}"
+        text = f"❌ 테스트 실패: {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Tests failed*"
+                    "text": f"*테스트 실패*\n*ID:* {task.task_id}\n*실패한 테스트:* {len(failures)}개"
                 }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Error: {task.error}"
-                }
-            },
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f"Task {task.task_id} | Status: {task.status.value}"
-                    }
-                ]
             }
         ]
         
-        # 스레드 타임스탬프 가져오기
-        thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
+        # verbose 모드에서는 실패 목록 추가
+        if self.notification_level == "verbose" and failures:
+            failure_list = "*실패한 테스트:*\n"
+            for failure in failures:
+                failure_list += f"• {failure.get('file')}::{failure.get('test')}\n"
+            
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": failure_list
+                }
+            })
         
-        # 메시지 전송
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"상태: {task.status.value}"
+                }
+            ]
+        })
+        
+        thread_ts = task.metadata.get("slack_thread_ts")
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
     
-    def send_test_fix_attempt(self, task: Task, attempt: int) -> Optional[str]:
+    def send_test_fix_attempt(self, task: Task, attempt: int, max_retries: int) -> Optional[str]:
         """
-        테스트 수정 시도 알림
+        테스트 실패 수정 시도 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
             attempt: 시도 횟수
+            max_retries: 최대 재시도 횟수
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        # 최소 알림 모드에서는 전송하지 않음
+        # minimal 모드에서는 시도 알림 생략
         if self.notification_level == "minimal":
             return None
         
-        text = f"🔄 Fixing test failures for task {task.task_id} (attempt {attempt})..."
+        text = f"🔄 테스트 실패 수정 시도 ({attempt}/{max_retries}): {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Fixing test failures* (attempt {attempt})"
+                    "text": f"*테스트 실패 수정 시도 ({attempt}/{max_retries})*\n*ID:* {task.task_id}"
                 }
             },
             {
@@ -516,41 +479,40 @@ class SlackNotifier:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"Task {task.task_id} | Status: {task.status.value}"
+                        "text": f"상태: {task.status.value}"
                     }
                 ]
             }
         ]
         
-        # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
     
     def send_deploying(self, task: Task) -> Optional[str]:
         """
         배포 시작 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        text = f"🚀 Deploying task {task.task_id}..."
+        # minimal 모드에서는 시작 알림 생략
+        if self.notification_level == "minimal":
+            return None
         
-        # 메시지 블록 구성
+        text = f"🚀 배포 시작: {task.task_id}"
+        
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Deploying*"
+                    "text": f"*배포 시작*\n*ID:* {task.task_id}\n*브랜치:* {task.branch_name}"
                 }
             },
             {
@@ -558,258 +520,190 @@ class SlackNotifier:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"Task {task.task_id} | Status: {task.status.value}"
+                        "text": f"상태: {task.status.value}"
                     }
                 ]
             }
         ]
         
-        # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
     
     def send_deployment_success(self, task: Task) -> Optional[str]:
         """
         배포 성공 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        # 배포 URL 포함
-        url_text = f" at {task.deployed_url}" if task.deployed_url else ""
-        version_text = f" (version {task.deployed_version})" if task.deployed_version else ""
+        text = f"🎉 배포 성공: {task.task_id}"
         
-        text = f"🚀 Deployment successful for task {task.task_id}{url_text}{version_text}"
-        
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Deployment successful*"
+                    "text": f"*배포 성공*\n*ID:* {task.task_id}\n*버전:* {task.deployed_version or 'N/A'}"
                 }
             }
         ]
         
-        # URL 추가
+        # PR URL이 있으면 추가
+        if task.pr_url:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*PR:* <{task.pr_url}|GitHub에서 보기>"
+                }
+            })
+        
+        # 배포 URL이 있으면 추가
         if task.deployed_url:
             blocks.append({
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"Deployed at: <{task.deployed_url}|{task.deployed_url}>"
+                    "text": f"*배포 URL:* <{task.deployed_url}|서비스 확인하기>"
                 }
             })
         
-        # 버전 추가
-        if task.deployed_version:
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Version: {task.deployed_version}"
-                }
-            })
-        
-        # PR 링크 추가
-        if task.pr_url:
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Pull Request: <{task.pr_url}|View PR>"
-                }
-            })
-        
-        # 상태 정보
         blocks.append({
             "type": "context",
             "elements": [
                 {
                     "type": "mrkdwn",
-                    "text": f"Task {task.task_id} | Status: {task.status.value}"
+                    "text": f"상태: {task.status.value}"
                 }
             ]
         })
         
-        # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
     
-    def send_deployment_failure(self, task: Task) -> Optional[str]:
+    def send_deployment_failure(self, task: Task, error_message: str) -> Optional[str]:
         """
         배포 실패 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
+            error_message: 오류 메시지
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        text = f"⚠️ Deployment failed for task {task.task_id}"
+        text = f"⚠️ 배포 실패: {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Deployment failed*"
+                    "text": f"*배포 실패*\n*ID:* {task.task_id}\n*오류:* {error_message}"
                 }
             },
             {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Error: {task.error}"
-                }
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"상태: {task.status.value}"
+                    }
+                ]
             }
         ]
         
-        # PR 링크 추가
-        if task.pr_url:
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Pull Request: <{task.pr_url}|View PR>"
-                }
-            })
-        
-        # 상태 정보
-        blocks.append({
-            "type": "context",
-            "elements": [
-                {
-                    "type": "mrkdwn",
-                    "text": f"Task {task.task_id} | Status: {task.status.value}"
-                }
-            ]
-        })
-        
-        # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
     
     def send_completion(self, task: Task) -> Optional[str]:
         """
         작업 완료 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        text = f"🎉 Task {task.task_id} completed: {task.request}"
+        text = f"✅ 작업 완료: {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Task completed*"
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Request: {task.request}"
+                    "text": f"*작업 완료*\n*ID:* {task.task_id}\n*요청:* {task.request}"
                 }
             }
         ]
         
-        # 배포 정보 추가
-        if task.deployed and task.deployed_url:
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Deployed at: <{task.deployed_url}|{task.deployed_url}>"
-                }
-            })
-        
-        # PR 링크 추가
+        # PR URL이 있으면 추가
         if task.pr_url:
             blocks.append({
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"Pull Request: <{task.pr_url}|View PR>"
+                    "text": f"*PR:* <{task.pr_url}|GitHub에서 보기>"
                 }
             })
         
-        # 상태 정보
+        # 배포 URL이 있으면 추가
+        if task.deployed_url:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*배포 URL:* <{task.deployed_url}|서비스 확인하기>"
+                }
+            })
+        
         blocks.append({
             "type": "context",
             "elements": [
                 {
                     "type": "mrkdwn",
-                    "text": f"Task {task.task_id} | Status: {task.status.value} | Completed at: {task.completed_at}"
+                    "text": f"상태: {task.status.value} | 완료 시간: {task.completed_at}"
                 }
             ]
         })
         
-        # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)
     
     def send_error(self, task: Task) -> Optional[str]:
         """
         오류 알림
         
         Args:
-            task: 작업 객체
+            task: Task 객체
             
         Returns:
-            메시지 타임스탬프 또는 None
+            메시지 타임스탬프
         """
-        text = f"⚠️ Error in task {task.task_id}: {task.error}"
+        text = f"❌ 오류 발생: {task.task_id}"
         
-        # 메시지 블록 구성
         blocks = [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"*Error occurred*"
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Error: {task.error}"
+                    "text": f"*오류 발생*\n*ID:* {task.task_id}\n*오류:* {task.error or '알 수 없는 오류'}"
                 }
             },
             {
@@ -817,68 +711,14 @@ class SlackNotifier:
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": f"Task {task.task_id} | Status: {task.status.value}"
+                        "text": f"상태: {task.status.value}"
                     }
                 ]
             }
         ]
         
-        # 스레드 타임스탬프 가져오기
         thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
         if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
+            return self.send_thread_message(thread_ts, text, blocks)
         else:
-            return self.send_message(text, blocks, channel=channel)
-            
-    def send_plan_created(self, task: Task, plan_summary: str) -> Optional[str]:
-        """
-        계획 수립 완료 알림
-        
-        Args:
-            task: 작업 객체
-            plan_summary: 계획 요약
-            
-        Returns:
-            메시지 타임스탬프 또는 None
-        """
-        text = f"📋 Plan created for task {task.task_id}: {plan_summary}"
-        
-        # 메시지 블록 구성
-        blocks = [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"*Plan created*"
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Plan: {plan_summary}"
-                }
-            },
-            {
-                "type": "context",
-                "elements": [
-                    {
-                        "type": "mrkdwn",
-                        "text": f"Task {task.task_id} | Status: {task.status.value}"
-                    }
-                ]
-            }
-        ]
-        
-        # 스레드 타임스탬프와 채널 가져오기
-        thread_ts = task.metadata.get("slack_thread_ts")
-        channel = task.metadata.get("slack_channel")
-        
-        # 메시지 전송
-        if thread_ts:
-            return self.send_thread_message(thread_ts, text, blocks, channel=channel)
-        else:
-            return self.send_message(text, blocks, channel=channel)
+            return self.send_message(text, blocks)

@@ -1,3 +1,3 @@
 """
-T-Developer Q Developer 에이전트 패키지
+Q Developer 에이전트 패키지
 """
