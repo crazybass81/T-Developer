@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import '../styles/ProjectCreationPage.css';
 
 function ProjectCreationPage() {
@@ -13,6 +13,10 @@ function ProjectCreationPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState({
+    github: false,
+    slack: false
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -20,6 +24,47 @@ function ProjectCreationPage() {
       ...prev,
       [name]: value
     }));
+    
+    // 연결 상태 초기화 (값이 변경되면)
+    if (name === 'githubRepo' && connectionStatus.github) {
+      setConnectionStatus(prev => ({ ...prev, github: false }));
+    } else if (name === 'slackChannel' && connectionStatus.slack) {
+      setConnectionStatus(prev => ({ ...prev, slack: false }));
+    }
+  };
+  
+  const handleConnect = (type) => {
+    if (type === 'github') {
+      if (!projectData.githubRepo.trim()) {
+        alert('GitHub 저장소 URL을 입력해주세요.');
+        return;
+      }
+      
+      // GitHub 저장소 형식 검증 (간단한 검증)
+      const githubRegex = /^(https?:\/\/)?(www\.)?github\.com\/[\w.-]+\/[\w.-]+$/;
+      if (!githubRegex.test(projectData.githubRepo)) {
+        alert('유효한 GitHub 저장소 URL을 입력해주세요. (예: github.com/username/repo)');
+        return;
+      }
+      
+      setConnectionStatus(prev => ({ ...prev, github: true }));
+      alert(`GitHub 저장소 "${projectData.githubRepo}"가 연결되었습니다.`);
+    } else if (type === 'slack') {
+      if (!projectData.slackChannel.trim()) {
+        alert('Slack 채널을 입력해주세요.');
+        return;
+      }
+      
+      // Slack 채널 형식 검증 (간단한 검증)
+      const slackRegex = /^#[\w-]+$/;
+      if (!slackRegex.test(projectData.slackChannel)) {
+        alert('유효한 Slack 채널 이름을 입력해주세요. (예: #channel-name)');
+        return;
+      }
+      
+      setConnectionStatus(prev => ({ ...prev, slack: true }));
+      alert(`Slack 채널 "${projectData.slackChannel}"이 연결되었습니다.`);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -28,8 +73,25 @@ function ProjectCreationPage() {
     setError(null);
 
     try {
-      // API 호출 - 프로젝트 생성 API 호출
-      const response = await axios.post('/api/projects', {
+      // GitHub와 Slack 연결 상태 확인
+      if (!connectionStatus.github) {
+        alert('GitHub 저장소를 연결해주세요.');
+        setLoading(false);
+        return;
+      }
+      
+      if (!connectionStatus.slack) {
+        alert('Slack 채널을 연결해주세요.');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Submitting to API:', api.defaults.baseURL + '/api/projects');
+      
+      // 임시 처리: API 호출 없이 다음 페이지로 이동
+      // 실제 API가 준비되면 아래 주석을 해제하세요
+      /*
+      const response = await api.post('/api/projects', {
         name: projectData.name,
         description: projectData.description,
         github_repo: projectData.githubRepo,
@@ -37,6 +99,7 @@ function ProjectCreationPage() {
       });
       
       console.log('Project created:', response.data);
+      */
       
       // 프로젝트 생성 후 작업 생성 페이지로 이동
       navigate('/tasks/new');
@@ -92,8 +155,16 @@ function ProjectCreationPage() {
               required
               placeholder="예: github.com/사용자/govchat"
             />
-            <button type="button" className="connect-button">연결</button>
+            <button 
+              type="button" 
+              className={`connect-button ${connectionStatus.github ? 'connected' : ''}`}
+              onClick={() => handleConnect('github')}
+              title="GitHub 저장소 연결 확인"
+            >
+              {connectionStatus.github ? '✓ 연결됨' : '연결'}
+            </button>
           </div>
+          {connectionStatus.github && <div className="connection-info">GitHub 저장소가 연결되었습니다.</div>}
         </div>
         
         <div className="form-group">
@@ -108,14 +179,22 @@ function ProjectCreationPage() {
               required
               placeholder="예: #govchat-dev"
             />
-            <button type="button" className="connect-button">연결</button>
+            <button 
+              type="button" 
+              className={`connect-button ${connectionStatus.slack ? 'connected' : ''}`}
+              onClick={() => handleConnect('slack')}
+              title="Slack 채널 연결 확인"
+            >
+              {connectionStatus.slack ? '✓ 연결됨' : '연결'}
+            </button>
           </div>
+          {connectionStatus.slack && <div className="connection-info">Slack 채널이 연결되었습니다.</div>}
         </div>
         
         <button 
           type="submit" 
           className="submit-button"
-          disabled={loading}
+          disabled={loading || !connectionStatus.github || !connectionStatus.slack}
         >
           {loading ? '생성 중...' : '프로젝트 생성'}
         </button>

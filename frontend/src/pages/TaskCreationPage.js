@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import taskService from '../api/taskService';
 import '../styles/TaskCreationPage.css';
 
 function TaskCreationPage() {
@@ -15,11 +15,23 @@ function TaskCreationPage() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await axios.get('/api/projects');
+        // 임시 처리: API 호출 대신 더미 데이터 사용
+        // 실제 API가 준비되면 아래 주석을 해제하세요
+        /*
+        const response = await taskService.getProjects();
         setProjects(response.data);
         if (response.data.length > 0) {
           setSelectedProject(response.data[0].project_id);
         }
+        */
+        
+        // 더미 데이터
+        const dummyProjects = [
+          { project_id: 'proj-1', name: 'GovChat' },
+          { project_id: 'proj-2', name: '테스트 프로젝트' }
+        ];
+        setProjects(dummyProjects);
+        setSelectedProject('proj-1');
       } catch (err) {
         console.error('Error fetching projects:', err);
         setError('프로젝트 목록을 가져오는 중 오류가 발생했습니다.');
@@ -35,8 +47,10 @@ function TaskCreationPage() {
     setError(null);
 
     try {
-      // API 호출
-      const response = await axios.post('/api/tasks', {
+      // 임시 처리: API 호출 대신 직접 다음 페이지로 이동
+      // 실제 API가 준비되면 아래 주석을 해제하세요
+      /*
+      const response = await taskService.createTask({
         request,
         user_id: 'web-user', // 실제 구현에서는 인증된 사용자 ID 사용
         project_id: selectedProject
@@ -44,6 +58,12 @@ function TaskCreationPage() {
       
       // 작업 ID를 받아 모니터링 페이지로 이동
       const taskId = response.data.task_id;
+      */
+      
+      // 임시 작업 ID 생성
+      const taskId = 'TASK-' + Date.now();
+      console.log('Would create task:', { request, project_id: selectedProject });
+      
       navigate(`/tasks/${taskId}/monitor`);
     } catch (err) {
       console.error('Error creating task:', err);

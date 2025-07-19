@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import taskService from '../api/taskService';
 import '../styles/TaskMonitoringPage.css';
 
 function TaskMonitoringPage() {
@@ -30,11 +30,50 @@ function TaskMonitoringPage() {
   useEffect(() => {
     const fetchTask = async () => {
       try {
-        const response = await axios.get(`/api/tasks/${taskId}`);
+        // 임시 처리: API 호출 대신 더미 데이터 사용
+        // 실제 API가 준비되면 아래 주석을 해제하세요
+        /*
+        const response = await taskService.getTask(taskId);
         setTask(response.data);
+        */
+        
+        // 더미 데이터 - 시간에 따라 상태가 변하도록 설정
+        const now = new Date();
+        const startTime = new Date(parseInt(taskId.split('-')[1])); // TASK-timestamp 형식 가정
+        const elapsedSeconds = Math.floor((now - startTime) / 1000);
+        
+        let status = 'received';
+        if (elapsedSeconds > 3) status = 'planning';
+        if (elapsedSeconds > 6) status = 'planned';
+        if (elapsedSeconds > 9) status = 'coding';
+        if (elapsedSeconds > 12) status = 'coded';
+        if (elapsedSeconds > 15) status = 'testing';
+        if (elapsedSeconds > 18) status = 'tested';
+        if (elapsedSeconds > 21) status = 'deploying';
+        if (elapsedSeconds > 24) status = 'deployed';
+        if (elapsedSeconds > 27) status = 'completed';
+        
+        const dummyTask = {
+          task_id: taskId,
+          request: '사용자가 질문을 입력하면 관련된 정부 지원사업을 검색하여 추천하는 기능을 추가해줘.',
+          status: status,
+          created_at: startTime.toISOString(),
+          updated_at: now.toISOString(),
+          plan_summary: '정부 지원사업 검색 및 추천 기능 구현 계획',
+          modified_files: ['src/services/searchService.js', 'src/controllers/chatController.js'],
+          created_files: ['src/services/governmentSupportService.js'],
+          branch_name: `feature/${taskId}`,
+          commit_hash: 'abc123def456',
+          test_success: true,
+          pr_url: 'https://github.com/example/repo/pull/123',
+          deployed_version: 'v1.0.0',
+          deployed_url: 'https://example.com/app'
+        };
+        
+        setTask(dummyTask);
         
         // 작업 상태에 따라 이벤트 생성
-        generateEvents(response.data);
+        generateEvents(dummyTask);
       } catch (err) {
         console.error('Error fetching task:', err);
         setError('작업 정보를 가져오는 중 오류가 발생했습니다.');

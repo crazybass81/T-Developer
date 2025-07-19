@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import taskService from '../api/taskService';
+import axios from '../api/axios';
 import '../styles/TaskReviewPage.css';
 
 function TaskReviewPage() {
@@ -15,14 +16,40 @@ function TaskReviewPage() {
   useEffect(() => {
     const fetchTask = async () => {
       try {
-        const response = await axios.get(`/api/tasks/${taskId}`);
+        // 임시 처리: API 호출 대신 더미 데이터 사용
+        // 실제 API가 준비되면 아래 주석을 해제하세요
+        /*
+        const response = await taskService.getTask(taskId);
         setTask(response.data);
+        */
+        
+        // 더미 데이터
+        const dummyTask = {
+          task_id: taskId,
+          request: '사용자가 질문을 입력하면 관련된 정부 지원사업을 검색하여 추천하는 기능을 추가해줘.',
+          status: 'completed',
+          created_at: new Date(Date.now() - 30000).toISOString(),
+          updated_at: new Date().toISOString(),
+          plan_summary: '정부 지원사업 검색 및 추천 기능 구현 계획',
+          modified_files: ['src/services/searchService.js', 'src/controllers/chatController.js'],
+          created_files: ['src/services/governmentSupportService.js'],
+          branch_name: `feature/${taskId}`,
+          commit_hash: 'abc123def456',
+          test_success: true,
+          pr_url: 'https://github.com/example/repo/pull/123',
+          deployed_version: 'v1.0.0',
+          deployed_url: 'https://example.com/app',
+          plan_s3_key: 'plans/task-123-plan.json',
+          test_log_s3_key: 'logs/task-123-test.log'
+        };
+        
+        setTask(dummyTask);
         
         // 첫 번째 파일 선택 (있는 경우)
-        if (response.data.modified_files && response.data.modified_files.length > 0) {
-          setSelectedFile(response.data.modified_files[0]);
-        } else if (response.data.created_files && response.data.created_files.length > 0) {
-          setSelectedFile(response.data.created_files[0]);
+        if (dummyTask.modified_files && dummyTask.modified_files.length > 0) {
+          setSelectedFile(dummyTask.modified_files[0]);
+        } else if (dummyTask.created_files && dummyTask.created_files.length > 0) {
+          setSelectedFile(dummyTask.created_files[0]);
         }
       } catch (err) {
         console.error('Error fetching task:', err);
@@ -42,10 +69,177 @@ function TaskReviewPage() {
     const fetchFileDiff = async () => {
       try {
         setFileContent('파일 내용을 불러오는 중...');
+        
+        // 임시 처리: API 호출 대신 더미 데이터 사용
+        // 실제 API가 준비되면 아래 주석을 해제하세요
+        /*
         // 파일 경로를 URL 인코딩하여 API 호출
         const encodedPath = encodeURIComponent(selectedFile);
         const response = await axios.get(`/api/tasks/${taskId}/diff/${encodedPath}`);
         setFileContent(response.data.diff);
+        */
+        
+        // 더미 diff 데이터
+        let dummyDiff = '';
+        
+        if (selectedFile === 'src/services/searchService.js') {
+          dummyDiff = `diff --git a/src/services/searchService.js b/src/services/searchService.js
+index 1234567..abcdefg 100644
+--- a/src/services/searchService.js
++++ b/src/services/searchService.js
+@@ -10,6 +10,7 @@ class SearchService {
+   constructor() {
+     this.db = database.getConnection();
+     this.logger = new Logger('SearchService');
++    this.govSupportService = new GovernmentSupportService();
+   }
+
+   /**
+@@ -25,6 +26,25 @@ class SearchService {
+     return results;
+   }
+
++  /**
++   * 사용자 질문에 관련된 정부 지원사업을 검색합니다.
++   * @param {string} query - 사용자 질문
++   * @param {number} limit - 최대 결과 수 (기본값: 3)
++   * @returns {Array} 관련 지원사업 목록
++   */
++  async searchGovernmentSupport(query, limit = 3) {
++    this.logger.info(\`정부 지원사업 검색: \${query}\`);
++    
++    // 키워드 추출 및 정부 지원사업 검색
++    const keywords = await this.extractKeywords(query);
++    const supportPrograms = await this.govSupportService.findByKeywords(keywords, limit);
++    
++    this.logger.info(\`검색 결과: \${supportPrograms.length}개 지원사업 발견\`);
++    
++    return supportPrograms;
++  }
++
+   /**
+    * 검색 결과를 사용자 선호도에 따라 정렬합니다.
+    * @param {Array} results - 검색 결과 배열`;
+        } else if (selectedFile === 'src/controllers/chatController.js') {
+          dummyDiff = `diff --git a/src/controllers/chatController.js b/src/controllers/chatController.js
+index 9876543..fedcba0 100644
+--- a/src/controllers/chatController.js
++++ b/src/controllers/chatController.js
+@@ -2,6 +2,7 @@ const ChatService = require('../services/chatService');
+ const UserService = require('../services/userService');
+ const ResponseFormatter = require('../utils/responseFormatter');
+ const SearchService = require('../services/searchService');
++const { SUPPORT_PROGRAM_INTENT } = require('../constants/intents');
+
+ class ChatController {
+   constructor() {
+@@ -35,6 +36,21 @@ class ChatController {
+     }
+   }
+
++  /**
++   * 정부 지원사업 추천 처리
++   */
++  async handleSupportProgramRecommendation(req, res) {
++    try {
++      const { query } = req.body;
++      const searchService = new SearchService();
++      const programs = await searchService.searchGovernmentSupport(query);
++      
++      return res.json(ResponseFormatter.success(programs));
++    } catch (error) {
++      this.logger.error(\`지원사업 추천 오류: \${error.message}\`);
++      return res.status(500).json(ResponseFormatter.error('지원사업 검색 중 오류가 발생했습니다'));
++    }
++  }
++
+   /**
+    * 사용자 메시지 처리
+    */
+@@ -48,6 +64,11 @@ class ChatController {
+       // 의도 분석
+       const intent = await this.chatService.analyzeIntent(message);
+       
++      // 정부 지원사업 검색 의도인 경우
++      if (intent === SUPPORT_PROGRAM_INTENT) {
++        return await this.handleSupportProgramRecommendation(req, res);
++      }
++      
+       // 일반 대화 처리
+       const response = await this.chatService.generateResponse(message, userId);`;
+        } else if (selectedFile === 'src/services/governmentSupportService.js') {
+          dummyDiff = `diff --git a/src/services/governmentSupportService.js b/src/services/governmentSupportService.js
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/src/services/governmentSupportService.js
+@@ -0,0 +1,62 @@
++/**
++ * 정부 지원사업 검색 및 추천 서비스
++ */
++const database = require('../config/database');
++const Logger = require('../utils/logger');
++
++class GovernmentSupportService {
++  constructor() {
++    this.db = database.getConnection();
++    this.logger = new Logger('GovernmentSupportService');
++    this.collection = 'government_support_programs';
++  }
++
++  /**
++   * 키워드 기반으로 관련 정부 지원사업을 검색합니다.
++   * @param {Array} keywords - 검색 키워드 배열
++   * @param {number} limit - 최대 결과 수
++   * @returns {Array} 지원사업 목록
++   */
++  async findByKeywords(keywords, limit = 3) {
++    this.logger.info(\`키워드로 지원사업 검색: \${keywords.join(', ')}\`);
++    
++    try {
++      // 키워드 기반 검색 쿼리 구성
++      const query = {
++        $or: keywords.map(keyword => ({
++          $or: [
++            { title: { $regex: keyword, $options: 'i' } },
++            { description: { $regex: keyword, $options: 'i' } },
++            { target: { $regex: keyword, $options: 'i' } },
++            { tags: { $in: [keyword] } }
++          ]
++        }))
++      };
++      
++      // 데이터베이스 검색 실행
++      const programs = await this.db.collection(this.collection)
++        .find(query)
++        .sort({ relevance: -1, deadline: 1 })
++        .limit(limit)
++        .toArray();
++      
++      return programs.map(program => ({
++        id: program._id,
++        title: program.title,
++        organization: program.organization,
++        description: program.description,
++        eligibility: program.eligibility,
++        benefits: program.benefits,
++        deadline: program.deadline,
++        applicationUrl: program.applicationUrl,
++        contactInfo: program.contactInfo
++      }));
++    } catch (error) {
++      this.logger.error(\`지원사업 검색 오류: \${error.message}\`);
++      throw new Error(\`정부 지원사업 검색 중 오류 발생: \${error.message}\`);
++    }
++  }
++}
++
++module.exports = GovernmentSupportService;`;
+        } else {
+          dummyDiff = `// ${selectedFile} 파일의 diff 내용이 준비되지 않았습니다.`;
+        }
+        
+        setFileContent(dummyDiff);
       } catch (err) {
         console.error('Error fetching file diff:', err);
         setFileContent(`// ${selectedFile} 파일의 diff를 가져오는 중 오류가 발생했습니다.\n// ${err.message}`);
@@ -111,7 +305,7 @@ function TaskReviewPage() {
         {task.plan_s3_key && (
           <button 
             className="view-details-button"
-            onClick={() => window.open(`/api/tasks/${taskId}/plan`, '_blank')}
+            onClick={() => alert('계획 상세 보기 기능은 아직 구현되지 않았습니다.')}
           >
             계획 상세 보기
           </button>
@@ -188,7 +382,7 @@ function TaskReviewPage() {
         {task.test_log_s3_key && (
           <button 
             className="view-details-button"
-            onClick={() => window.open(`/api/tasks/${taskId}/test-log`, '_blank')}
+            onClick={() => alert('테스트 로그 보기 기능은 아직 구현되지 않았습니다.')}
           >
             테스트 로그 보기
           </button>
