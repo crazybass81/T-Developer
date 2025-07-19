@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import taskService from '../api/taskService';
 import '../styles/ProjectCreationPage.css';
 
 function ProjectCreationPage() {
@@ -89,14 +90,23 @@ function ProjectCreationPage() {
       console.log('Submitting to API:', api.defaults.baseURL + '/api/projects');
       
       // 실제 API 호출
-      const response = await api.post('/api/projects', {
+      const projectPayload = {
         name: projectData.name,
         description: projectData.description,
         github_repo: projectData.githubRepo,
         slack_channel: projectData.slackChannel
-      });
+      };
       
-      console.log('Project created:', response.data);
+      console.log('Creating project with payload:', projectPayload);
+      const response = await taskService.createProject(projectPayload);
+      
+      console.log('Project created successfully:', response.data);
+      
+      // 로컬 스토리지에 최근 생성된 프로젝트 ID 저장 (선택사항)
+      if (response.data && response.data.project_id) {
+        localStorage.setItem('lastCreatedProjectId', response.data.project_id);
+        console.log('Saved project ID to localStorage:', response.data.project_id);
+      }
       
       // 프로젝트 생성 후 작업 생성 페이지로 이동
       navigate('/tasks/new');

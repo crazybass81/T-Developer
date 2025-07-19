@@ -6,3 +6,4 @@ slack-sdk==3.23.0
 requests==2.31.0
 pydantic==2.4.2
 openai==1.2.4
+psutil==5.9.5

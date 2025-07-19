@@ -47,9 +47,34 @@ class SlackNotifier:
         Returns:
             메시지 타임스탬프
         """
-        # 프로젝트별 Slack 채널 확인
+        # 프로젝트별 Slack 채널 확인 (메타데이터에서 먼저 확인)
         project_slack_channel = task.metadata.get("slack_channel")
         thread_ts = task.metadata.get("slack_thread_ts")
+        
+        # 메타데이터에 없으면 프로젝트 정보에서 확인
+        if not project_slack_channel and task.project_id:
+            try:
+                from context.dynamo.project_store import ProjectStore
+                project_store = ProjectStore()
+                project = project_store.get_project(task.project_id)
+                if project and "slack_channel" in project:
+                    project_slack_channel = project["slack_channel"]
+                    # 메타데이터에 저장하여 다음 호출에서 재사용
+                    task.metadata["slack_channel"] = project_slack_channel
+                    logger.info(f"Found project-specific Slack channel from project {task.project_id}: {project_slack_channel}")
+                    
+                    # TaskStore를 통해 Task 업데이트 (메타데이터 저장)
+                    try:
+                        from context.dynamo.task_store import TaskStore
+                        TaskStore().update_task(task)
+                        logger.info(f"Updated task metadata with project Slack channel: {project_slack_channel}")
+                    except Exception as e:
+                        logger.error(f"Failed to save project Slack channel to task metadata: {e}")
+            except Exception as e:
+                logger.warning(f"Failed to get project Slack channel for task {task.task_id}: {e}")
+        
+        if project_slack_channel:
+            logger.info(f"Using project-specific Slack channel for task {task.task_id}: {project_slack_channel}")
         
         if thread_ts:
             return self.send_thread_message(thread_ts, text, blocks, channel=project_slack_channel)
@@ -704,5 +729,81 @@ class SlackNotifier:
                 ]
             }
         ]
+        
+        return self._send_task_message(task, text, blocks)
+    def send_message(self, task: Task, message: str) -> Optional[str]:
+        """
+        작업에 대한 일반 메시지 전송
+        
+        Args:
+            task: Task 객체
+            message: 메시지 내용
+            
+        Returns:
+            메시지 타임스탬프
+        """
+        text = f"ℹ️ {task.task_id}: {message}"
+        
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*{task.task_id}*\n{message}"
+                }
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"상태: {task.status.value}"
+                    }
+                ]
+            }
+        ]
+        
+        return self._send_task_message(task, text, blocks)
+    def send_review_pending(self, task: Task) -> Optional[str]:
+        """
+        코드 리뷰 대기 알림
+        
+        Args:
+            task: Task 객체
+            
+        Returns:
+            메시지 타임스탬프
+        """
+        text = f"👀 코드 리뷰 대기: {task.task_id}"
+        
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*코드 리뷰 대기*\n*ID:* {task.task_id}\n*요청:* {task.request}"
+                }
+            }
+        ]
+        
+        # PR URL이 있으면 추가
+        if task.pr_url:
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*PR:* <{task.pr_url}|GitHub에서 리뷰하기>"
+                }
+            })
+        
+        blocks.append({
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"상태: {task.status.value}"
+                }
+            ]
+        })
         
         return self._send_task_message(task, text, blocks)

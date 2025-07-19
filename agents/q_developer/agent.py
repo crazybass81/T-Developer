@@ -138,9 +138,26 @@ class QDeveloperAgent:
                 
         except Exception as e:
             logger.error(f"Error executing task with Q Developer: {str(e)}", exc_info=True)
-            logger.warning("Falling back to mock implementation")
             
-            # 오류 발생 시 가상 구현으로 폴백
+            # Try OpenAI code generator if available
+            try:
+                from agents.q_developer.openai_generator import OpenAICodeGenerator
+                openai_generator = OpenAICodeGenerator()
+                
+                if openai_generator.is_available():
+                    logger.info("Falling back to OpenAI code generator")
+                    result = openai_generator.generate_code(instruction, workspace_dir)
+                    if result.get("success", False):
+                        return result
+                    else:
+                        logger.warning(f"OpenAI code generation failed: {result.get('error')}")
+                else:
+                    logger.warning("OpenAI API key not available, falling back to mock implementation")
+            except Exception as openai_error:
+                logger.error(f"Error with OpenAI code generator: {str(openai_error)}", exc_info=True)
+            
+            # If OpenAI fails or is not available, fall back to mock implementation
+            logger.warning("Falling back to mock implementation")
             result = self._mock_code_implementation(instruction)
             return result
     
@@ -369,6 +386,26 @@ class QDeveloperAgent:
                 
         except Exception as e:
             logger.error(f"Error fixing test failures: {str(e)}", exc_info=True)
+            
+            # Try OpenAI code generator if available
+            try:
+                from agents.q_developer.openai_generator import OpenAICodeGenerator
+                openai_generator = OpenAICodeGenerator()
+                
+                if openai_generator.is_available():
+                    logger.info("Falling back to OpenAI code generator for test fixes")
+                    result = openai_generator.fix_test_failures(failures, workspace_dir)
+                    if result.get("success", False):
+                        logger.info(f"Fixed {result.get('fixed', 0)} test failures with OpenAI")
+                        return result
+                    else:
+                        logger.warning(f"OpenAI test fix failed: {result.get('error')}")
+                else:
+                    logger.warning("OpenAI API key not available, falling back to mock implementation")
+            except Exception as openai_error:
+                logger.error(f"Error with OpenAI test fix: {str(openai_error)}", exc_info=True)
+            
+            # If OpenAI fails or is not available, fall back to mock implementation
             logger.warning("Falling back to mock implementation")
             
             # 임시 구현: 가상의 수정 결과 반환
@@ -401,6 +438,33 @@ class QDeveloperAgent:
         logger.info(f"Using workspace directory for deployment: {workspace_dir}")
         
         try:
+            # 배포 대상 확인
+            deployment_target = deployment_info.get("deployment_target", "")
+            
+            # AWS Lambda 배포
+            if deployment_target.lower() == "aws lambda":
+                try:
+                    from tools.deployment.lambda_deployer import LambdaDeployer
+                    lambda_deployer = LambdaDeployer()
+                    result = lambda_deployer.deploy(workspace_dir)
+                    
+                    # 배포 로그 파일 저장
+                    log_file = os.path.join(workspace_dir, "deploy.log")
+                    with open(log_file, 'w') as f:
+                        f.write(f"Lambda deployment result: {json.dumps(result, indent=2)}")
+                    
+                    logger.info(f"Lambda deployment completed: {result.get('status')} - {result.get('function_name')}")
+                    return {
+                        "success": result.get("status") in ["created", "updated"],
+                        "version": result.get("version", "v1.0.0"),
+                        "url": result.get("function_url", ""),
+                        "log": f"Lambda deployment completed: {result.get('status')}"
+                    }
+                except Exception as e:
+                    logger.error(f"Lambda deployment failed: {str(e)}", exc_info=True)
+                    raise
+            
+            # 기본 Q Developer CLI 배포 시도
             # 배포 정보 파일로 저장
             deploy_file = os.path.join(workspace_dir, "deployment_info.json")
             with open(deploy_file, 'w') as f:

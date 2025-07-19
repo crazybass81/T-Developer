@@ -75,13 +75,14 @@ class MAO:
         
         return task_id
     
-    def process_request_async(self, request_text: str, user_id: str) -> str:
+    def process_request_async(self, request_text: str, user_id: str, project_context: Dict[str, Any] = None) -> str:
         """
         사용자 요청을 비동기적으로 처리하는 함수
         
         Args:
             request_text: 요청 내용
             user_id: 사용자 ID
+            project_context: 프로젝트 컨텍스트 정보 (선택적)
             
         Returns:
             작업 ID
@@ -99,6 +100,55 @@ class MAO:
             status=TaskStatus.RECEIVED,
             created_at=datetime.now().isoformat()
         )
+        
+        # 프로젝트 컨텍스트 정보 추가
+        if project_context:
+            # 프로젝트 ID 저장
+            if "project_id" in project_context:
+                task.project_id = project_context["project_id"]
+                logger.info(f"Task associated with project: {project_context['project_id']}")
+                
+                # 프로젝트 ID가 있으면 프로젝트 정보를 추가로 가져오기
+                try:
+                    from context.dynamo.project_store import ProjectStore
+                    project_store = ProjectStore()
+                    project = project_store.get_project(project_context["project_id"])
+                    
+                    if project:
+                        # Slack 채널 정보 추출
+                        if "slack_channel" in project and project["slack_channel"]:
+                            task.metadata["slack_channel"] = project["slack_channel"]
+                            logger.info(f"Using project Slack channel from database: {project['slack_channel']}")
+                        
+                        # GitHub 저장소 정보 추출
+                        if "github_repo" in project and project["github_repo"]:
+                            repo_url = project["github_repo"]
+                            repo_parts = repo_url.strip().split('/')
+                            if len(repo_parts) >= 2:
+                                owner = repo_parts[-2]
+                                repo = repo_parts[-1]
+                                task.metadata["github_owner"] = owner
+                                task.metadata["github_repo"] = repo
+                                logger.info(f"Using project GitHub repo from database: {owner}/{repo}")
+                except Exception as e:
+                    logger.warning(f"Failed to get project details: {e}")
+            
+            # 직접 전달된 컨텍스트에서 Slack 채널 정보 저장 (메타데이터에 추가)
+            if "slack_channel" in project_context and project_context["slack_channel"]:
+                task.metadata["slack_channel"] = project_context["slack_channel"]
+                logger.info(f"Using project-specific Slack channel: {project_context['slack_channel']}")
+            
+            # 직접 전달된 컨텍스트에서 GitHub 저장소 정보 저장 (메타데이터에 추가)
+            if "github_repo" in project_context and project_context["github_repo"]:
+                # GitHub 저장소 URL에서 owner와 repo 추출
+                repo_url = project_context["github_repo"]
+                repo_parts = repo_url.strip().split('/')
+                if len(repo_parts) >= 2:
+                    owner = repo_parts[-2]
+                    repo = repo_parts[-1]
+                    task.metadata["github_owner"] = owner
+                    task.metadata["github_repo"] = repo
+                    logger.info(f"Using project-specific GitHub repo: {owner}/{repo}")
         
         # 작업 저장
         self.task_store.save_task(task)
@@ -234,8 +284,8 @@ class MAO:
             task.status = TaskStatus.CODING
             self.task_store.update_task(task)
             
-            # GitHub 도구 초기화
-            github_tool = GitHubTool(task_id=task.task_id)
+            # GitHub 도구 초기화 (프로젝트 컨텍스트 포함)
+            github_tool = GitHubTool(task_id=task.task_id, task_metadata=task.metadata, project_id=task.project_id)
             
             # 브랜치 생성
             branch_name = f"{settings.GITHUB_BRANCH_PREFIX}{task.task_id}"
@@ -322,8 +372,8 @@ class MAO:
             task.status = TaskStatus.TESTING
             self.task_store.update_task(task)
             
-            # GitHub 도구 초기화 (루프 밖에서 한 번만 생성)
-            github_tool = GitHubTool(task_id=task.task_id)
+            # GitHub 도구 초기화 (루프 밖에서 한 번만 생성, 프로젝트 컨텍스트 포함)
+            github_tool = GitHubTool(task_id=task.task_id, task_metadata=task.metadata, project_id=task.project_id)
             
             # Slack 알림 전송
             self.slack.send_testing_started(task)
@@ -466,11 +516,11 @@ class MAO:
             task.status = TaskStatus.DEPLOYING
             self.task_store.update_task(task)
             
-            # Slack 알림 전송
+            # Slack 알림 전송 (프로젝트별 채널 사용)
             self.slack.send_deploying(task)
             
-            # GitHub 도구 초기화
-            github_tool = GitHubTool(task_id=task.task_id)
+            # GitHub 도구 초기화 (프로젝트 컨텍스트 포함)
+            github_tool = GitHubTool(task_id=task.task_id, task_metadata=task.metadata, project_id=task.project_id)
             
             # PR 설명 생성
             pr_description = self._generate_pr_description(task)
@@ -489,6 +539,20 @@ class MAO:
             # PR 병합
             merge_result = github_tool.merge_pull_request(pr_url, task.branch_name)
             
+            # 자동 병합이 비활성화되어 리뷰 대기 상태인 경우
+            if merge_result.get("awaiting_review", False):
+                # 리뷰 대기 상태로 설정
+                task.status = TaskStatus.REVIEW_PENDING
+                task.pr_url = merge_result.get("url")
+                task.pr_number = merge_result.get("pr_number")
+                self.task_store.update_task(task)
+                
+                # Slack 알림 전송
+                self.slack.send_review_pending(task)
+                
+                logger.info(f"PR created and awaiting review for task {task.task_id}: {merge_result.get('message')}")
+                return task
+            
             if not merge_result.get("merged", False):
                 # 병합 실패
                 task.status = TaskStatus.ERROR
@@ -501,15 +565,73 @@ class MAO:
                 logger.error(f"PR merge failed for task {task.task_id}: {merge_result.get('message')}")
                 return task
             
-            # 배포 성공
-            task.status = TaskStatus.DEPLOYED
-            task.deployed = True
-            task.deployed_version = merge_result.get("version")
-            task.deployed_url = merge_result.get("url")
-            self.task_store.update_task(task)
-            
-            # Slack 알림 전송
-            self.slack.send_deployment_success(task)
+            # PR 병합 성공 후 Lambda 배포 시도 (글로벌 컨텍스트에서 배포 대상이 AWS Lambda인 경우)
+            global_context = self.task_store.get_global_context()
+            if global_context.get("deployment_target", "").lower() == "aws lambda":
+                try:
+                    # Slack 알림 전송 - Lambda 배포 시작
+                    self.slack.send_message(task, "AWS Lambda 배포를 시작합니다...")
+                    
+                    # Lambda 배포 실행
+                    deployment_info = {
+                        "deployment_target": "AWS Lambda",
+                        "function_name": settings.LAMBDA_FUNCTION_NAME,
+                        "region": settings.AWS_REGION,
+                        "task_id": task.task_id,
+                        "pr_url": task.pr_url,
+                        "commit_hash": task.commit_hash
+                    }
+                    
+                    # 같은 workspace_dir 사용
+                    deploy_result = self.q_developer_agent.deploy(deployment_info, github_tool.workspace_dir)
+                    
+                    if deploy_result.get("success", False):
+                        # Lambda 배포 성공
+                        task.status = TaskStatus.DEPLOYED
+                        task.deployed = True
+                        task.deployed_version = deploy_result.get("version")
+                        task.deployed_url = deploy_result.get("url")
+                        task.metadata["lambda_deployment"] = "success"
+                        self.task_store.update_task(task)
+                        
+                        # Slack 알림 전송
+                        self.slack.send_deployment_success(task)
+                        
+                        logger.info(f"Lambda deployment completed for task {task.task_id}")
+                    else:
+                        # Lambda 배포 실패 (하지만 PR은 병합됨)
+                        task.status = TaskStatus.COMPLETED
+                        task.deployed = False
+                        task.metadata["lambda_deployment"] = "failed"
+                        task.metadata["lambda_error"] = deploy_result.get("error", "Unknown error")
+                        self.task_store.update_task(task)
+                        
+                        # Slack 알림 전송
+                        self.slack.send_message(task, f"PR이 병합되었지만 Lambda 배포에 실패했습니다: {deploy_result.get('error', 'Unknown error')}")
+                        
+                        logger.warning(f"Lambda deployment failed for task {task.task_id}: {deploy_result.get('error', 'Unknown error')}")
+                except Exception as e:
+                    # Lambda 배포 오류 (하지만 PR은 병합됨)
+                    logger.error(f"Error in Lambda deployment for task {task.task_id}: {e}", exc_info=True)
+                    
+                    task.status = TaskStatus.COMPLETED
+                    task.deployed = False
+                    task.metadata["lambda_deployment"] = "error"
+                    task.metadata["lambda_error"] = str(e)
+                    self.task_store.update_task(task)
+                    
+                    # Slack 알림 전송
+                    self.slack.send_message(task, f"PR이 병합되었지만 Lambda 배포 중 오류가 발생했습니다: {str(e)}")
+            else:
+                # 기본 배포 (기본적으로 PR 병합만 수행)
+                task.status = TaskStatus.DEPLOYED
+                task.deployed = True
+                task.deployed_version = merge_result.get("version")
+                task.deployed_url = merge_result.get("url")
+                self.task_store.update_task(task)
+                
+                # Slack 알림 전송
+                self.slack.send_deployment_success(task)
             
             logger.info(f"Deployment completed for task {task.task_id}")
             return task
@@ -596,6 +718,35 @@ Generated by T-Developer
         
         context = {}
         
+        # 프로젝트 정보 추가 (있는 경우)
+        if task.project_id:
+            try:
+                # 프로젝트 정보 가져오기
+                from context.dynamo.project_store import ProjectStore
+                project_store = ProjectStore()
+                project = project_store.get_project(task.project_id)
+                
+                if project:
+                    logger.info(f"Found project context for task {task.task_id}: {project['name']}")
+                    context["project_id"] = task.project_id
+                    context["project_name"] = project["name"]
+                    context["project_description"] = project.get("description", "")
+                    
+                    # 프로젝트 설정 추가
+                    if "github_repo" in project:
+                        context["github_repo"] = project["github_repo"]
+                    if "slack_channel" in project:
+                        context["slack_channel"] = project["slack_channel"]
+            except Exception as e:
+                logger.warning(f"Failed to get project info for task {task.task_id}: {e}")
+        
+        # 프로젝트 메타데이터 추가 (GitHub 저장소, Slack 채널 등)
+        if task.metadata:
+            if "github_owner" in task.metadata and "github_repo" in task.metadata:
+                context["github_repo"] = f"{task.metadata['github_owner']}/{task.metadata['github_repo']}"
+            if "slack_channel" in task.metadata:
+                context["slack_channel"] = task.metadata["slack_channel"]
+        
         # 글로벌 컨텍스트 가져오기
         global_context = self.task_store.get_global_context()
         context["global_context"] = global_context
@@ -604,9 +755,10 @@ Generated by T-Developer
         related_tasks = self.task_store.find_related_tasks(task.request)
         context["related_tasks"] = [t.to_dict() for t in related_tasks]
         
-        # 관련 파일 검색
-        github_tool = GitHubTool()
+        # 관련 파일 검색 (프로젝트별 GitHub 저장소 사용)
+        github_tool = GitHubTool(task_id=task.task_id, task_metadata=task.metadata, project_id=task.project_id)
         related_files = github_tool.find_related_files(task.request)
         context["related_files"] = related_files
         
+        logger.info(f"Gathered context for task {task.task_id} with {len(related_tasks)} related tasks and {len(related_files)} related files")
         return context

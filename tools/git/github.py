@@ -21,16 +21,63 @@ class GitHubTool:
     GitHub 저장소 클론, 브랜치 생성, 커밋, PR 생성 등의 기능을 제공합니다.
     """
     
-    def __init__(self, task_id: str = None):
+    def __init__(self, task_id: str = None, task_metadata: Dict[str, Any] = None, project_id: str = None):
         """
         GitHubTool 초기화
         
         Args:
             task_id: 작업 ID (지정된 경우 작업별 워크스페이스 사용)
+            task_metadata: 작업 메타데이터 (프로젝트별 GitHub 저장소 정보 포함)
+            project_id: 프로젝트 ID (지정된 경우 프로젝트 정보에서 GitHub 저장소 정보 가져오기)
         """
         self.token = settings.GITHUB_TOKEN
-        self.repo = settings.GITHUB_REPO
-        self.owner = settings.GITHUB_OWNER
+        self.task_metadata = task_metadata or {}
+        self.project_id = project_id
+        
+        # 프로젝트별 GitHub 저장소 정보 사용 (메타데이터에서 먼저 확인)
+        if task_metadata and "github_owner" in task_metadata and "github_repo" in task_metadata:
+            self.owner = task_metadata["github_owner"]
+            self.repo = task_metadata["github_repo"]
+            logger.info(f"Using project-specific GitHub repo from metadata: {self.owner}/{self.repo}")
+        
+        # 메타데이터에 없으면 프로젝트 ID로 프로젝트 정보에서 확인
+        elif project_id:
+            try:
+                from context.dynamo.project_store import ProjectStore
+                project_store = ProjectStore()
+                project = project_store.get_project(project_id)
+                
+                if project and "github_repo" in project:
+                    # GitHub 저장소 URL에서 owner와 repo 추출
+                    repo_url = project["github_repo"]
+                    repo_parts = repo_url.strip().split('/')
+                    
+                    if len(repo_parts) >= 2:
+                        self.owner = repo_parts[-2]
+                        self.repo = repo_parts[-1]
+                        logger.info(f"Using project-specific GitHub repo from project {project_id}: {self.owner}/{self.repo}")
+                    else:
+                        # 기본값 사용
+                        self.owner = settings.GITHUB_OWNER
+                        self.repo = settings.GITHUB_REPO
+                        logger.info(f"Invalid GitHub repo format in project {project_id}, using default: {self.owner}/{self.repo}")
+                else:
+                    # 기본값 사용
+                    self.owner = settings.GITHUB_OWNER
+                    self.repo = settings.GITHUB_REPO
+                    logger.info(f"No GitHub repo found in project {project_id}, using default: {self.owner}/{self.repo}")
+            except Exception as e:
+                logger.warning(f"Failed to get project GitHub repo: {e}")
+                # 기본값 사용
+                self.owner = settings.GITHUB_OWNER
+                self.repo = settings.GITHUB_REPO
+                logger.info(f"Error getting project info, using default GitHub repo: {self.owner}/{self.repo}")
+        else:
+            # 기본값 사용
+            self.owner = settings.GITHUB_OWNER
+            self.repo = settings.GITHUB_REPO
+            logger.info(f"Using default GitHub repo: {self.owner}/{self.repo}")
+        
         self.api_base = "https://api.github.com"
         self.repo_url = f"https://github.com/{self.owner}/{self.repo}.git"
         
@@ -280,6 +327,19 @@ class GitHubTool:
             # PR 번호 추출
             pr_number = pr_url.split("/")[-1]
             
+            # 자동 병합 설정 확인
+            auto_merge = self._get_auto_merge_setting()
+            
+            if not auto_merge:
+                logger.info(f"Auto-merge is disabled. PR #{pr_number} will remain open for review.")
+                return {
+                    "merged": False,
+                    "awaiting_review": True,
+                    "message": "PR created and awaiting review (auto-merge disabled)",
+                    "pr_number": pr_number,
+                    "url": pr_url
+                }
+            
             # GitHub API를 통해 실제 PR 병합 수행
             url = f"{self.api_base}/repos/{self.owner}/{self.repo}/pulls/{pr_number}/merge"
             headers = {
@@ -332,6 +392,56 @@ class GitHubTool:
                 "merged": False,
                 "message": f"Error merging PR: {str(e)}"
             }
+    
+    def _get_auto_merge_setting(self) -> bool:
+        """
+        자동 병합 설정 확인
+        
+        Returns:
+            자동 병합 활성화 여부
+        """
+        try:
+            # 1. 프로젝트 메타데이터에서 설정 확인 (가장 우선순위)
+            if self.task_metadata and "auto_merge" in self.task_metadata:
+                auto_merge = self.task_metadata["auto_merge"]
+                logger.info(f"Using auto_merge setting from task metadata: {auto_merge}")
+                return auto_merge
+            
+            # 2. 프로젝트 설정에서 확인
+            if self.project_id:
+                try:
+                    from context.dynamo.project_store import ProjectStore
+                    project_store = ProjectStore()
+                    project = project_store.get_project(self.project_id)
+                    
+                    if project and "auto_merge" in project:
+                        auto_merge = project["auto_merge"]
+                        logger.info(f"Using auto_merge setting from project {self.project_id}: {auto_merge}")
+                        return auto_merge
+                except Exception as e:
+                    logger.warning(f"Failed to get project auto_merge setting: {e}")
+            
+            # 3. 글로벌 컨텍스트에서 설정 확인
+            from context.dynamo.task_store import TaskStore
+            task_store = TaskStore()
+            global_context = task_store.get_global_context()
+            
+            # 글로벌 컨텍스트에 auto_merge 설정이 있으면 사용
+            if "auto_merge" in global_context:
+                auto_merge = global_context["auto_merge"]
+                logger.info(f"Using auto_merge setting from global context: {auto_merge}")
+                return auto_merge
+            
+            # 4. 환경 변수에서 설정 확인
+            import os
+            env_auto_merge = os.environ.get("AUTO_MERGE", "true").lower()
+            auto_merge = env_auto_merge in ["true", "1", "yes"]
+            logger.info(f"Using auto_merge setting from environment: {auto_merge}")
+            return auto_merge
+        except Exception as e:
+            logger.warning(f"Error getting auto_merge setting: {e}")
+            # 기본값은 자동 병합 활성화
+            return True
     
     def _cleanup_branch(self, branch_name: str) -> None:
         """

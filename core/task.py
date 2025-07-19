@@ -19,6 +19,7 @@ class TaskStatus(Enum):
     TESTED = "tested"          # 테스트 완료
     DEPLOYING = "deploying"    # 배포 중
     DEPLOYED = "deployed"      # 배포 완료
+    REVIEW_PENDING = "review_pending"  # PR 리뷰 대기 중
     COMPLETED = "completed"    # 작업 완료
     ERROR = "error"            # 오류 발생
 
@@ -50,6 +51,7 @@ class Task:
         deployed_version: str = None,
         deployed_url: str = None,
         pr_url: str = None,
+        pr_number: str = None,
         error: str = None,
         project_id: str = None,
         metadata: Dict[str, Any] = None
@@ -99,6 +101,7 @@ class Task:
         self.deployed_version = deployed_version
         self.deployed_url = deployed_url
         self.pr_url = pr_url
+        self.pr_number = pr_number
         self.error = error
         self.project_id = project_id
         self.metadata = metadata or {}
@@ -147,6 +150,8 @@ class Task:
             result['deployed_url'] = self.deployed_url
         if self.pr_url:
             result['pr_url'] = self.pr_url
+        if self.pr_number:
+            result['pr_number'] = self.pr_number
         if self.error:
             result['error'] = self.error
         if self.project_id:
@@ -191,6 +196,7 @@ class Task:
             deployed_version=data.get('deployed_version'),
             deployed_url=data.get('deployed_url'),
             pr_url=data.get('pr_url'),
+            pr_number=data.get('pr_number'),
             error=data.get('error'),
             project_id=data.get('project_id'),
             metadata=data.get('metadata')

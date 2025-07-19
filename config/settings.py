@@ -18,6 +18,10 @@ AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 DYNAMODB_TABLE_PREFIX = os.getenv("DYNAMODB_TABLE_PREFIX", "TDeveloper-")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "t-developer-context")
 
+# AWS Lambda 설정
+LAMBDA_FUNCTION_NAME = os.getenv("LAMBDA_FUNCTION_NAME", "t-developer-api")
+LAMBDA_ROLE_ARN = os.getenv("LAMBDA_ROLE_ARN", "arn:aws:iam::123456789012:role/lambda-role")
+
 # GitHub 설정
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_OWNER = os.getenv("GITHUB_OWNER")

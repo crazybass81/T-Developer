@@ -238,3 +238,28 @@ class TaskStore:
                 'test_framework': 'pytest',
                 'deployment_target': 'AWS Lambda'
             }
+    
+    def save_global_context(self, context: Dict[str, Any]) -> None:
+        """
+        글로벌 컨텍스트 저장
+        
+        Args:
+            context: 글로벌 컨텍스트 정보
+        """
+        try:
+            # task_id를 GLOBAL_CONTEXT로 설정
+            context['task_id'] = 'GLOBAL_CONTEXT'
+            
+            # 기존 컨텍스트가 있으면 병합
+            existing_context = self.get_global_context()
+            if existing_context and isinstance(existing_context, dict):
+                # 기존 task_id는 유지
+                existing_context.update(context)
+                context = existing_context
+            
+            # DynamoDB에 저장
+            self.table.put_item(Item=context)
+            logger.info("Global context saved to DynamoDB")
+        except Exception as e:
+            logger.error(f"Error saving global context: {e}")
+            raise

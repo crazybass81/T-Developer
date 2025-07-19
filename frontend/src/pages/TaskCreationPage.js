@@ -18,8 +18,27 @@ function TaskCreationPage() {
         // 실제 API 호출
         const response = await taskService.getProjects();
         setProjects(response.data);
+        
+        // 로컬 스토리지에서 최근 생성된 프로젝트 ID 확인
+        const lastCreatedProjectId = localStorage.getItem('lastCreatedProjectId');
+        
+        if (lastCreatedProjectId) {
+          // 최근 생성된 프로젝트가 목록에 있는지 확인
+          const projectExists = response.data.some(p => p.project_id === lastCreatedProjectId);
+          
+          if (projectExists) {
+            setSelectedProject(lastCreatedProjectId);
+            console.log('Using last created project:', lastCreatedProjectId);
+            // 사용 후 삭제 (선택사항)
+            localStorage.removeItem('lastCreatedProjectId');
+            return;
+          }
+        }
+        
+        // 최근 프로젝트가 없으면 첫 번째 프로젝트 사용
         if (response.data.length > 0) {
           setSelectedProject(response.data[0].project_id);
+          console.log('Using first project in list:', response.data[0].project_id);
         }
       } catch (err) {
         console.error('Error fetching projects:', err);
@@ -36,12 +55,21 @@ function TaskCreationPage() {
     setError(null);
 
     try {
+      // 프로젝트 ID 확인
+      if (!selectedProject) {
+        setError('프로젝트를 선택해주세요.');
+        setLoading(false);
+        return;
+      }
+
       // 실제 API 호출
       const response = await taskService.createTask({
         request,
         user_id: 'web-user', // 실제 구현에서는 인증된 사용자 ID 사용
         project_id: selectedProject
       });
+      
+      console.log('Task created with project context:', { project_id: selectedProject });
       
       // 작업 ID를 받아 모니터링 페이지로 이동
       const taskId = response.data.task_id;

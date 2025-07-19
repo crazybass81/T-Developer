@@ -10,6 +10,7 @@ import hmac
 import hashlib
 import json
 import uuid
+import requests
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
@@ -78,6 +79,107 @@ class ProjectResponse(BaseModel):
     status: str = "created"
     message: str = "Project created"
 
+@app.post("/api/projects", response_model=ProjectResponse)
+async def create_project(project_request: ProjectRequest):
+    """
+    새로운 프로젝트 생성
+    
+    Args:
+        project_request: 프로젝트 요청 정보
+        
+    Returns:
+        프로젝트 응답 정보
+    """
+    logger.info(f"Received project creation request: {project_request.name}")
+    
+    # 프로젝트 ID 생성
+    project_id = f"PROJ-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}"
+    
+    try:
+        # 프로젝트 저장
+        from context.dynamo.project_store import ProjectStore
+        project_store = ProjectStore()
+        
+        project = {
+            "project_id": project_id,
+            "name": project_request.name,
+            "description": project_request.description,
+            "github_repo": project_request.github_repo,
+            "slack_channel": project_request.slack_channel,
+            "created_at": datetime.now().isoformat()
+        }
+        
+        project_store.save_project(project)
+        logger.info(f"Project created: {project_id}")
+        
+        # 프로젝트 설명을 글로벌 컨텍스트에 추가 (선택사항)
+        try:
+            global_context = mao.task_store.get_global_context()
+            global_context["project_description"] = project_request.description
+            if project_request.github_repo:
+                global_context["github_repo"] = project_request.github_repo
+            mao.task_store.save_global_context(global_context)
+            logger.info("Updated global context with project information")
+        except Exception as e:
+            logger.warning(f"Failed to update global context: {e}")
+        
+        return ProjectResponse(
+            project_id=project_id,
+            name=project_request.name,
+            status="created",
+            message="Project created successfully"
+        )
+    except Exception as e:
+        logger.error(f"Error creating project: {e}")
+        raise HTTPException(status_code=500, detail=f"Error creating project: {str(e)}")
+
+@app.get("/api/projects")
+async def get_projects():
+    """
+    프로젝트 목록 조회
+    
+    Returns:
+        프로젝트 목록
+    """
+    logger.info("Getting projects list")
+    
+    try:
+        from context.dynamo.project_store import ProjectStore
+        project_store = ProjectStore()
+        projects = project_store.list_projects()
+        return projects
+    except Exception as e:
+        logger.error(f"Error getting projects: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting projects: {str(e)}")
+
+@app.get("/api/projects/{project_id}")
+async def get_project(project_id: str):
+    """
+    프로젝트 조회
+    
+    Args:
+        project_id: 프로젝트 ID
+        
+    Returns:
+        프로젝트 정보
+    """
+    logger.info(f"Getting project: {project_id}")
+    
+    try:
+        from context.dynamo.project_store import ProjectStore
+        project_store = ProjectStore()
+        project = project_store.get_project(project_id)
+        
+        if not project:
+            raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
+        
+        return project
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting project: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting project: {str(e)}")
+
 @app.post("/api/tasks", response_model=TaskResponse)
 async def create_task(task_request: TaskRequest, background_tasks: BackgroundTasks):
     """
@@ -92,8 +194,32 @@ async def create_task(task_request: TaskRequest, background_tasks: BackgroundTas
     """
     logger.info(f"Received task request: {task_request.request}")
     
-    # 비동기로 작업 처리
-    task_id = mao.process_request_async(task_request.request, task_request.user_id)
+    # 프로젝트 정보 조회
+    project_context = {}
+    if task_request.project_id:
+        try:
+            from context.dynamo.project_store import ProjectStore
+            project_store = ProjectStore()
+            project = project_store.get_project(task_request.project_id)
+            
+            if project:
+                logger.info(f"Found project: {project['name']} for task")
+                project_context = {
+                    "project_id": project["project_id"],
+                    "project_name": project["name"],
+                    "slack_channel": project.get("slack_channel"),
+                    "github_repo": project.get("github_repo")
+                }
+                
+                # 프로젝트 정보 로깅
+                logger.info(f"Project context for task: {project_context}")
+        except Exception as e:
+            logger.warning(f"Failed to get project info: {e}")
+    else:
+        logger.warning("No project_id provided for task, using default settings")
+    
+    # 비동기로 작업 처리 (프로젝트 컨텍스트 포함)
+    task_id = mao.process_request_async(task_request.request, task_request.user_id, project_context)
     
     return TaskResponse(
         task_id=task_id,
@@ -281,36 +407,186 @@ async def slack_events(request: Request, background_tasks: BackgroundTasks):
         return {"challenge": body.get("challenge")}
     
     elif event_type == "event_callback":
-        # 이벤트 콜백 처리
+        # 이벤트 처리
         event = body.get("event", {})
         
         # 메시지 이벤트 처리
         if event.get("type") == "message":
-            # 봇 메시지 무시
-            if event.get("bot_id"):
+            # 봇 메시지 무시 (bot_id 또는 bot_profile이 있는 경우)
+            if event.get("bot_id") or event.get("bot_profile") or event.get("subtype") == "bot_message":
+                logger.debug("Ignoring bot message")
                 return {"status": "ok", "message": "Bot message ignored"}
             
             # 메시지 텍스트 가져오기
             text = event.get("text", "")
             user = event.get("user", "unknown")
             
-            # T-Developer 멘션 확인 (정확한 패턴 매칭)
-            # 문장 시작에 멘션이 있고 콜론으로 구분된 경우에만 명령으로 인식
-            if (text.startswith("<@T-Developer>:") or 
-                text.startswith("T-Developer:") or 
-                text.startswith("@T-Developer:")):
-                # 멘션 제거하고 요청 추출
-                if text.startswith("<@T-Developer>:"):
-                    request_text = text[len("<@T-Developer>:"):].strip()
-                elif text.startswith("@T-Developer:"):
-                    request_text = text[len("@T-Developer:"):].strip()
+            # 자신이 보낸 메시지인지 확인 (앱 사용자 ID와 메시지 사용자 ID 비교)
+            app_user_id = None
+            if settings.SLACK_BOT_TOKEN:
+                try:
+                    from slack.notifier import SlackNotifier
+                    slack = SlackNotifier()
+                    if slack.client:
+                        auth_info = slack.client.auth_test()
+                        if auth_info["ok"]:
+                            app_user_id = auth_info["user_id"]
+                            logger.info(f"Found bot ID: {app_user_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to get bot ID: {e}")
+            
+            # 자신이 보낸 메시지면 무시
+            if app_user_id and user == app_user_id:
+                logger.debug("Ignoring message from self")
+                return {"status": "ok", "message": "Ignoring message from self"}
+            
+            # 멘션 패턴 확인
+            is_bot_mention = False
+            request_text = ""
+            
+            # 1. 정규식을 사용하여 문장 시작 부분의 멘션 패턴 확인
+            import re
+            
+            # 실제 봇 ID 기반 멘션 확인 (문장 시작 부분에 있는 경우만)
+            if app_user_id:
+                # <@BOT_ID>: 또는 <@BOT_ID> 패턴 (문장 시작)
+                bot_mention_pattern = re.compile(f"^\s*<@{app_user_id}>:?\s*(.+)$")
+                match = bot_mention_pattern.match(text)
+                if match:
+                    is_bot_mention = True
+                    request_text = match.group(1).strip()
+                    logger.info(f"Matched bot mention pattern with ID {app_user_id}: {request_text[:30]}...")
                 else:
-                    request_text = text[len("T-Developer:"):].strip()
+                    # 문장 중간에 있는 멘션도 확인 (더 유연한 패턴 매칭)
+                    anywhere_pattern = re.compile(f"<@{app_user_id}>:?\s*(.+)")
+                    match = anywhere_pattern.search(text)
+                    if match:
+                        is_bot_mention = True
+                        request_text = match.group(1).strip()
+                        logger.info(f"Matched bot mention anywhere in text with ID {app_user_id}: {request_text[:30]}...")
+            
+            # 2. 이벤트의 mentions 필드 확인 (Slack API가 제공하는 경우)
+            if not is_bot_mention and "mentions" in event and event["mentions"]:
+                for mention in event["mentions"]:
+                    # 멘션된 사용자가 봇인 경우
+                    if app_user_id and mention.get("user_id") == app_user_id:
+                        is_bot_mention = True
+                        # 멘션 텍스트 추출 (위치에 상관없이)
+                        mention_text = f"<@{app_user_id}>"
+                        parts = text.split(mention_text, 1)
+                        if len(parts) > 1:
+                            request_text = parts[1].strip()
+                            # 콜론으로 시작하면 제거
+                            if request_text.startswith(":"):
+                                request_text = request_text[1:].strip()
+                            logger.info(f"Matched bot mention from mentions field: {request_text[:30]}...")
+                        else:
+                            # 멘션만 있고 텍스트가 없는 경우
+                            request_text = "도움말"
+                            logger.info("Mention without text, defaulting to help request")
+                        break
+            
+            # 3. 일반 텍스트 기반 멘션 확인 (fallback - 더 유연한 패턴 매칭)
+            if not is_bot_mention:
+                # T-Developer: 또는 @T-Developer: 패턴 (문장 시작 또는 중간)
+                text_mention_patterns = [
+                    r"^\s*(@?T-Developer):?\s*(.+)$",  # 문장 시작
+                    r"\s+(@?T-Developer):?\s*(.+)"    # 문장 중간
+                ]
                 
-                # 비동기로 작업 처리
-                task_id = mao.process_request_async(request_text, user)
+                for pattern in text_mention_patterns:
+                    match = re.search(pattern, text)
+                    if match:
+                        is_bot_mention = True
+                        request_text = match.group(2).strip()
+                        logger.info(f"Matched text mention pattern: {request_text[:30]}...")
+                        break
+                    
+            # 멘션이 없거나 텍스트가 없는 경우는 무시
+            if not is_bot_mention or not request_text:
+                logger.debug(f"Ignoring message without proper bot mention: {text[:30]}...")
+                return {"status": "ok", "message": "Message ignored (no proper bot mention)"}
                 
-                return {"status": "ok", "task_id": task_id}
+            logger.info(f"Processing bot mention: '{request_text[:50]}...'")
+            
+            # 멘션이 확인되었으므로 처리
+                    
+                # 프로젝트 지정 확인 ("project:ProjectName" 형태로 지정)
+                project_id = None
+                project_prefix = "project:"
+                
+                if project_prefix in request_text.lower():
+                    # 프로젝트 이름 추출
+                    parts = request_text.split(project_prefix, 1)
+                    if len(parts) > 1:
+                        project_part = parts[1].strip()
+                        project_name = project_part.split()[0].strip()  # 첫 번째 단어를 프로젝트 이름으로 간주
+                        
+                        # 프로젝트 이름으로 프로젝트 ID 찾기
+                        try:
+                            from context.dynamo.project_store import ProjectStore
+                            project_store = ProjectStore()
+                            projects = project_store.list_projects()
+                            
+                            for project in projects:
+                                if project["name"].lower() == project_name.lower():
+                                    project_id = project["project_id"]
+                                    logger.info(f"Found project ID {project_id} for name {project_name}")
+                                    break
+                            
+                            # 프로젝트 이름 부분 제거
+                            request_text = request_text.replace(f"{project_prefix}{project_name}", "").strip()
+                        except Exception as e:
+                            logger.warning(f"Failed to find project by name {project_name}: {e}")
+                            # 오류 발생 시 프로젝트 이름 부분만 제거
+                            request_text = request_text.replace(f"{project_prefix}{project_name}", "").strip()
+                
+                # 프로젝트 정보 가져오기
+                project_context = {}
+                try:
+                    from context.dynamo.project_store import ProjectStore
+                    project_store = ProjectStore()
+                    
+                    # 프로젝트 ID가 지정된 경우
+                    if project_id:
+                        project = project_store.get_project(project_id)
+                        if project:
+                            logger.info(f"Using specified project for Slack request: {project['name']}")
+                            project_context = {
+                                "project_id": project["project_id"],
+                                "project_name": project["name"],
+                                "slack_channel": project.get("slack_channel"),
+                                "github_repo": project.get("github_repo")
+                            }
+                    # 프로젝트 ID가 없는 경우 기본 프로젝트 사용
+                    else:
+                        projects = project_store.list_projects()
+                        if projects:
+                            project = projects[0]  # 첫 번째 프로젝트 사용
+                            logger.info(f"Using default project for Slack request: {project['name']}")
+                            project_context = {
+                                "project_id": project["project_id"],
+                                "project_name": project["name"],
+                                "slack_channel": project.get("slack_channel"),
+                                "github_repo": project.get("github_repo")
+                            }
+                except Exception as e:
+                    logger.warning(f"Failed to get project for Slack request: {e}")
+                
+                # 비동기로 작업 처리 (프로젝트 컨텍스트 포함)
+                task_id = mao.process_request_async(request_text, user, project_context)
+                
+                # 로그 추가
+                project_info = ""
+                if "project_id" in project_context:
+                    project_info = f" for project {project_context['project_id']}"
+                logger.info(f"Created task {task_id}{project_info} from Slack message by user {user}")
+                
+                return {"status": "ok", "task_id": task_id, "project_info": project_context.get("project_id")}
+            else:
+                # 멘션이 아닌 경우 무시
+                logger.debug(f"Ignoring message without bot mention: {text[:30]}...")
+                return {"status": "ok", "message": "Message ignored (no bot mention)"}
     
     # 기타 이벤트는 무시
     return {"status": "ok"}
@@ -433,12 +709,140 @@ async def get_projects():
 @app.get("/health")
 async def health_check():
     """
-    헬스 체크
+    기본 헬스 체크
     
     Returns:
-        상태 정보
+        기본 상태 정보
     """
-    return {"status": "ok", "version": "1.0.0"}
+    return {
+        "status": "ok", 
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/health/detailed")
+async def detailed_health_check():
+    """
+    상세 헬스 체크
+    
+    Returns:
+        상세 상태 정보
+    """
+    # 프로젝트 개수 확인
+    project_count = 0
+    try:
+        from context.dynamo.project_store import ProjectStore
+        project_store = ProjectStore()
+        projects = project_store.list_projects()
+        project_count = len(projects)
+    except Exception as e:
+        logger.warning(f"Failed to get project count: {e}")
+    
+    # 작업 개수 확인
+    task_count = 0
+    completed_tasks = 0
+    error_tasks = 0
+    try:
+        all_tasks = mao.task_store.find_tasks_by_status(None)  # 모든 작업 가져오기
+        task_count = len(all_tasks)
+        # 완료된 작업 수 계산
+        completed_tasks = sum(1 for task in all_tasks if task.status in [TaskStatus.COMPLETED, TaskStatus.DEPLOYED])
+        # 오류 작업 수 계산
+        error_tasks = sum(1 for task in all_tasks if task.status == TaskStatus.ERROR)
+    except Exception as e:
+        logger.warning(f"Failed to get task count: {e}")
+    
+    # 시스템 정보 수집
+    import platform
+    import psutil
+    import os
+    from datetime import timedelta
+    
+    # 시스템 부팅 시간 계산
+    boot_time = datetime.fromtimestamp(psutil.boot_time())
+    uptime = datetime.now() - boot_time
+    
+    system_info = {
+        "platform": platform.system(),
+        "python_version": platform.python_version(),
+        "cpu_usage": psutil.cpu_percent(interval=0.1),
+        "memory_usage": psutil.virtual_memory().percent,
+        "disk_usage": psutil.disk_usage('/').percent,
+        "uptime_seconds": int(uptime.total_seconds()),
+        "uptime_human": str(timedelta(seconds=int(uptime.total_seconds())))
+    }
+    
+    # 연결 상태 확인
+    connections = {
+        "aws": "unknown",
+        "github": "unknown",
+        "slack": "unknown"
+    }
+    
+    # AWS 연결 테스트
+    try:
+        # DynamoDB 테이블 존재 확인
+        table_name = mao.task_store.table_name
+        mao.task_store.dynamodb.meta.client.describe_table(TableName=table_name)
+        connections["aws"] = "connected"
+    except Exception as e:
+        connections["aws"] = f"error: {str(e)[:100]}"
+    
+    # GitHub 연결 테스트
+    try:
+        if settings.GITHUB_TOKEN and settings.GITHUB_OWNER and settings.GITHUB_REPO:
+            from tools.git.github import GitHubTool
+            github_tool = GitHubTool()
+            # 저장소 정보 확인
+            url = f"{github_tool.api_base}/repos/{github_tool.owner}/{github_tool.repo}"
+            headers = {
+                "Authorization": f"token {github_tool.token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                connections["github"] = "connected"
+            else:
+                connections["github"] = f"error: {response.status_code}"
+        else:
+            connections["github"] = "not configured"
+    except Exception as e:
+        connections["github"] = f"error: {str(e)[:100]}"
+    
+    # Slack 연결 테스트
+    try:
+        if settings.SLACK_BOT_TOKEN:
+            from slack.notifier import SlackNotifier
+            slack = SlackNotifier()
+            if slack.client:
+                # 간단한 API 호출로 토큰 유효성 확인
+                response = slack.client.auth_test()
+                if response["ok"]:
+                    connections["slack"] = f"connected as {response['user']}"
+                else:
+                    connections["slack"] = f"error: {response.get('error')}"
+            else:
+                connections["slack"] = "client initialization failed"
+        else:
+            connections["slack"] = "not configured"
+    except Exception as e:
+        connections["slack"] = f"error: {str(e)[:100]}"
+    
+    return {
+        "status": "ok", 
+        "version": "1.0.0",
+        "projects": project_count,
+        "tasks": {
+            "total": task_count,
+            "completed": completed_tasks,
+            "error": error_tasks,
+            "in_progress": task_count - completed_tasks - error_tasks
+        },
+        "system": system_info,
+        "connections": connections,
+        "environment": settings.ENV,
+        "timestamp": datetime.now().isoformat()
+    }
 
 if __name__ == "__main__":
     import uvicorn

@@ -146,6 +146,46 @@ def setup_global_context():
         logger.error(f"Error saving global context: {e}")
         raise
 
+def create_projects_table():
+    """
+    DynamoDB Projects 테이블 생성
+    - ProjectStore를 위한 테이블 생성
+    """
+    dynamodb = boto3.resource('dynamodb', region_name=settings.AWS_REGION)
+    table_name = f"{settings.DYNAMODB_TABLE_PREFIX}Projects"
+    
+    try:
+        # 테이블이 이미 존재하는지 확인
+        table = dynamodb.Table(table_name)
+        table.load()
+        logger.info(f"Table {table_name} already exists")
+        return table
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ResourceNotFoundException':
+            # 테이블 생성
+            logger.info(f"Creating table {table_name}")
+            table = dynamodb.create_table(
+                TableName=table_name,
+                KeySchema=[
+                    {'AttributeName': 'project_id', 'KeyType': 'HASH'}  # 파티션 키
+                ],
+                AttributeDefinitions=[
+                    {'AttributeName': 'project_id', 'AttributeType': 'S'}
+                ],
+                ProvisionedThroughput={
+                    'ReadCapacityUnits': 5,
+                    'WriteCapacityUnits': 5
+                }
+            )
+            
+            # 테이블 생성 완료 대기
+            table.meta.client.get_waiter('table_exists').wait(TableName=table_name)
+            logger.info(f"Table {table_name} created successfully")
+            return table
+        else:
+            logger.error(f"Error creating table: {e}")
+            raise
+
 def main():
     """
     인프라 설정 메인 함수
@@ -154,6 +194,9 @@ def main():
     
     # DynamoDB 테이블 생성
     create_dynamodb_table()
+    
+    # Projects 테이블 생성
+    create_projects_table()
     
     # S3 버킷 생성
     create_s3_bucket()

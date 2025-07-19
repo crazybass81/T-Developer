@@ -1,12 +1,13 @@
 """
 ProjectStore - DynamoDB 기반 프로젝트 저장소
 
-이 모듈은 DynamoDB를 사용하여 프로젝트 정보를 저장하고 관리하는 기능을 제공합니다.
+프로젝트 정보를 DynamoDB에 저장하고 조회하는 기능을 제공합니다.
 """
 import logging
 import boto3
-from boto3.dynamodb.conditions import Key
-from typing import Dict, List, Optional, Any
+from botocore.exceptions import ClientError
+from typing import Dict, List, Any, Optional
+from datetime import datetime
 
 from config import settings
 
@@ -24,76 +25,57 @@ class ProjectStore:
         """ProjectStore 초기화"""
         self.region = settings.AWS_REGION
         self.table_name = f"{settings.DYNAMODB_TABLE_PREFIX}Projects"
-        
-        # DynamoDB 리소스 생성
         self.dynamodb = boto3.resource('dynamodb', region_name=self.region)
-        
-        # 테이블 존재 확인 및 생성
-        self._ensure_table_exists()
-        
+        self.table = self._ensure_table_exists()
         logger.info(f"ProjectStore initialized with table: {self.table_name}")
     
-    def _ensure_table_exists(self) -> None:
+    def _ensure_table_exists(self):
         """
         테이블이 존재하는지 확인하고, 없으면 생성
+        
+        Returns:
+            DynamoDB 테이블 객체
         """
         try:
-            # 테이블 존재 여부 확인
-            self.dynamodb.meta.client.describe_table(TableName=self.table_name)
-            logger.info(f"Table {self.table_name} already exists")
-        except self.dynamodb.meta.client.exceptions.ResourceNotFoundException:
-            # 테이블 생성
-            logger.info(f"Creating table {self.table_name}")
-            
-            table = self.dynamodb.create_table(
-                TableName=self.table_name,
-                KeySchema=[
-                    {
-                        'AttributeName': 'project_id',
-                        'KeyType': 'HASH'  # 파티션 키
+            table = self.dynamodb.Table(self.table_name)
+            table.load()
+            return table
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                logger.info(f"Creating DynamoDB table: {self.table_name}")
+                table = self.dynamodb.create_table(
+                    TableName=self.table_name,
+                    KeySchema=[
+                        {'AttributeName': 'project_id', 'KeyType': 'HASH'}  # 파티션 키
+                    ],
+                    AttributeDefinitions=[
+                        {'AttributeName': 'project_id', 'AttributeType': 'S'}
+                    ],
+                    ProvisionedThroughput={
+                        'ReadCapacityUnits': 5,
+                        'WriteCapacityUnits': 5
                     }
-                ],
-                AttributeDefinitions=[
-                    {
-                        'AttributeName': 'project_id',
-                        'AttributeType': 'S'
-                    }
-                ],
-                ProvisionedThroughput={
-                    'ReadCapacityUnits': 5,
-                    'WriteCapacityUnits': 5
-                }
-            )
-            
-            # 테이블 생성 완료 대기
-            table.meta.client.get_waiter('table_exists').wait(TableName=self.table_name)
-            logger.info(f"Table {self.table_name} created successfully")
+                )
+                # 테이블 생성 완료 대기
+                table.meta.client.get_waiter('table_exists').wait(TableName=self.table_name)
+                logger.info(f"Table {self.table_name} created successfully")
+                return table
+            else:
+                logger.error(f"Error accessing DynamoDB table: {e}")
+                raise
     
-    def save_project(self, project_data: Dict[str, Any]) -> str:
+    def save_project(self, project: Dict[str, Any]):
         """
         프로젝트 정보 저장
         
         Args:
-            project_data: 저장할 프로젝트 정보
-            
-        Returns:
-            저장된 프로젝트 ID
+            project: 프로젝트 정보 딕셔너리
         """
         try:
-            table = self.dynamodb.Table(self.table_name)
-            
-            # 프로젝트 ID가 없으면 이름을 ID로 사용
-            if 'project_id' not in project_data:
-                project_data['project_id'] = project_data['name'].lower().replace(' ', '-')
-            
-            # 프로젝트 정보 저장
-            table.put_item(Item=project_data)
-            
-            logger.info(f"Project {project_data['project_id']} saved successfully")
-            return project_data['project_id']
-        
+            self.table.put_item(Item=project)
+            logger.info(f"Project {project['project_id']} saved to DynamoDB")
         except Exception as e:
-            logger.error(f"Failed to save project: {str(e)}", exc_info=True)
+            logger.error(f"Error saving project {project.get('project_id')}: {e}")
             raise
     
     def get_project(self, project_id: str) -> Optional[Dict[str, Any]]:
@@ -101,102 +83,70 @@ class ProjectStore:
         프로젝트 정보 조회
         
         Args:
-            project_id: 조회할 프로젝트 ID
+            project_id: 프로젝트 ID
             
         Returns:
-            프로젝트 정보 (없으면 None)
+            프로젝트 정보 딕셔너리 또는 None
         """
         try:
-            table = self.dynamodb.Table(self.table_name)
-            
-            # 프로젝트 조회
-            response = table.get_item(Key={'project_id': project_id})
-            
-            # 결과 반환
+            response = self.table.get_item(Key={'project_id': project_id})
             if 'Item' in response:
                 return response['Item']
             else:
                 logger.warning(f"Project {project_id} not found")
                 return None
-        
         except Exception as e:
-            logger.error(f"Failed to get project {project_id}: {str(e)}", exc_info=True)
+            logger.error(f"Error getting project {project_id}: {e}")
             raise
     
-    def list_projects(self) -> List[Dict[str, Any]]:
-        """
-        모든 프로젝트 목록 조회
-        
-        Returns:
-            프로젝트 목록
-        """
-        try:
-            table = self.dynamodb.Table(self.table_name)
-            
-            # 모든 프로젝트 스캔
-            response = table.scan()
-            
-            # 결과 반환
-            projects = response.get('Items', [])
-            logger.info(f"Found {len(projects)} projects")
-            return projects
-        
-        except Exception as e:
-            logger.error(f"Failed to list projects: {str(e)}", exc_info=True)
-            raise
-    
-    def update_project(self, project_id: str, updates: Dict[str, Any]) -> None:
+    def update_project(self, project: Dict[str, Any]):
         """
         프로젝트 정보 업데이트
         
         Args:
-            project_id: 업데이트할 프로젝트 ID
-            updates: 업데이트할 필드와 값
+            project: 프로젝트 정보 딕셔너리
         """
         try:
-            table = self.dynamodb.Table(self.table_name)
-            
-            # 업데이트 표현식 생성
-            update_expression = "SET "
-            expression_attribute_values = {}
-            
-            for key, value in updates.items():
-                if key != 'project_id':  # 키는 업데이트 불가
-                    update_expression += f"{key} = :{key.replace('-', '_')}, "
-                    expression_attribute_values[f":{key.replace('-', '_')}"] = value
-            
-            # 마지막 쉼표 제거
-            update_expression = update_expression[:-2]
-            
-            # 프로젝트 업데이트
-            if expression_attribute_values:
-                table.update_item(
-                    Key={'project_id': project_id},
-                    UpdateExpression=update_expression,
-                    ExpressionAttributeValues=expression_attribute_values
-                )
-                
-                logger.info(f"Project {project_id} updated successfully")
-        
+            self.save_project(project)
+            logger.info(f"Project {project['project_id']} updated in DynamoDB")
         except Exception as e:
-            logger.error(f"Failed to update project {project_id}: {str(e)}", exc_info=True)
+            logger.error(f"Error updating project {project['project_id']}: {e}")
             raise
     
-    def delete_project(self, project_id: str) -> None:
+    def list_projects(self) -> List[Dict[str, Any]]:
+        """
+        프로젝트 목록 조회
+        
+        Returns:
+            프로젝트 정보 딕셔너리 목록
+        """
+        try:
+            response = self.table.scan()
+            projects = response.get('Items', [])
+            
+            # 생성일 기준 내림차순 정렬
+            projects.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            
+            logger.info(f"Found {len(projects)} projects")
+            return projects
+        except Exception as e:
+            logger.error(f"Error listing projects: {e}")
+            return []
+    
+    def delete_project(self, project_id: str) -> bool:
         """
         프로젝트 삭제
         
         Args:
-            project_id: 삭제할 프로젝트 ID
+            project_id: 프로젝트 ID
+            
+        Returns:
+            삭제 성공 여부
         """
         try:
-            table = self.dynamodb.Table(self.table_name)
-            
-            # 프로젝트 삭제
-            table.delete_item(Key={'project_id': project_id})
-            
-            logger.info(f"Project {project_id} deleted successfully")
-        
+            self.table.delete_item(Key={'project_id': project_id})
+            logger.info(f"Project {project_id} deleted from DynamoDB")
+            return True
         except Exception as e:
-            logger.error(f"Failed to delete project {project_id}: {str(e)}", exc_info=True)
-            raise
+            logger.error(f"Error deleting project {project_id}: {e}")
+            return False
