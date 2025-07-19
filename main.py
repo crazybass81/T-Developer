@@ -510,83 +510,83 @@ async def slack_events(request: Request, background_tasks: BackgroundTasks):
             logger.info(f"Processing bot mention: '{request_text[:50]}...'")
             
             # 멘션이 확인되었으므로 처리
+            
+            # 프로젝트 지정 확인 ("project:ProjectName" 형태로 지정)
+            project_id = None
+            project_prefix = "project:"
+            
+            if project_prefix in request_text.lower():
+                # 프로젝트 이름 추출
+                parts = request_text.split(project_prefix, 1)
+                if len(parts) > 1:
+                    project_part = parts[1].strip()
+                    project_name = project_part.split()[0].strip()  # 첫 번째 단어를 프로젝트 이름으로 간주
                     
-                # 프로젝트 지정 확인 ("project:ProjectName" 형태로 지정)
-                project_id = None
-                project_prefix = "project:"
-                
-                if project_prefix in request_text.lower():
-                    # 프로젝트 이름 추출
-                    parts = request_text.split(project_prefix, 1)
-                    if len(parts) > 1:
-                        project_part = parts[1].strip()
-                        project_name = project_part.split()[0].strip()  # 첫 번째 단어를 프로젝트 이름으로 간주
-                        
-                        # 프로젝트 이름으로 프로젝트 ID 찾기
-                        try:
-                            from context.dynamo.project_store import ProjectStore
-                            project_store = ProjectStore()
-                            projects = project_store.list_projects()
-                            
-                            for project in projects:
-                                if project["name"].lower() == project_name.lower():
-                                    project_id = project["project_id"]
-                                    logger.info(f"Found project ID {project_id} for name {project_name}")
-                                    break
-                            
-                            # 프로젝트 이름 부분 제거
-                            request_text = request_text.replace(f"{project_prefix}{project_name}", "").strip()
-                        except Exception as e:
-                            logger.warning(f"Failed to find project by name {project_name}: {e}")
-                            # 오류 발생 시 프로젝트 이름 부분만 제거
-                            request_text = request_text.replace(f"{project_prefix}{project_name}", "").strip()
-                
-                # 프로젝트 정보 가져오기
-                project_context = {}
-                try:
-                    from context.dynamo.project_store import ProjectStore
-                    project_store = ProjectStore()
-                    
-                    # 프로젝트 ID가 지정된 경우
-                    if project_id:
-                        project = project_store.get_project(project_id)
-                        if project:
-                            logger.info(f"Using specified project for Slack request: {project['name']}")
-                            project_context = {
-                                "project_id": project["project_id"],
-                                "project_name": project["name"],
-                                "slack_channel": project.get("slack_channel"),
-                                "github_repo": project.get("github_repo")
-                            }
-                    # 프로젝트 ID가 없는 경우 기본 프로젝트 사용
-                    else:
+                    # 프로젝트 이름으로 프로젝트 ID 찾기
+                    try:
+                        from context.dynamo.project_store import ProjectStore
+                        project_store = ProjectStore()
                         projects = project_store.list_projects()
-                        if projects:
-                            project = projects[0]  # 첫 번째 프로젝트 사용
-                            logger.info(f"Using default project for Slack request: {project['name']}")
-                            project_context = {
-                                "project_id": project["project_id"],
-                                "project_name": project["name"],
-                                "slack_channel": project.get("slack_channel"),
-                                "github_repo": project.get("github_repo")
-                            }
-                except Exception as e:
-                    logger.warning(f"Failed to get project for Slack request: {e}")
+                        
+                        for project in projects:
+                            if project["name"].lower() == project_name.lower():
+                                project_id = project["project_id"]
+                                logger.info(f"Found project ID {project_id} for name {project_name}")
+                                break
+                        
+                        # 프로젝트 이름 부분 제거
+                        request_text = request_text.replace(f"{project_prefix}{project_name}", "").strip()
+                    except Exception as e:
+                        logger.warning(f"Failed to find project by name {project_name}: {e}")
+                        # 오류 발생 시 프로젝트 이름 부분만 제거
+                        request_text = request_text.replace(f"{project_prefix}{project_name}", "").strip()
+            
+            # 프로젝트 정보 가져오기
+            project_context = {}
+            try:
+                from context.dynamo.project_store import ProjectStore
+                project_store = ProjectStore()
                 
-                # 비동기로 작업 처리 (프로젝트 컨텍스트 포함)
-                task_id = mao.process_request_async(request_text, user, project_context)
-                
-                # 로그 추가
-                project_info = ""
-                if "project_id" in project_context:
-                    project_info = f" for project {project_context['project_id']}"
-                logger.info(f"Created task {task_id}{project_info} from Slack message by user {user}")
-                
-                return {"status": "ok", "task_id": task_id, "project_info": project_context.get("project_id")}
-            else:
-                # 멘션이 아닌 경우 무시
-                logger.debug(f"Ignoring message without bot mention: {text[:30]}...")
-                return {"status": "ok", "message": "Message ignored (no bot mention)"}
+                # 프로젝트 ID가 지정된 경우
+                if project_id:
+                    project = project_store.get_project(project_id)
+                    if project:
+                        logger.info(f"Using specified project for Slack request: {project['name']}")
+                        project_context = {
+                            "project_id": project["project_id"],
+                            "project_name": project["name"],
+                            "slack_channel": project.get("slack_channel"),
+                            "github_repo": project.get("github_repo")
+                        }
+                # 프로젝트 ID가 없는 경우 기본 프로젝트 사용
+                else:
+                    projects = project_store.list_projects()
+                    if projects:
+                        project = projects[0]  # 첫 번째 프로젝트 사용
+                        logger.info(f"Using default project for Slack request: {project['name']}")
+                        project_context = {
+                            "project_id": project["project_id"],
+                            "project_name": project["name"],
+                            "slack_channel": project.get("slack_channel"),
+                            "github_repo": project.get("github_repo")
+                        }
+            except Exception as e:
+                logger.warning(f"Failed to get project for Slack request: {e}")
+            
+            # 비동기로 작업 처리 (프로젝트 컨텍스트 포함)
+            task_id = mao.process_request_async(request_text, user, project_context)
+            
+            # 로그 추가
+            project_info = ""
+            if "project_id" in project_context:
+                project_info = f" for project {project_context['project_id']}"
+            logger.info(f"Created task {task_id}{project_info} from Slack message by user {user}")
+            
+            return {"status": "ok", "task_id": task_id, "project_info": project_context.get("project_id")}
+        else:
+            # 멘션이 아닌 경우 무시
+            logger.debug(f"Ignoring message without bot mention: {text[:30]}...")
+            return {"status": "ok", "message": "Message ignored (no bot mention)"}
     
     # 기타 이벤트는 무시
     return {"status": "ok"}

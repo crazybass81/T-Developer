@@ -16,7 +16,7 @@ const getApiBaseUrl = () => {
   }
   
   // Default fallback
-  return 'http://localhost:8000';
+  return 'http://172.31.21.41:8000';
 };
 
 export const apiClient = {
