@@ -1,0 +1,38 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Run Python linters
+        run: |
+          pip install flake8
+          flake8 . --exclude=frontend/,build/,venv/,.git/ --max-line-length=120
+      - name: Run Backend Tests
+        run: pytest
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install Frontend dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Run Frontend lint
+        run: npm run lint
+        working-directory: frontend
+      - name: Run Frontend tests
+        run: CI=true npm test
+        working-directory: frontend
+      - name: Build Frontend
+        run: npm run build
+        working-directory: frontend
