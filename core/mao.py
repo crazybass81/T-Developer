@@ -339,7 +339,7 @@ class MAO:
             success = test_result.get("success", False)
             
             # 테스트 재시도 옵션 확인
-            max_retries = 0  # 테스트 재시도 비활성화
+            max_retries = settings.MAX_RETRIES  # 설정에서 MAX_RETRIES 값을 가져옴
             # 테스트 재시도를 비활성화하려면 MAX_RETRIES를 0으로 설정
             if max_retries == 0:
                 logger.info("Test retries disabled (MAX_RETRIES=0)")
