@@ -1,0 +1,60 @@
+{
+  "task_id": "TASK-20250720-30bf9344",
+  "feature_name": "Test task from curl",
+  "description": "Test task from curl",
+  "plan": {
+    "summary": "\uc694\uccad\ub41c \uae30\ub2a5 \uad6c\ud604 \uacc4\ud68d",
+    "steps": [
+      "\uc694\uad6c\uc0ac\ud56d \ubd84\uc11d",
+      "\uc124\uacc4 \ubc0f \uc544\ud0a4\ud14d\ucc98 \uacb0\uc815",
+      "\ucf54\ub4dc \uad6c\ud604",
+      "\ub2e8\uc704 \ud14c\uc2a4\ud2b8 \uc791\uc131",
+      "\ud1b5\ud569 \ud14c\uc2a4\ud2b8 \uc218\ud589"
+    ],
+    "acceptance_criteria": [
+      "\uae30\ub2a5\uc774 \uc694\uad6c\uc0ac\ud56d\uc5d0 \ub9de\uac8c \ub3d9\uc791\ud568",
+      "\ucf54\ub4dc\uac00 \ud504\ub85c\uc81d\ud2b8 \uc2a4\ud0c0\uc77c \uac00\uc774\ub4dc\ub97c \uc900\uc218\ud568",
+      "\ubaa8\ub4e0 \ud14c\uc2a4\ud2b8\uac00 \ud1b5\uacfc\ud568"
+    ],
+    "considerations": [
+      "\uc131\ub2a5 \ucd5c\uc801\ud654",
+      "\ubcf4\uc548 \uace0\ub824\uc0ac\ud56d",
+      "\uc720\uc9c0\ubcf4\uc218\uc131"
+    ]
+  },
+  "context": {
+    "global_context": {
+      "project_description": "A test project",
+      "created_at": "2023-01-01T00:00:00Z",
+      "task_id": "GLOBAL_CONTEXT",
+      "coding_style": "PEP8",
+      "status": "ACTIVE",
+      "github_repo": "github.com/test/repo3",
+      "framework": "FastAPI",
+      "test_framework": "pytest",
+      "deployment_target": "AWS Lambda"
+    },
+    "related_tasks": [
+      {
+        "task_id": "TASK-20250720-30bf9344",
+        "request": "Test task from curl",
+        "user_id": "test-user",
+        "status": "coding",
+        "created_at": "2025-07-20T04:18:38.506940",
+        "plan_summary": "\uc694\uccad\ub41c \uae30\ub2a5 \uad6c\ud604 \uacc4\ud68d",
+        "plan_s3_key": "plans/TASK-20250720-30bf9344.json",
+        "branch_name": "feature/TASK-20250720-30bf9344"
+      }
+    ],
+    "related_files": [
+      {
+        "path": "app.py",
+        "description": "\uc560\ud50c\ub9ac\ucf00\uc774\uc158 \uc9c4\uc785\uc810"
+      },
+      {
+        "path": "config.py",
+        "description": "\uc124\uc815 \ubaa8\ub4c8"
+      }
+    ]
+  }
+}
