@@ -83,6 +83,7 @@ class GitHubTool:
         
         # 작업별 워크스페이스 사용
         if task_id:
+            # 작업별 워크스페이스는 T-Developer 내부가 아닌 별도의 작업 디렉토리에 생성
             self.workspace_dir = os.path.join(settings.Q_DEVELOPER_WORKSPACE, task_id)
         else:
             self.workspace_dir = settings.Q_DEVELOPER_WORKSPACE
@@ -115,8 +116,8 @@ class GitHubTool:
         git_dir = os.path.join(self.workspace_dir, ".git")
         try:
             if not os.path.exists(git_dir):
-                # 저장소 클론
-                logger.info(f"Cloning repository to {self.workspace_dir}")
+                # 저장소 클론 - 대상 저장소를 클론
+                logger.info(f"Cloning target repository {self.owner}/{self.repo} to {self.workspace_dir}")
                 self._run_git_command(["git", "clone", self.repo_url, self.workspace_dir], ignore_errors=True)
             else:
                 # 저장소 업데이트

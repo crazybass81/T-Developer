@@ -57,6 +57,9 @@ Desktop.ini
 
 # Q Developer workspace
 /tmp/q-workspace/
+workspace/target_repos/
+# Keep workspace README
+!workspace/README.md
 
 # Node.js
 node_modules/

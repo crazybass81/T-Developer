@@ -17,7 +17,7 @@ from context.s3.artifact_store import ArtifactStore
 from agents.agno.agent import AgnoAgent
 from agents.q_developer.agent import QDeveloperAgent
 from tools.git.github import GitHubTool
-from slack.notifier import SlackNotifier
+from slack.notifier_factory import SlackNotifierFactory
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class MAO:
         self.artifact_store = ArtifactStore()
         self.agno_agent = AgnoAgent()
         self.q_developer_agent = QDeveloperAgent()
-        self.slack = SlackNotifier()
+        self.slack = SlackNotifierFactory.create_notifier()
         logger.info("MAO initialized")
     
     def process_request(self, request_text: str, user_id: str, project_id: str = None) -> str:

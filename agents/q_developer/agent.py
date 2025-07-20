@@ -24,7 +24,7 @@ class QDeveloperAgent:
     
     def __init__(self):
         """Q Developer 에이전트 초기화"""
-        # 기본 작업공간 경로
+        # 기본 작업공간 경로 - 대상 저장소를 위한 디렉토리
         self.workspace_dir = settings.Q_DEVELOPER_WORKSPACE
         os.makedirs(self.workspace_dir, exist_ok=True)
         logger.info(f"Q Developer Agent initialized with workspace: {self.workspace_dir}")

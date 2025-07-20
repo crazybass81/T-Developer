@@ -41,9 +41,27 @@ app = FastAPI(
 )
 
 # CORS 설정
+# S3 웹사이트 오리진 허용
+def get_allowed_origins():
+    origins = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "*",  # 모든 오리진 허용 (동적 포트 할당을 위해)
+    ]
+    
+    # S3 버킷 웹사이트 오리진 추가
+    bucket_name = os.environ.get("FRONTEND_BUCKET_NAME", "tdeveloper-frontend")
+    regions = ["us-east-1", "us-east-2", "us-west-1", "us-west-2", "ap-northeast-2"]
+    
+    for region in regions:
+        origins.append(f"http://{bucket_name}.s3-website-{region}.amazonaws.com")
+        origins.append(f"http://{bucket_name}.s3-website.{region}.amazonaws.com")
+    
+    return origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8000", "*"],  # 프론트엔드 개발 서버 주소
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
