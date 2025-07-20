@@ -1,13 +1,13 @@
 # T-Developer v1.0 Testing Checklist
 
-This checklist helps verify that all features of T-Developer v1.0 are working correctly after deployment.
+Use this checklist to verify that all features of T-Developer v1.0 are working correctly after deployment.
 
 ## Backend Verification
 
 - [ ] **Backend Service Running**
   - [ ] Systemd service is active (`systemctl status tdeveloper`)
   - [ ] Health endpoint returns 200 (`curl http://localhost:8000/health`)
-  - [ ] Detailed health endpoint shows correct information (`curl http://localhost:8000/health/detailed`)
+  - [ ] Detailed health endpoint shows correct information
 
 - [ ] **AWS Resources**
   - [ ] DynamoDB tables exist with correct prefix

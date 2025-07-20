@@ -1,6 +1,6 @@
 # T-Developer v1.0
 
-This is the v1.0 release of T-Developer, a system that automates software development tasks using AI. This version runs entirely on EC2 without AWS Lambda dependencies.
+T-Developer is an AI-powered development assistant that automates software development tasks using natural language requests.
 
 ## Architecture
 
@@ -11,50 +11,54 @@ T-Developer v1.0 uses a simple architecture:
 - **Storage**: DynamoDB for task/project data, S3 for artifacts
 - **Integrations**: GitHub for code repositories, Slack for notifications
 
-## Deployment Instructions
+## Features
 
-### Backend Deployment
+- **Natural Language Task Processing**: Submit development tasks in plain English
+- **AI-Powered Development**: Automated planning, coding, and testing
+- **GitHub Integration**: Automatic branch creation, code commits, and PR creation
+- **Slack Integration**: Real-time notifications about task progress
+- **Project Management**: Organize tasks by project with specific GitHub repos and Slack channels
+- **Test Execution**: Automatic test running and reporting
+- **Code Review**: View diffs and test results for completed tasks
 
-1. **Install Dependencies**:
+## Deployment
+
+See the [Deployment Guide](DEPLOYMENT_GUIDE.md) for detailed instructions on deploying T-Developer v1.0.
+
+### Quick Start
+
+1. **Backend Setup**:
    ```bash
+   # Clone the repository
+   git clone https://github.com/your-username/T-Developer.git
    cd T-Developer
+   
+   # Install dependencies
    python3 -m venv venv
    source venv/bin/activate
    pip install -r requirements.txt
-   ```
-
-2. **Configure Environment**:
-   ```bash
+   
+   # Configure environment
    cp .env.example .env
    # Edit .env with your settings
-   ```
-
-3. **Install as Service**:
-   ```bash
+   
+   # Set up infrastructure
+   python3 scripts/setup_infrastructure.py
+   
+   # Install as a service
    sudo ./scripts/install_service.sh
    ```
 
-4. **Verify Backend**:
+2. **Frontend Setup**:
    ```bash
-   curl http://localhost:8000/health
-   ```
-
-### Frontend Deployment
-
-1. **Build and Deploy**:
-   ```bash
-   ./deploy_frontend.sh
-   ```
+   # Build the frontend
+   cd frontend
+   npm install
+   echo "REACT_APP_API_URL=http://<EC2-PUBLIC-IP>:8000" > .env.production
+   npm run build
    
-   You can specify a custom backend URL:
-   ```bash
-   ./deploy_frontend.sh https://your-api-domain.com
-   ```
-
-2. **Access the Frontend**:
-   Open the S3 website URL in your browser:
-   ```
-   http://tdeveloper-frontend.s3-website-<region>.amazonaws.com
+   # Deploy to S3
+   aws s3 sync build/ s3://tdeveloper-frontend/ --delete
    ```
 
 ## Configuration
@@ -66,25 +70,34 @@ Key configuration options in `.env`:
 - **Slack Integration**: `SLACK_BOT_TOKEN`, `SLACK_CHANNEL`, `SLACK_SIGNING_SECRET`
 - **Lambda Features**: All set to `false` in v1.0 (`USE_LAMBDA_NOTIFIER`, `USE_LAMBDA_TEST_EXECUTOR`)
 
-## Verification
+## Usage
 
-Run the verification script to check your deployment:
+1. **Create a Project**:
+   - Open the frontend in a web browser
+   - Fill in project details (name, description, GitHub repo, Slack channel)
+   - Click "Create Project"
 
-```bash
-./scripts/verify_deployment.sh
-```
+2. **Submit a Task**:
+   - Navigate to the "New Task" page
+   - Select a project
+   - Enter a natural language request (e.g., "Add a login page")
+   - Click "Submit"
 
-Use the testing checklist to verify all features:
+3. **Monitor Progress**:
+   - Watch the task timeline update in real-time
+   - Receive notifications in Slack
+   - Review the completed task (plan, code changes, test results)
+   - Merge the Pull Request on GitHub
 
-```bash
-cat TESTING_CHECKLIST.md
-```
+## Monitoring and Maintenance
 
-## Troubleshooting
+- **Monitor Deployment**: Run `./scripts/monitor_deployment.sh`
+- **View Logs**: Check `logs/tdeveloper.out.log`, `logs/tdeveloper.err.log`, and `t-developer.log`
+- **Restart Service**: Run `sudo systemctl restart tdeveloper`
 
-- **Backend Issues**: Check logs with `sudo journalctl -u tdeveloper -f`
-- **Frontend Issues**: Check browser console and network requests
-- **Integration Issues**: Verify credentials in `.env` file
+## Testing
+
+See the [Testing Checklist](TESTING_CHECKLIST.md) for a comprehensive list of features to test after deployment.
 
 ## Future Development
 

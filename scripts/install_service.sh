@@ -20,6 +20,10 @@ fi
 T_DEVELOPER_DIR=$(realpath $(dirname $(dirname $0)))
 echo "T-Developer directory: $T_DEVELOPER_DIR"
 
+# Create logs directory if it doesn't exist
+mkdir -p $T_DEVELOPER_DIR/logs
+echo "Created logs directory: $T_DEVELOPER_DIR/logs"
+
 # Copy the systemd service file
 SERVICE_FILE="/etc/systemd/system/tdeveloper.service"
 echo "Creating systemd service file: $SERVICE_FILE"
@@ -28,32 +32,8 @@ cp $T_DEVELOPER_DIR/scripts/tdeveloper.service $SERVICE_FILE
 # Update paths in the service file if needed
 sed -i "s|WorkingDirectory=.*|WorkingDirectory=$T_DEVELOPER_DIR|" $SERVICE_FILE
 sed -i "s|EnvironmentFile=.*|EnvironmentFile=$T_DEVELOPER_DIR/.env|" $SERVICE_FILE
-sed -i "s|ExecStart=.*|ExecStart=$T_DEVELOPER_DIR/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000|" $SERVICE_FILE
-
-# Make sure .env file exists
-if [ ! -f "$T_DEVELOPER_DIR/.env" ]; then
-  echo "Creating .env file from .env.example"
-  cp $T_DEVELOPER_DIR/.env.example $T_DEVELOPER_DIR/.env
-  echo -e "${YELLOW}Please edit $T_DEVELOPER_DIR/.env with your actual credentials${NC}"
-fi
-
-# Make sure Lambda features are disabled for v1.0
-echo "Ensuring Lambda features are disabled for v1.0"
-if grep -q "USE_LAMBDA_NOTIFIER" "$T_DEVELOPER_DIR/.env"; then
-  sed -i 's/USE_LAMBDA_NOTIFIER=.*/USE_LAMBDA_NOTIFIER=false/' "$T_DEVELOPER_DIR/.env"
-else
-  echo "USE_LAMBDA_NOTIFIER=false" >> "$T_DEVELOPER_DIR/.env"
-fi
-
-if grep -q "USE_LAMBDA_TEST_EXECUTOR" "$T_DEVELOPER_DIR/.env"; then
-  sed -i 's/USE_LAMBDA_TEST_EXECUTOR=.*/USE_LAMBDA_TEST_EXECUTOR=false/' "$T_DEVELOPER_DIR/.env"
-else
-  echo "USE_LAMBDA_TEST_EXECUTOR=false" >> "$T_DEVELOPER_DIR/.env"
-fi
-
-# Install pytest if not already installed
-echo "Ensuring pytest is installed"
-$T_DEVELOPER_DIR/venv/bin/pip install pytest
+sed -i "s|StandardOutput=file:.*|StandardOutput=file:$T_DEVELOPER_DIR/logs/tdeveloper.out.log|" $SERVICE_FILE
+sed -i "s|StandardError=file:.*|StandardError=file:$T_DEVELOPER_DIR/logs/tdeveloper.err.log|" $SERVICE_FILE
 
 # Reload systemd
 echo "Reloading systemd"

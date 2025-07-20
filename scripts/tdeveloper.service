@@ -1,14 +1,16 @@
 [Unit]
-Description=T-Developer FastAPI Service
+Description=T-Developer FastAPI Backend
 After=network.target
 
 [Service]
 User=ec2-user
 WorkingDirectory=/home/ec2-user/T-Developer
 EnvironmentFile=/home/ec2-user/T-Developer/.env
-ExecStart=/home/ec2-user/T-Developer/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=5
+StandardOutput=file:/home/ec2-user/T-Developer/logs/tdeveloper.out.log
+StandardError=file:/home/ec2-user/T-Developer/logs/tdeveloper.err.log
 
 [Install]
 WantedBy=multi-user.target
