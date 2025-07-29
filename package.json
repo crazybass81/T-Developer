@@ -17,7 +17,21 @@
     "format": "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "seed:dev": "ts-node scripts/seed-dev-data.ts",
-    "build:frontend": "echo 'Frontend build placeholder'"
+    "build:frontend": "echo 'Frontend build placeholder'",
+    "preset:list": "ts-node scripts/preset-manager.ts list",
+    "preset:activate": "ts-node scripts/preset-manager.ts activate",
+    "preset:deactivate": "ts-node scripts/preset-manager.ts deactivate",
+    "dev:minimal": "npm run preset:activate minimal && npm run dev",
+    "dev:mocks": "npm run preset:activate full-mocks && npm run dev",
+    "test:integration": "npm run preset:activate testing && npm run test",
+    "db:setup:test": "ts-node scripts/setup-test-db.ts",
+    "db:cleanup:test": "ts-node scripts/cleanup-test-db.ts",
+    "test:agents": "ts-node scripts/test-agent-framework.ts",
+    "agents:list": "echo 'Available agent types:' && grep -r 'AgentType\.' backend/src/agents/framework/agent-types.ts",
+    "test:communication": "ts-node scripts/test-communication.ts",
+    "test:bedrock": "ts-node scripts/test-bedrock-integration.ts",
+    "test:squad": "ts-node scripts/test-agent-squad.ts",
+    "test:agno": "ts-node scripts/test-agno-monitoring.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock": "^3.0.0",
@@ -26,6 +40,7 @@
     "@aws-sdk/client-lambda": "^3.0.0",
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.0.0",
     "@faker-js/faker": "^8.4.1",
     "@types/ioredis": "^4.28.10",
     "axios": "^1.6.0",
@@ -50,7 +65,11 @@
     "prettier": "^3.0.0",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "js-yaml": "^4.1.0",
+    "@types/js-yaml": "^4.0.5",
+    "commander": "^11.1.0",
+    "chalk": "^4.1.2"
   },
   "keywords": [
     "ai",

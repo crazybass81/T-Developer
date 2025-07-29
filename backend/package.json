@@ -14,7 +14,19 @@
     "optimize:resources": "ts-node ../scripts/optimize-resources.ts",
     "analyze:bundle": "webpack-bundle-analyzer dist/assets/stats.json",
     "monitor:memory": "ts-node ../scripts/memory-monitor.ts",
-    "generate": "ts-node ../scripts/code-generator/generator.ts"
+    "generate": "ts-node ../scripts/code-generator/generator.ts",
+    "dev:hmr": "ts-node ../scripts/dev-server.ts",
+    "dev:mocks": "ts-node ../scripts/mock-server.ts",
+    "debug:setup": "../scripts/debug-commands.sh setup",
+    "debug:inspect": "../scripts/debug-commands.sh inspect",
+    "debug:profile": "../scripts/debug-commands.sh profile",
+    "debug:analyze-profile": "../scripts/debug-commands.sh analyze-profile",
+    "debug:heap": "../scripts/debug-commands.sh heap",
+    "debug:trace": "../scripts/debug-commands.sh trace",
+    "debug:memory": "../scripts/debug-commands.sh memory",
+    "debug:agent": "../scripts/debug-commands.sh agent",
+    "debug:test": "../scripts/debug-commands.sh test",
+    "debug:clean": "../scripts/debug-commands.sh clean"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock": "^3.0.0",
@@ -62,8 +74,13 @@
     "typescript": "^5.0.0",
     "chalk": "^4.1.2",
     "@types/inquirer": "^8.2.0",
+    "@types/ws": "^8.5.0",
     "commander": "^9.4.0",
     "inquirer": "^8.2.0",
-    "handlebars": "^4.7.7"
+    "handlebars": "^4.7.7",
+    "chokidar": "^3.5.3",
+    "ws": "^8.14.0",
+    "@faker-js/faker": "^8.3.1",
+    "socket.io": "^4.7.4"
   }
 }

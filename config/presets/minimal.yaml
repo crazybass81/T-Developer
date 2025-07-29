@@ -1,0 +1,12 @@
+name: minimal
+description: Minimal setup for quick development
+env:
+  NODE_ENV: development
+  USE_MOCKS: "false"
+  LOG_LEVEL: debug
+services:
+  - name: dynamodb
+    type: docker
+    image: amazon/dynamodb-local
+    ports:
+      - "8000:8000"
