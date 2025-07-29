@@ -5,13 +5,16 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Copy source code
 COPY . .
 
 # Build application
 RUN npm run build
+
+# Install production dependencies
+RUN npm ci --omit=dev
 
 # Runtime stage
 FROM node:18-alpine
