@@ -45,44 +45,56 @@ npm run build
 npm start
 ```
 
+## 🏗️ 프로젝트 구조
+
+```
+{{PROJECT_NAME}}/
+├── src/
+│   ├── controllers/    # API 컨트롤러
+│   ├── services/       # 비즈니스 로직
+│   ├── models/         # 데이터 모델
+│   ├── routes/         # API 라우트
+│   └── utils/          # 유틸리티 함수
+├── tests/              # 테스트 파일
+├── docs/               # 문서
+└── scripts/            # 스크립트
+```
+
 ## 📚 API 문서
 
-- [API 문서](./docs/api.md)
-- [Swagger UI](http://localhost:8000/api-docs)
+API 문서는 다음 주소에서 확인할 수 있습니다:
+- 개발: http://localhost:{{PORT}}/api-docs
+- 프로덕션: {{PRODUCTION_URL}}/api-docs
 
 ## 🧪 테스트
 
 ```bash
-# 모든 테스트 실행
+# 단위 테스트
+npm run test:unit
+
+# 통합 테스트
+npm run test:integration
+
+# 전체 테스트
 npm test
-
-# 테스트 커버리지
-npm run test:coverage
 ```
 
-## 📦 배포
+## 🔧 환경 변수
 
-```bash
-# Docker 빌드
-docker build -t {{PROJECT_NAME}} .
-
-# Docker 실행
-docker run -p 8000:8000 {{PROJECT_NAME}}
-```
+| 변수명 | 설명 | 기본값 |
+|--------|------|--------|
+{{#ENV_VARS}}
+| {{NAME}} | {{DESCRIPTION}} | {{DEFAULT}} |
+{{/ENV_VARS}}
 
 ## 🤝 기여하기
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+기여를 환영합니다! [CONTRIBUTING.md](./CONTRIBUTING.md)를 참고해주세요.
 
 ## 📄 라이선스
 
-이 프로젝트는 {{LICENSE}} 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+이 프로젝트는 {{LICENSE}} 라이선스 하에 배포됩니다.
 
-## 🙏 감사의 말
+---
 
-- [T-Developer](https://t-developer.com) - AI 기반 개발 플랫폼
-- 모든 기여자들에게 감사드립니다
+Generated with ❤️ by [T-Developer](https://github.com/t-developer)
