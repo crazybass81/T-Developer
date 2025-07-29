@@ -2,6 +2,7 @@ export { ConnectionPool, DynamoDBPool, RedisPool, BedrockPool, PoolManager } fro
 export { DatabaseOptimizer } from './database-optimizer';
 export { CacheManager, MultiLevelCache } from './cache-manager';
 export { QueueManager, JobWorker, AgentExecutionWorker, JobType, JobPriority } from './job-queue';
+export { LambdaOptimizer, DynamicImportManager, PrefetchManager, backendWebpackConfig, frontendViteConfig } from './bundle-optimizer';
 
 // Initialize performance systems
 export async function initializePerformanceSystems(): Promise<void> {
