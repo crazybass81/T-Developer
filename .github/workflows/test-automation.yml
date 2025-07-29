@@ -1,0 +1,85 @@
+name: Automated Testing Pipeline
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, develop]
+
+jobs:
+  test-matrix:
+    name: Test Suite - ${{ matrix.test-suite }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        test-suite: [unit, integration, e2e]
+        node-version: [18.x, 20.x]
+        include:
+          - test-suite: unit
+            timeout: 10
+          - test-suite: integration
+            timeout: 20
+          - test-suite: e2e
+            timeout: 30
+    
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "curl http://localhost:8000"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
+          
+      - name: Run ${{ matrix.test-suite }} tests
+        run: |
+          cd backend
+          npm run test:${{ matrix.test-suite }}
+        timeout-minutes: ${{ matrix.timeout }}
+        env:
+          DYNAMODB_ENDPOINT: http://localhost:8000
+          REDIS_HOST: localhost
+          NODE_ENV: test
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-${{ matrix.test-suite }}-${{ matrix.node-version }}
+          path: backend/test-results/
+          retention-days: 7
+          
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        if: matrix.test-suite == 'unit'
+        with:
+          directory: ./backend/coverage
+          flags: ${{ matrix.test-suite }}
+          name: codecov-${{ matrix.test-suite }}

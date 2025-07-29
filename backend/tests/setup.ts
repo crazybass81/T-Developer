@@ -1,30 +1,21 @@
-import { mockEnvironment } from './helpers/test-utils';
-import { DatabaseTestHelpers } from './helpers/database-helpers';
+import { jest } from '@jest/globals';
 
 // Global test setup
-beforeAll(() => {
+beforeAll(async () => {
   // Set test environment variables
-  const restoreEnv = mockEnvironment({
-    NODE_ENV: 'test',
-    JWT_ACCESS_SECRET: 'test-access-secret',
-    JWT_REFRESH_SECRET: 'test-refresh-secret',
-    AWS_REGION: 'us-east-1',
-    REDIS_HOST: 'localhost',
-    REDIS_PORT: '6379'
-  });
-
-  // Store restore function globally for cleanup
-  (global as any).restoreEnv = restoreEnv;
+  process.env.NODE_ENV = 'test';
+  process.env.LOG_LEVEL = 'error';
+  process.env.DYNAMODB_ENDPOINT = 'http://localhost:8000';
+  process.env.REDIS_HOST = 'localhost';
 });
 
-beforeEach(() => {
-  // Setup database mocks for each test
-  DatabaseTestHelpers.setupMocks();
+afterAll(async () => {
+  // Cleanup after all tests
+  jest.clearAllMocks();
 });
 
-afterAll(() => {
-  // Restore original environment
-  if ((global as any).restoreEnv) {
-    (global as any).restoreEnv();
-  }
-});
+// Mock AWS SDK
+jest.mock('@aws-sdk/client-dynamodb');
+jest.mock('@aws-sdk/lib-dynamodb');
+jest.mock('@aws-sdk/client-bedrock');
+jest.mock('@aws-sdk/client-s3');

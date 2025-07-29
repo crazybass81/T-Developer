@@ -1,0 +1,80 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality-checks:
+    name: Quality Gate Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
+          
+      - name: Code quality check
+        run: |
+          cd backend
+          npm run lint
+          npm run format:check
+          
+      - name: Test coverage check
+        run: |
+          cd backend
+          npm run test:coverage
+          
+      - name: Coverage threshold check
+        run: |
+          cd backend
+          npx nyc check-coverage --lines 80 --functions 80 --branches 80 --statements 80
+          
+      - name: Security audit
+        run: |
+          cd backend
+          npm audit --audit-level=moderate
+          
+      - name: Bundle size check
+        run: |
+          cd backend
+          npm run build
+          npx bundlesize
+          
+      - name: Comment PR
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const coverage = JSON.parse(fs.readFileSync('./backend/coverage/coverage-summary.json', 'utf8'));
+            const comment = `
+            ## 🔍 Quality Gate Results
+            
+            ### Coverage Report
+            - **Lines**: ${coverage.total.lines.pct}%
+            - **Functions**: ${coverage.total.functions.pct}%
+            - **Branches**: ${coverage.total.branches.pct}%
+            - **Statements**: ${coverage.total.statements.pct}%
+            
+            ### Status
+            ${coverage.total.lines.pct >= 80 ? '✅' : '❌'} Coverage threshold check
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
