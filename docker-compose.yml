@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # DynamoDB Local
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: t-developer-dynamodb
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    networks:
+      - t-developer-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: t-developer-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-devpassword}
+    volumes:
+      - redis-data:/data
+    networks:
+      - t-developer-network
+
+  # LocalStack (AWS 서비스 모킹)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: t-developer-localstack
+    ports:
+      - "4566:4566"
+      - "4571:4571"
+    environment:
+      - SERVICES=s3,lambda,secretsmanager,cloudwatch
+      - DEBUG=1
+      - LAMBDA_EXECUTOR=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - localstack-data:/tmp/localstack
+    networks:
+      - t-developer-network
+
+  # Postgres (선택적 - DynamoDB 대신 사용 가능)
+  postgres:
+    image: postgres:15-alpine
+    container_name: t-developer-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: t_developer
+      POSTGRES_USER: ${DB_USER:-developer}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - t-developer-network
+
+  # Elasticsearch (컴포넌트 검색용)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: t-developer-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - t-developer-network
+
+  # Kibana (Elasticsearch UI)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: t-developer-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - t-developer-network
+
+  # Jaeger (분산 추적)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: t-developer-jaeger
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    networks:
+      - t-developer-network
+
+volumes:
+  redis-data:
+  localstack-data:
+  postgres-data:
+  elasticsearch-data:
+
+networks:
+  t-developer-network:
+    driver: bridge

@@ -28,7 +28,7 @@ services:
     image: redis:7-alpine
     container_name: t-developer-redis
     ports:
-      - "6380:6379"
+      - "6379:6379"
     command: redis-server --appendonly yes
     volumes:
       - "./docker/redis:/data"

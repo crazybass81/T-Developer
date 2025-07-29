@@ -1,0 +1,15 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY backend/src/services/local-cdn.ts ./src/
+COPY tsconfig.json ./
+
+RUN npm install -g typescript ts-node
+
+EXPOSE 3002
+
+CMD ["ts-node", "src/local-cdn.ts"]

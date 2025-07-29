@@ -17,6 +17,7 @@ dist/
 .env
 .env.local
 .env.*.local
+.env.key
 
 # AWS
 .aws/
@@ -32,6 +33,13 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# SSL Certificates
+certs/
+*.crt
+*.key
+*.pem
+*.csr
 
 # Python
 __pycache__/

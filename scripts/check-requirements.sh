@@ -5,7 +5,7 @@ echo "🔍 개발 환경 체크 시작..."
 
 # Node.js 버전 확인
 NODE_VERSION=$(node -v 2>/dev/null)
-if [[ ! "$NODE_VERSION" =~ ^v18\.|^v20\. ]]; then
+if [[ ! "$NODE_VERSION" =~ ^v18\.|^v20\.|^v22\. ]]; then
     echo "❌ Node.js 18+ 필요 (현재: $NODE_VERSION)"
     exit 1
 fi
