@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { alertManager } from '../monitoring/alerting';
+import { alertManager, alertTemplates } from '../monitoring/alerting';
 
 const router = Router();
 

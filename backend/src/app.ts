@@ -6,6 +6,7 @@ import { tracingMiddleware } from './config/tracing';
 import { logger } from './config/logger';
 import testRoutes from './routes/test';
 import monitoringRoutes from './routes/monitoring';
+import testAlertRoutes from './routes/test-alerts';
 import { apmEndpoints, apmService } from './monitoring/apm';
 import { alertManager } from './monitoring/alerting';
 
@@ -29,6 +30,7 @@ app.get('/metrics', metricsEndpoint());
 
 app.use('/test', testRoutes);
 app.use('/api/monitoring', monitoringRoutes);
+app.use('/test/alerts', testAlertRoutes);
 
 apmEndpoints(app);
 
