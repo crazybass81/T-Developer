@@ -18,7 +18,8 @@
     "format": "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "docs:generate": "typedoc",
-    "docs:serve": "npx http-server docs/api -p 3001"
+    "docs:serve": "npx http-server docs/api -p 3001",
+    "docs:build": "ts-node scripts/generate-docs.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock": "^3.0.0",
