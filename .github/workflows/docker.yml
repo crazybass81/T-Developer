@@ -54,3 +54,4 @@ jobs:
           build-args: |
             NODE_ENV=production
             BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}

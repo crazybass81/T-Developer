@@ -1,28 +1,45 @@
+# Build stage
 FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Copy package files
 COPY package*.json ./
 RUN npm ci --omit=dev
 
+# Copy source code
 COPY . .
+
+# Build application
 RUN npm run build
 
-FROM node:18-alpine AS runtime
+# Runtime stage
+FROM node:18-alpine
 
-WORKDIR /app
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
 
+# Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
+WORKDIR /app
 
+# Copy node_modules and built application
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./
+
+# Switch to non-root user
 USER nodejs
 
-EXPOSE 3000
+# Expose port
+EXPOSE 8000
 
-ENV NODE_ENV=production
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node healthcheck.js || exit 1
 
+# Start application with dumb-init
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/main.js"]
