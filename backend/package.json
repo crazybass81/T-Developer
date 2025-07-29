@@ -13,7 +13,8 @@
     "format": "prettier --write src/**/*.ts",
     "optimize:resources": "ts-node ../scripts/optimize-resources.ts",
     "analyze:bundle": "webpack-bundle-analyzer dist/assets/stats.json",
-    "monitor:memory": "ts-node ../scripts/memory-monitor.ts"
+    "monitor:memory": "ts-node ../scripts/memory-monitor.ts",
+    "generate": "ts-node ../scripts/code-generator/generator.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock": "^3.0.0",
@@ -59,6 +60,10 @@
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.0",
     "typescript": "^5.0.0",
-    "chalk": "^4.1.2"
+    "chalk": "^4.1.2",
+    "@types/inquirer": "^8.2.0",
+    "commander": "^9.4.0",
+    "inquirer": "^8.2.0",
+    "handlebars": "^4.7.7"
   }
 }
