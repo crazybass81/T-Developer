@@ -5,6 +5,9 @@ import { agentMetricsMiddleware } from './middleware/metrics';
 import { tracingMiddleware } from './config/tracing';
 import { logger } from './config/logger';
 import testRoutes from './routes/test';
+import monitoringRoutes from './routes/monitoring';
+import { apmEndpoints, apmService } from './monitoring/apm';
+import { alertManager } from './monitoring/alerting';
 
 const app = express();
 
@@ -25,6 +28,12 @@ app.get('/health', (req, res) => {
 app.get('/metrics', metricsEndpoint());
 
 app.use('/test', testRoutes);
+app.use('/api/monitoring', monitoringRoutes);
+
+apmEndpoints(app);
+
+// Start APM monitoring
+apmService.start(5000);
 
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error('Unhandled error', error, {
