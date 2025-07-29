@@ -1,52 +1,41 @@
 import express from 'express';
-import { securityHeaders, corsOptions, requestId, securityAudit } from './middleware/security';
-import { RateLimitConfig } from './middleware/rate-limit-config';
-import authRoutes from './routes/auth';
+import { loggingMiddleware } from './middleware/logging';
+import { metricsMiddleware, metricsEndpoint } from './config/metrics';
+import { agentMetricsMiddleware } from './middleware/metrics';
+import { tracingMiddleware } from './config/tracing';
+import { logger } from './config/logger';
+import testRoutes from './routes/test';
 
 const app = express();
-const rateLimitConfig = new RateLimitConfig();
 
-// Security middleware (순서 중요)
-app.use(securityHeaders);
-app.use(corsOptions);
-app.use(requestId);
-app.use(securityAudit);
+app.use(express.json());
+app.use(loggingMiddleware);
+app.use(metricsMiddleware());
+app.use(agentMetricsMiddleware());
+app.use(tracingMiddleware());
 
-// Rate limiting
-app.use(rateLimitConfig.ipBasedLimiter);
-
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Health check
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
+  res.json({ 
+    status: 'ok', 
     timestamp: new Date().toISOString(),
-    requestId: req.id
+    service: 't-developer-backend'
   });
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
+app.get('/metrics', metricsEndpoint());
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Not Found',
-    path: req.originalUrl,
-    requestId: req.id
+app.use('/test', testRoutes);
+
+app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error('Unhandled error', error, {
+    requestId: req.requestId,
+    url: req.url,
+    method: req.method
   });
-});
-
-// Error handler
-app.use((err: any, req: any, res: any, next: any) => {
-  console.error('Error:', err);
   
-  res.status(err.status || 500).json({
-    error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
-    requestId: req.id
+  res.status(500).json({
+    error: 'Internal server error',
+    requestId: req.requestId
   });
 });
 

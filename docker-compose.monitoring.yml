@@ -1,6 +1,20 @@
 version: '3.8'
 
 services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: t-developer-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
   grafana:
     image: grafana/grafana:latest
     container_name: t-developer-grafana
@@ -9,21 +23,16 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      - ./docker/grafana:/var/lib/grafana
+      - grafana-storage:/var/lib/grafana
 
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: t-developer-prometheus
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: t-developer-jaeger
     ports:
-      - "9090:9090"
-    volumes:
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./docker/prometheus/data:/prometheus
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
 
-  statsd:
-    image: graphiteapp/graphite-statsd
-    container_name: t-developer-statsd
-    ports:
-      - "8125:8125/udp"
-      - "8126:8126"
-      - "2003:2003"
+volumes:
+  grafana-storage:

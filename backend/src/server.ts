@@ -1,29 +1,24 @@
+import './config/tracing'; // Initialize tracing first
 import app from './app';
-import { SecureEnvLoader } from './utils/env-loader';
-import { initializeSecrets } from './config/secrets-manager';
-import { startHttpsServer } from './config/https-server';
+import { logger } from './config/logger';
 
-async function startServer() {
-  // Initialize secrets from AWS Secrets Manager
-  await initializeSecrets();
-  
-  // Load environment variables
-  const envLoader = new SecureEnvLoader();
-  await envLoader.loadEnvironment();
+const PORT = process.env.PORT || 8000;
 
-  const PORT = process.env.PORT || 8000;
-  
-  // HTTP 서버 시작
-  app.listen(PORT, () => {
-    console.log(`✅ T-Developer server running on port ${PORT}`);
-    console.log(`🔒 Security headers enabled`);
-    console.log(`🛡️  CORS configured`);
-    console.log(`⚡ Rate limiting active`);
-    console.log(`📊 Request tracking enabled`);
+app.listen(PORT, () => {
+  logger.info(`T-Developer backend server started`, {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
   });
-  
-  // HTTPS 서버 시작 (개발 환경)
-  startHttpsServer(app, 8443);
-}
+});
 
-startServer().catch(console.error);
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
