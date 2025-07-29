@@ -21,7 +21,7 @@ export class RateLimiter {
   
   middleware(options: RateLimitOptions) {
     const {
-      windowMs = 60 * 1000, // 1분
+      windowMs = 60 * 1000,
       max = 100,
       message = 'Too many requests',
       keyGenerator = (req) => req.ip
@@ -33,7 +33,6 @@ export class RateLimiter {
       const window = now - windowMs;
       
       try {
-        // 시간 window 기반 카운팅
         await this.redis.zremrangebyscore(key, '-inf', window);
         const count = await this.redis.zcard(key);
         
@@ -44,11 +43,9 @@ export class RateLimiter {
           });
         }
         
-        // 요청 기록
         await this.redis.zadd(key, now, `${now}-${Math.random()}`);
         await this.redis.expire(key, Math.ceil(windowMs / 1000));
         
-        // 헤더 설정
         res.setHeader('X-RateLimit-Limit', max);
         res.setHeader('X-RateLimit-Remaining', Math.max(0, max - count - 1));
         res.setHeader('X-RateLimit-Reset', new Date(now + windowMs).toISOString());
@@ -56,19 +53,8 @@ export class RateLimiter {
         next();
       } catch (error) {
         console.error('Rate limiter error:', error);
-        // Rate limiter 오류 시 요청 통과
         next();
       }
-    };
-  }
-  
-  // API별 다른 제한 설정
-  apiLimits() {
-    return {
-      general: this.middleware({ windowMs: 60000, max: 100 }),
-      auth: this.middleware({ windowMs: 300000, max: 5 }), // 5분에 5회
-      create: this.middleware({ windowMs: 3600000, max: 10 }), // 1시간에 10회
-      ai: this.middleware({ windowMs: 60000, max: 20 }) // 1분에 20회
     };
   }
 }
