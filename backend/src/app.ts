@@ -1,55 +1,36 @@
 import express from 'express';
-import { loggingMiddleware } from './middleware/logging';
-import { metricsMiddleware, metricsEndpoint } from './config/metrics';
-import { agentMetricsMiddleware } from './middleware/metrics';
-import { tracingMiddleware } from './config/tracing';
-import { logger } from './config/logger';
-import testRoutes from './routes/test';
-import monitoringRoutes from './routes/monitoring';
-import testAlertRoutes from './routes/test-alerts';
-import validationTestRoutes from './routes/validation-test';
-import { apmEndpoints, apmService } from './monitoring/apm';
-import { alertManager } from './monitoring/alerting';
+import cors from 'cors';
+import { APISecurityMiddleware, DynamicRateLimiter } from './security/api-security';
+import projectsRouter from './routes/projects';
+import agentsRouter from './routes/agents';
+import secureDataRouter from './routes/secure-data.example';
 
 const app = express();
 
+// Basic middleware
 app.use(express.json());
-app.use(loggingMiddleware);
-app.use(metricsMiddleware());
-app.use(agentMetricsMiddleware());
-app.use(tracingMiddleware());
+app.use(cors());
 
+// Security middleware
+app.use('/api', APISecurityMiddleware.securityHeaders());
+app.use('/api', DynamicRateLimiter.middleware());
+
+// Protected routes
+app.use('/api/protected', APISecurityMiddleware.apiKeyAuth(['projects:read']));
+
+// Health check (public)
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    service: 't-developer-backend'
-  });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/metrics', metricsEndpoint());
+// Route handlers
+app.use('/api/projects', projectsRouter);
+app.use('/api/agents', agentsRouter);
+app.use('/api/secure', secureDataRouter);
 
-app.use('/test', testRoutes);
-app.use('/api/monitoring', monitoringRoutes);
-app.use('/test/alerts', testAlertRoutes);
-app.use('/test/validation', validationTestRoutes);
-
-apmEndpoints(app);
-
-// Start APM monitoring
-apmService.start(5000);
-
-app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Unhandled error', error, {
-    requestId: req.requestId,
-    url: req.url,
-    method: req.method
-  });
-  
-  res.status(500).json({
-    error: 'Internal server error',
-    requestId: req.requestId
-  });
+const PORT = process.env.PORT || 8000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 
 export default app;

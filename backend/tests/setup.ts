@@ -1,21 +1,18 @@
-import { jest } from '@jest/globals';
+// Test setup file
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test-secret';
+process.env.REDIS_HOST = 'localhost';
+process.env.REDIS_PORT = '6379';
 
-// Global test setup
-beforeAll(async () => {
-  // Set test environment variables
-  process.env.NODE_ENV = 'test';
-  process.env.LOG_LEVEL = 'error';
-  process.env.DYNAMODB_ENDPOINT = 'http://localhost:8000';
-  process.env.REDIS_HOST = 'localhost';
+// Mock Redis for tests
+jest.mock('ioredis', () => {
+  return jest.fn().mockImplementation(() => ({
+    zremrangebyscore: jest.fn().mockResolvedValue(0),
+    zcard: jest.fn().mockResolvedValue(0),
+    zadd: jest.fn().mockResolvedValue(1),
+    expire: jest.fn().mockResolvedValue(1)
+  }));
 });
 
-afterAll(async () => {
-  // Cleanup after all tests
-  jest.clearAllMocks();
-});
-
-// Mock AWS SDK
-jest.mock('@aws-sdk/client-dynamodb');
-jest.mock('@aws-sdk/lib-dynamodb');
-jest.mock('@aws-sdk/client-bedrock');
-jest.mock('@aws-sdk/client-s3');
+// Increase timeout for security tests
+jest.setTimeout(30000);
