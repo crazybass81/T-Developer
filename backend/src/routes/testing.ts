@@ -12,7 +12,7 @@ router.get('/agent/:agentName', async (req, res) => {
     const result = await agent.execute(projectId, { test: true });
     
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -21,7 +21,7 @@ router.get('/bedrock', async (req, res) => {
   try {
     const result = await TracedExternalService.callBedrock('claude-3', 'test prompt');
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -30,7 +30,7 @@ router.get('/db', async (req, res) => {
   try {
     const result = await TracedExternalService.queryDynamoDB('test-table', 'test-key');
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });

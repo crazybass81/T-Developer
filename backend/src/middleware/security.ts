@@ -6,9 +6,8 @@ export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'", "wss:", "https:"],
     },
@@ -35,39 +34,12 @@ export const corsOptions = cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
-  exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID']
 });
 
-// Request ID 미들웨어
 export const requestId = (req: Request, res: Response, next: NextFunction) => {
   const id = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  req.id = id as string;
+  (req as any).id = id as string;
   res.setHeader('X-Request-ID', id);
-  next();
-};
-
-// Security 감사 로깅
-export const securityAudit = (req: Request, res: Response, next: NextFunction) => {
-  const startTime = Date.now();
-  
-  res.on('finish', () => {
-    const duration = Date.now() - startTime;
-    const audit = {
-      timestamp: new Date().toISOString(),
-      requestId: req.id,
-      method: req.method,
-      path: req.path,
-      ip: req.ip,
-      userAgent: req.headers['user-agent'],
-      statusCode: res.statusCode,
-      duration
-    };
-    
-    if (res.statusCode >= 400) {
-      console.warn('Security audit:', audit);
-    }
-  });
-  
   next();
 };

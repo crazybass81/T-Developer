@@ -27,7 +27,7 @@ describe('Authentication Flow E2E Tests', () => {
       expect(loginResponse.body).toHaveProperty('accessToken');
       expect(loginResponse.body).toHaveProperty('refreshToken');
 
-      const { accessToken, refreshToken } = loginResponse.body;
+      const { accessToken, refreshToken } = loginResponse.body as any;
 
       // 2. Access protected resource
       const profileResponse = await client.get('/api/auth/profile', {
@@ -48,7 +48,7 @@ describe('Authentication Flow E2E Tests', () => {
 
       // 4. Use new token
       const newProfileResponse = await client.get('/api/auth/profile', {
-        'Authorization': `Bearer ${refreshResponse.body.accessToken}`
+        'Authorization': `Bearer ${(refreshResponse.body as any).accessToken}`
       });
 
       expect(newProfileResponse.status).toBe(200);

@@ -49,6 +49,17 @@ export class E2ETestEnvironment {
   }
   
   private async startDynamoDBLocal(): Promise<void> {
+    // Check if DynamoDB is already running on port 8000
+    try {
+      const response = await fetch('http://localhost:8000');
+      if (response.status === 400 || response.status === 404) {
+        console.log('📝 Using existing DynamoDB on port 8000');
+        return;
+      }
+    } catch (error) {
+      // Port not available, start new container
+    }
+    
     const dynamodb = spawn('docker', [
       'run',
       '--rm',
@@ -65,6 +76,29 @@ export class E2ETestEnvironment {
   }
   
   private async startRedis(): Promise<void> {
+    // Check if Redis is already running on port 6379
+    try {
+      const net = require('net');
+      const socket = new net.Socket();
+      await new Promise((resolve, reject) => {
+        socket.setTimeout(1000);
+        socket.on('connect', () => {
+          socket.destroy();
+          resolve(true);
+        });
+        socket.on('timeout', () => {
+          socket.destroy();
+          reject(new Error('timeout'));
+        });
+        socket.on('error', reject);
+        socket.connect(6379, 'localhost');
+      });
+      console.log('📝 Using existing Redis on port 6379');
+      return;
+    } catch (error) {
+      // Port not available, start new container
+    }
+    
     const redis = spawn('docker', [
       'run',
       '--rm',
@@ -82,9 +116,9 @@ export class E2ETestEnvironment {
     const tables = [
       {
         TableName: 'test-projects',
-        KeySchema: [{ AttributeName: 'id', KeyType: 'HASH' }],
-        AttributeDefinitions: [{ AttributeName: 'id', AttributeType: 'S' }],
-        BillingMode: 'PAY_PER_REQUEST'
+        KeySchema: [{ AttributeName: 'id', KeyType: 'HASH' as const }],
+        AttributeDefinitions: [{ AttributeName: 'id', AttributeType: 'S' as const }],
+        BillingMode: 'PAY_PER_REQUEST' as const
       }
     ];
     

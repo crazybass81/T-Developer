@@ -5,7 +5,7 @@ import app from '../../src/app';
 
 export class IntegrationTestSetup {
   private testServer: TestServer;
-  private testClient: TestClient;
+  private testClient!: TestClient;
   private authHelpers: AuthTestHelpers;
   private port: number = 0;
 

@@ -1,36 +1,30 @@
 import express from 'express';
-import cors from 'cors';
-import { APISecurityMiddleware, DynamicRateLimiter } from './security/api-security';
-import projectsRouter from './routes/projects';
-import agentsRouter from './routes/agents';
-import secureDataRouter from './routes/secure-data.example';
+import { corsOptions, securityHeaders, requestId } from './middleware/security';
+import healthRoutes from './api/routes/health.routes';
+import { config } from './core/config';
+import logger from './config/logger';
 
 const app = express();
 
 // Basic middleware
 app.use(express.json());
-app.use(cors());
+app.use(corsOptions);
+app.use(securityHeaders);
+app.use(requestId);
 
-// Security middleware
-app.use('/api', APISecurityMiddleware.securityHeaders());
-app.use('/api', DynamicRateLimiter.middleware());
+// Routes
+app.use('/api', healthRoutes);
 
-// Protected routes
-app.use('/api/protected', APISecurityMiddleware.apiKeyAuth(['projects:read']));
-
-// Health check (public)
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Error handling
+app.use((err: any, req: any, res: any, next: any) => {
+  logger.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
-// Route handlers
-app.use('/api/projects', projectsRouter);
-app.use('/api/agents', agentsRouter);
-app.use('/api/secure', secureDataRouter);
-
-const PORT = process.env.PORT || 8000;
+const PORT = config.server.port;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  logger.info(`🚀 T-Developer server running on port ${PORT}`);
+  logger.info(`Environment: ${config.app.env}`);
 });
 
 export default app;

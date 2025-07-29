@@ -1,20 +1,36 @@
-import { encryptEnvFile } from '../backend/src/utils/crypto';
+#!/usr/bin/env ts-node
 
-async function main() {
+import { EnvCrypto } from '../backend/src/utils/crypto';
+import fs from 'fs/promises';
+import path from 'path';
+
+async function encryptEnvFile(): Promise<void> {
+  const crypto = new EnvCrypto();
+  const envPath = path.join(process.cwd(), '.env');
+  const encryptedPath = path.join(process.cwd(), '.env.encrypted');
+  
   try {
-    await encryptEnvFile();
+    const envContent = await fs.readFile(envPath, 'utf8');
+    const lines = envContent.split('\n');
     
-    console.log('\n📋 암호화 완료:');
-    console.log('- 원본: .env');
-    console.log('- 암호화된 파일: .env.encrypted');
-    console.log('\n⚠️  주의사항:');
-    console.log('- .env.key 파일을 절대 커밋하지 마세요');
-    console.log('- 프로덕션에서는 .env.encrypted 사용');
+    const encryptedLines = await Promise.all(lines.map(async (line) => {
+      if (line.includes('=') && !line.startsWith('#')) {
+        const [key, value] = line.split('=', 2);
+        if (key.includes('SECRET') || key.includes('KEY') || key.includes('PASSWORD')) {
+          const encrypted = await crypto.encrypt(value);
+          return `${key}=ENC:${encrypted}`;
+        }
+      }
+      return line;
+    }));
     
+    await fs.writeFile(encryptedPath, encryptedLines.join('\n'));
+    console.log('✅ 환경 변수가 암호화되었습니다: .env.encrypted');
   } catch (error) {
     console.error('❌ 암호화 실패:', error);
-    process.exit(1);
   }
 }
 
-main();
+if (require.main === module) {
+  encryptEnvFile();
+}

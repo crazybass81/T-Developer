@@ -1,7 +1,5 @@
 import { faker } from '@faker-js/faker';
 import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
 
 export class MockServiceManager {
   private mockServers: Map<string, any> = new Map();
@@ -10,7 +8,6 @@ export class MockServiceManager {
     await Promise.all([
       this.startBedrockMock(),
       this.startDynamoDBMock(),
-      this.startS3Mock(),
       this.startExternalAPIMocks()
     ]);
     
@@ -25,12 +22,13 @@ export class MockServiceManager {
       const { prompt } = req.body;
       
       await this.simulateLatency(500, 2000);
+      
       const response = this.generateMockLLMResponse(prompt);
       
       res.json({
         completion: response,
         stop_reason: 'stop_sequence',
-        model: req.params[0],
+        model: 'claude-3-sonnet',
         usage: {
           input_tokens: prompt.split(' ').length * 1.3,
           output_tokens: response.split(' ').length * 1.3
@@ -83,94 +81,12 @@ export class MockServiceManager {
       }
     });
     
-    app.post('/tables/:tableName/query', (req, res) => {
-      const { tableName } = req.params;
-      const tableData = tables.get(tableName) || [];
-      
-      res.json({
-        Items: tableData,
-        Count: tableData.length,
-        ScannedCount: tableData.length
-      });
-    });
-    
-    const server = app.listen(8000, () => {
-      console.log('🗃️  DynamoDB mock server running on port 8000');
+    const server = app.listen(8001, () => {
+      console.log('🗃️  DynamoDB mock server running on port 8001');
     });
     
     this.mockServers.set('dynamodb', server);
     await this.seedDynamoDBData(tables);
-  }
-  
-  private async startS3Mock(): Promise<void> {
-    const app = express();
-    app.use(express.json());
-    app.use(express.raw({ type: '*/*', limit: '100mb' }));
-    
-    const buckets: Map<string, Map<string, any>> = new Map();
-    
-    app.put('/:bucket', (req, res) => {
-      const { bucket } = req.params;
-      
-      if (!buckets.has(bucket)) {
-        buckets.set(bucket, new Map());
-        res.status(200).send();
-      } else {
-        res.status(409).json({ 
-          Code: 'BucketAlreadyExists',
-          Message: 'The requested bucket name is not available'
-        });
-      }
-    });
-    
-    app.put('/:bucket/:key(*)', (req, res) => {
-      const { bucket, key } = req.params;
-      
-      if (!buckets.has(bucket)) {
-        return res.status(404).json({ Code: 'NoSuchBucket' });
-      }
-      
-      const bucketData = buckets.get(bucket)!;
-      bucketData.set(key, {
-        Body: req.body,
-        ContentType: req.headers['content-type'],
-        ContentLength: req.body.length,
-        ETag: `"${faker.string.alphanumeric(32)}"`,
-        LastModified: new Date().toISOString()
-      });
-      
-      res.json({ ETag: bucketData.get(key).ETag });
-    });
-    
-    app.get('/:bucket/:key(*)', (req, res) => {
-      const { bucket, key } = req.params;
-      
-      if (!buckets.has(bucket)) {
-        return res.status(404).json({ Code: 'NoSuchBucket' });
-      }
-      
-      const bucketData = buckets.get(bucket)!;
-      const object = bucketData.get(key);
-      
-      if (!object) {
-        return res.status(404).json({ Code: 'NoSuchKey' });
-      }
-      
-      res.set({
-        'Content-Type': object.ContentType,
-        'Content-Length': object.ContentLength,
-        'ETag': object.ETag,
-        'Last-Modified': object.LastModified
-      });
-      
-      res.send(object.Body);
-    });
-    
-    const server = app.listen(4568, () => {
-      console.log('☁️  S3 mock server running on port 4568');
-    });
-    
-    this.mockServers.set('s3', server);
   }
   
   private async startExternalAPIMocks(): Promise<void> {
@@ -185,11 +101,6 @@ export class MockServiceManager {
     app.get('/github/repos/:owner/:repo', (req, res) => {
       const repoInfo = this.generateMockGitHubRepo(req.params.owner, req.params.repo);
       res.json(repoInfo);
-    });
-    
-    app.get('/pypi/:package', (req, res) => {
-      const packageInfo = this.generateMockPyPIPackage(req.params.package);
-      res.json(packageInfo);
     });
     
     const server = app.listen(4569, () => {
@@ -222,7 +133,6 @@ export class MockServiceManager {
         type: 'git',
         url: `https://github.com/${faker.internet.userName()}/${packageName}`
       },
-      dependencies: this.generateMockDependencies(),
       downloads: {
         weekly: faker.number.int({ min: 1000, max: 1000000 })
       }
@@ -252,57 +162,6 @@ export class MockServiceManager {
         name: 'MIT License'
       }
     };
-  }
-  
-  private generateMockPyPIPackage(packageName: string): any {
-    return {
-      info: {
-        name: packageName,
-        version: faker.system.semver(),
-        summary: faker.lorem.sentence(),
-        author: faker.person.fullName(),
-        author_email: faker.internet.email(),
-        license: faker.helpers.arrayElement(['MIT', 'Apache-2.0', 'GPL-3.0']),
-        keywords: faker.lorem.words(5),
-        classifiers: [
-          'Development Status :: 4 - Beta',
-          'Intended Audience :: Developers',
-          'Programming Language :: Python :: 3'
-        ]
-      },
-      releases: this.generateMockReleases()
-    };
-  }
-  
-  private generateMockDependencies(): Record<string, string> {
-    const deps: Record<string, string> = {};
-    const count = faker.number.int({ min: 3, max: 10 });
-    
-    for (let i = 0; i < count; i++) {
-      const packageName = faker.helpers.arrayElement([
-        'express', 'react', 'vue', 'lodash', 'axios',
-        'moment', 'uuid', 'bcrypt', 'jsonwebtoken', 'dotenv'
-      ]);
-      deps[packageName] = `^${faker.system.semver()}`;
-    }
-    
-    return deps;
-  }
-  
-  private generateMockReleases(): Record<string, any[]> {
-    const releases: Record<string, any[]> = {};
-    const versionCount = faker.number.int({ min: 3, max: 10 });
-    
-    for (let i = 0; i < versionCount; i++) {
-      const version = faker.system.semver();
-      releases[version] = [{
-        filename: `package-${version}.tar.gz`,
-        size: faker.number.int({ min: 10000, max: 1000000 }),
-        upload_time: faker.date.past().toISOString()
-      }];
-    }
-    
-    return releases;
   }
   
   private async seedDynamoDBData(tables: Map<string, any[]>): Promise<void> {
@@ -346,95 +205,17 @@ export class MockServiceManager {
   }
 }
 
-export class WebSocketMockServer {
-  private io: Server;
-  
-  constructor(httpServer: any) {
-    this.io = new Server(httpServer, {
-      cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
-      }
-    });
-    
-    this.setupHandlers();
-  }
-  
-  private setupHandlers(): void {
-    this.io.on('connection', (socket) => {
-      console.log('Mock WebSocket client connected');
-      
-      this.simulateProjectUpdates(socket);
-      this.simulateAgentExecutions(socket);
-      
-      socket.on('disconnect', () => {
-        console.log('Mock WebSocket client disconnected');
-      });
-    });
-  }
-  
-  private simulateProjectUpdates(socket: any): void {
-    const projectId = `proj_${faker.string.uuid()}`;
-    const statuses = ['analyzing', 'designing', 'building', 'testing', 'completed'];
-    let currentIndex = 0;
-    
-    const interval = setInterval(() => {
-      if (currentIndex >= statuses.length) {
-        clearInterval(interval);
-        return;
-      }
-      
-      socket.emit('project:update', {
-        projectId,
-        status: statuses[currentIndex],
-        progress: (currentIndex + 1) / statuses.length * 100,
-        timestamp: new Date().toISOString()
-      });
-      
-      currentIndex++;
-    }, 3000);
-  }
-  
-  private simulateAgentExecutions(socket: any): void {
-    const agents = [
-      'nl-input', 'ui-selection', 'parsing', 'component-decision',
-      'matching-rate', 'search', 'generation', 'assembly', 'download'
-    ];
-    
-    agents.forEach((agent, index) => {
-      setTimeout(() => {
-        socket.emit('agent:start', {
-          agentName: agent,
-          timestamp: new Date().toISOString()
-        });
-        
-        setTimeout(() => {
-          socket.emit('agent:complete', {
-            agentName: agent,
-            result: 'success',
-            duration: faker.number.int({ min: 1000, max: 5000 }),
-            timestamp: new Date().toISOString()
-          });
-        }, faker.number.int({ min: 2000, max: 8000 }));
-      }, index * 2000);
-    });
-  }
-}
-
 export const mockConfig = {
   enabled: process.env.USE_MOCKS === 'true',
   services: {
     bedrock: process.env.MOCK_BEDROCK === 'true',
     dynamodb: process.env.MOCK_DYNAMODB === 'true',
-    s3: process.env.MOCK_S3 === 'true',
     external: process.env.MOCK_EXTERNAL_APIS === 'true'
   },
   endpoints: {
     bedrock: 'http://localhost:4567',
-    dynamodb: 'http://localhost:8000',
-    s3: 'http://localhost:4568',
+    dynamodb: 'http://localhost:8001',
     npm: 'http://localhost:4569/npm',
-    github: 'http://localhost:4569/github',
-    pypi: 'http://localhost:4569/pypi'
+    github: 'http://localhost:4569/github'
   }
 };

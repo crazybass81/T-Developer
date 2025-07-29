@@ -4,6 +4,18 @@ import { EventEmitter } from 'events';
 import path from 'path';
 import WebSocket from 'ws';
 
+interface HMRConfig {
+  watchPaths?: string[];
+  ignorePaths?: string[];
+  hotReloadableExtensions?: string[];
+  debounceDelay?: number;
+  command?: string;
+  args?: string[];
+  appPort?: number;
+  wsPort?: number;
+}
+
+// HMR 매니저
 export class HotModuleReplacementManager extends EventEmitter {
   private watcher?: chokidar.FSWatcher;
   private process?: ChildProcess;
@@ -16,9 +28,10 @@ export class HotModuleReplacementManager extends EventEmitter {
   }
   
   async start(): Promise<void> {
-    console.log('Starting Hot Module Replacement...');
+    console.log('🔥 Starting Hot Module Replacement...');
     
     this.startWebSocketServer();
+    await this.startProcess();
     this.startWatching();
   }
   
@@ -61,26 +74,31 @@ export class HotModuleReplacementManager extends EventEmitter {
   }
   
   private handleFileChange(filePath: string): void {
-    console.log(`File changed: ${filePath}`);
+    console.log(`📝 File changed: ${filePath}`);
     
     if (this.reloadTimer) {
       clearTimeout(this.reloadTimer);
     }
     
     this.reloadTimer = setTimeout(() => {
-      this.hotReload(filePath);
+      const ext = path.extname(filePath);
+      
+      if (this.config.hotReloadableExtensions?.includes(ext)) {
+        this.hotReload(filePath);
+      } else {
+        this.restartProcess();
+      }
     }, this.config.debounceDelay || 100);
   }
   
   private async hotReload(filePath: string): Promise<void> {
     try {
       this.clearModuleCache(filePath);
-      this.emit('module:reload', filePath);
       this.notifyClients('reload');
-      console.log(`Hot reloaded: ${filePath}`);
-      
+      console.log(`🔄 Hot reloaded: ${filePath}`);
     } catch (error) {
       console.error('Hot reload failed:', error);
+      this.restartProcess();
     }
   }
   
@@ -95,8 +113,61 @@ export class HotModuleReplacementManager extends EventEmitter {
         }
       });
     } catch (error) {
-      // File might not be resolvable
+      // File might not be in cache
     }
+  }
+  
+  private async restartProcess(): Promise<void> {
+    if (this.isRestarting) return;
+    
+    this.isRestarting = true;
+    console.log('🔄 Restarting application...');
+    
+    if (this.process) {
+      await this.stopProcess();
+    }
+    
+    await this.startProcess();
+    
+    this.isRestarting = false;
+    this.notifyClients('restart');
+  }
+  
+  private async startProcess(): Promise<void> {
+    const command = this.config.command || 'npm';
+    const args = this.config.args || ['run', 'dev'];
+    
+    this.process = spawn(command, args, {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        NODE_ENV: 'development',
+        HMR_ENABLED: 'true'
+      }
+    });
+    
+    this.process.on('exit', (code) => {
+      if (code !== 0 && !this.isRestarting) {
+        console.error(`Process exited with code ${code}`);
+        setTimeout(() => this.restartProcess(), 1000);
+      }
+    });
+  }
+  
+  private async stopProcess(): Promise<void> {
+    if (!this.process) return;
+    
+    return new Promise((resolve) => {
+      this.process!.once('exit', resolve);
+      this.process!.kill('SIGTERM');
+      
+      setTimeout(() => {
+        if (this.process) {
+          this.process.kill('SIGKILL');
+        }
+        resolve(undefined);
+      }, 5000);
+    });
   }
   
   private notifyClients(action: string): void {
@@ -112,10 +183,14 @@ export class HotModuleReplacementManager extends EventEmitter {
   }
   
   async stop(): Promise<void> {
-    console.log('Stopping Hot Module Replacement...');
+    console.log('🛑 Stopping Hot Module Replacement...');
     
     if (this.watcher) {
       await this.watcher.close();
+    }
+    
+    if (this.process) {
+      await this.stopProcess();
     }
     
     if (this.wsServer) {
@@ -158,13 +233,6 @@ export const hmrClient = `
   };
 })();
 `;
-
-interface HMRConfig {
-  watchPaths?: string[];
-  ignorePaths?: string[];
-  debounceDelay?: number;
-  wsPort?: number;
-}
 
 export function setupHMRMiddleware(app: any): void {
   if (process.env.NODE_ENV !== 'development') return;

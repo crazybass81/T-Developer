@@ -54,11 +54,19 @@ export class TestClient {
   async get(path: string, headers?: Record<string, string>) {
     const response = await fetch(`${this.baseURL}${path}`, {
       method: 'GET',
-      headers
+      ...(headers && { headers })
     });
+    
+    let body;
+    try {
+      body = await response.json();
+    } catch {
+      body = await response.text();
+    }
+    
     return {
       status: response.status,
-      body: await response.json()
+      body
     };
   }
   
@@ -71,9 +79,17 @@ export class TestClient {
       },
       body: JSON.stringify(data)
     });
+    
+    let body;
+    try {
+      body = await response.json();
+    } catch {
+      body = await response.text();
+    }
+    
     return {
       status: response.status,
-      body: await response.json()
+      body
     };
   }
 }

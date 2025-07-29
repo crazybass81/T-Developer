@@ -15,7 +15,9 @@ export class RateLimiter {
     this.redis = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD
+      password: process.env.REDIS_PASSWORD,
+      retryDelayOnFailover: 100,
+      maxRetriesPerRequest: 3
     });
   }
   
@@ -55,6 +57,15 @@ export class RateLimiter {
         console.error('Rate limiter error:', error);
         next();
       }
+    };
+  }
+  
+  apiLimits() {
+    return {
+      general: this.middleware({ windowMs: 60000, max: 100 }),
+      auth: this.middleware({ windowMs: 300000, max: 5 }),
+      create: this.middleware({ windowMs: 3600000, max: 10 }),
+      ai: this.middleware({ windowMs: 60000, max: 20 })
     };
   }
 }

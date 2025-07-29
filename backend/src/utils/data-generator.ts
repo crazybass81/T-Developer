@@ -47,6 +47,31 @@ export class DevelopmentDataGenerator {
     
     console.log(`✅ ${count}개의 프로젝트 데이터 생성 완료`);
   }
+
+  async generateComponents(count: number = 30): Promise<void> {
+    const components = [];
+    
+    for (let i = 0; i < count; i++) {
+      const component = {
+        id: `comp_${faker.string.uuid()}`,
+        name: faker.hacker.noun(),
+        version: faker.system.semver(),
+        language: faker.helpers.arrayElement(['javascript', 'typescript', 'python']),
+        downloads: faker.number.int({ min: 100, max: 100000 })
+      };
+      
+      components.push(component);
+    }
+    
+    for (const component of components) {
+      await this.docClient.send(new PutCommand({
+        TableName: 'T-Developer-Components',
+        Item: component
+      }));
+    }
+    
+    console.log(`✅ ${count}개의 컴포넌트 데이터 생성 완료`);
+  }
   
   private generateProjectName(): string {
     const templates = [
