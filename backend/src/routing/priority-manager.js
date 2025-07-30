@@ -1,22 +1,17 @@
-enum Priority {
-  CRITICAL = 1,
-  HIGH = 2,
-  NORMAL = 3,
-  LOW = 4
-}
-
-interface PriorityTask {
-  id: string;
-  priority: Priority;
-  createdAt: number;
-  data: any;
-}
+const Priority = {
+  CRITICAL: 1,
+  HIGH: 2,
+  NORMAL: 3,
+  LOW: 4
+};
 
 class PriorityQueue {
-  private queue: Array<[number, number, PriorityTask]> = [];
-  private taskMap: Map<string, number> = new Map();
+  constructor() {
+    this.queue = [];
+    this.taskMap = new Map();
+  }
   
-  addTask(task: PriorityTask): void {
+  addTask(task) {
     const priorityScore = this.calculatePriorityScore(task);
     
     // 힙에 추가 (우선순위, 타임스탬프, 태스크)
@@ -27,14 +22,14 @@ class PriorityQueue {
     this.heapifyUp(this.queue.length - 1);
   }
   
-  getNextTask(): PriorityTask | null {
+  getNextTask() {
     if (this.queue.length === 0) return null;
     
     // 최고 우선순위 태스크 추출
     const [, , task] = this.queue[0];
     
     // 힙에서 제거
-    const lastItem = this.queue.pop()!;
+    const lastItem = this.queue.pop();
     if (this.queue.length > 0) {
       this.queue[0] = lastItem;
       this.heapifyDown(0);
@@ -44,7 +39,7 @@ class PriorityQueue {
     return task;
   }
   
-  private calculatePriorityScore(task: PriorityTask): number {
+  calculatePriorityScore(task) {
     let baseScore = task.priority;
     
     // 대기 시간 가중치
@@ -68,7 +63,7 @@ class PriorityQueue {
     return baseScore - (waitWeight + slaWeight + typeWeight);
   }
   
-  private heapifyUp(index: number): void {
+  heapifyUp(index) {
     if (index === 0) return;
     
     const parentIndex = Math.floor((index - 1) / 2);
@@ -78,7 +73,7 @@ class PriorityQueue {
     }
   }
   
-  private heapifyDown(index: number): void {
+  heapifyDown(index) {
     const leftChild = 2 * index + 1;
     const rightChild = 2 * index + 2;
     let smallest = index;
@@ -99,16 +94,15 @@ class PriorityQueue {
     }
   }
   
-  size(): number {
+  size() {
     return this.queue.length;
   }
   
-  isEmpty(): boolean {
+  isEmpty() {
     return this.queue.length === 0;
   }
   
-  // 우선순위 업데이트
-  updatePriority(taskId: string, newPriority: Priority): boolean {
+  updatePriority(taskId, newPriority) {
     // 기존 태스크 찾기 및 제거
     const taskIndex = this.queue.findIndex(([, , task]) => task.id === taskId);
     if (taskIndex === -1) return false;
@@ -116,7 +110,7 @@ class PriorityQueue {
     const [, timestamp, task] = this.queue[taskIndex];
     
     // 제거
-    const lastItem = this.queue.pop()!;
+    const lastItem = this.queue.pop();
     if (taskIndex < this.queue.length) {
       this.queue[taskIndex] = lastItem;
       this.heapifyDown(taskIndex);
@@ -131,22 +125,22 @@ class PriorityQueue {
 }
 
 class PriorityManager {
-  private queues: Map<string, PriorityQueue> = new Map();
-  
   constructor() {
+    this.queues = new Map();
+    
     // 에이전트별 우선순위 큐 초기화
     this.queues.set('code-agent', new PriorityQueue());
     this.queues.set('test-agent', new PriorityQueue());
     this.queues.set('design-agent', new PriorityQueue());
   }
   
-  addTask(agentName: string, task: any, priority: Priority = Priority.NORMAL): void {
+  addTask(agentName, task, priority = Priority.NORMAL) {
     const queue = this.queues.get(agentName);
     if (!queue) {
       throw new Error(`No queue found for agent: ${agentName}`);
     }
     
-    const priorityTask: PriorityTask = {
+    const priorityTask = {
       id: task.id || `task-${Date.now()}`,
       priority,
       createdAt: Date.now(),
@@ -156,7 +150,7 @@ class PriorityManager {
     queue.addTask(priorityTask);
   }
   
-  getNextTask(agentName: string): any | null {
+  getNextTask(agentName) {
     const queue = this.queues.get(agentName);
     if (!queue) return null;
     
@@ -164,8 +158,8 @@ class PriorityManager {
     return priorityTask ? priorityTask.data : null;
   }
   
-  getQueueStats(): Record<string, number> {
-    const stats: Record<string, number> = {};
+  getQueueStats() {
+    const stats = {};
     
     for (const [agentName, queue] of this.queues) {
       stats[agentName] = queue.size();
@@ -174,7 +168,7 @@ class PriorityManager {
     return stats;
   }
   
-  updateTaskPriority(agentName: string, taskId: string, newPriority: Priority): boolean {
+  updateTaskPriority(agentName, taskId, newPriority) {
     const queue = this.queues.get(agentName);
     if (!queue) return false;
     
@@ -182,4 +176,4 @@ class PriorityManager {
   }
 }
 
-module.exports = { PriorityQueue, PriorityManager };
+module.exports = { PriorityQueue, PriorityManager, Priority };

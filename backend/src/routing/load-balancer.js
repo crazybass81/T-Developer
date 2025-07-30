@@ -1,25 +1,12 @@
-interface AgentLoad {
-  agentId: string;
-  currentTasks: number;
-  cpuUsage: number;
-  memoryUsage: number;
-  avgResponseTime: number;
-  capacity: number;
-}
-
-type BalancingStrategy = 'round-robin' | 'least-connections' | 'weighted-round-robin' | 'resource-based';
-
 class LoadBalancer {
-  private agentLoads: Map<string, AgentLoad> = new Map();
-  private strategy: BalancingStrategy;
-  private roundRobinIndex = 0;
-  
-  constructor(strategy: BalancingStrategy = 'weighted-round-robin') {
+  constructor(strategy = 'weighted-round-robin') {
+    this.agentLoads = new Map();
     this.strategy = strategy;
+    this.roundRobinIndex = 0;
     this.startMonitoring();
   }
   
-  async getAvailableAgents(): Promise<string[]> {
+  async getAvailableAgents() {
     const agents = Array.from(this.agentLoads.entries());
     
     // 용량이 남은 에이전트 필터링
@@ -42,15 +29,15 @@ class LoadBalancer {
     }
   }
   
-  private sortByLeastConnections(agents: [string, AgentLoad][]): string[] {
+  sortByLeastConnections(agents) {
     return agents
       .sort((a, b) => a[1].currentTasks - b[1].currentTasks)
       .map(([id]) => id);
   }
   
-  private weightedRoundRobin(agents: [string, AgentLoad][]): string[] {
+  weightedRoundRobin(agents) {
     // 가중치 기반 라운드 로빈
-    const weighted: string[] = [];
+    const weighted = [];
     
     agents.forEach(([id, load]) => {
       const weight = Math.max(1, load.capacity - load.currentTasks);
@@ -62,7 +49,7 @@ class LoadBalancer {
     return weighted;
   }
   
-  private sortByResourceUsage(agents: [string, AgentLoad][]): string[] {
+  sortByResourceUsage(agents) {
     return agents
       .sort((a, b) => {
         const scoreA = this.calculateResourceScore(a[1]);
@@ -72,7 +59,7 @@ class LoadBalancer {
       .map(([id]) => id);
   }
   
-  private roundRobin(agents: [string, AgentLoad][]): string[] {
+  roundRobin(agents) {
     if (agents.length === 0) return [];
     
     const agentIds = agents.map(([id]) => id);
@@ -82,7 +69,7 @@ class LoadBalancer {
     return [selected, ...agentIds.filter(id => id !== selected)];
   }
   
-  private calculateResourceScore(load: AgentLoad): number {
+  calculateResourceScore(load) {
     // 리소스 사용량 종합 점수 (낮을수록 좋음)
     return (
       load.cpuUsage * 0.4 +
@@ -91,7 +78,7 @@ class LoadBalancer {
     );
   }
   
-  async updateAgentLoad(agentId: string, load: Partial<AgentLoad>): Promise<void> {
+  async updateAgentLoad(agentId, load) {
     const currentLoad = this.agentLoads.get(agentId) || {
       agentId,
       currentTasks: 0,
@@ -104,7 +91,7 @@ class LoadBalancer {
     this.agentLoads.set(agentId, { ...currentLoad, ...load });
   }
   
-  private startMonitoring(): void {
+  startMonitoring() {
     // 초기 에이전트 로드 설정
     this.agentLoads.set('code-agent', {
       agentId: 'code-agent',
@@ -123,28 +110,9 @@ class LoadBalancer {
       avgResponseTime: 100,
       capacity: 3
     });
-    
-    // 주기적 모니터링
-    setInterval(() => {
-      this.collectMetrics();
-    }, 10000); // 10초마다
   }
   
-  private collectMetrics(): void {
-    // 실제 메트릭 수집 로직 (시뮬레이션)
-    for (const [agentId, load] of this.agentLoads) {
-      const updatedLoad = {
-        ...load,
-        cpuUsage: Math.random() * 0.8,
-        memoryUsage: Math.random() * 0.6,
-        avgResponseTime: 100 + Math.random() * 200
-      };
-      
-      this.agentLoads.set(agentId, updatedLoad);
-    }
-  }
-  
-  getLoadStats(): Record<string, AgentLoad> {
+  getLoadStats() {
     return Object.fromEntries(this.agentLoads);
   }
 }

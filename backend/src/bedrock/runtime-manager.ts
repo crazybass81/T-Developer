@@ -1,95 +1,64 @@
-// backend/src/bedrock/runtime-manager.ts
-import { AgentCoreRuntime, AgentCoreConfig } from './agentcore-runtime';
+import { AgentCoreClient } from './agentcore-client';
 
-export interface RuntimeInstance {
+interface RuntimeSession {
   id: string;
-  runtime: AgentCoreRuntime;
-  config: AgentCoreConfig;
+  userId: string;
   createdAt: Date;
-  lastUsed: Date;
-  sessionCount: number;
+  lastActivity: Date;
 }
 
 export class RuntimeManager {
-  private runtimes: Map<string, RuntimeInstance> = new Map();
-  private defaultConfig: Partial<AgentCoreConfig>;
-
+  private agentCore: AgentCoreClient;
+  private sessions: Map<string, RuntimeSession> = new Map();
+  
   constructor() {
-    this.defaultConfig = {
-      region: process.env.AWS_BEDROCK_REGION || 'us-east-1',
-      agentId: process.env.BEDROCK_AGENT_ID,
-      agentAliasId: process.env.BEDROCK_AGENT_ALIAS_ID || 'TSTALIASID'
-    };
+    this.agentCore = new AgentCoreClient();
   }
-
-  createRuntime(config?: Partial<AgentCoreConfig>): string {
-    const runtimeId = this.generateRuntimeId();
-    const fullConfig = { ...this.defaultConfig, ...config } as AgentCoreConfig;
+  
+  async initializeRuntime(): Promise<void> {
+    await this.agentCore.createSession('system');
+    console.log('✅ AgentCore runtime initialized');
+  }
+  
+  async createAgentSession(userId: string): Promise<string> {
+    const sessionId = `session_${userId}_${Date.now()}`;
+    await this.agentCore.createSession(sessionId);
     
-    const runtime = new AgentCoreRuntime(fullConfig);
-    
-    const instance: RuntimeInstance = {
-      id: runtimeId,
-      runtime,
-      config: fullConfig,
+    this.sessions.set(sessionId, {
+      id: sessionId,
+      userId,
       createdAt: new Date(),
-      lastUsed: new Date(),
-      sessionCount: 0
-    };
-
-    this.runtimes.set(runtimeId, instance);
-    return runtimeId;
-  }
-
-  getRuntime(runtimeId: string): AgentCoreRuntime | null {
-    const instance = this.runtimes.get(runtimeId);
-    if (!instance) return null;
-
-    instance.lastUsed = new Date();
-    return instance.runtime;
-  }
-
-  async invokeAgent(
-    runtimeId: string,
-    inputText: string,
-    sessionId?: string
-  ): Promise<any> {
-    const runtime = this.getRuntime(runtimeId);
-    if (!runtime) {
-      throw new Error(`Runtime not found: ${runtimeId}`);
-    }
-
-    const instance = this.runtimes.get(runtimeId)!;
-    instance.sessionCount++;
-
-    return await runtime.invokeAgent(inputText, sessionId);
-  }
-
-  removeRuntime(runtimeId: string): boolean {
-    return this.runtimes.delete(runtimeId);
-  }
-
-  listRuntimes(): RuntimeInstance[] {
-    return Array.from(this.runtimes.values());
-  }
-
-  getStats(): {
-    totalRuntimes: number;
-    totalSessions: number;
-    oldestRuntime?: Date;
-  } {
-    const instances = Array.from(this.runtimes.values());
+      lastActivity: new Date()
+    });
     
-    return {
-      totalRuntimes: instances.length,
-      totalSessions: instances.reduce((sum, inst) => sum + inst.sessionCount, 0),
-      oldestRuntime: instances.length > 0 
-        ? new Date(Math.min(...instances.map(inst => inst.createdAt.getTime())))
-        : undefined
-    };
+    return sessionId;
   }
-
-  private generateRuntimeId(): string {
-    return `runtime_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  async executeInSession(sessionId: string, input: any): Promise<any> {
+    // Create Bedrock session if it doesn't exist
+    if (!this.sessions.has(sessionId)) {
+      await this.agentCore.createSession(sessionId);
+      this.sessions.set(sessionId, {
+        id: sessionId,
+        userId: 'unknown',
+        createdAt: new Date(),
+        lastActivity: new Date()
+      });
+    }
+    
+    const session = this.sessions.get(sessionId)!;
+    session.lastActivity = new Date();
+    return await this.agentCore.executeAgent(sessionId, input);
+  }
+  
+  async cleanupSessions(): Promise<void> {
+    const now = new Date();
+    const timeout = 8 * 60 * 60 * 1000; // 8 hours
+    
+    for (const [sessionId, session] of this.sessions) {
+      if (now.getTime() - session.lastActivity.getTime() > timeout) {
+        this.sessions.delete(sessionId);
+      }
+    }
   }
 }

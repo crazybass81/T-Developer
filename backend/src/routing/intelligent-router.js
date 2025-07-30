@@ -1,29 +1,10 @@
-interface Task {
-  id: string;
-  type: string;
-  description: string;
-  priority: number;
-  createdAt: Date;
-}
-
-interface Agent {
-  name: string;
-  capabilities: string[];
-  currentLoad: number;
-  maxCapacity: number;
-}
-
-interface RoutingScore {
-  agentName: string;
-  score: number;
-  reasoning: string;
-}
-
 class IntelligentRouter {
-  private routingHistory: Map<string, string> = new Map();
-  private performanceMetrics: Map<string, number> = new Map();
+  constructor() {
+    this.routingHistory = new Map();
+    this.performanceMetrics = new Map();
+  }
   
-  async routeTask(task: Task): Promise<Agent> {
+  async routeTask(task) {
     // 1. 특징 추출
     const features = await this.extractFeatures(task);
     
@@ -42,29 +23,40 @@ class IntelligentRouter {
     return selectedAgent;
   }
   
-  private async extractFeatures(task: Task): Promise<number[]> {
+  async extractFeatures(task) {
     return [
       task.description.length / 100, // 복잡도
       task.priority / 10, // 우선순위
       this.getTaskTypeScore(task.type), // 타입 점수
-      Date.now() - task.createdAt.getTime() // 대기 시간
+      Date.now() - task.createdAt.getTime(), // 대기 시간
+      task.type // 원본 타입 정보 보존
     ];
   }
   
-  private async calculateAgentScores(features: number[]): Promise<RoutingScore[]> {
+  getTaskTypeFromFeatures(features) {
+    // features[4]에 원본 타입 정보가 있음
+    return features[4] || 'general';
+  }
+  
+  async calculateAgentScores(features) {
     const agents = ['code-agent', 'test-agent', 'design-agent'];
     
     return agents.map(agentName => {
       let score = 0;
       let reasoning = '';
       
-      // 간단한 점수 계산 로직
-      if (agentName === 'code-agent' && features[2] > 0.7) {
+      // 간단한 점수 계산 로직 - task type 기반
+      const taskType = this.getTaskTypeFromFeatures(features);
+      
+      if (agentName === 'code-agent' && taskType === 'code') {
+        score = 0.95;
+        reasoning = 'Code task matched to code agent';
+      } else if (agentName === 'test-agent' && (taskType === 'test' || features[1] > 0.8)) {
         score = 0.9;
-        reasoning = 'High code complexity detected';
-      } else if (agentName === 'test-agent' && features[1] > 0.8) {
-        score = 0.8;
-        reasoning = 'High priority testing task';
+        reasoning = 'Test task or high priority matched to test agent';
+      } else if (agentName === 'design-agent' && taskType === 'design') {
+        score = 0.85;
+        reasoning = 'Design task matched to design agent';
       } else {
         score = 0.5;
         reasoning = 'Default scoring';
@@ -78,7 +70,7 @@ class IntelligentRouter {
     });
   }
   
-  private async getAvailableAgents(): Promise<Agent[]> {
+  async getAvailableAgents() {
     return [
       {
         name: 'code-agent',
@@ -95,7 +87,7 @@ class IntelligentRouter {
     ];
   }
   
-  private selectBestAgent(scores: RoutingScore[], availableAgents: Agent[]): Agent {
+  selectBestAgent(scores, availableAgents) {
     // 점수와 가용성을 종합하여 최적 에이전트 선택
     const sortedScores = scores.sort((a, b) => b.score - a.score);
     
@@ -110,10 +102,10 @@ class IntelligentRouter {
     return availableAgents[0];
   }
   
-  private getTaskTypeScore(type: string): number {
-    const typeScores: Record<string, number> = {
+  getTaskTypeScore(type) {
+    const typeScores = {
       'code': 0.9,
-      'test': 0.8,
+      'test': 0.85, // Higher score for test tasks
       'design': 0.7,
       'general': 0.5
     };
@@ -121,7 +113,7 @@ class IntelligentRouter {
     return typeScores[type] || 0.5;
   }
   
-  private async recordRoutingDecision(task: Task, agent: Agent): Promise<void> {
+  async recordRoutingDecision(task, agent) {
     this.routingHistory.set(task.id, agent.name);
     console.log(`Task ${task.id} routed to ${agent.name}`);
   }
