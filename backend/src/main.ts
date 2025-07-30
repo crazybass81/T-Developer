@@ -1,36 +1,52 @@
-// T-Developer Main Entry Point - Agno + Agent Squad Architecture
 import express from 'express';
-import { UnifiedAgentSystem } from './orchestration/unified-agent-system';
-import { BedrockAgentCoreIntegration } from './bedrock/agentcore-integration';
+import cors from 'cors';
+import helmet from 'helmet';
+import { config } from './config/environment';
+import { logger } from './config/logger';
+import { AgentOrchestrator } from './orchestration/agent-orchestrator';
+import { setupRoutes } from './routes';
+import { errorHandler } from './middleware/error-handler';
 
-const app = express();
-app.use(express.json());
+async function bootstrap() {
+  const app = express();
 
-// Initialize AI Multi-Agent System
-const agentSystem = new UnifiedAgentSystem();
-const agentCore = new BedrockAgentCoreIntegration();
+  // Security middleware
+  app.use(helmet());
+  app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    credentials: true
+  }));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy',
-    architecture: 'Agno + Agent Squad + Bedrock AgentCore',
-    agents: 9
+  // Body parsing
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true }));
+
+  // Health check
+  app.get('/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || '1.0.0'
+    });
   });
-});
 
-// Main agent processing endpoint
-app.post('/api/process', async (req, res) => {
-  try {
-    const result = await agentSystem.processRequest(req.body);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+  // Initialize Agent Orchestrator
+  const orchestrator = new AgentOrchestrator();
+  await orchestrator.initialize();
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 T-Developer running on port ${PORT}`);
-  console.log('📋 Architecture: Agno Framework + AWS Agent Squad + Bedrock AgentCore');
+  // Setup routes
+  setupRoutes(app, orchestrator);
+
+  // Error handling
+  app.use(errorHandler);
+
+  const port = config.port || 3000;
+  app.listen(port, () => {
+    logger.info(`T-Developer backend running on port ${port}`);
+  });
+}
+
+bootstrap().catch(error => {
+  logger.error('Failed to start application:', error);
+  process.exit(1);
 });

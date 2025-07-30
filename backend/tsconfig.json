@@ -17,7 +17,11 @@
     "emitDecoratorMetadata": true,
     "baseUrl": "./src",
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["*"],
+      "@/config/*": ["config/*"],
+      "@/agents/*": ["agents/*"],
+      "@/services/*": ["services/*"],
+      "@/utils/*": ["utils/*"]
     }
   },
   "include": ["src/**/*"],

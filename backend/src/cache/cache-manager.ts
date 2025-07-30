@@ -1,152 +1,176 @@
-import { RedisClient } from './redis/client';
+import { RedisClient, CacheConfig } from './redis-client';
 
-export interface CacheOptions {
-  ttl?: number;
-  prefix?: string;
-  serialize?: boolean;
+export interface CacheStrategy {
+  ttl: number;
+  tags?: string[];
+  invalidateOn?: string[];
+}
+
+export interface CacheMetrics {
+  hits: number;
+  misses: number;
+  sets: number;
+  deletes: number;
 }
 
 export class CacheManager {
   private redis: RedisClient;
-  private defaultTTL: number = 3600; // 1 hour
-  private keyPrefix: string = 't-dev:';
-  
-  constructor(redis: RedisClient) {
-    this.redis = redis;
+  private strategies: Map<string, CacheStrategy> = new Map();
+  private metrics: CacheMetrics = { hits: 0, misses: 0, sets: 0, deletes: 0 };
+
+  constructor(config: CacheConfig) {
+    this.redis = new RedisClient(config);
+    this.initializeStrategies();
   }
-  
-  private buildKey(key: string, prefix?: string): string {
-    const actualPrefix = prefix || this.keyPrefix;
-    return `${actualPrefix}${key}`;
+
+  private initializeStrategies(): void {
+    // User cache strategy
+    this.strategies.set('user', {
+      ttl: 3600, // 1 hour
+      tags: ['user'],
+      invalidateOn: ['user:update', 'user:delete']
+    });
+
+    // Project cache strategy
+    this.strategies.set('project', {
+      ttl: 1800, // 30 minutes
+      tags: ['project'],
+      invalidateOn: ['project:update', 'project:delete']
+    });
+
+    // Agent cache strategy
+    this.strategies.set('agent', {
+      ttl: 300, // 5 minutes (agents change frequently)
+      tags: ['agent'],
+      invalidateOn: ['agent:update', 'agent:execute']
+    });
+
+    // Query result cache
+    this.strategies.set('query', {
+      ttl: 600, // 10 minutes
+      tags: ['query']
+    });
   }
-  
-  // Multi-level caching
-  async get<T>(key: string, options?: CacheOptions): Promise<T | null> {
-    const fullKey = this.buildKey(key, options?.prefix);
-    return await this.redis.get<T>(fullKey);
-  }
-  
-  async set<T>(key: string, value: T, options?: CacheOptions): Promise<void> {
-    const fullKey = this.buildKey(key, options?.prefix);
-    const ttl = options?.ttl || this.defaultTTL;
-    await this.redis.set(fullKey, value, ttl);
-  }
-  
-  async del(key: string, options?: CacheOptions): Promise<void> {
-    const fullKey = this.buildKey(key, options?.prefix);
-    await this.redis.del(fullKey);
-  }
-  
-  // Cache-aside pattern
-  async getOrSet<T>(
-    key: string,
-    fetcher: () => Promise<T>,
-    options?: CacheOptions
-  ): Promise<T> {
-    const cached = await this.get<T>(key, options);
-    
-    if (cached !== null) {
-      return cached;
+
+  async get<T>(key: string, loader?: () => Promise<T>): Promise<T | null> {
+    try {
+      const cached = await this.redis.get<T>(key);
+      
+      if (cached !== null) {
+        this.metrics.hits++;
+        return cached;
+      }
+
+      this.metrics.misses++;
+
+      if (loader) {
+        const value = await loader();
+        await this.set(key, value);
+        return value;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Cache get error:', error);
+      return loader ? await loader() : null;
     }
-    
-    const value = await fetcher();
-    await this.set(key, value, options);
-    
-    return value;
   }
-  
-  // Batch operations
-  async mget<T>(keys: string[], options?: CacheOptions): Promise<(T | null)[]> {
-    const fullKeys = keys.map(key => this.buildKey(key, options?.prefix));
-    const client = this.redis.getClient();
-    const values = await client.mget(...fullKeys);
-    
-    return values.map(value => value ? JSON.parse(value) : null);
-  }
-  
-  async mset(items: Array<{ key: string; value: any }>, options?: CacheOptions): Promise<void> {
-    const client = this.redis.getClient();
-    const pipeline = client.pipeline();
-    const ttl = options?.ttl || this.defaultTTL;
-    
-    for (const item of items) {
-      const fullKey = this.buildKey(item.key, options?.prefix);
-      pipeline.setex(fullKey, ttl, JSON.stringify(item.value));
+
+  async set<T>(key: string, value: T, strategyName?: string): Promise<void> {
+    try {
+      const strategy = strategyName ? this.strategies.get(strategyName) : null;
+      const ttl = strategy?.ttl || 3600;
+      
+      await this.redis.set(key, value, ttl);
+      this.metrics.sets++;
+
+      // Add tags if strategy defines them
+      if (strategy?.tags) {
+        await this.addTags(key, strategy.tags);
+      }
+    } catch (error) {
+      console.error('Cache set error:', error);
     }
-    
-    await pipeline.exec();
   }
-  
-  // Pattern-based operations
-  async deletePattern(pattern: string, options?: CacheOptions): Promise<number> {
-    const fullPattern = this.buildKey(pattern, options?.prefix);
-    const client = this.redis.getClient();
-    
-    const keys = await client.keys(fullPattern);
-    if (keys.length === 0) return 0;
-    
-    await client.del(...keys);
-    return keys.length;
+
+  async del(key: string): Promise<void> {
+    try {
+      await this.redis.del(key);
+      this.metrics.deletes++;
+    } catch (error) {
+      console.error('Cache delete error:', error);
+    }
   }
-  
-  // Cache warming
-  async warmCache<T>(
-    keys: string[],
-    fetcher: (key: string) => Promise<T>,
-    options?: CacheOptions
-  ): Promise<void> {
-    const items = await Promise.all(
-      keys.map(async (key) => ({
-        key,
-        value: await fetcher(key)
-      }))
-    );
-    
-    await this.mset(items, options);
+
+  async invalidateByTag(tag: string): Promise<number> {
+    try {
+      const tagKey = `tag:${tag}`;
+      const keys = await this.redis.get<string[]>(tagKey);
+      
+      if (!keys || keys.length === 0) return 0;
+
+      // Delete all keys with this tag
+      const pipeline = this.redis['client'].pipeline();
+      keys.forEach(key => pipeline.del(key));
+      pipeline.del(tagKey);
+      
+      await pipeline.exec();
+      return keys.length;
+    } catch (error) {
+      console.error('Cache invalidate by tag error:', error);
+      return 0;
+    }
   }
-  
-  // Cache statistics
-  async getStats(): Promise<{
-    hitRate: number;
-    missRate: number;
-    totalKeys: number;
-    memoryUsage: string;
-  }> {
-    const client = this.redis.getClient();
-    const info = await client.info('stats');
-    const keyspace = await client.info('keyspace');
-    
-    // Parse Redis info
-    const stats = this.parseRedisInfo(info);
-    const keys = this.parseKeyspace(keyspace);
+
+  async invalidateByPattern(pattern: string): Promise<number> {
+    try {
+      return await this.redis.invalidatePattern(pattern);
+    } catch (error) {
+      console.error('Cache invalidate by pattern error:', error);
+      return 0;
+    }
+  }
+
+  private async addTags(key: string, tags: string[]): Promise<void> {
+    for (const tag of tags) {
+      const tagKey = `tag:${tag}`;
+      const existingKeys = await this.redis.get<string[]>(tagKey) || [];
+      
+      if (!existingKeys.includes(key)) {
+        existingKeys.push(key);
+        await this.redis.set(tagKey, existingKeys, 86400); // 24 hours
+      }
+    }
+  }
+
+  // Cache warming for frequently accessed data
+  async warmCache(warmupData: Array<{ key: string; loader: () => Promise<any>; strategy?: string }>): Promise<void> {
+    const promises = warmupData.map(async ({ key, loader, strategy }) => {
+      try {
+        const exists = await this.redis.exists(key);
+        if (!exists) {
+          const value = await loader();
+          await this.set(key, value, strategy);
+        }
+      } catch (error) {
+        console.error(`Cache warm error for key ${key}:`, error);
+      }
+    });
+
+    await Promise.all(promises);
+  }
+
+  getMetrics(): CacheMetrics & { hitRate: number } {
+    const total = this.metrics.hits + this.metrics.misses;
+    const hitRate = total > 0 ? this.metrics.hits / total : 0;
     
     return {
-      hitRate: stats.keyspace_hits / (stats.keyspace_hits + stats.keyspace_misses) || 0,
-      missRate: stats.keyspace_misses / (stats.keyspace_hits + stats.keyspace_misses) || 0,
-      totalKeys: keys.total || 0,
-      memoryUsage: stats.used_memory_human || '0B'
+      ...this.metrics,
+      hitRate
     };
   }
-  
-  private parseRedisInfo(info: string): any {
-    const stats: any = {};
-    info.split('\r\n').forEach(line => {
-      if (line.includes(':')) {
-        const [key, value] = line.split(':');
-        stats[key] = isNaN(Number(value)) ? value : Number(value);
-      }
-    });
-    return stats;
-  }
-  
-  private parseKeyspace(keyspace: string): any {
-    const keys: any = {};
-    keyspace.split('\r\n').forEach(line => {
-      if (line.startsWith('db0:')) {
-        const match = line.match(/keys=(\d+)/);
-        if (match) keys.total = parseInt(match[1]);
-      }
-    });
-    return keys;
+
+  async disconnect(): Promise<void> {
+    await this.redis.disconnect();
   }
 }

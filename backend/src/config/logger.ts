@@ -1,4 +1,5 @@
 import winston from 'winston';
+import { config } from './environment';
 
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -14,15 +15,16 @@ export const logger = winston.createLogger({
         winston.format.colorize(),
         winston.format.simple()
       )
-    }),
-    new winston.transports.File({ 
-      filename: 'logs/error.log', 
-      level: 'error' 
-    }),
-    new winston.transports.File({ 
-      filename: 'logs/combined.log' 
     })
   ]
 });
 
-export default logger;
+if (config.nodeEnv === 'production') {
+  logger.add(new winston.transports.File({ 
+    filename: 'logs/error.log', 
+    level: 'error' 
+  }));
+  logger.add(new winston.transports.File({ 
+    filename: 'logs/combined.log' 
+  }));
+}
