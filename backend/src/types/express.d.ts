@@ -4,6 +4,8 @@ declare namespace Express {
       id: string;
       scopes: string[];
       authMethod: 'api_key' | 'hmac' | 'jwt';
+      permissions?: string[];
+      role?: string;
     };
     id?: string;
   }

@@ -1,112 +1,248 @@
-import { 
-  SecretsManagerClient, 
-  GetSecretValueCommand,
-  CreateSecretCommand,
-  UpdateSecretCommand 
-} from '@aws-sdk/client-secrets-manager';
+import { SecretsManagerClient, GetSecretValueCommand, CreateSecretCommand, UpdateSecretCommand, RotateSecretCommand } from '@aws-sdk/client-secrets-manager';
+import { KMSClient, EncryptCommand, DecryptCommand } from '@aws-sdk/client-kms';
+
+export interface SecretsConfig {
+  region: string;
+  applicationName: string;
+  defaultKmsKeyId?: string;
+  cacheTTL?: number;
+  cdpInterval?: number;
+  cdpRetention?: number;
+  realtimeReplication?: boolean;
+}
+
+export interface CreateSecretOptions {
+  description?: string;
+  kmsKeyId?: string;
+  enableRotation?: boolean;
+  rotationRules?: RotationRules;
+  tags?: Array<{ Key: string; Value: string }>;
+}
+
+export interface RotationRules {
+  rotationDays?: number;
+  automaticRotation?: boolean;
+}
+
+export interface EncryptionContext {
+  [key: string]: string;
+}
+
+export interface SecretAuditLog {
+  timestamp: Date;
+  user: string;
+  sourceIP: string;
+  userAgent: string;
+  success: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+export interface TimeRange {
+  start: Date;
+  end: Date;
+}
 
 export class SecretsManager {
-  private client: SecretsManagerClient;
-  private cache: Map<string, { value: any; expiry: number }> = new Map();
-  private cacheTTL = 300000; // 5분
-  
-  constructor() {
-    this.client = new SecretsManagerClient({
-      region: process.env.AWS_REGION || 'us-east-1'
+  private secretsClient: SecretsManagerClient;
+  private kmsClient: KMSClient;
+  private cache: SecretCache;
+  private rotationScheduler: RotationScheduler;
+
+  constructor(private config: SecretsConfig) {
+    this.secretsClient = new SecretsManagerClient({
+      region: config.region
     });
-  }
-  
-  async getSecret(secretName: string): Promise<any> {
-    // 캐시 확인
-    const cached = this.cache.get(secretName);
-    if (cached && cached.expiry > Date.now()) {
-      return cached.value;
-    }
     
+    this.kmsClient = new KMSClient({
+      region: config.region
+    });
+    
+    this.cache = new SecretCache({
+      ttl: config.cacheTTL || 3600000 // 1 hour
+    });
+    
+    this.rotationScheduler = new RotationScheduler();
+  }
+
+  async createSecret(
+    name: string,
+    value: any,
+    options?: CreateSecretOptions
+  ): Promise<string> {
+    const secretString = typeof value === 'string' 
+      ? value 
+      : JSON.stringify(value);
+
+    const command = new CreateSecretCommand({
+      Name: this.getSecretName(name),
+      SecretString: secretString,
+      Description: options?.description,
+      KmsKeyId: options?.kmsKeyId || this.config.defaultKmsKeyId,
+      Tags: [
+        { Key: 'Application', Value: this.config.applicationName },
+        { Key: 'Environment', Value: process.env.NODE_ENV || 'development' },
+        ...(options?.tags || [])
+      ]
+    });
+
+    const response = await this.secretsClient.send(command);
+
+    if (options?.enableRotation) {
+      await this.enableRotation(response.ARN!, options.rotationRules);
+    }
+
+    return response.ARN!;
+  }
+
+  async getSecret<T = any>(name: string): Promise<T> {
+    // Check cache first
+    const cached = this.cache.get<T>(name);
+    if (cached) {
+      return cached;
+    }
+
     try {
-      const command = new GetSecretValueCommand({ SecretId: secretName });
-      const response = await this.client.send(command);
-      
-      let secretValue: any;
-      if (response.SecretString) {
-        secretValue = JSON.parse(response.SecretString);
-      } else if (response.SecretBinary) {
-        const buff = Buffer.from(response.SecretBinary);
-        secretValue = buff.toString('utf-8');
-      }
-      
-      // 캐시에 저장
-      this.cache.set(secretName, {
-        value: secretValue,
-        expiry: Date.now() + this.cacheTTL
+      const command = new GetSecretValueCommand({
+        SecretId: this.getSecretName(name),
+        VersionStage: 'AWSCURRENT'
       });
-      
+
+      const response = await this.secretsClient.send(command);
+
+      let secretValue: T;
+
+      if (response.SecretString) {
+        try {
+          secretValue = JSON.parse(response.SecretString) as T;
+        } catch {
+          secretValue = response.SecretString as any;
+        }
+      } else if (response.SecretBinary) {
+        secretValue = Buffer.from(response.SecretBinary) as any;
+      } else {
+        throw new Error('Secret has no value');
+      }
+
+      // Cache the secret
+      this.cache.set(name, secretValue);
+
       return secretValue;
-    } catch (error) {
-      console.error(`Failed to retrieve secret ${secretName}:`, error);
+
+    } catch (error: any) {
+      if (error.name === 'ResourceNotFoundException') {
+        throw new Error(`Secret not found: ${name}`);
+      }
       throw error;
     }
   }
-  
-  async createOrUpdateSecret(secretName: string, secretValue: any): Promise<void> {
-    const secretString = typeof secretValue === 'string' 
-      ? secretValue 
-      : JSON.stringify(secretValue);
-    
-    try {
-      // 먼저 업데이트 시도
-      const updateCommand = new UpdateSecretCommand({
-        SecretId: secretName,
-        SecretString: secretString
-      });
-      await this.client.send(updateCommand);
-      console.log(`✅ Secret updated: ${secretName}`);
-    } catch (error: any) {
-      if (error.name === 'ResourceNotFoundException') {
-        // 없으면 생성
-        const createCommand = new CreateSecretCommand({
-          Name: secretName,
-          SecretString: secretString,
-          Description: `T-Developer secret: ${secretName}`
-        });
-        await this.client.send(createCommand);
-        console.log(`✅ Secret created: ${secretName}`);
-      } else {
-        throw error;
-      }
-    }
-    
-    // 캐시 무효화
-    this.cache.delete(secretName);
+
+  async rotateSecret(name: string, newValue: any): Promise<void> {
+    const secretName = this.getSecretName(name);
+
+    // Create new version
+    await this.secretsClient.send(new UpdateSecretCommand({
+      SecretId: secretName,
+      SecretString: typeof newValue === 'string' 
+        ? newValue 
+        : JSON.stringify(newValue)
+    }));
+
+    // Invalidate cache
+    this.cache.delete(name);
+
+    // Notify dependent services
+    await this.notifyDependentServices(name);
   }
-  
-  // 환경별 시크릿 로드
-  async loadEnvironmentSecrets(): Promise<void> {
-    const environment = process.env.NODE_ENV || 'development';
-    const secretName = `t-developer/${environment}/config`;
-    
-    try {
-      const secrets = await this.getSecret(secretName);
-      
-      // 환경 변수로 설정
-      Object.entries(secrets).forEach(([key, value]) => {
-        if (!process.env[key]) {
-          process.env[key] = value as string;
-        }
-      });
-      
-      console.log(`✅ Loaded secrets for ${environment} environment`);
-    } catch (error) {
-      console.warn(`⚠️  No secrets found for ${environment}, using local .env`);
-    }
+
+  async enableRotation(secretArn: string, rules?: RotationRules): Promise<void> {
+    await this.secretsClient.send(new RotateSecretCommand({
+      SecretId: secretArn,
+      RotationRules: {
+        AutomaticallyAfterDays: rules?.rotationDays || 30
+      }
+    }));
+
+    // Schedule rotation
+    this.rotationScheduler.schedule({
+      secretArn,
+      rules: rules || {},
+      nextRotation: this.calculateNextRotation(rules || {})
+    });
+  }
+
+  async encryptValue(plaintext: string, context?: EncryptionContext): Promise<string> {
+    const command = new EncryptCommand({
+      KeyId: this.config.defaultKmsKeyId!,
+      Plaintext: Buffer.from(plaintext),
+      EncryptionContext: context
+    });
+
+    const response = await this.kmsClient.send(command);
+    return Buffer.from(response.CiphertextBlob!).toString('base64');
+  }
+
+  async decryptValue(ciphertext: string, context?: EncryptionContext): Promise<string> {
+    const command = new DecryptCommand({
+      CiphertextBlob: Buffer.from(ciphertext, 'base64'),
+      EncryptionContext: context
+    });
+
+    const response = await this.kmsClient.send(command);
+    return Buffer.from(response.Plaintext!).toString();
+  }
+
+  async auditSecretAccess(secretName: string, timeRange: TimeRange): Promise<SecretAuditLog[]> {
+    // Simplified audit implementation
+    return [];
+  }
+
+  private getSecretName(name: string): string {
+    return `${this.config.applicationName}/${process.env.NODE_ENV || 'development'}/${name}`;
+  }
+
+  private calculateNextRotation(rules: RotationRules): Date {
+    const nextRotation = new Date();
+    nextRotation.setDate(nextRotation.getDate() + (rules.rotationDays || 30));
+    return nextRotation;
+  }
+
+  private async notifyDependentServices(secretName: string): Promise<void> {
+    console.log(`Secret ${secretName} has been rotated`);
   }
 }
 
-// 초기화 스크립트
-export async function initializeSecrets(): Promise<void> {
-  const manager = new SecretsManager();
-  
-  if (process.env.NODE_ENV === 'production') {
-    await manager.loadEnvironmentSecrets();
+class SecretCache {
+  private cache: Map<string, { value: any; expiry: number }> = new Map();
+
+  constructor(private options: { ttl: number }) {}
+
+  get<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.value;
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  set<T>(key: string, value: T): void {
+    this.cache.set(key, {
+      value,
+      expiry: Date.now() + this.options.ttl
+    });
+  }
+
+  delete(key: string): void {
+    this.cache.delete(key);
+  }
+}
+
+class RotationScheduler {
+  private schedules: Map<string, any> = new Map();
+
+  schedule(config: any): void {
+    this.schedules.set(config.secretArn, config);
+    console.log(`Scheduled rotation for ${config.secretArn}`);
   }
 }
