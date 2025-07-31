@@ -1,0 +1,81 @@
+{
+  "total_packages": 12,
+  "successful": [],
+  "failed": [
+    {
+      "package": "agno>=1.7.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "boto3>=1.26.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "botocore>=1.29.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "python-dotenv>=1.0.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "requests>=2.31.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "pydantic>=2.0.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "fastapi>=0.100.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "uvicorn>=0.23.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "pytest>=7.4.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "black>=23.0.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "flake8>=6.0.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    },
+    {
+      "package": "mypy>=1.5.0",
+      "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n",
+      "stdout": ""
+    }
+  ],
+  "warnings": [],
+  "timing": {},
+  "bulk_install": {
+    "success": false,
+    "time": 0.007841110229492188,
+    "output": "",
+    "error": "error: No virtual environment found; run `uv venv` to create an environment, or pass `--system` to install into a non-virtual environment\n"
+  },
+  "performance": {
+    "pip_time": 0.2598249912261963,
+    "uv_time": 0.008995294570922852,
+    "speedup": 28.884545044925655,
+    "pip_success": false,
+    "uv_success": false
+  }
+}
