@@ -1,0 +1,2 @@
+VSCODE_HANDLES_SIGPIPE=true
+PATH=/home/ec2-user/.vscode-server/cli/servers/Stable-488a1f239235055e34e673291fb8d8c810886f81/server/bin/remote-cli:/home/ec2-user/.nvm/versions/node/v18.20.8/bin:/home/ec2-user/.local/bin:/home/ec2-user/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/ec2-user/.local/bin
