@@ -1,112 +1,220 @@
+"""
+Search Agent 테스트
+"""
+
 import pytest
 import asyncio
-from unittest.mock import Mock, patch
-from backend.src.agents.implementations.search.search_agent import (
-    MultiSourceSearchEngine,
-    IntelligentQueryExpander,
-    RealtimeIndexingSystem,
-    SearchResultRanker,
-    SearchResult
+from unittest.mock import Mock, patch, AsyncMock
+from backend.src.agents.implementations.search_agent import (
+    SearchAgent,
+    SearchQuery,
+    SearchResult,
+    NPMSearcher,
+    GitHubSearcher
 )
 
 class TestSearchAgent:
     """Search Agent 테스트"""
 
     @pytest.fixture
-    def sample_search_results(self):
+    def search_agent(self):
+        return SearchAgent()
+
+    @pytest.fixture
+    def sample_query(self):
+        return SearchQuery(
+            keywords=['authentication', 'jwt'],
+            language='javascript',
+            framework='react',
+            min_stars=10,
+            license_filter=['MIT', 'Apache-2.0']
+        )
+
+    @pytest.fixture
+    def sample_requirements(self):
         return [
-            SearchResult(
-                component_id='comp_001',
-                name='react-component',
-                description='A React UI component',
-                source='npm',
-                relevance_score=0.9,
-                metadata={'downloads': 100000, 'stars': 500}
-            ),
-            SearchResult(
-                component_id='comp_002',
-                name='vue-component',
-                description='A Vue UI component',
-                source='npm',
-                relevance_score=0.8,
-                metadata={'downloads': 50000, 'stars': 300}
-            )
+            {
+                'id': 'req-001',
+                'description': 'User authentication with JWT tokens',
+                'features': ['login', 'logout', 'token_refresh'],
+                'language': 'javascript',
+                'framework': 'react'
+            }
         ]
 
     @pytest.mark.asyncio
-    async def test_multi_source_search(self):
-        """다중 소스 검색 테스트"""
-        search_engine = MultiSourceSearchEngine()
+    async def test_search_components(self, search_agent, sample_query):
+        """컴포넌트 검색 테스트"""
         
-        results = await search_engine.search_components(
-            'react component',
-            {'language': 'javascript'}
-        )
+        # Mock search sources
+        mock_results = [
+            SearchResult(
+                id='test-auth',
+                name='test-auth',
+                description='Authentication library',
+                source='npm',
+                url='https://npmjs.com/test-auth',
+                score=0.8,
+                metadata={'stars': 100},
+                compatibility_info={}
+            )
+        ]
         
-        assert isinstance(results, list)
-        assert len(results) >= 0
+        with patch.object(search_agent.search_sources['npm'], 'search', 
+                         return_value=mock_results):
+            with patch.object(search_agent.search_sources['github'], 'search',
+                             return_value=[]):
+                with patch.object(search_agent.search_sources['pypi'], 'search',
+                                 return_value=[]):
+                    with patch.object(search_agent.search_sources['maven'], 'search',
+                                     return_value=[]):
+                        
+                        results = await search_agent.search_components(sample_query)
+                        
+                        assert len(results) > 0
+                        assert results[0].name == 'test-auth'
+                        assert results[0].source == 'npm'
 
     @pytest.mark.asyncio
-    async def test_query_expansion(self):
-        """쿼리 확장 테스트"""
-        expander = IntelligentQueryExpander()
+    async def test_search_by_requirements(self, search_agent, sample_requirements):
+        """요구사항 기반 검색 테스트"""
         
-        expanded_queries = await expander.expand_query(
-            'ui component',
-            {'framework': 'react'}
-        )
-        
-        assert isinstance(expanded_queries, list)
-        assert len(expanded_queries) > 1
-        assert 'ui component' in expanded_queries
+        with patch.object(search_agent, 'search_components') as mock_search:
+            mock_search.return_value = [
+                SearchResult(
+                    id='auth-lib',
+                    name='auth-lib',
+                    description='JWT authentication',
+                    source='npm',
+                    url='https://npmjs.com/auth-lib',
+                    score=0.9,
+                    metadata={},
+                    compatibility_info={}
+                )
+            ]
+            
+            results = await search_agent.search_by_requirements(sample_requirements)
+            
+            assert 'req-001' in results
+            assert len(results['req-001']) > 0
+            assert results['req-001'][0].name == 'auth-lib'
 
     @pytest.mark.asyncio
-    async def test_realtime_indexing(self):
-        """실시간 인덱싱 테스트"""
-        indexer = RealtimeIndexingSystem()
+    async def test_generate_search_query(self, search_agent, sample_requirements):
+        """검색 쿼리 생성 테스트"""
         
-        component = {
-            'id': 'test_comp',
-            'name': 'test-component',
-            'description': 'A test component for UI'
+        with patch.object(search_agent.agent, 'arun') as mock_arun:
+            mock_arun.return_value = Mock(
+                content='{"keywords": ["auth", "jwt"], "language": "javascript", "framework": "react"}'
+            )
+            
+            query = await search_agent._generate_search_query(sample_requirements[0])
+            
+            assert 'auth' in query.keywords
+            assert query.language == 'javascript'
+            assert query.framework == 'react'
+
+    def test_extract_basic_keywords(self, search_agent):
+        """기본 키워드 추출 테스트"""
+        
+        requirement = {
+            'description': 'User authentication system with database integration',
+            'features': ['login', 'logout']
         }
         
-        await indexer.index_component(component)
+        keywords = search_agent._extract_basic_keywords(requirement)
         
-        assert 'test_comp' in indexer.index
-        assert 'keywords' in indexer.index['test_comp']
+        assert 'auth' in keywords or 'authentication' in keywords
+        assert 'database' in keywords
+        assert 'login' in keywords
 
-    @pytest.mark.asyncio
-    async def test_result_ranking(self, sample_search_results):
-        """검색 결과 랭킹 테스트"""
-        ranker = SearchResultRanker()
+    def test_should_search_source(self, search_agent, sample_query):
+        """소스별 검색 여부 결정 테스트"""
         
-        ranked_results = await ranker.rank_results(
-            sample_search_results,
-            'react component',
-            {'framework': 'react'}
-        )
+        # JavaScript는 NPM에서 검색해야 함
+        assert search_agent._should_search_source('npm', sample_query)
         
-        assert len(ranked_results) == len(sample_search_results)
-        assert ranked_results[0].relevance_score >= ranked_results[1].relevance_score
+        # JavaScript는 PyPI에서 검색하지 않음
+        assert not search_agent._should_search_source('pypi', sample_query)
+        
+        # GitHub은 모든 언어 검색
+        assert search_agent._should_search_source('github', sample_query)
 
-    @pytest.mark.asyncio
-    async def test_popularity_calculation(self, sample_search_results):
-        """인기도 계산 테스트"""
-        ranker = SearchResultRanker()
+    def test_deduplicate_results(self, search_agent):
+        """중복 결과 제거 테스트"""
         
-        popularity_score = ranker._calculate_popularity(sample_search_results[0])
+        results = [
+            SearchResult('1', 'test-lib', 'desc', 'npm', 'url1', 0.8, {}, {}),
+            SearchResult('2', 'test_lib', 'desc', 'github', 'url2', 0.7, {}, {}),  # 중복
+            SearchResult('3', 'other-lib', 'desc', 'npm', 'url3', 0.9, {}, {})
+        ]
         
-        assert 0.0 <= popularity_score <= 1.0
+        unique_results = search_agent._deduplicate_results(results)
+        
+        assert len(unique_results) == 2
+        assert unique_results[0].name == 'test-lib'
+        assert unique_results[1].name == 'other-lib'
 
-    @pytest.mark.asyncio
-    async def test_recency_calculation(self, sample_search_results):
-        """최신성 계산 테스트"""
-        ranker = SearchResultRanker()
+
+class TestNPMSearcher:
+    """NPM Searcher 테스트"""
+
+    @pytest.fixture
+    def npm_searcher(self):
+        return NPMSearcher()
+
+    def test_parse_npm_results(self, npm_searcher):
+        """NPM 결과 파싱 테스트"""
         
-        # 최신 업데이트 정보 추가
-        sample_search_results[0].metadata['last_updated'] = '2024-01-01T00:00:00'
+        mock_data = [
+            {
+                'package': {
+                    'name': 'test-package',
+                    'description': 'Test package',
+                    'version': '1.0.0',
+                    'keywords': ['test'],
+                    'license': 'MIT'
+                },
+                'score': {'final': 0.8}
+            }
+        ]
         
-        recency_score = ranker._calculate_recency(sample_search_results[0])
+        results = npm_searcher._parse_npm_results(mock_data)
         
-        assert 0.0 <= recency_score <= 1.0
+        assert len(results) == 1
+        assert results[0].name == 'test-package'
+        assert results[0].score == 0.8
+        assert results[0].metadata['license'] == 'MIT'
+
+
+class TestGitHubSearcher:
+    """GitHub Searcher 테스트"""
+
+    @pytest.fixture
+    def github_searcher(self):
+        return GitHubSearcher()
+
+    def test_parse_github_results(self, github_searcher):
+        """GitHub 결과 파싱 테스트"""
+        
+        mock_data = [
+            {
+                'full_name': 'user/repo',
+                'name': 'repo',
+                'description': 'Test repository',
+                'html_url': 'https://github.com/user/repo',
+                'stargazers_count': 1000,
+                'forks_count': 100,
+                'language': 'JavaScript',
+                'license': {'name': 'MIT'},
+                'updated_at': '2023-01-01T00:00:00Z',
+                'topics': ['auth', 'jwt']
+            }
+        ]
+        
+        results = github_searcher._parse_github_results(mock_data)
+        
+        assert len(results) == 1
+        assert results[0].name == 'repo'
+        assert results[0].metadata['stars'] == 1000
+        assert results[0].metadata['language'] == 'JavaScript'

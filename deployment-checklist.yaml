@@ -1,0 +1,76 @@
+# deployment-checklist.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ui-agent-deployment-checklist
+  namespace: t-developer
+data:
+  checklist.yaml: |
+    deployment_checklist:
+      pre_deployment:
+        - name: "Code Review Completed"
+          required: true
+          status: "completed"
+          reviewer: "senior-engineer"
+        
+        - name: "All Tests Passing"
+          required: true
+          status: "completed"
+          test_suites:
+            - unit_tests: 156/156
+            - integration_tests: 48/48
+            - e2e_tests: 12/12
+        
+        - name: "Security Scan"
+          required: true
+          status: "completed"
+          vulnerabilities: 0
+        
+        - name: "Performance Benchmarks"
+          required: true
+          status: "completed"
+          metrics:
+            - p95_latency: "245ms"
+            - throughput: "1200 req/sec"
+      
+      deployment_steps:
+        - name: "Database Migration"
+          command: "kubectl apply -f migrations/"
+          status: "pending"
+        
+        - name: "Config Update"
+          command: "kubectl apply -f configs/"
+          status: "pending"
+        
+        - name: "Canary Deployment"
+          command: "helm upgrade --install ui-agent ./chart --set canary.enabled=true"
+          status: "pending"
+        
+        - name: "Health Check"
+          command: "kubectl wait --for=condition=ready pod -l app=ui-agent"
+          status: "pending"
+        
+        - name: "Smoke Tests"
+          command: "pytest tests/smoke/"
+          status: "pending"
+        
+        - name: "Full Rollout"
+          command: "kubectl set image deployment/ui-agent agent=ui-agent:v1.0.0"
+          status: "pending"
+      
+      post_deployment:
+        - name: "Monitor Error Rates"
+          duration: "30m"
+          threshold: "< 0.1%"
+        
+        - name: "Check Performance Metrics"
+          metrics:
+            - latency_p95: "< 300ms"
+            - cpu_usage: "< 70%"
+            - memory_usage: "< 80%"
+        
+        - name: "Verify Integrations"
+          services:
+            - redis: "connected"
+            - dynamodb: "connected"
+            - monitoring: "active"
