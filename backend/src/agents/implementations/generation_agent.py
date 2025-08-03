@@ -1,721 +1,515 @@
 # backend/src/agents/implementations/generation_agent.py
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-import asyncio
-import json
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
 from agno.agent import Agent
 from agno.models.aws import AwsBedrock
 from agno.models.openai import OpenAIChat
-from agno.tools import CodeAnalyzer, FileHandler
 
 @dataclass
-class GenerationRequest:
-    component_type: str
-    requirements: List[str]
-    framework: str
-    language: str
-    dependencies: List[str] = field(default_factory=list)
-    constraints: Dict[str, Any] = field(default_factory=dict)
-    context: Dict[str, Any] = field(default_factory=dict)
-
-@dataclass
-class GeneratedCode:
-    id: str
-    component_name: str
+class GeneratedComponent:
+    name: str
+    code: str
     language: str
     framework: str
-    source_code: str
-    test_code: str
-    documentation: str
-    dependencies: List[str]
-    file_structure: Dict[str, str]
-    quality_score: float
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-class CodeTemplate:
-    def __init__(self, name: str, language: str, framework: str):
-        self.name = name
-        self.language = language
-        self.framework = framework
-        self.template_code = ""
-        self.placeholders = {}
-        self.dependencies = []
+    tests: Optional[str] = None
+    documentation: Optional[str] = None
+    dependencies: List[str] = None
 
 class GenerationAgent:
-    """AI-powered code generation agent"""
+    """코드 및 컴포넌트 생성 에이전트"""
 
     def __init__(self):
-        # Primary code generator - Claude 3 Opus (best for code)
-        self.code_generator = Agent(
+        # 주 생성 에이전트 - Claude 3 (복잡한 코드 생성)
+        self.main_generator = Agent(
             name="Code-Generator",
-            model=AwsBedrock(
-                id="anthropic.claude-3-opus-v1:0",
-                region="us-east-1"
-            ),
-            role="Expert software engineer and code architect",
+            model=AwsBedrock(id="anthropic.claude-3-sonnet-v2:0"),
+            role="Expert software developer and code generator",
             instructions=[
                 "Generate high-quality, production-ready code",
                 "Follow best practices and design patterns",
-                "Include comprehensive error handling",
-                "Write clean, maintainable, and well-documented code",
-                "Ensure code is secure and performant",
-                "Generate appropriate tests for all code"
-            ],
-            temperature=0.1,  # Low temperature for consistent code
-            max_retries=3
-        )
-
-        # Test generator - GPT-4 (good for test patterns)
-        self.test_generator = Agent(
-            name="Test-Generator",
-            model=OpenAIChat(id="gpt-4-turbo-preview"),
-            role="Senior QA engineer and test architect",
-            instructions=[
-                "Generate comprehensive test suites",
-                "Include unit, integration, and edge case tests",
-                "Follow testing best practices",
-                "Ensure high code coverage",
-                "Write clear test descriptions"
-            ],
-            temperature=0.2
-        )
-
-        # Documentation generator
-        self.doc_generator = Agent(
-            name="Doc-Generator",
-            model=AwsBedrock(id="amazon.nova-pro-v1:0"),
-            role="Technical writer and documentation specialist",
-            instructions=[
-                "Generate clear, comprehensive documentation",
-                "Include API documentation and usage examples",
-                "Write user-friendly guides",
-                "Document all public interfaces"
+                "Include proper error handling and documentation",
+                "Ensure code is maintainable and testable"
             ],
             temperature=0.3
         )
-
-        # Code quality analyzer
-        self.quality_analyzer = CodeQualityAnalyzer()
         
-        # Template manager
-        self.template_manager = TemplateManager()
+        # 보조 생성 에이전트 - GPT-4 (빠른 생성)
+        self.fast_generator = Agent(
+            name="Fast-Code-Generator",
+            model=OpenAIChat(id="gpt-4-turbo-preview"),
+            role="Rapid code generation specialist",
+            instructions=[
+                "Generate code quickly while maintaining quality",
+                "Focus on functional correctness",
+                "Use standard patterns and conventions"
+            ],
+            temperature=0.2
+        )
         
-        # Code optimizer
+        self.template_engine = CodeTemplateEngine()
         self.code_optimizer = CodeOptimizer()
+        self.test_generator = TestGenerator()
 
     async def generate_component(
         self,
-        request: GenerationRequest
-    ) -> GeneratedCode:
-        """Generate a complete component with code, tests, and documentation"""
-
-        # 1. Analyze requirements and select template
-        template = await self._select_template(request)
+        specification: Dict[str, Any],
+        generation_options: Optional[Dict[str, Any]] = None
+    ) -> GeneratedComponent:
+        """컴포넌트 생성"""
         
-        # 2. Generate code in parallel
-        generation_tasks = [
-            self._generate_source_code(request, template),
-            self._generate_test_code(request),
-            self._generate_documentation(request)
-        ]
+        options = generation_options or {}
+        language = specification.get('language', 'python')
+        framework = specification.get('framework', 'fastapi')
         
-        source_code, test_code, documentation = await asyncio.gather(*generation_tasks)
+        # 1. 코드 생성
+        code = await self._generate_code(specification, options)
         
-        # 3. Optimize generated code
-        optimized_code = await self.code_optimizer.optimize(
-            source_code,
-            request.language,
-            request.framework
-        )
+        # 2. 코드 최적화
+        if options.get('optimize', True):
+            code = await self.code_optimizer.optimize(code, language)
         
-        # 4. Analyze quality
-        quality_score = await self.quality_analyzer.analyze(
-            optimized_code,
-            test_code
-        )
+        # 3. 테스트 생성
+        tests = None
+        if options.get('generate_tests', True):
+            tests = await self.test_generator.generate_tests(code, specification)
         
-        # 5. Generate file structure
-        file_structure = self._generate_file_structure(
-            request,
-            optimized_code,
-            test_code
-        )
+        # 4. 문서 생성
+        documentation = None
+        if options.get('generate_docs', True):
+            documentation = await self._generate_documentation(code, specification)
         
-        return GeneratedCode(
-            id=self._generate_id(),
-            component_name=request.component_type,
-            language=request.language,
-            framework=request.framework,
-            source_code=optimized_code,
-            test_code=test_code,
+        # 5. 의존성 추출
+        dependencies = self._extract_dependencies(code, language, framework)
+        
+        return GeneratedComponent(
+            name=specification.get('name', 'generated_component'),
+            code=code,
+            language=language,
+            framework=framework,
+            tests=tests,
             documentation=documentation,
-            dependencies=self._extract_dependencies(optimized_code, request.framework),
-            file_structure=file_structure,
-            quality_score=quality_score,
-            metadata={
-                'template_used': template.name if template else 'custom',
-                'generation_time': asyncio.get_event_loop().time(),
-                'requirements_count': len(request.requirements)
-            }
+            dependencies=dependencies
         )
 
-    async def _generate_source_code(
+    async def _generate_code(
         self,
-        request: GenerationRequest,
-        template: Optional[CodeTemplate]
+        specification: Dict[str, Any],
+        options: Dict[str, Any]
     ) -> str:
-        """Generate source code"""
+        """코드 생성"""
+        
+        # 템플릿 기반 생성 시도
+        if options.get('use_template', True):
+            template_code = await self.template_engine.generate_from_template(
+                specification
+            )
+            if template_code:
+                return template_code
+        
+        # AI 기반 생성
+        complexity = self._assess_complexity(specification)
+        
+        if complexity == 'simple' and options.get('fast_generation', False):
+            return await self._fast_generate(specification)
+        else:
+            return await self._detailed_generate(specification)
 
-        context = self._build_generation_context(request, template)
+    async def _detailed_generate(self, specification: Dict[str, Any]) -> str:
+        """상세한 코드 생성"""
+        
+        prompt = self._build_generation_prompt(specification)
+        result = await self.main_generator.arun(prompt)
+        
+        return self._extract_code_from_response(result.content)
+
+    async def _fast_generate(self, specification: Dict[str, Any]) -> str:
+        """빠른 코드 생성"""
+        
+        prompt = self._build_simple_prompt(specification)
+        result = await self.fast_generator.arun(prompt)
+        
+        return self._extract_code_from_response(result.content)
+
+    def _build_generation_prompt(self, spec: Dict[str, Any]) -> str:
+        """상세 생성 프롬프트 구성"""
+        
+        return f"""
+        Generate a {spec.get('language', 'Python')} component with the following specifications:
+        
+        Name: {spec.get('name', 'Component')}
+        Description: {spec.get('description', 'A generated component')}
+        
+        Requirements:
+        {self._format_requirements(spec.get('requirements', []))}
+        
+        Features:
+        {self._format_features(spec.get('features', []))}
+        
+        Framework: {spec.get('framework', 'Standard')}
+        
+        Please generate:
+        1. Complete, production-ready code
+        2. Proper error handling
+        3. Type hints (if applicable)
+        4. Docstrings and comments
+        5. Follow best practices for {spec.get('language', 'Python')}
+        
+        Return only the code without explanations.
+        """
+
+    def _format_requirements(self, requirements: List[str]) -> str:
+        """요구사항 포맷팅"""
+        return '\n'.join(f"- {req}" for req in requirements)
+
+    def _format_features(self, features: List[str]) -> str:
+        """기능 포맷팅"""
+        return '\n'.join(f"- {feature}" for feature in features)
+
+    def _extract_code_from_response(self, response: str) -> str:
+        """응답에서 코드 추출"""
+        
+        # 코드 블록 추출
+        import re
+        
+        # ```language 형태의 코드 블록 찾기
+        code_blocks = re.findall(r'```(?:\w+)?\n(.*?)\n```', response, re.DOTALL)
+        
+        if code_blocks:
+            return code_blocks[0].strip()
+        
+        # 코드 블록이 없으면 전체 응답 반환
+        return response.strip()
+
+    def _assess_complexity(self, specification: Dict[str, Any]) -> str:
+        """복잡도 평가"""
+        
+        complexity_indicators = 0
+        
+        # 요구사항 수
+        requirements = specification.get('requirements', [])
+        if len(requirements) > 10:
+            complexity_indicators += 2
+        elif len(requirements) > 5:
+            complexity_indicators += 1
+        
+        # 기능 수
+        features = specification.get('features', [])
+        if len(features) > 8:
+            complexity_indicators += 2
+        elif len(features) > 4:
+            complexity_indicators += 1
+        
+        # 통합 요구사항
+        if specification.get('integrations'):
+            complexity_indicators += 1
+        
+        # 성능 요구사항
+        if specification.get('performance_requirements'):
+            complexity_indicators += 1
+        
+        if complexity_indicators >= 4:
+            return 'complex'
+        elif complexity_indicators >= 2:
+            return 'medium'
+        else:
+            return 'simple'
+
+    async def _generate_documentation(
+        self,
+        code: str,
+        specification: Dict[str, Any]
+    ) -> str:
+        """문서 생성"""
         
         prompt = f"""
-Generate {request.language} code for a {request.component_type} component using {request.framework}.
-
-Requirements:
-{chr(10).join(f"- {req}" for req in request.requirements)}
-
-Framework: {request.framework}
-Language: {request.language}
-
-Constraints:
-{json.dumps(request.constraints, indent=2)}
-
-Context:
-{json.dumps(context, indent=2)}
-
-Generate production-ready code with:
-1. Proper error handling
-2. Input validation
-3. Security best practices
-4. Performance optimization
-5. Clear documentation
-6. Modular design
-
-Return only the code without explanations.
-"""
-
-        result = await self.code_generator.arun(prompt)
-        return self._clean_generated_code(result.content)
-
-    async def _generate_test_code(self, request: GenerationRequest) -> str:
-        """Generate comprehensive test code"""
-
-        prompt = f"""
-Generate comprehensive test suite for a {request.component_type} in {request.language}.
-
-Requirements to test:
-{chr(10).join(f"- {req}" for req in request.requirements)}
-
-Framework: {request.framework}
-Testing Framework: {self._get_test_framework(request.language, request.framework)}
-
-Include:
-1. Unit tests for all functions/methods
-2. Integration tests for component interactions
-3. Edge case tests
-4. Error handling tests
-5. Performance tests (if applicable)
-6. Mock external dependencies
-
-Generate tests with clear descriptions and good coverage.
-"""
-
-        result = await self.test_generator.arun(prompt)
-        return self._clean_generated_code(result.content)
-
-    async def _generate_documentation(self, request: GenerationRequest) -> str:
-        """Generate component documentation"""
-
-        prompt = f"""
-Generate comprehensive documentation for a {request.component_type} component.
-
-Component Details:
-- Type: {request.component_type}
-- Language: {request.language}
-- Framework: {request.framework}
-
-Requirements:
-{chr(10).join(f"- {req}" for req in request.requirements)}
-
-Include:
-1. Component overview and purpose
-2. Installation instructions
-3. API documentation
-4. Usage examples
-5. Configuration options
-6. Troubleshooting guide
-
-Format as Markdown.
-"""
-
-        result = await self.doc_generator.arun(prompt)
+        Generate comprehensive documentation for the following code:
+        
+        ```
+        {code}
+        ```
+        
+        Component Name: {specification.get('name', 'Component')}
+        Description: {specification.get('description', '')}
+        
+        Please include:
+        1. Overview and purpose
+        2. Installation instructions
+        3. Usage examples
+        4. API reference
+        5. Configuration options
+        
+        Format as Markdown.
+        """
+        
+        result = await self.main_generator.arun(prompt)
         return result.content
 
-    def _build_generation_context(
+    def _extract_dependencies(
         self,
-        request: GenerationRequest,
-        template: Optional[CodeTemplate]
-    ) -> Dict[str, Any]:
-        """Build context for code generation"""
-
-        context = {
-            'project_type': request.context.get('project_type', 'web_application'),
-            'architecture_pattern': request.context.get('architecture', 'mvc'),
-            'database_type': request.context.get('database', 'postgresql'),
-            'authentication': request.context.get('auth', 'jwt'),
-            'deployment_target': request.context.get('deployment', 'cloud')
-        }
-
-        if template:
-            context['template'] = {
-                'name': template.name,
-                'placeholders': template.placeholders,
-                'base_dependencies': template.dependencies
-            }
-
-        return context
-
-    async def _select_template(self, request: GenerationRequest) -> Optional[CodeTemplate]:
-        """Select appropriate code template"""
-
-        template_key = f"{request.language}_{request.framework}_{request.component_type}"
-        
-        # Check for exact match
-        if template_key in self.template_manager.templates:
-            return self.template_manager.templates[template_key]
-        
-        # Find similar template
-        similar_templates = self.template_manager.find_similar(
-            request.language,
-            request.framework,
-            request.component_type
-        )
-        
-        if similar_templates:
-            return similar_templates[0]
-        
-        return None
-
-    def _generate_file_structure(
-        self,
-        request: GenerationRequest,
-        source_code: str,
-        test_code: str
-    ) -> Dict[str, str]:
-        """Generate appropriate file structure"""
-
-        structure = {}
-        
-        # Main source file
-        main_file = self._get_main_filename(request)
-        structure[main_file] = source_code
-        
-        # Test file
-        test_file = self._get_test_filename(request)
-        structure[test_file] = test_code
-        
-        # Additional files based on framework
-        additional_files = self._get_additional_files(request)
-        structure.update(additional_files)
-        
-        return structure
-
-    def _get_main_filename(self, request: GenerationRequest) -> str:
-        """Get main source filename"""
-        
-        extensions = {
-            'python': '.py',
-            'javascript': '.js',
-            'typescript': '.ts',
-            'java': '.java',
-            'go': '.go',
-            'rust': '.rs'
-        }
-        
-        ext = extensions.get(request.language.lower(), '.txt')
-        component_name = request.component_type.lower().replace(' ', '_')
-        
-        return f"src/{component_name}{ext}"
-
-    def _get_test_filename(self, request: GenerationRequest) -> str:
-        """Get test filename"""
-        
-        test_patterns = {
-            'python': 'test_{}.py',
-            'javascript': '{}.test.js',
-            'typescript': '{}.test.ts',
-            'java': '{}Test.java',
-            'go': '{}_test.go',
-            'rust': '{}_test.rs'
-        }
-        
-        pattern = test_patterns.get(request.language.lower(), 'test_{}.txt')
-        component_name = request.component_type.lower().replace(' ', '_')
-        
-        return f"tests/{pattern.format(component_name)}"
-
-    def _get_additional_files(self, request: GenerationRequest) -> Dict[str, str]:
-        """Generate additional framework-specific files"""
-        
-        files = {}
-        
-        # Package/dependency files
-        if request.language == 'python':
-            files['requirements.txt'] = self._generate_python_requirements(request)
-            files['setup.py'] = self._generate_python_setup(request)
-        elif request.language in ['javascript', 'typescript']:
-            files['package.json'] = self._generate_package_json(request)
-        elif request.language == 'java':
-            files['pom.xml'] = self._generate_maven_pom(request)
-        
-        # Configuration files
-        if request.framework == 'react':
-            files['.eslintrc.js'] = self._generate_eslint_config()
-        elif request.framework == 'vue':
-            files['vue.config.js'] = self._generate_vue_config()
-        elif request.framework == 'django':
-            files['settings.py'] = self._generate_django_settings()
-        
-        return files
-
-    def _extract_dependencies(self, code: str, framework: str) -> List[str]:
-        """Extract dependencies from generated code"""
+        code: str,
+        language: str,
+        framework: str
+    ) -> List[str]:
+        """의존성 추출"""
         
         dependencies = []
         
-        # Language-specific import patterns
-        import_patterns = {
-            'python': [r'import\s+(\w+)', r'from\s+(\w+)\s+import'],
-            'javascript': [r'import.*from\s+[\'"]([^\'"]+)[\'"]', r'require\([\'"]([^\'"]+)[\'"]\)'],
-            'java': [r'import\s+([\w\.]+)'],
-            'go': [r'import\s+"([^"]+)"']
-        }
+        if language == 'python':
+            # Python import 문 분석
+            import re
+            imports = re.findall(r'^(?:from|import)\s+(\w+)', code, re.MULTILINE)
+            
+            # 표준 라이브러리 제외
+            stdlib_modules = {'os', 'sys', 'json', 're', 'datetime', 'typing'}
+            dependencies = [imp for imp in imports if imp not in stdlib_modules]
         
-        # Extract based on patterns
-        # Implementation would use regex to find imports
+        elif language in ['javascript', 'typescript']:
+            # JavaScript/TypeScript require/import 분석
+            import re
+            imports = re.findall(r'(?:require|import).*?[\'"]([^\'\"]+)[\'"]', code)
+            dependencies = [imp for imp in imports if not imp.startswith('.')]
         
-        # Add framework-specific dependencies
-        framework_deps = self._get_framework_dependencies(framework)
-        dependencies.extend(framework_deps)
+        # 프레임워크 의존성 추가
+        if framework and framework not in dependencies:
+            dependencies.append(framework)
         
         return list(set(dependencies))
 
-    def _get_framework_dependencies(self, framework: str) -> List[str]:
-        """Get standard dependencies for framework"""
+class CodeTemplateEngine:
+    """코드 템플릿 엔진"""
+    
+    async def generate_from_template(self, specification: Dict[str, Any]) -> Optional[str]:
+        """템플릿 기반 코드 생성"""
         
-        deps = {
-            'react': ['react', 'react-dom'],
-            'vue': ['vue'],
-            'angular': ['@angular/core', '@angular/common'],
-            'django': ['django'],
-            'flask': ['flask'],
-            'express': ['express'],
-            'spring': ['org.springframework:spring-core']
-        }
+        template_type = self._identify_template_type(specification)
         
-        return deps.get(framework.lower(), [])
+        if template_type:
+            template = self._load_template(template_type)
+            return self._apply_template(template, specification)
+        
+        return None
+    
+    def _identify_template_type(self, spec: Dict[str, Any]) -> Optional[str]:
+        """템플릿 타입 식별"""
+        
+        # 간단한 패턴 매칭
+        description = spec.get('description', '').lower()
+        
+        if 'api' in description or 'rest' in description:
+            return 'rest_api'
+        elif 'crud' in description:
+            return 'crud_service'
+        elif 'database' in description:
+            return 'database_model'
+        
+        return None
+    
+    def _load_template(self, template_type: str) -> str:
+        """템플릿 로드"""
+        
+        templates = {
+            'rest_api': '''
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
-    def _clean_generated_code(self, code: str) -> str:
-        """Clean and format generated code"""
-        
-        # Remove markdown code blocks
-        if code.startswith('```'):
-            lines = code.split('\n')
-            if len(lines) > 2:
-                code = '\n'.join(lines[1:-1])
-        
-        # Remove extra whitespace
-        code = code.strip()
-        
-        return code
+app = FastAPI()
 
-    def _generate_id(self) -> str:
-        """Generate unique ID for generated code"""
-        import uuid
-        return f"gen_{uuid.uuid4().hex[:8]}"
+class {{model_name}}(BaseModel):
+    {{model_fields}}
 
-    def _get_test_framework(self, language: str, framework: str) -> str:
-        """Get appropriate test framework"""
-        
-        test_frameworks = {
-            'python': 'pytest',
-            'javascript': 'jest',
-            'typescript': 'jest',
-            'java': 'junit',
-            'go': 'testing',
-            'rust': 'cargo test'
-        }
-        
-        return test_frameworks.get(language.lower(), 'unittest')
+@app.get("/{{endpoint}}")
+async def get_{{endpoint}}():
+    return {"message": "{{endpoint}} endpoint"}
 
-class CodeQualityAnalyzer:
-    """Analyzes code quality and provides scores"""
+@app.post("/{{endpoint}}")
+async def create_{{endpoint}}(item: {{model_name}}):
+    return {"message": "Created", "data": item}
+''',
+            'crud_service': '''
+from typing import List, Optional
 
-    async def analyze(self, source_code: str, test_code: str) -> float:
-        """Analyze code quality and return score (0-1)"""
-        
-        scores = []
-        
-        # Code complexity
-        complexity_score = self._analyze_complexity(source_code)
-        scores.append(complexity_score * 0.3)
-        
-        # Test coverage estimation
-        coverage_score = self._estimate_coverage(source_code, test_code)
-        scores.append(coverage_score * 0.3)
-        
-        # Code style
-        style_score = self._analyze_style(source_code)
-        scores.append(style_score * 0.2)
-        
-        # Security patterns
-        security_score = self._analyze_security(source_code)
-        scores.append(security_score * 0.2)
-        
-        return sum(scores)
-
-    def _analyze_complexity(self, code: str) -> float:
-        """Analyze code complexity"""
-        # Simplified complexity analysis
-        lines = code.split('\n')
-        non_empty_lines = [l for l in lines if l.strip()]
-        
-        # Basic complexity indicators
-        complexity_keywords = ['if', 'for', 'while', 'try', 'except', 'switch', 'case']
-        complexity_count = sum(
-            line.count(keyword) for line in non_empty_lines 
-            for keyword in complexity_keywords
-        )
-        
-        # Normalize score (lower complexity = higher score)
-        if len(non_empty_lines) == 0:
-            return 1.0
-        
-        complexity_ratio = complexity_count / len(non_empty_lines)
-        return max(0.0, 1.0 - complexity_ratio)
-
-    def _estimate_coverage(self, source_code: str, test_code: str) -> float:
-        """Estimate test coverage"""
-        if not test_code.strip():
-            return 0.0
-        
-        # Simple heuristic: ratio of test lines to source lines
-        source_lines = len([l for l in source_code.split('\n') if l.strip()])
-        test_lines = len([l for l in test_code.split('\n') if l.strip()])
-        
-        if source_lines == 0:
-            return 1.0
-        
-        coverage_ratio = test_lines / source_lines
-        return min(1.0, coverage_ratio)
-
-    def _analyze_style(self, code: str) -> float:
-        """Analyze code style"""
-        # Basic style checks
-        lines = code.split('\n')
-        
-        # Check for comments
-        comment_lines = sum(1 for line in lines if line.strip().startswith('#') or line.strip().startswith('//'))
-        comment_ratio = comment_lines / max(1, len(lines))
-        
-        # Check for proper naming (simplified)
-        has_proper_naming = any(
-            word.islower() or word.isupper() or '_' in word
-            for line in lines
-            for word in line.split()
-            if word.isalpha()
-        )
-        
-        style_score = (comment_ratio * 0.5) + (0.5 if has_proper_naming else 0.0)
-        return min(1.0, style_score)
-
-    def _analyze_security(self, code: str) -> float:
-        """Analyze security patterns"""
-        # Check for security anti-patterns
-        security_issues = [
-            'eval(',
-            'exec(',
-            'system(',
-            'shell_exec(',
-            'password',  # hardcoded passwords
-            'secret',    # hardcoded secrets
-        ]
-        
-        code_lower = code.lower()
-        issue_count = sum(1 for issue in security_issues if issue in code_lower)
-        
-        # Security patterns (good)
-        security_patterns = [
-            'validate',
-            'sanitize',
-            'escape',
-            'hash',
-            'encrypt'
-        ]
-        
-        pattern_count = sum(1 for pattern in security_patterns if pattern in code_lower)
-        
-        # Calculate score
-        if issue_count > 0:
-            return max(0.0, 0.5 - (issue_count * 0.1))
-        
-        return min(1.0, 0.7 + (pattern_count * 0.1))
-
-class TemplateManager:
-    """Manages code templates"""
-
+class {{class_name}}Service:
     def __init__(self):
-        self.templates = {}
-        self._load_default_templates()
-
-    def _load_default_templates(self):
-        """Load default code templates"""
-        
-        # React component template
-        react_component = CodeTemplate(
-            name="react_functional_component",
-            language="javascript",
-            framework="react"
-        )
-        react_component.template_code = """
-import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
-
-const {{COMPONENT_NAME}} = ({ {{PROPS}} }) => {
-  {{STATE_DECLARATIONS}}
-  
-  {{USE_EFFECT_HOOKS}}
-  
-  {{EVENT_HANDLERS}}
-  
-  return (
-    <div className="{{CSS_CLASS}}">
-      {{COMPONENT_CONTENT}}
-    </div>
-  );
-};
-
-{{COMPONENT_NAME}}.propTypes = {
-  {{PROP_TYPES}}
-};
-
-{{COMPONENT_NAME}}.defaultProps = {
-  {{DEFAULT_PROPS}}
-};
-
-export default {{COMPONENT_NAME}};
-"""
-        react_component.placeholders = {
-            'COMPONENT_NAME': 'string',
-            'PROPS': 'string',
-            'STATE_DECLARATIONS': 'code',
-            'USE_EFFECT_HOOKS': 'code',
-            'EVENT_HANDLERS': 'code',
-            'CSS_CLASS': 'string',
-            'COMPONENT_CONTENT': 'jsx',
-            'PROP_TYPES': 'object',
-            'DEFAULT_PROPS': 'object'
+        self.data = []
+    
+    def create(self, item: dict) -> dict:
+        item['id'] = len(self.data) + 1
+        self.data.append(item)
+        return item
+    
+    def get_all(self) -> List[dict]:
+        return self.data
+    
+    def get_by_id(self, item_id: int) -> Optional[dict]:
+        return next((item for item in self.data if item['id'] == item_id), None)
+    
+    def update(self, item_id: int, updates: dict) -> Optional[dict]:
+        item = self.get_by_id(item_id)
+        if item:
+            item.update(updates)
+        return item
+    
+    def delete(self, item_id: int) -> bool:
+        item = self.get_by_id(item_id)
+        if item:
+            self.data.remove(item)
+            return True
+        return False
+'''
         }
-        react_component.dependencies = ['react', 'prop-types']
         
-        self.templates['javascript_react_component'] = react_component
-
-    def find_similar(self, language: str, framework: str, component_type: str) -> List[CodeTemplate]:
-        """Find similar templates"""
+        return templates.get(template_type, '')
+    
+    def _apply_template(self, template: str, spec: Dict[str, Any]) -> str:
+        """템플릿 적용"""
         
-        similar = []
+        # 간단한 템플릿 변수 치환
+        replacements = {
+            '{{model_name}}': spec.get('name', 'Item').title(),
+            '{{class_name}}': spec.get('name', 'Item').title(),
+            '{{endpoint}}': spec.get('name', 'items').lower(),
+            '{{model_fields}}': self._generate_model_fields(spec)
+        }
         
-        for template in self.templates.values():
-            score = 0
-            
-            if template.language == language:
-                score += 3
-            if template.framework == framework:
-                score += 2
-            if component_type.lower() in template.name.lower():
-                score += 1
-            
-            if score > 0:
-                similar.append((template, score))
+        result = template
+        for placeholder, value in replacements.items():
+            result = result.replace(placeholder, value)
         
-        # Sort by score and return templates
-        similar.sort(key=lambda x: x[1], reverse=True)
-        return [template for template, _ in similar]
+        return result
+    
+    def _generate_model_fields(self, spec: Dict[str, Any]) -> str:
+        """모델 필드 생성"""
+        
+        fields = spec.get('fields', [])
+        if not fields:
+            return 'name: str\n    description: str'
+        
+        field_lines = []
+        for field in fields:
+            field_name = field.get('name', 'field')
+            field_type = field.get('type', 'str')
+            field_lines.append(f'{field_name}: {field_type}')
+        
+        return '\n    '.join(field_lines)
 
 class CodeOptimizer:
-    """Optimizes generated code"""
-
-    async def optimize(self, code: str, language: str, framework: str) -> str:
-        """Optimize code for performance and best practices"""
+    """코드 최적화기"""
+    
+    async def optimize(self, code: str, language: str) -> str:
+        """코드 최적화"""
         
-        optimizations = []
+        # 기본적인 최적화 (실제로는 더 복잡한 로직 필요)
+        optimized = code
         
-        # Language-specific optimizations
         if language == 'python':
-            optimizations.extend(self._python_optimizations(code))
+            # Python 최적화
+            optimized = self._optimize_python(optimized)
         elif language in ['javascript', 'typescript']:
-            optimizations.extend(self._javascript_optimizations(code))
-        elif language == 'java':
-            optimizations.extend(self._java_optimizations(code))
+            # JavaScript/TypeScript 최적화
+            optimized = self._optimize_javascript(optimized)
         
-        # Framework-specific optimizations
-        if framework == 'react':
-            optimizations.extend(self._react_optimizations(code))
-        elif framework == 'vue':
-            optimizations.extend(self._vue_optimizations(code))
+        return optimized
+    
+    def _optimize_python(self, code: str) -> str:
+        """Python 코드 최적화"""
         
-        # Apply optimizations
-        optimized_code = code
-        for optimization in optimizations:
-            optimized_code = optimization(optimized_code)
+        # 간단한 최적화 예시
+        # 실제로는 AST 분석 등을 통한 더 정교한 최적화 필요
         
-        return optimized_code
+        # 불필요한 공백 제거
+        lines = [line.rstrip() for line in code.split('\n')]
+        
+        # 빈 줄 정리 (연속된 빈 줄을 하나로)
+        optimized_lines = []
+        prev_empty = False
+        
+        for line in lines:
+            if line.strip() == '':
+                if not prev_empty:
+                    optimized_lines.append(line)
+                prev_empty = True
+            else:
+                optimized_lines.append(line)
+                prev_empty = False
+        
+        return '\n'.join(optimized_lines)
+    
+    def _optimize_javascript(self, code: str) -> str:
+        """JavaScript 코드 최적화"""
+        
+        # 기본적인 정리
+        return code.strip()
 
-    def _python_optimizations(self, code: str) -> List[callable]:
-        """Python-specific optimizations"""
+class TestGenerator:
+    """테스트 생성기"""
+    
+    async def generate_tests(
+        self,
+        code: str,
+        specification: Dict[str, Any]
+    ) -> str:
+        """테스트 코드 생성"""
         
-        def add_type_hints(code: str) -> str:
-            # Add basic type hints where missing
-            return code
+        language = specification.get('language', 'python')
         
-        def optimize_imports(code: str) -> str:
-            # Organize and optimize imports
-            return code
+        if language == 'python':
+            return self._generate_python_tests(code, specification)
+        elif language in ['javascript', 'typescript']:
+            return self._generate_js_tests(code, specification)
         
-        return [add_type_hints, optimize_imports]
+        return ""
+    
+    def _generate_python_tests(self, code: str, spec: Dict[str, Any]) -> str:
+        """Python 테스트 생성"""
+        
+        component_name = spec.get('name', 'Component')
+        
+        return f'''
+import unittest
+from unittest.mock import Mock, patch
+from {component_name.lower()} import {component_name}
 
-    def _javascript_optimizations(self, code: str) -> List[callable]:
-        """JavaScript-specific optimizations"""
-        
-        def add_strict_mode(code: str) -> str:
-            if "'use strict';" not in code:
-                return "'use strict';\n\n" + code
-            return code
-        
-        def optimize_async_await(code: str) -> str:
-            # Optimize async/await patterns
-            return code
-        
-        return [add_strict_mode, optimize_async_await]
+class Test{component_name}(unittest.TestCase):
+    
+    def setUp(self):
+        self.{component_name.lower()} = {component_name}()
+    
+    def test_basic_functionality(self):
+        """Test basic functionality"""
+        # TODO: Implement test
+        self.assertTrue(True)
+    
+    def test_error_handling(self):
+        """Test error handling"""
+        # TODO: Implement error test
+        pass
 
-    def _react_optimizations(self, code: str) -> List[callable]:
-        """React-specific optimizations"""
+if __name__ == '__main__':
+    unittest.main()
+'''
+    
+    def _generate_js_tests(self, code: str, spec: Dict[str, Any]) -> str:
+        """JavaScript 테스트 생성"""
         
-        def add_memo_optimization(code: str) -> str:
-            # Add React.memo where appropriate
-            return code
+        component_name = spec.get('name', 'Component')
         
-        def optimize_useeffect(code: str) -> str:
-            # Optimize useEffect dependencies
-            return code
-        
-        return [add_memo_optimization, optimize_useeffect]
+        return f'''
+const {{ {component_name} }} = require('./{component_name.lower()}');
 
-    def _java_optimizations(self, code: str) -> List[callable]:
-        """Java-specific optimizations"""
-        return []
-
-    def _vue_optimizations(self, code: str) -> List[callable]:
-        """Vue-specific optimizations"""
-        return []
+describe('{component_name}', () => {{
+    let {component_name.lower()};
+    
+    beforeEach(() => {{
+        {component_name.lower()} = new {component_name}();
+    }});
+    
+    it('should work correctly', () => {{
+        // TODO: Implement test
+        expect(true).toBe(true);
+    }});
+    
+    it('should handle errors', () => {{
+        // TODO: Implement error test
+    }});
+}});
+'''

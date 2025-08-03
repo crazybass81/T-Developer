@@ -1,556 +1,299 @@
-"""
-Search Agent - 컴포넌트 검색 및 발견 에이전트
-"""
-
-from typing import Dict, List, Any, Optional, Tuple
+# backend/src/agents/implementations/search_agent.py
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 import asyncio
 import aiohttp
 from agno.agent import Agent
 from agno.models.aws import AwsBedrock
-import json
-import re
 
 @dataclass
 class SearchResult:
-    id: str
+    component_id: str
     name: str
     description: str
-    source: str
-    url: str
+    source: str  # npm, pypi, github, etc.
     score: float
     metadata: Dict[str, Any]
-    compatibility_info: Dict[str, Any]
-
-@dataclass
-class SearchQuery:
-    keywords: List[str]
-    language: Optional[str]
-    framework: Optional[str]
-    category: Optional[str]
-    min_stars: int = 0
-    license_filter: List[str] = None
 
 class SearchAgent:
-    """다중 소스에서 컴포넌트를 검색하고 발견하는 에이전트"""
-    
+    """컴포넌트 검색 및 발견 에이전트"""
+
     def __init__(self):
-        self.agent = Agent(
-            name="Component-Search-Agent",
-            model=AwsBedrock(
-                id="amazon.nova-lite-v1:0",
-                region="us-east-1"
-            ),
-            role="Expert in finding and evaluating software components",
+        self.search_agent = Agent(
+            name="Component-Search-Engine",
+            model=AwsBedrock(id="amazon.nova-lite-v1:0"),
+            role="Expert component discovery specialist",
             instructions=[
-                "Search for components across multiple sources",
+                "Search and discover relevant components from multiple sources",
                 "Evaluate component quality and relevance",
-                "Rank results by matching score and quality",
-                "Filter results based on requirements"
+                "Provide comprehensive search results with metadata"
             ],
-            temperature=0.3,
-            max_retries=3
+            temperature=0.1
         )
         
-        self.search_sources = {
-            'npm': NPMSearcher(),
-            'pypi': PyPISearcher(),
-            'github': GitHubSearcher(),
-            'maven': MavenSearcher()
+        self.search_engines = {
+            'npm': NPMSearchEngine(),
+            'pypi': PyPISearchEngine(),
+            'github': GitHubSearchEngine(),
+            'maven': MavenSearchEngine()
         }
         
-        self.result_ranker = ResultRanker()
-        self.quality_evaluator = QualityEvaluator()
-        
+        self.quality_evaluator = ComponentQualityEvaluator()
+
     async def search_components(
         self,
-        query: SearchQuery,
-        max_results: int = 50
+        requirements: Dict[str, Any],
+        search_options: Optional[Dict[str, Any]] = None
     ) -> List[SearchResult]:
-        """컴포넌트 검색 실행"""
+        """컴포넌트 검색"""
         
-        # 1. 병렬 검색 실행
+        # 검색 쿼리 생성
+        search_queries = await self._generate_search_queries(requirements)
+        
+        # 병렬 검색 실행
         search_tasks = []
-        for source_name, searcher in self.search_sources.items():
-            if self._should_search_source(source_name, query):
-                task = searcher.search(query, max_results // len(self.search_sources))
-                search_tasks.append((source_name, task))
+        for source, engine in self.search_engines.items():
+            if self._should_search_source(source, requirements):
+                task = self._search_in_source(engine, search_queries, requirements)
+                search_tasks.append(task)
         
-        # 2. 검색 결과 수집
+        # 모든 검색 결과 수집
         all_results = []
-        for source_name, task in search_tasks:
-            try:
-                results = await task
-                for result in results:
-                    result.source = source_name
+        search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+        
+        for results in search_results:
+            if isinstance(results, list):
                 all_results.extend(results)
-            except Exception as e:
-                print(f"Search failed for {source_name}: {e}")
         
-        # 3. 중복 제거
-        unique_results = self._deduplicate_results(all_results)
+        # 품질 평가 및 필터링
+        evaluated_results = await self._evaluate_and_filter(all_results, requirements)
         
-        # 4. 품질 평가
-        evaluated_results = await self._evaluate_quality(unique_results)
+        # 중복 제거 및 순위 매기기
+        final_results = self._deduplicate_and_rank(evaluated_results)
         
-        # 5. 결과 랭킹
-        ranked_results = await self.result_ranker.rank_results(
-            evaluated_results,
-            query
-        )
-        
-        return ranked_results[:max_results]
-    
-    async def search_by_requirements(
+        return final_results[:20]  # 상위 20개 결과
+
+    async def _generate_search_queries(
         self,
-        requirements: List[Dict[str, Any]],
-        matching_results: List[Any] = None
-    ) -> Dict[str, List[SearchResult]]:
-        """요구사항 기반 검색"""
+        requirements: Dict[str, Any]
+    ) -> List[str]:
+        """검색 쿼리 생성"""
         
-        search_results = {}
+        queries = []
         
-        for req in requirements:
-            # 요구사항에서 검색 쿼리 생성
-            query = await self._generate_search_query(req)
+        # 기본 키워드 기반 쿼리
+        if 'keywords' in requirements:
+            queries.extend(requirements['keywords'])
+        
+        # 기능 기반 쿼리
+        if 'features' in requirements:
+            for feature in requirements['features']:
+                queries.append(feature)
+        
+        # 기술 스택 기반 쿼리
+        if 'technologies' in requirements:
+            for tech in requirements['technologies']:
+                queries.append(tech)
+        
+        # AI 기반 쿼리 확장
+        expanded_queries = await self._expand_queries_with_ai(queries, requirements)
+        queries.extend(expanded_queries)
+        
+        return list(set(queries))  # 중복 제거
+
+    async def _search_in_source(
+        self,
+        engine: 'SearchEngine',
+        queries: List[str],
+        requirements: Dict[str, Any]
+    ) -> List[SearchResult]:
+        """특정 소스에서 검색"""
+        
+        results = []
+        
+        for query in queries:
+            try:
+                source_results = await engine.search(query, requirements)
+                results.extend(source_results)
+            except Exception as e:
+                print(f"Search error in {engine.name}: {e}")
+        
+        return results
+
+    async def _evaluate_and_filter(
+        self,
+        results: List[SearchResult],
+        requirements: Dict[str, Any]
+    ) -> List[SearchResult]:
+        """품질 평가 및 필터링"""
+        
+        evaluated_results = []
+        
+        for result in results:
+            # 품질 점수 계산
+            quality_score = await self.quality_evaluator.evaluate(result)
             
-            # 매칭 결과가 있으면 우선순위 조정
-            if matching_results:
-                query = self._adjust_query_with_matching(query, req, matching_results)
+            # 관련성 점수 계산
+            relevance_score = await self._calculate_relevance(result, requirements)
             
-            # 검색 실행
-            results = await self.search_components(query)
-            search_results[req.get('id', f'req_{len(search_results)}')] = results
-        
-        return search_results
-    
-    async def _generate_search_query(self, requirement: Dict[str, Any]) -> SearchQuery:
-        """요구사항에서 검색 쿼리 생성"""
-        
-        # AI 에이전트를 통한 키워드 추출
-        prompt = f"""
-        Extract search keywords from this requirement:
-        
-        Requirement: {json.dumps(requirement, indent=2)}
-        
-        Return JSON with:
-        - keywords: list of search terms
-        - language: programming language if specified
-        - framework: framework if specified
-        - category: component category
-        """
-        
-        try:
-            response = await self.agent.arun(prompt)
-            query_data = json.loads(response.content)
+            # 종합 점수
+            result.score = (quality_score * 0.6 + relevance_score * 0.4)
             
-            return SearchQuery(
-                keywords=query_data.get('keywords', []),
-                language=query_data.get('language'),
-                framework=query_data.get('framework'),
-                category=query_data.get('category'),
-                min_stars=10,
-                license_filter=['MIT', 'Apache-2.0', 'BSD']
-            )
-        except Exception:
-            # 폴백: 기본 키워드 추출
-            keywords = self._extract_basic_keywords(requirement)
-            return SearchQuery(
-                keywords=keywords,
-                language=requirement.get('language'),
-                framework=requirement.get('framework'),
-                min_stars=10
-            )
-    
-    def _extract_basic_keywords(self, requirement: Dict[str, Any]) -> List[str]:
-        """기본 키워드 추출"""
-        keywords = []
+            # 최소 임계값 필터링
+            if result.score >= 0.3:
+                evaluated_results.append(result)
         
-        # 설명에서 키워드 추출
-        description = requirement.get('description', '')
-        words = re.findall(r'\b\w+\b', description.lower())
+        return evaluated_results
+
+    def _deduplicate_and_rank(self, results: List[SearchResult]) -> List[SearchResult]:
+        """중복 제거 및 순위 매기기"""
         
-        # 기술 관련 키워드 필터링
-        tech_keywords = [
-            'auth', 'database', 'api', 'ui', 'component',
-            'library', 'framework', 'service', 'client'
-        ]
-        
-        keywords.extend([w for w in words if w in tech_keywords])
-        
-        # 기능에서 키워드 추출
-        if 'features' in requirement:
-            keywords.extend(requirement['features'])
-        
-        return list(set(keywords))[:10]
-    
-    def _should_search_source(self, source: str, query: SearchQuery) -> bool:
-        """소스별 검색 여부 결정"""
-        
-        language_mapping = {
-            'npm': ['javascript', 'typescript', 'node'],
-            'pypi': ['python'],
-            'maven': ['java', 'kotlin', 'scala'],
-            'github': ['all']
-        }
-        
-        if not query.language:
-            return True
-        
-        return (query.language.lower() in language_mapping.get(source, []) or 
-                source == 'github')
-    
-    def _deduplicate_results(self, results: List[SearchResult]) -> List[SearchResult]:
-        """중복 결과 제거"""
+        # 이름 기반 중복 제거
         seen_names = set()
         unique_results = []
         
-        for result in results:
-            # 이름 정규화
-            normalized_name = result.name.lower().replace('-', '').replace('_', '')
-            
-            if normalized_name not in seen_names:
-                seen_names.add(normalized_name)
+        for result in sorted(results, key=lambda x: x.score, reverse=True):
+            if result.name not in seen_names:
                 unique_results.append(result)
+                seen_names.add(result.name)
         
         return unique_results
+
+    def _should_search_source(self, source: str, requirements: Dict[str, Any]) -> bool:
+        """소스 검색 여부 결정"""
+        
+        tech_stack = requirements.get('technologies', [])
+        
+        # 기술 스택에 따른 소스 선택
+        if source == 'npm' and any(tech in ['javascript', 'typescript', 'node.js'] for tech in tech_stack):
+            return True
+        elif source == 'pypi' and 'python' in tech_stack:
+            return True
+        elif source == 'maven' and 'java' in tech_stack:
+            return True
+        elif source == 'github':
+            return True  # GitHub는 항상 검색
+        
+        return False
+
+class SearchEngine:
+    """검색 엔진 베이스 클래스"""
     
-    async def _evaluate_quality(self, results: List[SearchResult]) -> List[SearchResult]:
-        """품질 평가"""
-        
-        for result in results:
-            quality_score = await self.quality_evaluator.evaluate(result)
-            result.metadata['quality_score'] = quality_score
-            
-            # 전체 점수에 품질 점수 반영
-            result.score = (result.score * 0.7) + (quality_score * 0.3)
-        
-        return results
+    def __init__(self, name: str):
+        self.name = name
+    
+    async def search(self, query: str, requirements: Dict[str, Any]) -> List[SearchResult]:
+        raise NotImplementedError
 
-
-class NPMSearcher:
+class NPMSearchEngine(SearchEngine):
     """NPM 패키지 검색"""
     
-    async def search(self, query: SearchQuery, limit: int) -> List[SearchResult]:
+    def __init__(self):
+        super().__init__('npm')
+    
+    async def search(self, query: str, requirements: Dict[str, Any]) -> List[SearchResult]:
         """NPM 검색 실행"""
         
-        search_url = "https://registry.npmjs.org/-/v1/search"
-        params = {
-            'text': ' '.join(query.keywords),
-            'size': limit
-        }
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.get(search_url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return self._parse_npm_results(data.get('objects', []))
-        
-        return []
-    
-    def _parse_npm_results(self, objects: List[Dict]) -> List[SearchResult]:
-        """NPM 결과 파싱"""
         results = []
         
-        for obj in objects:
-            package = obj.get('package', {})
+        async with aiohttp.ClientSession() as session:
+            url = f"https://registry.npmjs.org/-/v1/search?text={query}&size=10"
             
-            result = SearchResult(
-                id=package.get('name', ''),
-                name=package.get('name', ''),
-                description=package.get('description', ''),
-                source='npm',
-                url=f"https://www.npmjs.com/package/{package.get('name', '')}",
-                score=obj.get('score', {}).get('final', 0),
-                metadata={
-                    'version': package.get('version', ''),
-                    'keywords': package.get('keywords', []),
-                    'author': package.get('author', {}),
-                    'license': package.get('license', ''),
-                    'downloads': obj.get('score', {}).get('detail', {}).get('popularity', 0)
-                },
-                compatibility_info={}
-            )
-            results.append(result)
-        
-        return results
-
-
-class PyPISearcher:
-    """PyPI 패키지 검색"""
-    
-    async def search(self, query: SearchQuery, limit: int) -> List[SearchResult]:
-        """PyPI 검색 실행"""
-        
-        search_url = "https://pypi.org/simple/"
-        # PyPI는 간단한 검색만 지원하므로 GitHub API 활용
-        
-        github_searcher = GitHubSearcher()
-        github_results = await github_searcher.search_by_language(
-            query, 'python', limit
-        )
-        
-        # PyPI에서 실제 패키지 확인
-        verified_results = []
-        for result in github_results:
-            if await self._verify_pypi_package(result.name):
-                result.source = 'pypi'
-                verified_results.append(result)
-        
-        return verified_results
-    
-    async def _verify_pypi_package(self, package_name: str) -> bool:
-        """PyPI 패키지 존재 확인"""
-        try:
-            async with aiohttp.ClientSession() as session:
-                url = f"https://pypi.org/pypi/{package_name}/json"
+            try:
                 async with session.get(url) as response:
-                    return response.status == 200
-        except:
-            return False
-
-
-class GitHubSearcher:
-    """GitHub 저장소 검색"""
-    
-    async def search(self, query: SearchQuery, limit: int) -> List[SearchResult]:
-        """GitHub 검색 실행"""
-        
-        if query.language:
-            return await self.search_by_language(query, query.language, limit)
-        else:
-            return await self.search_general(query, limit)
-    
-    async def search_by_language(
-        self, 
-        query: SearchQuery, 
-        language: str, 
-        limit: int
-    ) -> List[SearchResult]:
-        """언어별 GitHub 검색"""
-        
-        search_terms = ' '.join(query.keywords)
-        search_query = f"{search_terms} language:{language}"
-        
-        if query.min_stars > 0:
-            search_query += f" stars:>={query.min_stars}"
-        
-        return await self._github_api_search(search_query, limit)
-    
-    async def search_general(self, query: SearchQuery, limit: int) -> List[SearchResult]:
-        """일반 GitHub 검색"""
-        
-        search_terms = ' '.join(query.keywords)
-        search_query = search_terms
-        
-        if query.min_stars > 0:
-            search_query += f" stars:>={query.min_stars}"
-        
-        return await self._github_api_search(search_query, limit)
-    
-    async def _github_api_search(self, query: str, limit: int) -> List[SearchResult]:
-        """GitHub API 검색"""
-        
-        url = "https://api.github.com/search/repositories"
-        params = {
-            'q': query,
-            'sort': 'stars',
-            'order': 'desc',
-            'per_page': min(limit, 100)
-        }
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return self._parse_github_results(data.get('items', []))
-        
-        return []
-    
-    def _parse_github_results(self, items: List[Dict]) -> List[SearchResult]:
-        """GitHub 결과 파싱"""
-        results = []
-        
-        for item in items:
-            result = SearchResult(
-                id=item.get('full_name', ''),
-                name=item.get('name', ''),
-                description=item.get('description', ''),
-                source='github',
-                url=item.get('html_url', ''),
-                score=item.get('stargazers_count', 0) / 1000,  # 정규화
-                metadata={
-                    'stars': item.get('stargazers_count', 0),
-                    'forks': item.get('forks_count', 0),
-                    'language': item.get('language', ''),
-                    'license': item.get('license', {}).get('name', '') if item.get('license') else '',
-                    'updated_at': item.get('updated_at', ''),
-                    'topics': item.get('topics', [])
-                },
-                compatibility_info={}
-            )
-            results.append(result)
+                    if response.status == 200:
+                        data = await response.json()
+                        
+                        for package in data.get('objects', []):
+                            pkg_info = package.get('package', {})
+                            
+                            result = SearchResult(
+                                component_id=f"npm:{pkg_info.get('name', '')}",
+                                name=pkg_info.get('name', ''),
+                                description=pkg_info.get('description', ''),
+                                source='npm',
+                                score=0.0,  # 나중에 계산
+                                metadata={
+                                    'version': pkg_info.get('version', ''),
+                                    'keywords': pkg_info.get('keywords', []),
+                                    'author': pkg_info.get('author', {}),
+                                    'repository': pkg_info.get('repository', {}),
+                                    'downloads': package.get('searchScore', 0)
+                                }
+                            )
+                            
+                            results.append(result)
+            
+            except Exception as e:
+                print(f"NPM search error: {e}")
         
         return results
 
-
-class MavenSearcher:
-    """Maven Central 검색"""
+class ComponentQualityEvaluator:
+    """컴포넌트 품질 평가기"""
     
-    async def search(self, query: SearchQuery, limit: int) -> List[SearchResult]:
-        """Maven 검색 실행"""
-        
-        search_url = "https://search.maven.org/solrsearch/select"
-        params = {
-            'q': ' '.join(query.keywords),
-            'rows': limit,
-            'wt': 'json'
-        }
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.get(search_url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return self._parse_maven_results(
-                        data.get('response', {}).get('docs', [])
-                    )
-        
-        return []
-    
-    def _parse_maven_results(self, docs: List[Dict]) -> List[SearchResult]:
-        """Maven 결과 파싱"""
-        results = []
-        
-        for doc in docs:
-            result = SearchResult(
-                id=f"{doc.get('g', '')}:{doc.get('a', '')}",
-                name=doc.get('a', ''),
-                description='',  # Maven에서 설명 제공 안함
-                source='maven',
-                url=f"https://mvnrepository.com/artifact/{doc.get('g', '')}/{doc.get('a', '')}",
-                score=1.0,  # 기본 점수
-                metadata={
-                    'group_id': doc.get('g', ''),
-                    'artifact_id': doc.get('a', ''),
-                    'latest_version': doc.get('latestVersion', ''),
-                    'version_count': doc.get('versionCount', 0)
-                },
-                compatibility_info={}
-            )
-            results.append(result)
-        
-        return results
-
-
-class ResultRanker:
-    """검색 결과 랭킹"""
-    
-    async def rank_results(
-        self, 
-        results: List[SearchResult], 
-        query: SearchQuery
-    ) -> List[SearchResult]:
-        """결과 랭킹"""
-        
-        for result in results:
-            # 키워드 매칭 점수
-            keyword_score = self._calculate_keyword_match(result, query.keywords)
-            
-            # 인기도 점수
-            popularity_score = self._calculate_popularity_score(result)
-            
-            # 최신성 점수
-            freshness_score = self._calculate_freshness_score(result)
-            
-            # 최종 점수 계산
-            final_score = (
-                result.score * 0.4 +
-                keyword_score * 0.3 +
-                popularity_score * 0.2 +
-                freshness_score * 0.1
-            )
-            
-            result.score = final_score
-        
-        return sorted(results, key=lambda x: x.score, reverse=True)
-    
-    def _calculate_keyword_match(self, result: SearchResult, keywords: List[str]) -> float:
-        """키워드 매칭 점수"""
-        if not keywords:
-            return 0.5
-        
-        text = f"{result.name} {result.description}".lower()
-        matches = sum(1 for keyword in keywords if keyword.lower() in text)
-        
-        return matches / len(keywords)
-    
-    def _calculate_popularity_score(self, result: SearchResult) -> float:
-        """인기도 점수"""
-        if result.source == 'github':
-            stars = result.metadata.get('stars', 0)
-            return min(stars / 10000, 1.0)  # 10k stars = 1.0
-        elif result.source == 'npm':
-            downloads = result.metadata.get('downloads', 0)
-            return min(downloads / 1000000, 1.0)  # 1M downloads = 1.0
-        
-        return 0.5
-    
-    def _calculate_freshness_score(self, result: SearchResult) -> float:
-        """최신성 점수"""
-        # 간단한 구현 - 실제로는 updated_at 파싱 필요
-        return 0.8
-
-
-class QualityEvaluator:
-    """품질 평가기"""
-    
-    async def evaluate(self, result: SearchResult) -> float:
+    async def evaluate(self, component: SearchResult) -> float:
         """품질 점수 계산"""
         
-        score = 0.5  # 기본 점수
+        score = 0.0
         
-        # 문서화 점수
-        if result.description and len(result.description) > 20:
+        # 메타데이터 기반 평가
+        metadata = component.metadata
+        
+        # 다운로드 수 (NPM의 경우)
+        if 'downloads' in metadata:
+            downloads = metadata['downloads']
+            if downloads > 1000000:
+                score += 0.3
+            elif downloads > 100000:
+                score += 0.2
+            elif downloads > 10000:
+                score += 0.1
+        
+        # 문서화 품질
+        if component.description and len(component.description) > 50:
+            score += 0.2
+        
+        # 키워드 존재
+        if metadata.get('keywords'):
             score += 0.1
         
-        # 라이선스 점수
-        license_name = result.metadata.get('license', '').lower()
-        if any(good_license in license_name for good_license in ['mit', 'apache', 'bsd']):
-            score += 0.1
+        # 저장소 존재
+        if metadata.get('repository'):
+            score += 0.2
         
-        # 소스별 추가 평가
-        if result.source == 'github':
-            score += self._evaluate_github_quality(result)
-        elif result.source == 'npm':
-            score += self._evaluate_npm_quality(result)
+        # 최신성 (버전 정보)
+        if metadata.get('version'):
+            score += 0.2
         
         return min(score, 1.0)
+
+class PyPISearchEngine(SearchEngine):
+    """PyPI 패키지 검색"""
     
-    def _evaluate_github_quality(self, result: SearchResult) -> float:
-        """GitHub 품질 평가"""
-        score = 0.0
-        
-        stars = result.metadata.get('stars', 0)
-        forks = result.metadata.get('forks', 0)
-        
-        if stars > 100:
-            score += 0.1
-        if stars > 1000:
-            score += 0.1
-        if forks > 10:
-            score += 0.1
-        
-        return score
+    def __init__(self):
+        super().__init__('pypi')
     
-    def _evaluate_npm_quality(self, result: SearchResult) -> float:
-        """NPM 품질 평가"""
-        score = 0.0
-        
-        downloads = result.metadata.get('downloads', 0)
-        
-        if downloads > 1000:
-            score += 0.1
-        if downloads > 100000:
-            score += 0.1
-        
-        return score
+    async def search(self, query: str, requirements: Dict[str, Any]) -> List[SearchResult]:
+        # PyPI 검색 구현 (간단한 버전)
+        return []
+
+class GitHubSearchEngine(SearchEngine):
+    """GitHub 저장소 검색"""
+    
+    def __init__(self):
+        super().__init__('github')
+    
+    async def search(self, query: str, requirements: Dict[str, Any]) -> List[SearchResult]:
+        # GitHub API 검색 구현 (간단한 버전)
+        return []
+
+class MavenSearchEngine(SearchEngine):
+    """Maven 중앙 저장소 검색"""
+    
+    def __init__(self):
+        super().__init__('maven')
+    
+    async def search(self, query: str, requirements: Dict[str, Any]) -> List[SearchResult]:
+        # Maven 검색 구현 (간단한 버전)
+        return []

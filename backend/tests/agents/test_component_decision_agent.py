@@ -1,535 +1,331 @@
-# Component Decision Agent 테스트
-
+# backend/tests/agents/test_component_decision_agent.py
 import pytest
 import asyncio
 from unittest.mock import Mock, patch, AsyncMock
-from backend.src.agents.implementations.component_decision_agent import (
-    ComponentDecisionAgent,
-    ComponentOption,
-    DecisionContext,
-    MultiCriteriaDecisionSystem,
-    RiskAssessmentSystem
-)
+from typing import Dict, List, Any
 
-@pytest.fixture
-def sample_requirements():
-    return {
-        'functional': [
-            'user_authentication',
-            'data_persistence',
-            'real_time_notifications',
-            'file_upload'
-        ],
-        'non_functional': [
-            'handle_10000_concurrent_users',
-            'response_time_under_200ms',
-            'high_availability_99_9_percent'
-        ],
-        'technical': [
-            'microservices_architecture',
-            'cloud_native',
-            'containerized_deployment'
-        ],
-        'type': 'enterprise'
-    }
-
-@pytest.fixture
-def sample_components():
-    return [
-        {
-            'name': 'PostgreSQL',
-            'type': 'database',
-            'description': 'Advanced relational database',
-            'dependencies': ['libpq-dev'],
-            'license': 'PostgreSQL',
-            'maturity': 'stable',
-            'throughput_rps': 5000,
-            'avg_latency_ms': 2,
-            'memory_mb': 256
-        },
-        {
-            'name': 'Redis',
-            'type': 'cache',
-            'description': 'In-memory data structure store',
-            'dependencies': [],
-            'license': 'BSD',
-            'maturity': 'stable',
-            'throughput_rps': 100000,
-            'avg_latency_ms': 0.1,
-            'memory_mb': 64
-        },
-        {
-            'name': 'Kong',
-            'type': 'api_gateway',
-            'description': 'Cloud-native API gateway',
-            'dependencies': ['nginx', 'lua'],
-            'license': 'Apache-2.0',
-            'maturity': 'stable',
-            'throughput_rps': 20000,
-            'avg_latency_ms': 1,
-            'memory_mb': 128
-        },
-        {
-            'name': 'RabbitMQ',
-            'type': 'message_queue',
-            'description': 'Message broker',
-            'dependencies': ['erlang'],
-            'license': 'MPL-2.0',
-            'maturity': 'stable',
-            'throughput_rps': 10000,
-            'avg_latency_ms': 5,
-            'memory_mb': 200
-        }
-    ]
-
-@pytest.fixture
-def decision_context():
-    return DecisionContext(
-        project_requirements={
-            'type': 'enterprise',
-            'scale': 'large',
-            'criticality': 'high'
-        },
-        technical_constraints={
-            'cloud_provider': 'aws',
-            'deployment_model': 'containerized',
-            'compliance_requirements': ['SOC2', 'GDPR']
-        },
-        team_capabilities={
-            'size': 8,
-            'experience_level': 'senior',
-            'technologies': ['python', 'javascript', 'docker', 'kubernetes']
-        },
-        budget_constraints={
-            'development_budget': 500000,
-            'operational_budget_monthly': 10000,
-            'level': 'high'
-        },
-        timeline='6_months'
-    )
-
+@pytest.mark.asyncio
 class TestComponentDecisionAgent:
-    """Component Decision Agent 테스트 클래스"""
+    """Component Decision Agent 테스트"""
 
     @pytest.fixture
-    def agent(self):
-        return ComponentDecisionAgent()
+    async def decision_agent(self):
+        """Decision Agent 인스턴스"""
+        from component_decision_agent import ComponentDecisionAgent
+        
+        agent = ComponentDecisionAgent()
+        # Mock the AI agents to avoid actual API calls
+        agent.decision_agent.arun = AsyncMock(return_value=Mock(content="Test reasoning"))
+        agent.evaluator.arun = AsyncMock(return_value=Mock(content='{"functional_fit": 0.8, "performance": 0.7, "security": 0.9, "compatibility": 0.6, "cost": 0.8}'))
+        
+        yield agent
 
-    @pytest.mark.asyncio
-    async def test_component_evaluation(self, agent, sample_components, decision_context):
-        """컴포넌트 평가 테스트"""
-        
-        with patch.object(agent.agent, 'arun', new_callable=AsyncMock) as mock_arun:
-            mock_arun.return_value = Mock(content="""
-            성능: 8/10 - 높은 처리량과 낮은 지연시간
-            확장성: 9/10 - 수평적 확장 우수
-            유지보수성: 7/10 - 잘 문서화되어 있음
-            보안성: 8/10 - 엔터프라이즈급 보안 기능
-            비용 효율성: 6/10 - 라이선스 비용 고려 필요
-            팀 적합성: 9/10 - 팀의 기존 경험과 일치
-            
-            장점: 안정성, 성능, 커뮤니티 지원
-            단점: 메모리 사용량, 설정 복잡성
-            """)
-            
-            evaluated = await agent._evaluate_component_options(
-                sample_components, decision_context
-            )
-            
-            assert len(evaluated) == len(sample_components)
-            assert all(isinstance(comp, ComponentOption) for comp in evaluated)
-            assert all(comp.score > 0 for comp in evaluated)
-
-    @pytest.mark.asyncio
-    async def test_decision_making_process(self, agent, sample_requirements, sample_components):
-        """의사결정 프로세스 테스트"""
-        
-        with patch.object(agent, '_build_decision_context') as mock_context, \
-             patch.object(agent, '_evaluate_component_options') as mock_evaluate, \
-             patch.object(agent, '_find_optimal_combination') as mock_optimal, \
-             patch.object(agent, '_validate_decisions') as mock_validate:
-            
-            # Mock 설정
-            mock_context.return_value = decision_context
-            mock_evaluate.return_value = [
-                ComponentOption(
-                    name="PostgreSQL",
-                    type="database",
-                    description="Database",
-                    pros=["Reliable", "ACID compliant"],
-                    cons=["Memory intensive"],
-                    score=8.5,
-                    criteria_scores={"performance": 8, "scalability": 9},
-                    dependencies=["libpq"],
-                    license="PostgreSQL",
-                    maturity_level="stable"
-                )
-            ]
-            mock_optimal.return_value = mock_evaluate.return_value
-            mock_validate.return_value = Mock(
-                rationale="Best fit for requirements",
-                alternatives=[],
-                risks={"overall_risk_level": "low"}
-            )
-            
-            result = await agent.make_component_decisions(
-                sample_requirements, sample_components
-            )
-            
-            assert 'selected_components' in result
-            assert 'decision_rationale' in result
-            assert 'risk_assessment' in result
-            assert 'implementation_plan' in result
-
-    @pytest.mark.asyncio
-    async def test_multi_criteria_decision_system(self):
-        """다중 기준 의사결정 시스템 테스트"""
-        
-        mcdm = MultiCriteriaDecisionSystem()
-        
-        alternatives = [
-            ComponentOption(
-                name="Option A",
-                type="database",
-                description="High performance DB",
-                pros=[], cons=[],
-                score=0,
-                criteria_scores={
-                    "performance": 9.0,
-                    "scalability": 7.0,
-                    "maintainability": 6.0,
-                    "security": 8.0,
-                    "cost": 5.0
-                },
-                dependencies=[], license="MIT", maturity_level="stable"
-            ),
-            ComponentOption(
-                name="Option B",
-                type="database", 
-                description="Cost effective DB",
-                pros=[], cons=[],
-                score=0,
-                criteria_scores={
-                    "performance": 6.0,
-                    "scalability": 8.0,
-                    "maintainability": 9.0,
-                    "security": 7.0,
-                    "cost": 9.0
-                },
-                dependencies=[], license="Apache-2.0", maturity_level="stable"
-            )
-        ]
-        
-        criteria = {
-            "performance": 0.3,
-            "scalability": 0.2,
-            "maintainability": 0.2,
-            "security": 0.15,
-            "cost": 0.15
+    @pytest.fixture
+    def sample_requirements(self):
+        """샘플 요구사항"""
+        return {
+            'functional_requirements': [
+                'User authentication',
+                'Data visualization',
+                'Real-time updates'
+            ],
+            'performance_requirements': {
+                'response_time': 200,  # ms
+                'concurrent_users': 1000
+            },
+            'security_requirements': [
+                'OAuth 2.0 support',
+                'Data encryption'
+            ],
+            'preferred_technologies': ['React', 'Node.js'],
+            'target_platforms': ['web', 'mobile']
         }
-        
-        result = await mcdm.make_decision(alternatives, criteria, method='topsis')
-        
-        assert 'ranking' in result
-        assert 'scores' in result
-        assert len(result['ranking']) == 2
-        assert result['ranking'][0][1] > result['ranking'][1][1]  # 첫 번째가 더 높은 점수
 
-    @pytest.mark.asyncio
-    async def test_risk_assessment_system(self, decision_context):
-        """리스크 평가 시스템 테스트"""
-        
-        risk_system = RiskAssessmentSystem()
-        
-        components = [
-            ComponentOption(
-                name="Alpha Component",
-                type="experimental",
-                description="New experimental component",
-                pros=[], cons=[],
-                score=7.0,
-                criteria_scores={},
-                dependencies=["dep1", "dep2", "dep3", "dep4", "dep5", 
-                            "dep6", "dep7", "dep8", "dep9", "dep10", "dep11"],
-                license="GPL-3.0",
-                maturity_level="alpha"
-            )
-        ]
-        
-        with patch.object(risk_system.risk_categories['technical'], 'analyze') as mock_tech, \
-             patch.object(risk_system.risk_categories['operational'], 'analyze') as mock_ops, \
-             patch.object(risk_system.risk_categories['strategic'], 'analyze') as mock_strat, \
-             patch.object(risk_system.risk_categories['compliance'], 'analyze') as mock_comp:
-            
-            # Mock 리스크 분석 결과
-            mock_tech.return_value = {
-                'risks': [{'type': 'maturity', 'severity': 'high'}],
-                'risk_score': 8.0,
-                'mitigation_strategies': ['Monitor closely']
-            }
-            mock_ops.return_value = {'risks': [], 'risk_score': 3.0}
-            mock_strat.return_value = {'risks': [], 'risk_score': 4.0}
-            mock_comp.return_value = {'risks': [], 'risk_score': 2.0}
-            
-            result = await risk_system.assess_risks(components, decision_context)
-            
-            assert 'overall_risk_level' in result
-            assert 'risk_categories' in result
-            assert 'mitigation_strategies' in result
-            assert result['overall_risk_level'] in ['low', 'medium', 'high']
-
-    @pytest.mark.asyncio
-    async def test_architecture_pattern_matching(self):
-        """아키텍처 패턴 매칭 테스트"""
-        
-        from backend.src.agents.implementations.component_decision_advanced import (
-            ArchitecturePatternMatcher
-        )
-        
-        matcher = ArchitecturePatternMatcher()
-        
-        components = [
-            {'name': 'Kong', 'type': 'api_gateway', 'categories': ['gateway']},
-            {'name': 'Consul', 'type': 'service_discovery', 'categories': ['discovery']},
-            {'name': 'RabbitMQ', 'type': 'message_queue', 'categories': ['messaging']}
-        ]
-        
-        result = await matcher.match_components_to_pattern('microservices', components)
-        
-        assert 'pattern' in result
-        assert result['pattern'] == 'microservices'
-        assert 'required_components' in result
-        assert 'pattern_compliance_score' in result
-
-    @pytest.mark.asyncio
-    async def test_performance_prediction(self):
-        """성능 예측 테스트"""
-        
-        from backend.src.agents.implementations.component_decision_advanced import (
-            PerformancePredictor
-        )
-        
-        predictor = PerformancePredictor()
-        
-        components = [
-            ComponentOption(
-                name="FastDB",
-                type="database",
-                description="High performance database",
-                pros=[], cons=[], score=8.0,
-                criteria_scores={"performance": 9.0},
-                dependencies=[], license="MIT", maturity_level="stable"
-            )
-        ]
-        
-        expected_load = {
-            'concurrent_users': 1000,
-            'requests_per_second': 5000,
-            'data_size_gb': 100
-        }
-        
-        with patch.object(predictor.performance_models['latency'], 'predict') as mock_latency:
-            mock_latency.return_value = {'FastDB': 5.0, 'total_system_latency': 5.0}
-            
-            result = await predictor.predict_performance(components, expected_load)
-            
-            assert 'predictions' in result
-            assert 'overall_performance_score' in result
-            assert 'bottlenecks' in result
-
-    @pytest.mark.asyncio
-    async def test_cost_optimization(self):
-        """비용 최적화 테스트"""
-        
-        from backend.src.agents.implementations.component_decision_advanced import (
-            CostOptimizer
-        )
-        
-        optimizer = CostOptimizer()
-        
-        # 여러 컴포넌트 조합
-        combinations = [
-            [ComponentOption(
-                name="Expensive Option",
-                type="database", description="", pros=[], cons=[],
-                score=9.0, criteria_scores={}, dependencies=[],
-                license="Commercial", maturity_level="stable"
-            )],
-            [ComponentOption(
-                name="Budget Option", 
-                type="database", description="", pros=[], cons=[],
-                score=7.0, criteria_scores={}, dependencies=[],
-                license="MIT", maturity_level="stable"
-            )]
-        ]
-        
-        budget_constraints = {
-            'development': 100000,
-            'operational': 5000,
-            'total': 150000
-        }
-        
-        with patch.object(optimizer, '_calculate_total_cost') as mock_cost:
-            mock_cost.side_effect = [
-                {'total': 120000, 'development': 80000, 'operational': 40000},
-                {'total': 80000, 'development': 60000, 'operational': 20000}
-            ]
-            
-            result = await optimizer.optimize_for_cost(
-                combinations, budget_constraints, time_horizon=12
-            )
-            
-            assert 'optimal_combination' in result
-            assert 'cost_savings_analysis' in result
-            assert result['optimal_combination'] is not None
-
-    @pytest.mark.asyncio
-    async def test_decision_validation(self):
-        """의사결정 검증 테스트"""
-        
-        from backend.src.agents.implementations.component_decision_advanced import (
-            DecisionValidator
-        )
-        
-        validator = DecisionValidator()
-        
-        components = [
-            ComponentOption(
-                name="ValidComponent",
-                type="database", description="", pros=[], cons=[],
-                score=8.0, criteria_scores={"performance": 8.0},
-                dependencies=[], license="MIT", maturity_level="stable"
-            )
-        ]
-        
-        context = DecisionContext(
-            project_requirements={'architecture_pattern': 'microservices'},
-            technical_constraints={},
-            team_capabilities={},
-            budget_constraints={},
-            timeline='6_months'
-        )
-        
-        # Mock validation rules
-        for rule in validator.validation_rules:
-            rule.validate = AsyncMock(return_value={
-                'passed': True,
-                'score': 8.0,
-                'message': 'Validation passed'
-            })
-        
-        result = await validator.validate_decision(
-            components, context, "Well-reasoned decision"
-        )
-        
-        assert 'is_valid' in result
-        assert 'validation_score' in result
-        assert 'rule_results' in result
-        assert result['is_valid'] is True
-        assert result['validation_score'] > 0
-
-    @pytest.mark.asyncio
-    async def test_integration_with_other_agents(self, agent, sample_requirements):
-        """다른 에이전트와의 통합 테스트"""
-        
-        # Parser Agent에서 온 요구사항 시뮬레이션
-        parsed_requirements = {
-            'functional_requirements': sample_requirements['functional'],
-            'non_functional_requirements': sample_requirements['non_functional'],
-            'technical_requirements': sample_requirements['technical'],
-            'constraints': ['budget_limited', 'timeline_tight']
-        }
-        
-        # Matching Rate Agent에서 온 컴포넌트 시뮬레이션
-        matched_components = [
+    @pytest.fixture
+    def sample_components(self):
+        """샘플 컴포넌트"""
+        return [
             {
-                'name': 'PostgreSQL',
-                'type': 'database',
-                'match_score': 0.85,
-                'compatibility_score': 0.90
+                'id': 'comp1',
+                'name': 'React Dashboard',
+                'description': 'Modern dashboard with authentication',
+                'features': ['authentication', 'charts', 'real-time'],
+                'technologies': ['React', 'TypeScript'],
+                'supported_platforms': ['web'],
+                'performance_score': 0.8,
+                'security_score': 0.9,
+                'last_updated': '2024-01-15T00:00:00Z',
+                'license': 'MIT'
             },
             {
-                'name': 'Redis',
-                'type': 'cache', 
-                'match_score': 0.92,
-                'compatibility_score': 0.95
+                'id': 'comp2',
+                'name': 'Vue Analytics',
+                'description': 'Analytics dashboard with Vue.js',
+                'features': ['analytics', 'charts', 'export'],
+                'technologies': ['Vue', 'JavaScript'],
+                'supported_platforms': ['web'],
+                'performance_score': 0.7,
+                'security_score': 0.6,
+                'last_updated': '2023-06-01T00:00:00Z',
+                'license': 'Apache-2.0'
+            },
+            {
+                'id': 'comp3',
+                'name': 'Mobile Auth Kit',
+                'description': 'Authentication library for mobile',
+                'features': ['authentication', 'biometric', 'oauth'],
+                'technologies': ['React Native', 'Swift', 'Kotlin'],
+                'supported_platforms': ['mobile'],
+                'performance_score': 0.9,
+                'security_score': 0.95,
+                'last_updated': '2024-02-01T00:00:00Z',
+                'license': 'MIT'
+            }
+        ]
+
+    async def test_basic_decision_making(self, decision_agent, sample_requirements, sample_components):
+        """기본 결정 기능 테스트"""
+        
+        decisions = await decision_agent.make_component_decisions(
+            sample_requirements,
+            sample_components
+        )
+        
+        # 모든 컴포넌트에 대한 결정이 있어야 함
+        assert len(decisions) == len(sample_components)
+        
+        # 각 결정에 필요한 필드가 있어야 함
+        for decision in decisions:
+            assert decision.component_id is not None
+            assert decision.component_name is not None
+            assert decision.decision in ['selected', 'rejected', 'conditional']
+            assert 0 <= decision.score <= 1
+            assert decision.reasoning is not None
+
+    async def test_decision_criteria_application(self, decision_agent, sample_requirements, sample_components):
+        """결정 기준 적용 테스트"""
+        from component_decision_agent import DecisionCriteria
+        
+        # 보안 중심 기준
+        security_focused = DecisionCriteria(
+            functional_fit=0.2,
+            performance=0.1,
+            security=0.5,
+            compatibility=0.1,
+            cost=0.1
+        )
+        
+        decisions = await decision_agent.make_component_decisions(
+            sample_requirements,
+            sample_components,
+            criteria=security_focused
+        )
+        
+        # 보안 점수가 높은 컴포넌트가 더 높은 점수를 받아야 함
+        mobile_auth = next(d for d in decisions if d.component_id == 'comp3')
+        vue_analytics = next(d for d in decisions if d.component_id == 'comp2')
+        
+        assert mobile_auth.score > vue_analytics.score
+
+    async def test_risk_analysis(self, decision_agent, sample_requirements):
+        """리스크 분석 테스트"""
+        
+        # 리스크가 있는 컴포넌트
+        risky_component = {
+            'id': 'risky1',
+            'name': 'Old Library',
+            'description': 'Outdated library with known issues',
+            'features': ['basic_auth'],
+            'security_score': 0.3,  # 낮은 보안 점수
+            'last_updated': '2020-01-01T00:00:00Z',  # 오래된 업데이트
+            'license': 'GPL-3.0'  # 문제가 될 수 있는 라이선스
+        }
+        
+        risks = await decision_agent.risk_analyzer.analyze(
+            risky_component,
+            sample_requirements
+        )
+        
+        # 여러 리스크가 감지되어야 함
+        assert len(risks) > 0
+        assert any('security' in risk.lower() for risk in risks)
+        assert any('unmaintained' in risk.lower() for risk in risks)
+
+    async def test_compatibility_checking(self, decision_agent, sample_requirements):
+        """호환성 검사 테스트"""
+        
+        component = {
+            'id': 'test1',
+            'name': 'Test Component',
+            'technologies': ['React', 'Node.js'],
+            'supported_platforms': ['web', 'mobile']
+        }
+        
+        compatibility = await decision_agent.compatibility_checker.check(
+            component,
+            sample_requirements,
+            {}
+        )
+        
+        # 호환성 점수가 계산되어야 함
+        assert 'technology_stack' in compatibility
+        assert 'platform_support' in compatibility
+        assert compatibility['technology_stack'] > 0.5  # React, Node.js 매칭
+        assert compatibility['platform_support'] > 0.5  # web, mobile 지원
+
+    async def test_decision_optimization(self, decision_agent, sample_requirements, sample_components):
+        """결정 최적화 테스트"""
+        
+        # 호환성 문제가 있는 컴포넌트들 추가
+        conflicting_components = sample_components + [
+            {
+                'id': 'comp4',
+                'name': 'GPL Component',
+                'license': 'GPL-3.0',
+                'features': ['advanced_features']
             }
         ]
         
-        with patch.object(agent, 'make_component_decisions') as mock_decision:
-            mock_decision.return_value = {
-                'selected_components': matched_components[:1],  # PostgreSQL 선택
-                'decision_rationale': 'Best match for requirements',
-                'alternatives': matched_components[1:],
-                'risk_assessment': {'overall_risk_level': 'low'}
-            }
-            
-            result = await agent.make_component_decisions(
-                parsed_requirements, matched_components
-            )
-            
-            assert result['selected_components']
-            assert len(result['selected_components']) > 0
-
-    def test_component_option_dataclass(self):
-        """ComponentOption 데이터클래스 테스트"""
-        
-        component = ComponentOption(
-            name="TestComponent",
-            type="database",
-            description="Test database component",
-            pros=["Fast", "Reliable"],
-            cons=["Expensive"],
-            score=8.5,
-            criteria_scores={"performance": 9.0, "cost": 6.0},
-            dependencies=["libtest"],
-            license="MIT",
-            maturity_level="stable"
+        decisions = await decision_agent.make_component_decisions(
+            sample_requirements,
+            conflicting_components
         )
         
-        assert component.name == "TestComponent"
-        assert component.score == 8.5
-        assert len(component.pros) == 2
-        assert len(component.cons) == 1
-        assert "performance" in component.criteria_scores
+        # 최적화가 적용되어야 함
+        assert len(decisions) == len(conflicting_components)
 
-    @pytest.mark.asyncio
-    async def test_error_handling(self, agent):
-        """에러 처리 테스트"""
+    @pytest.mark.performance
+    async def test_decision_performance(self, decision_agent, sample_requirements):
+        """결정 성능 테스트"""
+        import time
         
-        # 잘못된 입력 데이터
-        invalid_requirements = None
-        invalid_components = []
+        # 많은 컴포넌트로 테스트
+        many_components = []
+        for i in range(50):
+            many_components.append({
+                'id': f'comp_{i}',
+                'name': f'Component {i}',
+                'description': f'Test component {i}',
+                'features': ['feature1', 'feature2'],
+                'performance_score': 0.5 + (i % 5) * 0.1,
+                'security_score': 0.6 + (i % 4) * 0.1
+            })
         
-        with pytest.raises(Exception):
-            await agent.make_component_decisions(
-                invalid_requirements, invalid_components
-            )
+        start_time = time.time()
+        decisions = await decision_agent.make_component_decisions(
+            sample_requirements,
+            many_components
+        )
+        elapsed_time = time.time() - start_time
+        
+        # 성능 기준: 50개 컴포넌트를 10초 이내에 처리
+        assert elapsed_time < 10.0
+        assert len(decisions) == 50
 
-    @pytest.mark.asyncio
-    async def test_concurrent_decision_making(self, agent, sample_requirements, sample_components):
-        """동시 의사결정 테스트"""
+    async def test_context_based_decisions(self, decision_agent, sample_requirements, sample_components):
+        """컨텍스트 기반 결정 테스트"""
         
-        # 여러 의사결정을 동시에 실행
-        tasks = []
-        for i in range(5):
-            task = agent.make_component_decisions(
-                sample_requirements, sample_components
-            )
-            tasks.append(task)
+        # 엔터프라이즈 컨텍스트
+        enterprise_context = {
+            'project_type': 'enterprise',
+            'security_critical': True,
+            'compliance_required': True
+        }
         
-        with patch.object(agent, 'make_component_decisions') as mock_decision:
-            mock_decision.return_value = {
-                'selected_components': [],
-                'decision_rationale': 'Test decision',
-                'alternatives': [],
-                'risk_assessment': {'overall_risk_level': 'low'}
-            }
-            
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            assert len(results) == 5
-            assert all(not isinstance(r, Exception) for r in results)
+        enterprise_decisions = await decision_agent.make_component_decisions(
+            sample_requirements,
+            sample_components,
+            context=enterprise_context
+        )
+        
+        # 스타트업 컨텍스트
+        startup_context = {
+            'project_type': 'startup',
+            'time_pressure': True,
+            'cost_sensitive': True
+        }
+        
+        startup_decisions = await decision_agent.make_component_decisions(
+            sample_requirements,
+            sample_components,
+            context=startup_context
+        )
+        
+        # 컨텍스트에 따라 다른 결정이 나와야 함
+        assert len(enterprise_decisions) == len(startup_decisions)
+        
+        # 보안 점수가 높은 컴포넌트가 엔터프라이즈에서 더 선호되어야 함
+        mobile_auth_enterprise = next(d for d in enterprise_decisions if d.component_id == 'comp3')
+        mobile_auth_startup = next(d for d in startup_decisions if d.component_id == 'comp3')
+        
+        # 엔터프라이즈에서 보안이 중요하므로 더 높은 점수
+        assert mobile_auth_enterprise.score >= mobile_auth_startup.score
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    async def test_conditional_decisions(self, decision_agent, sample_requirements):
+        """조건부 결정 테스트"""
+        
+        # 조건부 결정이 필요한 컴포넌트
+        conditional_component = {
+            'id': 'cond1',
+            'name': 'Conditional Component',
+            'description': 'Component with some issues',
+            'features': ['authentication', 'basic_features'],
+            'performance_score': 0.6,  # 중간 성능
+            'security_score': 0.5,    # 낮은 보안
+            'license': 'MIT'
+        }
+        
+        decisions = await decision_agent.make_component_decisions(
+            sample_requirements,
+            [conditional_component]
+        )
+        
+        decision = decisions[0]
+        
+        # 조건부 결정이어야 함
+        if decision.decision == 'conditional':
+            assert len(decision.conditions) > 0
+            assert any('security' in condition.lower() for condition in decision.conditions)
+
+    async def test_alternative_suggestions(self, decision_agent, sample_requirements, sample_components):
+        """대안 제안 테스트"""
+        
+        # 거부된 컴포넌트에 대한 대안이 제안되어야 함
+        decisions = await decision_agent.make_component_decisions(
+            sample_requirements,
+            sample_components
+        )
+        
+        rejected_decisions = [d for d in decisions if d.decision == 'rejected']
+        
+        for decision in rejected_decisions:
+            # 대안이 있거나 명확한 거부 이유가 있어야 함
+            assert len(decision.alternatives) > 0 or len(decision.risks) > 0
+
+    @pytest.mark.integration
+    async def test_end_to_end_decision_flow(self, decision_agent, sample_requirements, sample_components):
+        """전체 결정 플로우 테스트"""
+        
+        # 전체 결정 프로세스 실행
+        decisions = await decision_agent.make_component_decisions(
+            sample_requirements,
+            sample_components
+        )
+        
+        # 결과 검증
+        assert len(decisions) == len(sample_components)
+        
+        # 적어도 하나는 선택되어야 함
+        selected_count = len([d for d in decisions if d.decision == 'selected'])
+        conditional_count = len([d for d in decisions if d.decision == 'conditional'])
+        
+        assert selected_count + conditional_count > 0
+        
+        # 모든 결정에 추론이 있어야 함
+        for decision in decisions:
+            assert decision.reasoning is not None
+            assert len(decision.reasoning) > 0
+        
+        # 점수가 올바른 범위에 있어야 함
+        for decision in decisions:
+            assert 0 <= decision.score <= 1
