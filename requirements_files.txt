@@ -1,3 +1,0 @@
-./layers/python-common/requirements.txt
-./requirements.txt
-./requirements_files.txt

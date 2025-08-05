@@ -1,245 +1,437 @@
 # backend/src/agents/implementations/ui_selection/boilerplate_generator.py
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
-
-@dataclass
-class BoilerplateTemplate:
-    framework: str
-    template_name: str
-    files: Dict[str, str]
-    dependencies: List[str]
-    dev_dependencies: List[str]
-    scripts: Dict[str, str]
-    setup_instructions: List[str]
+import json
 
 class BoilerplateGenerator:
-    """보일러플레이트 코드 생성기"""
-
-    def __init__(self):
-        self.templates = self._initialize_templates()
-
-    def _initialize_templates(self) -> Dict[str, Dict[str, Any]]:
-        """템플릿 초기화"""
-        return {
-            'react': {
-                'basic': self._react_basic_template(),
-                'typescript': self._react_typescript_template(),
-                'nextjs': self._nextjs_template()
+    """보일러플레이트 설정 생성기"""
+    
+    FRAMEWORK_CONFIGS = {
+        'react': {
+            'package_json': {
+                'scripts': {
+                    'start': 'react-scripts start',
+                    'build': 'react-scripts build',
+                    'test': 'react-scripts test',
+                    'eject': 'react-scripts eject'
+                },
+                'dependencies': {
+                    'react': '^18.2.0',
+                    'react-dom': '^18.2.0',
+                    'react-scripts': '5.0.1'
+                }
             },
-            'vue': {
-                'basic': self._vue_basic_template(),
-                'typescript': self._vue_typescript_template(),
-                'nuxt': self._nuxt_template()
+            'tsconfig': {
+                'compilerOptions': {
+                    'target': 'es5',
+                    'lib': ['dom', 'dom.iterable', 'es6'],
+                    'allowJs': True,
+                    'skipLibCheck': True,
+                    'esModuleInterop': True,
+                    'allowSyntheticDefaultImports': True,
+                    'strict': True,
+                    'forceConsistentCasingInFileNames': True,
+                    'noFallthroughCasesInSwitch': True,
+                    'module': 'esnext',
+                    'moduleResolution': 'node',
+                    'resolveJsonModule': True,
+                    'isolatedModules': True,
+                    'noEmit': True,
+                    'jsx': 'react-jsx'
+                }
+            }
+        },
+        'vue': {
+            'package_json': {
+                'scripts': {
+                    'serve': 'vue-cli-service serve',
+                    'build': 'vue-cli-service build',
+                    'test:unit': 'vue-cli-service test:unit',
+                    'lint': 'vue-cli-service lint'
+                },
+                'dependencies': {
+                    'vue': '^3.2.13',
+                    'vue-router': '^4.0.3',
+                    'vuex': '^4.0.0'
+                }
             },
-            'angular': {
-                'basic': self._angular_basic_template()
+            'tsconfig': {
+                'compilerOptions': {
+                    'target': 'esnext',
+                    'module': 'esnext',
+                    'strict': True,
+                    'jsx': 'preserve',
+                    'importHelpers': True,
+                    'moduleResolution': 'node',
+                    'skipLibCheck': True,
+                    'esModuleInterop': True,
+                    'allowSyntheticDefaultImports': True,
+                    'sourceMap': True,
+                    'baseUrl': '.',
+                    'types': ['webpack-env']
+                }
+            }
+        },
+        'nextjs': {
+            'package_json': {
+                'scripts': {
+                    'dev': 'next dev',
+                    'build': 'next build',
+                    'start': 'next start',
+                    'lint': 'next lint'
+                },
+                'dependencies': {
+                    'next': '13.4.0',
+                    'react': '^18.2.0',
+                    'react-dom': '^18.2.0'
+                }
+            },
+            'next_config': {
+                'experimental': {
+                    'appDir': True
+                },
+                'images': {
+                    'domains': []
+                }
             }
         }
+    }
+    
+    DESIGN_SYSTEM_CONFIGS = {
+        'material-ui': {
+            'dependencies': {
+                '@mui/material': '^5.13.0',
+                '@emotion/react': '^11.11.0',
+                '@emotion/styled': '^11.11.0'
+            },
+            'theme_template': '''
+import { createTheme } from '@mui/material/styles';
 
-    async def generate_boilerplate(
+export const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+  },
+});
+'''
+        },
+        'tailwind-ui': {
+            'dependencies': {
+                'tailwindcss': '^3.3.0',
+                'autoprefixer': '^10.4.14',
+                'postcss': '^8.4.24'
+            },
+            'config_template': '''
+module.exports = {
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+'''
+        },
+        'chakra-ui': {
+            'dependencies': {
+                '@chakra-ui/react': '^2.7.0',
+                '@emotion/react': '^11.11.0',
+                '@emotion/styled': '^11.11.0',
+                'framer-motion': '^10.12.0'
+            },
+            'theme_template': '''
+import { extendTheme } from '@chakra-ui/react';
+
+const theme = extendTheme({
+  colors: {
+    brand: {
+      100: "#f7fafc",
+      900: "#1a202c",
+    },
+  },
+});
+
+export default theme;
+'''
+        }
+    }
+
+    async def generate_config(
         self,
         framework: str,
-        template_type: str = 'basic',
-        project_name: str = 'my-app',
-        options: Optional[Dict[str, Any]] = None
-    ) -> BoilerplateTemplate:
-        """보일러플레이트 생성"""
+        design_system: str,
+        requirements: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """보일러플레이트 설정 생성"""
         
-        template_config = self.templates.get(framework, {}).get(template_type)
+        config = {
+            'framework': framework,
+            'design_system': design_system,
+            'files': {},
+            'dependencies': {},
+            'scripts': {},
+            'setup_commands': []
+        }
         
-        if not template_config:
-            raise ValueError(f"Template {template_type} not found for {framework}")
+        # 프레임워크 기본 설정
+        framework_config = self.FRAMEWORK_CONFIGS.get(framework, {})
+        if framework_config:
+            config['files']['package.json'] = self._merge_package_json(
+                framework_config.get('package_json', {}),
+                requirements
+            )
+            
+            if 'tsconfig' in framework_config:
+                config['files']['tsconfig.json'] = framework_config['tsconfig']
+            
+            if 'next_config' in framework_config:
+                config['files']['next.config.js'] = framework_config['next_config']
         
-        # 프로젝트명으로 치환
-        files = {}
-        for file_path, content in template_config['files'].items():
-            processed_content = content.replace('{{PROJECT_NAME}}', project_name)
-            processed_content = processed_content.replace('{{FRAMEWORK}}', framework)
-            files[file_path] = processed_content
+        # 디자인 시스템 설정
+        design_config = self.DESIGN_SYSTEM_CONFIGS.get(design_system, {})
+        if design_config:
+            # 의존성 병합
+            config['dependencies'].update(design_config.get('dependencies', {}))
+            
+            # 테마/설정 파일
+            if 'theme_template' in design_config:
+                config['files']['theme.js'] = design_config['theme_template']
+            
+            if 'config_template' in design_config:
+                if design_system == 'tailwind-ui':
+                    config['files']['tailwind.config.js'] = design_config['config_template']
         
-        # 옵션 적용
-        if options:
-            files = self._apply_options(files, options)
+        # TypeScript 설정
+        if requirements.get('typescript', False):
+            config['dependencies']['typescript'] = '^5.0.0'
+            config['dependencies']['@types/react'] = '^18.2.0'
+            config['dependencies']['@types/react-dom'] = '^18.2.0'
         
-        return BoilerplateTemplate(
-            framework=framework,
-            template_name=template_type,
-            files=files,
-            dependencies=template_config['dependencies'],
-            dev_dependencies=template_config['dev_dependencies'],
-            scripts=template_config['scripts'],
-            setup_instructions=template_config['setup_instructions']
+        # 테스트 설정
+        if requirements.get('testing', False):
+            config['dependencies']['@testing-library/react'] = '^13.4.0'
+            config['dependencies']['@testing-library/jest-dom'] = '^5.16.0'
+            config['dependencies']['@testing-library/user-event'] = '^14.4.0'
+        
+        # ESLint/Prettier 설정
+        if requirements.get('linting', True):
+            config['dependencies']['eslint'] = '^8.42.0'
+            config['dependencies']['prettier'] = '^2.8.0'
+            config['files']['.eslintrc.js'] = self._generate_eslint_config(framework)
+            config['files']['.prettierrc'] = self._generate_prettier_config()
+        
+        # 설치 명령어 생성
+        config['setup_commands'] = self._generate_setup_commands(
+            framework, design_system, requirements
         )
+        
+        return config
 
-    def _react_basic_template(self) -> Dict[str, Any]:
-        """React 기본 템플릿"""
-        return {
-            'files': {
-                'package.json': '''{
-  "name": "{{PROJECT_NAME}}",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": ["react-app", "react-app/jest"]
-  },
-  "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
-  }
-}''',
-                'public/index.html': '''<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="description" content="{{PROJECT_NAME}} - Built with React" />
-    <title>{{PROJECT_NAME}}</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-  </body>
-</html>''',
-                'src/index.js': '''import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
+    def _merge_package_json(
+        self,
+        base_config: Dict[str, Any],
+        requirements: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """package.json 병합"""
+        
+        merged = base_config.copy()
+        
+        # 프로젝트 정보
+        merged.update({
+            'name': requirements.get('project_name', 'my-app'),
+            'version': '0.1.0',
+            'private': True
+        })
+        
+        return merged
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);''',
-                'src/App.js': '''import React from 'react';
+    def _generate_eslint_config(self, framework: str) -> str:
+        """ESLint 설정 생성"""
+        
+        configs = {
+            'react': '''
+module.exports = {
+  env: {
+    browser: true,
+    es2021: true,
+  },
+  extends: [
+    'eslint:recommended',
+    '@typescript-eslint/recommended',
+    'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
+  ],
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaFeatures: {
+      jsx: true,
+    },
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+  },
+  plugins: ['react', '@typescript-eslint'],
+  rules: {
+    'react/react-in-jsx-scope': 'off',
+  },
+};
+''',
+            'vue': '''
+module.exports = {
+  env: {
+    node: true,
+  },
+  extends: [
+    'eslint:recommended',
+    '@vue/typescript/recommended',
+    'plugin:vue/vue3-recommended',
+  ],
+  parserOptions: {
+    ecmaVersion: 2020,
+  },
+  rules: {
+    'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
+    'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
+  },
+};
+'''
+        }
+        
+        return configs.get(framework, configs['react'])
+
+    def _generate_prettier_config(self) -> str:
+        """Prettier 설정 생성"""
+        
+        return json.dumps({
+            'semi': True,
+            'trailingComma': 'es5',
+            'singleQuote': True,
+            'printWidth': 80,
+            'tabWidth': 2
+        }, indent=2)
+
+    def _generate_setup_commands(
+        self,
+        framework: str,
+        design_system: str,
+        requirements: Dict[str, Any]
+    ) -> List[str]:
+        """설치 명령어 생성"""
+        
+        commands = []
+        
+        # 프로젝트 생성
+        if framework == 'react':
+            commands.append('npx create-react-app my-app --template typescript')
+        elif framework == 'vue':
+            commands.append('vue create my-app')
+        elif framework == 'nextjs':
+            commands.append('npx create-next-app@latest my-app --typescript --tailwind --eslint')
+        
+        # 디자인 시스템 설치
+        if design_system == 'material-ui':
+            commands.append('npm install @mui/material @emotion/react @emotion/styled')
+        elif design_system == 'tailwind-ui':
+            commands.append('npm install -D tailwindcss postcss autoprefixer')
+            commands.append('npx tailwindcss init -p')
+        elif design_system == 'chakra-ui':
+            commands.append('npm install @chakra-ui/react @emotion/react @emotion/styled framer-motion')
+        
+        # 추가 도구 설치
+        if requirements.get('testing', False):
+            commands.append('npm install --save-dev @testing-library/react @testing-library/jest-dom')
+        
+        if requirements.get('linting', True):
+            commands.append('npm install --save-dev eslint prettier')
+        
+        return commands
+
+    async def generate_starter_files(
+        self,
+        framework: str,
+        design_system: str
+    ) -> Dict[str, str]:
+        """스타터 파일 생성"""
+        
+        files = {}
+        
+        # App 컴포넌트
+        if framework == 'react':
+            files['src/App.tsx'] = self._generate_react_app(design_system)
+            files['src/index.tsx'] = self._generate_react_index(design_system)
+        elif framework == 'vue':
+            files['src/App.vue'] = self._generate_vue_app(design_system)
+            files['src/main.ts'] = self._generate_vue_main(design_system)
+        
+        return files
+
+    def _generate_react_app(self, design_system: str) -> str:
+        """React App 컴포넌트 생성"""
+        
+        if design_system == 'material-ui':
+            return '''
+import React from 'react';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { theme } from './theme';
+import './App.css';
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <div className="App">
+        <h1>Welcome to your new app!</h1>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+export default App;
+'''
+        elif design_system == 'chakra-ui':
+            return '''
+import React from 'react';
+import { ChakraProvider } from '@chakra-ui/react';
+import theme from './theme';
+import './App.css';
+
+function App() {
+  return (
+    <ChakraProvider theme={theme}>
+      <div className="App">
+        <h1>Welcome to your new app!</h1>
+      </div>
+    </ChakraProvider>
+  );
+}
+
+export default App;
+'''
+        else:
+            return '''
+import React from 'react';
 import './App.css';
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>Welcome to {{PROJECT_NAME}}</h1>
-        <p>Built with React</p>
-      </header>
+      <h1>Welcome to your new app!</h1>
     </div>
   );
 }
 
-export default App;''',
-                'src/App.css': '''.App {
-  text-align: center;
-}
+export default App;
+'''
 
-.App-header {
-  background-color: #282c34;
-  padding: 20px;
-  color: white;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}''',
-                'src/index.css': '''body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}'''
-            },
-            'dependencies': ['react', 'react-dom', 'react-scripts'],
-            'dev_dependencies': [],
-            'scripts': {
-                'start': 'react-scripts start',
-                'build': 'react-scripts build',
-                'test': 'react-scripts test'
-            },
-            'setup_instructions': [
-                'npm install',
-                'npm start'
-            ]
-        }
-
-    def _react_typescript_template(self) -> Dict[str, Any]:
-        """React TypeScript 템플릿"""
-        return {
-            'files': {
-                'package.json': '''{
-  "name": "{{PROJECT_NAME}}",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "typescript": "^4.9.0"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test"
-  }
-}''',
-                'tsconfig.json': '''{
-  "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "es6"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx"
-  },
-  "include": ["src"]
-}''',
-                'src/App.tsx': '''import React from 'react';
-import './App.css';
-
-const App: React.FC = () => {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Welcome to {{PROJECT_NAME}}</h1>
-        <p>Built with React & TypeScript</p>
-      </header>
-    </div>
-  );
-};
-
-export default App;''',
-                'src/index.tsx': '''import React from 'react';
+    def _generate_react_index(self, design_system: str) -> str:
+        """React index 파일 생성"""
+        
+        return '''
+import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
@@ -251,258 +443,5 @@ root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
-);'''
-            },
-            'dependencies': ['react', 'react-dom', 'react-scripts'],
-            'dev_dependencies': ['@types/react', '@types/react-dom', 'typescript'],
-            'scripts': {
-                'start': 'react-scripts start',
-                'build': 'react-scripts build',
-                'test': 'react-scripts test'
-            },
-            'setup_instructions': [
-                'npm install',
-                'npm start'
-            ]
-        }
-
-    def _vue_basic_template(self) -> Dict[str, Any]:
-        """Vue 기본 템플릿"""
-        return {
-            'files': {
-                'package.json': '''{
-  "name": "{{PROJECT_NAME}}",
-  "version": "0.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "vue": "^3.3.0"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^4.2.0",
-    "vite": "^4.3.0"
-  }
-}''',
-                'index.html': '''<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{PROJECT_NAME}}</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
-</html>''',
-                'vite.config.js': '''import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-
-export default defineConfig({
-  plugins: [vue()],
-})''',
-                'src/main.js': '''import { createApp } from 'vue'
-import './style.css'
-import App from './App.vue'
-
-createApp(App).mount('#app')''',
-                'src/App.vue': '''<template>
-  <div id="app">
-    <header>
-      <h1>Welcome to {{PROJECT_NAME}}</h1>
-      <p>Built with Vue.js</p>
-    </header>
-  </div>
-</template>
-
-<script>
-export default {
-  name: 'App'
-}
-</script>
-
-<style>
-#app {
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-
-header {
-  background-color: #42b883;
-  padding: 20px;
-  color: white;
-}
-</style>''',
-                'src/style.css': '''body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-}'''
-            },
-            'dependencies': ['vue'],
-            'dev_dependencies': ['@vitejs/plugin-vue', 'vite'],
-            'scripts': {
-                'dev': 'vite',
-                'build': 'vite build',
-                'preview': 'vite preview'
-            },
-            'setup_instructions': [
-                'npm install',
-                'npm run dev'
-            ]
-        }
-
-    def _nextjs_template(self) -> Dict[str, Any]:
-        """Next.js 템플릿"""
-        return {
-            'files': {
-                'package.json': '''{
-  "name": "{{PROJECT_NAME}}",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "next": "13.4.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "eslint": "8.42.0",
-    "eslint-config-next": "13.4.0"
-  }
-}''',
-                'next.config.js': '''/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-}
-
-module.exports = nextConfig''',
-                'pages/index.js': '''import Head from 'next/head'
-
-export default function Home() {
-  return (
-    <>
-      <Head>
-        <title>{{PROJECT_NAME}}</title>
-        <meta name="description" content="Built with Next.js" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      <main>
-        <h1>Welcome to {{PROJECT_NAME}}</h1>
-        <p>Built with Next.js</p>
-      </main>
-    </>
-  )
-}''',
-                'pages/_app.js': '''import '@/styles/globals.css'
-
-export default function App({ Component, pageProps }) {
-  return <Component {...pageProps} />
-}''',
-                'styles/globals.css': '''html,
-body {
-  padding: 0;
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
-}
-
-main {
-  min-height: 100vh;
-  padding: 4rem 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}'''
-            },
-            'dependencies': ['next', 'react', 'react-dom'],
-            'dev_dependencies': ['eslint', 'eslint-config-next'],
-            'scripts': {
-                'dev': 'next dev',
-                'build': 'next build',
-                'start': 'next start'
-            },
-            'setup_instructions': [
-                'npm install',
-                'npm run dev'
-            ]
-        }
-
-    def _apply_options(self, files: Dict[str, str], options: Dict[str, Any]) -> Dict[str, str]:
-        """옵션 적용"""
-        
-        # PWA 옵션
-        if options.get('pwa', False):
-            files = self._add_pwa_support(files)
-        
-        # ESLint 옵션
-        if options.get('eslint', False):
-            files = self._add_eslint_config(files)
-        
-        # Prettier 옵션
-        if options.get('prettier', False):
-            files = self._add_prettier_config(files)
-        
-        return files
-
-    def _add_pwa_support(self, files: Dict[str, str]) -> Dict[str, str]:
-        """PWA 지원 추가"""
-        
-        files['public/manifest.json'] = '''{
-  "short_name": "App",
-  "name": "{{PROJECT_NAME}}",
-  "icons": [
-    {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
-}'''
-        
-        return files
-
-    def _add_eslint_config(self, files: Dict[str, str]) -> Dict[str, str]:
-        """ESLint 설정 추가"""
-        
-        files['.eslintrc.json'] = '''{
-  "extends": ["next/core-web-vitals"],
-  "rules": {
-    "no-unused-vars": "warn",
-    "no-console": "warn"
-  }
-}'''
-        
-        return files
-
-    def _add_prettier_config(self, files: Dict[str, str]) -> Dict[str, str]:
-        """Prettier 설정 추가"""
-        
-        files['.prettierrc'] = '''{
-  "semi": true,
-  "trailingComma": "es5",
-  "singleQuote": true,
-  "printWidth": 80,
-  "tabWidth": 2
-}'''
-        
-        return files
+);
+'''

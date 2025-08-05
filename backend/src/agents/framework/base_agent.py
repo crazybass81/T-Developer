@@ -36,8 +36,17 @@ class AgentContext:
     execution_context: Dict[str, Any]
     shared_memory: Dict[str, Any]
 
+@dataclass
+class AgentMessage:
+    id: str
+    type: str  # 'request', 'response', 'event', 'error'
+    source: str
+    target: str
+    payload: Any
+    timestamp: datetime
+
 class BaseAgent(ABC, Generic[T, R]):
-    """Base class for all T-Developer agents"""
+    """Unified base class for all T-Developer agents (Python & TypeScript compatible)"""
     
     def __init__(self, agent_config: Dict[str, Any]):
         self.agent_id = str(uuid.uuid4())
@@ -46,6 +55,7 @@ class BaseAgent(ABC, Generic[T, R]):
         self.metadata = self._create_metadata()
         self.context: Optional[AgentContext] = None
         self.logger = self._setup_logger()
+        self.event_handlers: Dict[str, List[callable]] = {}
         
     @abstractmethod
     async def initialize(self) -> None:
@@ -67,6 +77,47 @@ class BaseAgent(ABC, Generic[T, R]):
         """Clean up agent resources"""
         pass
     
+    async def handle_message(self, message: AgentMessage) -> AgentMessage:
+        """Handle incoming messages (unified interface)"""
+        try:
+            result = await self.process_message(message)
+            return AgentMessage(
+                id=f"response-{uuid.uuid4()}",
+                type="response",
+                source=self.agent_id,
+                target=message.source,
+                payload=result,
+                timestamp=datetime.utcnow()
+            )
+        except Exception as error:
+            return AgentMessage(
+                id=f"error-{uuid.uuid4()}",
+                type="error",
+                source=self.agent_id,
+                target=message.source,
+                payload={"error": str(error)},
+                timestamp=datetime.utcnow()
+            )
+    
+    async def process_message(self, message: AgentMessage) -> Any:
+        """Process message payload (to be overridden by subclasses)"""
+        return await self.execute(message.payload)
+    
+    def emit(self, event: str, data: Any) -> None:
+        """Emit event to registered handlers"""
+        if event in self.event_handlers:
+            for handler in self.event_handlers[event]:
+                try:
+                    handler(data)
+                except Exception as e:
+                    self.logger.error(f"Event handler error: {e}")
+    
+    def on(self, event: str, handler: callable) -> None:
+        """Register event handler"""
+        if event not in self.event_handlers:
+            self.event_handlers[event] = []
+        self.event_handlers[event].append(handler)
+    
     def _create_metadata(self) -> AgentMetadata:
         """Create agent metadata"""
         return AgentMetadata(
@@ -84,6 +135,12 @@ class BaseAgent(ABC, Generic[T, R]):
         logger = logging.getLogger(f"agent.{self.agent_id}")
         logger.setLevel(logging.INFO)
         return logger
+    
+    async def start(self, context: AgentContext) -> None:
+        """Start agent with context"""
+        self.context = context
+        await self.initialize()
+        self.emit('started', {'agent_id': self.agent_id, 'context': context})
     
     async def set_context(self, context: AgentContext) -> None:
         """Set agent execution context"""

@@ -1,59 +1,47 @@
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
+# T-Developer MVP .gitignore
 
-# Testing
-coverage/
-*.lcov
-.nyc_output
-
-# Production
-build/
-dist/
-*.log
-
-# Environment
+# Environment variables
 .env
 .env.local
-.env.*.local
-.env.encrypted
-.env.key
+.env.production
+.env.staging
+
+# Security files
+*.key
+*.pem
+*.crt
+*.csr
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+.venv-*/
+
+# Build outputs
+dist/
+build/
+coverage/
+*.log
 
 # AWS
 .aws/
-*.pem
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
 Thumbs.db
 
-# SSL Certificates
-certs/
-*.crt
-*.key
-*.pem
-*.csr
+# Test reports
+test-reports/
+*.lcov
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.Python
-venv/
-ENV/
-
-# Terraform
-*.tfstate
-*.tfstate.*
-.terraform/
-
-# Docker data
-docker/*/
+# Temporary files
+*.tmp
+*.temp

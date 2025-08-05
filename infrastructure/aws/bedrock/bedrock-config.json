@@ -1,0 +1,21 @@
+{
+  "modelId": "anthropic.claude-3-sonnet-v2:0",
+  "region": "us-east-1",
+  "agentCoreConfig": {
+    "runtimeId": "t-developer-runtime",
+    "sessionTimeout": 28800,
+    "maxConcurrentAgents": 50
+  },
+  "models": [
+    {
+      "provider": "anthropic",
+      "modelId": "claude-3-sonnet",
+      "purpose": "complex_analysis"
+    },
+    {
+      "provider": "openai", 
+      "modelId": "gpt-4-turbo",
+      "purpose": "code_generation"
+    }
+  ]
+}

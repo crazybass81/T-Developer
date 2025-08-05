@@ -283,7 +283,7 @@ interface TemplateVariable {
 
 interface TemplateBlock {
   name: string;
-  type: 'conditional' | 'loop' | 'include';
+  type: "conditional" | "loop" | "include";
   condition?: string;
   content: string;
 }
@@ -310,7 +310,10 @@ class TemplateSystem {
     return optimized;
   }
 
-  async renderTemplate(templateId: string, context: Record<string, any>): Promise<string> {
+  async renderTemplate(
+    templateId: string,
+    context: Record<string, any>
+  ): Promise<string> {
     const template = this.templates.get(templateId);
     if (!template) {
       throw new Error(`Template ${templateId} not found`);
@@ -332,7 +335,10 @@ class TemplateSystem {
     return this.optimizer.optimizeOutput(rendered);
   }
 
-  private validateVariables(template: TemplateMetadata, context: Record<string, any>): void {
+  private validateVariables(
+    template: TemplateMetadata,
+    context: Record<string, any>
+  ): void {
     for (const variable of template.variables) {
       if (variable.required && !(variable.name in context)) {
         throw new Error(`Required variable '${variable.name}' not provided`);
@@ -349,14 +355,14 @@ class TemplateSystem {
   private async processBlock(
     block: TemplateBlock,
     context: Record<string, any>,
-    content: string,
+    content: string
   ): Promise<string> {
     switch (block.type) {
-      case 'conditional':
+      case "conditional":
         return this.processConditionalBlock(block, context, content);
-      case 'loop':
+      case "loop":
         return this.processLoopBlock(block, context, content);
-      case 'include':
+      case "include":
         return this.processIncludeBlock(block, context, content);
       default:
         return content;
@@ -1662,14 +1668,14 @@ class ExpressionEvaluator:
 ```typescript
 // backend/src/agents/implementations/generation/conditional_rendering.ts
 interface ConditionalBlock {
-  type: 'if' | 'elif' | 'else';
+  type: "if" | "elif" | "else";
   condition?: string;
   body: TemplateNode[];
   next?: ConditionalBlock;
 }
 
 interface LoopBlock {
-  type: 'for' | 'while';
+  type: "for" | "while";
   iterator?: string;
   iterable?: string;
   condition?: string;
@@ -1686,10 +1692,16 @@ class ConditionalRenderer {
     this.contextManager = new ContextManager();
   }
 
-  async renderConditional(block: ConditionalBlock, context: RenderContext): Promise<string> {
+  async renderConditional(
+    block: ConditionalBlock,
+    context: RenderContext
+  ): Promise<string> {
     // if 블록 평가
     if (block.condition) {
-      const result = await this.expressionEvaluator.evaluate(block.condition, context);
+      const result = await this.expressionEvaluator.evaluate(
+        block.condition,
+        context
+      );
 
       if (result) {
         return await this.renderBody(block.body, context);
@@ -1699,11 +1711,14 @@ class ConditionalRenderer {
     // elif/else 체인 평가
     let current = block.next;
     while (current) {
-      if (current.type === 'else' || !current.condition) {
+      if (current.type === "else" || !current.condition) {
         return await this.renderBody(current.body, context);
       }
 
-      const result = await this.expressionEvaluator.evaluate(current.condition, context);
+      const result = await this.expressionEvaluator.evaluate(
+        current.condition,
+        context
+      );
 
       if (result) {
         return await this.renderBody(current.body, context);
@@ -1712,15 +1727,18 @@ class ConditionalRenderer {
       current = current.next;
     }
 
-    return '';
+    return "";
   }
 
   async renderLoop(block: LoopBlock, context: RenderContext): Promise<string> {
     const results: string[] = [];
 
-    if (block.type === 'for') {
+    if (block.type === "for") {
       // for 루프 처리
-      const iterable = await this.expressionEvaluator.evaluate(block.iterable!, context);
+      const iterable = await this.expressionEvaluator.evaluate(
+        block.iterable!,
+        context
+      );
 
       if (!this.isIterable(iterable)) {
         throw new Error(`Expression '${block.iterable}' is not iterable`);
@@ -1739,7 +1757,7 @@ class ConditionalRenderer {
             first: index === 0,
             last: index === iterable.length - 1,
             length: iterable.length,
-            parent: context.get('loop'),
+            parent: context.get("loop"),
           },
         });
 
@@ -1752,13 +1770,16 @@ class ConditionalRenderer {
       if (results.length === 0 && block.else) {
         return await this.renderBody(block.else, context);
       }
-    } else if (block.type === 'while') {
+    } else if (block.type === "while") {
       // while 루프 처리
       let iterations = 0;
       const maxIterations = 10000; // 무한 루프 방지
 
       while (iterations < maxIterations) {
-        const condition = await this.expressionEvaluator.evaluate(block.condition!, context);
+        const condition = await this.expressionEvaluator.evaluate(
+          block.condition!,
+          context
+        );
 
         if (!condition) break;
 
@@ -1777,14 +1798,17 @@ class ConditionalRenderer {
       }
 
       if (iterations >= maxIterations) {
-        throw new Error('Maximum iteration count exceeded');
+        throw new Error("Maximum iteration count exceeded");
       }
     }
 
-    return results.join('');
+    return results.join("");
   }
 
-  private async renderBody(nodes: TemplateNode[], context: RenderContext): Promise<string> {
+  private async renderBody(
+    nodes: TemplateNode[],
+    context: RenderContext
+  ): Promise<string> {
     const results: string[] = [];
 
     for (const node of nodes) {
@@ -1792,46 +1816,55 @@ class ConditionalRenderer {
       results.push(rendered);
     }
 
-    return results.join('');
+    return results.join("");
   }
 
   private isIterable(value: any): boolean {
     return (
       value != null &&
       (Array.isArray(value) ||
-        typeof value === 'string' ||
+        typeof value === "string" ||
         value instanceof Set ||
         value instanceof Map ||
-        typeof value[Symbol.iterator] === 'function')
+        typeof value[Symbol.iterator] === "function")
     );
   }
 }
 
 // 고급 조건부 렌더링 지원
 class AdvancedConditionalRenderer extends ConditionalRenderer {
-  async renderSwitch(switchBlock: SwitchBlock, context: RenderContext): Promise<string> {
-    const value = await this.expressionEvaluator.evaluate(switchBlock.expression, context);
+  async renderSwitch(
+    switchBlock: SwitchBlock,
+    context: RenderContext
+  ): Promise<string> {
+    const value = await this.expressionEvaluator.evaluate(
+      switchBlock.expression,
+      context
+    );
 
     for (const caseBlock of switchBlock.cases) {
-      if (caseBlock.type === 'default') {
+      if (caseBlock.type === "default") {
         return await this.renderBody(caseBlock.body, context);
       }
 
-      const caseValue = await this.expressionEvaluator.evaluate(caseBlock.value, context);
+      const caseValue = await this.expressionEvaluator.evaluate(
+        caseBlock.value,
+        context
+      );
 
       if (value === caseValue) {
         return await this.renderBody(caseBlock.body, context);
       }
     }
 
-    return '';
+    return "";
   }
 
   async renderTernary(
     condition: string,
     trueValue: string,
     falseValue: string,
-    context: RenderContext,
+    context: RenderContext
   ): Promise<string> {
     const result = await this.expressionEvaluator.evaluate(condition, context);
 
@@ -1845,7 +1878,7 @@ class AdvancedConditionalRenderer extends ConditionalRenderer {
   async renderUnless(
     condition: string,
     body: TemplateNode[],
-    context: RenderContext,
+    context: RenderContext
   ): Promise<string> {
     const result = await this.expressionEvaluator.evaluate(condition, context);
 
@@ -1853,7 +1886,7 @@ class AdvancedConditionalRenderer extends ConditionalRenderer {
       return await this.renderBody(body, context);
     }
 
-    return '';
+    return "";
   }
 }
 
@@ -1862,7 +1895,10 @@ class OptimizedConditionalRenderer extends AdvancedConditionalRenderer {
   private conditionCache: Map<string, boolean> = new Map();
   private compiledConditions: Map<string, Function> = new Map();
 
-  async renderConditional(block: ConditionalBlock, context: RenderContext): Promise<string> {
+  async renderConditional(
+    block: ConditionalBlock,
+    context: RenderContext
+  ): Promise<string> {
     // 조건 캐싱
     const cacheKey = `${block.condition}:${JSON.stringify(context.variables)}`;
 
@@ -1894,12 +1930,12 @@ class OptimizedConditionalRenderer extends AdvancedConditionalRenderer {
   private compileCondition(condition: string): Function {
     // 간단한 조건 컴파일러
     return new Function(
-      'context',
+      "context",
       `
       with (context.variables) {
         return ${condition};
       }
-    `,
+    `
     );
   }
 }
@@ -4976,23 +5012,36 @@ class E2ETestGenerator {
   async generateE2ETests(
     application: ApplicationSpec,
     requirements: Requirements[],
-    testConfig?: E2ETestConfig,
+    testConfig?: E2ETestConfig
   ): Promise<E2ETestSuite[]> {
     const testSuites: E2ETestSuite[] = [];
 
     // 1. 사용자 여정 분석
-    const userJourneys = await this.journeyAnalyzer.analyzeJourneys(application, requirements);
+    const userJourneys = await this.journeyAnalyzer.analyzeJourneys(
+      application,
+      requirements
+    );
 
     // 2. 각 여정에 대한 E2E 테스트 생성
     for (const journey of userJourneys) {
       // 페이지 객체 생성
-      const pageObjects = await this.pageObjectGenerator.generatePageObjects(journey, application);
+      const pageObjects = await this.pageObjectGenerator.generatePageObjects(
+        journey,
+        application
+      );
 
       // 테스트 케이스 생성
-      const testCases = await this.createE2ETestCases(journey, pageObjects, testConfig);
+      const testCases = await this.createE2ETestCases(
+        journey,
+        pageObjects,
+        testConfig
+      );
 
       // 테스트 데이터 생성
-      const testData = await this.testDataBuilder.buildTestData(testCases, application);
+      const testData = await this.testDataBuilder.buildTestData(
+        testCases,
+        application
+      );
 
       // 테스트 스위트 구성
       const testSuite = new E2ETestSuite({
@@ -5013,16 +5062,22 @@ class E2ETestGenerator {
   private async createE2ETestCases(
     journey: UserJourney,
     pageObjects: PageObject[],
-    config?: E2ETestConfig,
+    config?: E2ETestConfig
   ): Promise<E2ETestCase[]> {
     const testCases: E2ETestCase[] = [];
 
     // 1. Critical Path 테스트
-    const criticalPathTest = await this.generateCriticalPathTest(journey, pageObjects);
+    const criticalPathTest = await this.generateCriticalPathTest(
+      journey,
+      pageObjects
+    );
     testCases.push(criticalPathTest);
 
     // 2. Alternative Path 테스트
-    const alternativePaths = await this.generateAlternativePathTests(journey, pageObjects);
+    const alternativePaths = await this.generateAlternativePathTests(
+      journey,
+      pageObjects
+    );
     testCases.push(...alternativePaths);
 
     // 3. Error Path 테스트
@@ -5033,14 +5088,18 @@ class E2ETestGenerator {
     if (config?.crossBrowser) {
       const crossBrowserTests = await this.generateCrossBrowserTests(
         criticalPathTest,
-        config.browsers,
+        config.browsers
       );
       testCases.push(...crossBrowserTests);
     }
 
     // 5. Mobile 테스트
     if (config?.mobile) {
-      const mobileTests = await this.generateMobileTests(journey, pageObjects, config.devices);
+      const mobileTests = await this.generateMobileTests(
+        journey,
+        pageObjects,
+        config.devices
+      );
       testCases.push(...mobileTests);
     }
 
@@ -5049,15 +5108,15 @@ class E2ETestGenerator {
 
   private async generateCriticalPathTest(
     journey: UserJourney,
-    pageObjects: PageObject[],
+    pageObjects: PageObject[]
   ): Promise<E2ETestCase> {
     const steps: E2ETestStep[] = [];
 
     // 1. 초기 네비게이션
     steps.push({
-      action: 'navigate',
+      action: "navigate",
       target: journey.startUrl,
-      waitFor: { type: 'load', timeout: 10000 },
+      waitFor: { type: "load", timeout: 10000 },
     });
 
     // 2. 인증 (필요한 경우)
@@ -5069,32 +5128,32 @@ class E2ETestGenerator {
     for (const flowStep of journey.mainFlow) {
       const pageObject = pageObjects.find((po) => po.name === flowStep.page);
 
-      if (flowStep.action === 'click') {
+      if (flowStep.action === "click") {
         steps.push({
-          action: 'click',
+          action: "click",
           target: `${pageObject.name}.${flowStep.element}`,
-          waitFor: { type: 'element', selector: flowStep.waitFor },
+          waitFor: { type: "element", selector: flowStep.waitFor },
         });
-      } else if (flowStep.action === 'input') {
+      } else if (flowStep.action === "input") {
         steps.push({
-          action: 'type',
+          action: "type",
           target: `${pageObject.name}.${flowStep.element}`,
           data: flowStep.data,
-          waitFor: { type: 'enabled' },
+          waitFor: { type: "enabled" },
         });
-      } else if (flowStep.action === 'select') {
+      } else if (flowStep.action === "select") {
         steps.push({
-          action: 'select',
+          action: "select",
           target: `${pageObject.name}.${flowStep.element}`,
           data: flowStep.value,
-          waitFor: { type: 'visible' },
+          waitFor: { type: "visible" },
         });
       }
 
       // 스크린샷 (주요 단계)
       if (flowStep.critical) {
         steps.push({
-          action: 'screenshot',
+          action: "screenshot",
           target: flowStep.name,
           screenshot: true,
         });
@@ -5104,7 +5163,7 @@ class E2ETestGenerator {
     // 4. 검증 단계
     const validations = await this.validationBuilder.buildValidations(
       journey.expectedOutcome,
-      pageObjects,
+      pageObjects
     );
 
     return {
@@ -5115,7 +5174,7 @@ class E2ETestGenerator {
       steps,
       validations,
       postconditions: this.generatePostconditions(journey),
-      tags: ['critical', 'e2e', journey.feature],
+      tags: ["critical", "e2e", journey.feature],
     };
   }
 }
@@ -5128,7 +5187,7 @@ class PlaywrightTestGenerator {
     // 임포트
     code.push(`
 import { test, expect, Page } from '@playwright/test';
-import { ${testSuite.pageObjects.map((po) => po.name).join(', ')} } from './page-objects';
+import { ${testSuite.pageObjects.map((po) => po.name).join(", ")} } from './page-objects';
 import { testData } from './test-data/${testSuite.name}.data';
 `);
 
@@ -5136,7 +5195,7 @@ import { testData } from './test-data/${testSuite.name}.data';
     code.push(`
 test.describe('${testSuite.name}', () => {
   let page: Page;
-  ${testSuite.pageObjects.map((po) => `let ${this.camelCase(po.name)}: ${po.name};`).join('\n  ')}
+  ${testSuite.pageObjects.map((po) => `let ${this.camelCase(po.name)}: ${po.name};`).join("\n  ")}
 
   test.beforeEach(async ({ page: testPage, context }) => {
     page = testPage;
@@ -5144,7 +5203,7 @@ test.describe('${testSuite.name}', () => {
     // Initialize page objects
     ${testSuite.pageObjects
       .map((po) => `${this.camelCase(po.name)} = new ${po.name}(page);`)
-      .join('\n    ')}
+      .join("\n    ")}
     
     // Set viewport
     await page.setViewportSize({ width: 1920, height: 1080 });
@@ -5173,9 +5232,9 @@ test.describe('${testSuite.name}', () => {
       code.push(this.formatTestCase(testCase));
     }
 
-    code.push('});');
+    code.push("});");
 
-    return code.join('\n');
+    return code.join("\n");
   }
 
   private formatTestCase(testCase: E2ETestCase): string {
@@ -5200,23 +5259,23 @@ test.describe('${testSuite.name}', () => {
     return steps
       .map((step) => {
         switch (step.action) {
-          case 'navigate':
+          case "navigate":
             return `await page.goto('${step.target}');`;
 
-          case 'click':
+          case "click":
             return `
     await ${step.target}.click();
-    ${step.waitFor ? this.formatWaitCondition(step.waitFor) : ''}`;
+    ${step.waitFor ? this.formatWaitCondition(step.waitFor) : ""}`;
 
-          case 'type':
+          case "type":
             return `
     await ${step.target}.fill('${step.data}');`;
 
-          case 'select':
+          case "select":
             return `
     await ${step.target}.selectOption('${step.data}');`;
 
-          case 'screenshot':
+          case "screenshot":
             return `
     await page.screenshot({ 
       path: \`screenshots/\${test.info().title}-${step.target}.png\` 
@@ -5226,27 +5285,27 @@ test.describe('${testSuite.name}', () => {
             return `// Unknown action: ${step.action}`;
         }
       })
-      .join('\n    ');
+      .join("\n    ");
   }
 
   private formatWaitCondition(condition: WaitCondition): string {
     switch (condition.type) {
-      case 'load':
+      case "load":
         return `await page.waitForLoadState('load', { timeout: ${condition.timeout} });`;
 
-      case 'element':
+      case "element":
         return `await page.waitForSelector('${condition.selector}', { 
           state: 'visible',
           timeout: ${condition.timeout || 5000}
         });`;
 
-      case 'network':
+      case "network":
         return `await page.waitForResponse(response => 
           response.url().includes('${condition.url}') && response.status() === 200
         );`;
 
       default:
-        return '';
+        return "";
     }
   }
 }
@@ -5280,9 +5339,9 @@ describe('${testSuite.name}', () => {
       code.push(this.formatCypressTestCase(testCase));
     }
 
-    code.push('});');
+    code.push("});");
 
-    return code.join('\n');
+    return code.join("\n");
   }
 
   private formatCypressTestCase(testCase: E2ETestCase): string {
@@ -5291,29 +5350,29 @@ describe('${testSuite.name}', () => {
     // Setup test data
     const testData = ${JSON.stringify(testCase.testData, null, 4)};
     
-    ${testCase.steps.map((step) => this.formatCypressStep(step)).join('\n    ')}
+    ${testCase.steps.map((step) => this.formatCypressStep(step)).join("\n    ")}
     
     // Assertions
-    ${testCase.validations.map((v) => this.formatCypressAssertion(v)).join('\n    ')}
+    ${testCase.validations.map((v) => this.formatCypressAssertion(v)).join("\n    ")}
   });
 `;
   }
 
   private formatCypressStep(step: E2ETestStep): string {
     switch (step.action) {
-      case 'navigate':
+      case "navigate":
         return `cy.visit('${step.target}');`;
 
-      case 'click':
+      case "click":
         return `cy.get('${step.target}').click();`;
 
-      case 'type':
+      case "type":
         return `cy.get('${step.target}').type('${step.data}');`;
 
-      case 'select':
+      case "select":
         return `cy.get('${step.target}').select('${step.data}');`;
 
-      case 'screenshot':
+      case "screenshot":
         return `cy.screenshot('${step.target}');`;
 
       default:
@@ -5323,16 +5382,16 @@ describe('${testSuite.name}', () => {
 
   private formatCypressAssertion(validation: Validation): string {
     switch (validation.type) {
-      case 'visible':
+      case "visible":
         return `cy.get('${validation.target}').should('be.visible');`;
 
-      case 'text':
+      case "text":
         return `cy.get('${validation.target}').should('contain.text', '${validation.expected}');`;
 
-      case 'value':
+      case "value":
         return `cy.get('${validation.target}').should('have.value', '${validation.expected}');`;
 
-      case 'url':
+      case "url":
         return `cy.url().should('include', '${validation.expected}');`;
 
       default:
@@ -8673,7 +8732,7 @@ class VueOptimizer {
 
   async optimizeVueComponent(
     component: VueComponent,
-    options: VueOptimizationOptions,
+    options: VueOptimizationOptions
   ): Promise<OptimizedVueComponent> {
     let optimized = { ...component };
     const appliedOptimizations: string[] = [];
@@ -8681,7 +8740,7 @@ class VueOptimizer {
     // 1. Composition API 변환 (옵션)
     if (options.convertToCompositionApi && !this.isCompositionApi(component)) {
       optimized = await this.compositionApiConverter.convert(optimized);
-      appliedOptimizations.push('Converted to Composition API');
+      appliedOptimizations.push("Converted to Composition API");
     }
 
     // 2. 반응성 최적화
@@ -8708,54 +8767,57 @@ class VueOptimizer {
       optimized,
       appliedOptimizations,
       bundleOptimizations,
-      performanceGains: await this.estimatePerformanceGains(component, optimized),
+      performanceGains: await this.estimatePerformanceGains(
+        component,
+        optimized
+      ),
     };
   }
 
   private initializeRules() {
     // computed 속성 최적화
     this.rules.push({
-      name: 'optimize-computed',
-      description: 'Optimize computed properties',
+      name: "optimize-computed",
+      description: "Optimize computed properties",
       applies: (component) => !!component.computed,
       optimize: this.optimizeComputedProperties.bind(this),
-      impact: { performance: 'high', complexity: 'low' },
+      impact: { performance: "high", complexity: "low" },
     });
 
     // v-if vs v-show 최적화
     this.rules.push({
-      name: 'optimize-conditional-rendering',
-      description: 'Optimize v-if and v-show usage',
+      name: "optimize-conditional-rendering",
+      description: "Optimize v-if and v-show usage",
       applies: (component) => /v-if|v-show/.test(component.template),
       optimize: this.optimizeConditionalRendering.bind(this),
-      impact: { performance: 'medium', complexity: 'low' },
+      impact: { performance: "medium", complexity: "low" },
     });
 
     // 리스트 렌더링 최적화
     this.rules.push({
-      name: 'optimize-list-rendering',
-      description: 'Optimize v-for with proper keys',
+      name: "optimize-list-rendering",
+      description: "Optimize v-for with proper keys",
       applies: (component) => /v-for/.test(component.template),
       optimize: this.optimizeListRendering.bind(this),
-      impact: { performance: 'high', complexity: 'medium' },
+      impact: { performance: "high", complexity: "medium" },
     });
 
     // 이벤트 핸들러 최적화
     this.rules.push({
-      name: 'optimize-event-handlers',
-      description: 'Optimize event handler performance',
+      name: "optimize-event-handlers",
+      description: "Optimize event handler performance",
       applies: (component) => /@\w+/.test(component.template),
       optimize: this.optimizeEventHandlers.bind(this),
-      impact: { performance: 'medium', complexity: 'low' },
+      impact: { performance: "medium", complexity: "low" },
     });
 
     // Async Components
     this.rules.push({
-      name: 'add-async-components',
-      description: 'Convert heavy components to async',
+      name: "add-async-components",
+      description: "Convert heavy components to async",
       applies: (component) => this.shouldBeAsync(component),
       optimize: this.convertToAsyncComponent.bind(this),
-      impact: { performance: 'high', complexity: 'medium' },
+      impact: { performance: "high", complexity: "medium" },
     });
   }
 
@@ -8766,7 +8828,7 @@ class VueOptimizer {
       const optimizedComputed: any = {};
 
       for (const [key, value] of Object.entries(component.computed)) {
-        if (typeof value === 'function') {
+        if (typeof value === "function") {
           // 단순 getter를 최적화된 getter로 변환
           optimizedComputed[key] = {
             get: value,
@@ -8813,11 +8875,14 @@ class VueOptimizer {
       (match, tag, iterator) => {
         const keyExpression = this.generateOptimalKey(iterator);
         return `<${tag} v-for="${iterator}" :key="${keyExpression}"`;
-      },
+      }
     );
 
     // track-by 최적화 (Vue 2)
-    optimized.template = optimized.template.replace(/track-by="index"/g, 'track-by="$index"');
+    optimized.template = optimized.template.replace(
+      /track-by="index"/g,
+      'track-by="$index"'
+    );
 
     // 큰 리스트에 가상 스크롤링 제안
     if (this.hasLargeList(optimized.template)) {
@@ -8837,7 +8902,10 @@ class CompositionApiConverter {
     // Options API에서 Composition API로 변환
     const setupFunction = this.generateSetupFunction(component);
 
-    converted.script = this.replaceScriptContent(component.script, setupFunction);
+    converted.script = this.replaceScriptContent(
+      component.script,
+      setupFunction
+    );
 
     return converted;
   }
@@ -8849,7 +8917,7 @@ class CompositionApiConverter {
 
     // reactive data 변환
     if (component.data) {
-      imports.push('ref', 'reactive');
+      imports.push("ref", "reactive");
       const dataSetup = this.convertData(component.data);
       setupBody.push(dataSetup.code);
       returns.push(...dataSetup.returns);
@@ -8857,7 +8925,7 @@ class CompositionApiConverter {
 
     // computed 변환
     if (component.computed) {
-      imports.push('computed');
+      imports.push("computed");
       const computedSetup = this.convertComputed(component.computed);
       setupBody.push(computedSetup.code);
       returns.push(...computedSetup.returns);
@@ -8872,7 +8940,7 @@ class CompositionApiConverter {
 
     // watch 변환
     if (component.watch) {
-      imports.push('watch', 'watchEffect');
+      imports.push("watch", "watchEffect");
       const watchSetup = this.convertWatch(component.watch);
       setupBody.push(watchSetup.code);
     }
@@ -8885,16 +8953,16 @@ class CompositionApiConverter {
     }
 
     return `
-import { ${[...new Set(imports)].join(', ')} } from 'vue';
+import { ${[...new Set(imports)].join(", ")} } from 'vue';
 
 export default {
   name: '${component.name}',
-  ${component.props ? `props: ${JSON.stringify(component.props)},` : ''}
+  ${component.props ? `props: ${JSON.stringify(component.props)},` : ""}
   setup(props, { emit, slots, attrs }) {
-    ${setupBody.join('\n\n    ')}
+    ${setupBody.join("\n\n    ")}
 
     return {
-      ${returns.join(',\n      ')}
+      ${returns.join(",\n      ")}
     };
   }
 };`;
@@ -8903,35 +8971,40 @@ export default {
 
 // Vue 반응성 최적화
 class ReactivityOptimizer {
-  async optimize(component: VueComponent): Promise<ReactivityOptimizationResult> {
+  async optimize(
+    component: VueComponent
+  ): Promise<ReactivityOptimizationResult> {
     const optimizations: string[] = [];
     let optimized = { ...component };
 
     // 1. shallowRef/shallowReactive 사용 기회 찾기
     const shallowOpportunities = this.findShallowOpportunities(component);
     if (shallowOpportunities.length > 0) {
-      optimized = this.applyShallowOptimizations(optimized, shallowOpportunities);
-      optimizations.push('Applied shallow reactivity where appropriate');
+      optimized = this.applyShallowOptimizations(
+        optimized,
+        shallowOpportunities
+      );
+      optimizations.push("Applied shallow reactivity where appropriate");
     }
 
     // 2. computed vs methods 최적화
     const computedOpportunities = this.findComputedOpportunities(component);
     if (computedOpportunities.length > 0) {
       optimized = this.convertToComputed(optimized, computedOpportunities);
-      optimizations.push('Converted methods to computed properties');
+      optimizations.push("Converted methods to computed properties");
     }
 
     // 3. 불필요한 반응성 제거
     const nonReactiveData = this.findNonReactiveData(component);
     if (nonReactiveData.length > 0) {
       optimized = this.removeUnnecessaryReactivity(optimized, nonReactiveData);
-      optimizations.push('Removed unnecessary reactivity');
+      optimizations.push("Removed unnecessary reactivity");
     }
 
     // 4. watchEffect vs watch 최적화
     if (component.watch) {
       optimized = this.optimizeWatchers(optimized);
-      optimizations.push('Optimized watchers');
+      optimizations.push("Optimized watchers");
     }
 
     return {
@@ -8940,7 +9013,9 @@ class ReactivityOptimizer {
     };
   }
 
-  private findShallowOpportunities(component: VueComponent): ShallowOpportunity[] {
+  private findShallowOpportunities(
+    component: VueComponent
+  ): ShallowOpportunity[] {
     const opportunities: ShallowOpportunity[] = [];
 
     // 큰 객체나 배열 찾기
@@ -8950,8 +9025,8 @@ class ReactivityOptimizer {
       if (data.depth === 1 && data.size > 100) {
         opportunities.push({
           name: data.name,
-          type: 'shallow',
-          reason: 'Large flat data structure',
+          type: "shallow",
+          reason: "Large flat data structure",
         });
       }
     }
@@ -8964,7 +9039,7 @@ class ReactivityOptimizer {
 class VueBundleOptimizer {
   async optimizeForProduction(
     project: VueProject,
-    config: VueBundleConfig,
+    config: VueBundleConfig
   ): Promise<OptimizedBundle> {
     const optimizations: BundleOptimization[] = [];
 
@@ -9006,14 +9081,14 @@ class VueBundleOptimizer {
             manualChunks: this.generateManualChunks(optimizations),
             chunkFileNames: (chunkInfo) => {
               const facadeModuleId = chunkInfo.facadeModuleId
-                ? chunkInfo.facadeModuleId.split('/').pop()
-                : 'chunk';
+                ? chunkInfo.facadeModuleId.split("/").pop()
+                : "chunk";
               return `js/${facadeModuleId}-[hash].js`;
             },
           },
         },
         cssCodeSplit: true,
-        minify: 'terser',
+        minify: "terser",
         terserOptions: {
           compress: {
             drop_console: true,
@@ -9022,8 +9097,8 @@ class VueBundleOptimizer {
         },
       },
       optimizeDeps: {
-        include: ['vue', 'vue-router', 'pinia'],
-        exclude: ['@vueuse/core'],
+        include: ["vue", "vue-router", "pinia"],
+        exclude: ["@vueuse/core"],
       },
     };
   }
@@ -9031,7 +9106,9 @@ class VueBundleOptimizer {
 
 // Vue 3 특화 최적화
 class Vue3Optimizer extends VueOptimizer {
-  async optimizeVue3Features(component: VueComponent): Promise<OptimizedVueComponent> {
+  async optimizeVue3Features(
+    component: VueComponent
+  ): Promise<OptimizedVueComponent> {
     let optimized = { ...component };
 
     // 1. <script setup> 최적화
@@ -9083,7 +9160,7 @@ ${this.generateScriptSetupCode(component)}
       (match) => {
         const memoExpression = this.generateMemoExpression(match);
         return `${match} v-memo="${memoExpression}"`;
-      },
+      }
     );
 
     return optimized;
@@ -9111,8 +9188,11 @@ interface AngularOptimizationStrategy {
   name: string;
   description: string;
   analyze: (component: AngularComponent) => OptimizationOpportunity[];
-  apply: (component: AngularComponent, opportunity: OptimizationOpportunity) => AngularComponent;
-  priority: 'critical' | 'high' | 'medium' | 'low';
+  apply: (
+    component: AngularComponent,
+    opportunity: OptimizationOpportunity
+  ) => AngularComponent;
+  priority: "critical" | "high" | "medium" | "low";
 }
 
 interface AngularComponent {
@@ -9139,7 +9219,7 @@ class AngularOptimizer {
 
   async optimizeAngularComponent(
     component: AngularComponent,
-    config: AngularOptimizationConfig,
+    config: AngularOptimizationConfig
   ): Promise<OptimizedAngularComponent> {
     const opportunities: OptimizationOpportunity[] = [];
     let optimized = { ...component };
@@ -9158,7 +9238,7 @@ class AngularOptimizer {
     for (const strategy of this.strategies) {
       const strategyOpportunities = strategy.analyze(optimized);
       for (const opportunity of strategyOpportunities) {
-        if (config.autoApply || opportunity.impact === 'critical') {
+        if (config.autoApply || opportunity.impact === "critical") {
           optimized = strategy.apply(optimized, opportunity);
           opportunities.push(opportunity);
         }
@@ -9176,70 +9256,75 @@ class AngularOptimizer {
       optimized,
       opportunities,
       bundleAnalysis,
-      performanceMetrics: await this.calculatePerformanceMetrics(component, optimized),
+      performanceMetrics: await this.calculatePerformanceMetrics(
+        component,
+        optimized
+      ),
     };
   }
 
   private initializeStrategies() {
     // OnPush 전략
     this.strategies.push({
-      name: 'change-detection-onpush',
-      description: 'Use OnPush change detection strategy',
+      name: "change-detection-onpush",
+      description: "Use OnPush change detection strategy",
       analyze: this.analyzeOnPushOpportunity.bind(this),
       apply: this.applyOnPushStrategy.bind(this),
-      priority: 'high',
+      priority: "high",
     });
 
     // TrackBy 함수 추가
     this.strategies.push({
-      name: 'add-trackby',
-      description: 'Add trackBy functions to *ngFor',
+      name: "add-trackby",
+      description: "Add trackBy functions to *ngFor",
       analyze: this.analyzeTrackByOpportunity.bind(this),
       apply: this.addTrackByFunction.bind(this),
-      priority: 'high',
+      priority: "high",
     });
 
     // Pipe 최적화
     this.strategies.push({
-      name: 'optimize-pipes',
-      description: 'Optimize pipe usage',
+      name: "optimize-pipes",
+      description: "Optimize pipe usage",
       analyze: this.analyzePipeOpportunity.bind(this),
       apply: this.optimizePipes.bind(this),
-      priority: 'medium',
+      priority: "medium",
     });
 
     // Lazy Loading
     this.strategies.push({
-      name: 'lazy-loading',
-      description: 'Implement lazy loading for modules',
+      name: "lazy-loading",
+      description: "Implement lazy loading for modules",
       analyze: this.analyzeLazyLoadingOpportunity.bind(this),
       apply: this.implementLazyLoading.bind(this),
-      priority: 'high',
+      priority: "high",
     });
 
     // Preloading 전략
     this.strategies.push({
-      name: 'preloading-strategy',
-      description: 'Implement preloading strategy',
+      name: "preloading-strategy",
+      description: "Implement preloading strategy",
       analyze: this.analyzePreloadingOpportunity.bind(this),
       apply: this.implementPreloading.bind(this),
-      priority: 'medium',
+      priority: "medium",
     });
   }
 
-  private analyzeOnPushOpportunity(component: AngularComponent): OptimizationOpportunity[] {
+  private analyzeOnPushOpportunity(
+    component: AngularComponent
+  ): OptimizationOpportunity[] {
     const opportunities: OptimizationOpportunity[] = [];
 
     // 현재 Default 전략을 사용하고 있는지 확인
-    if (!component.typescript.includes('ChangeDetectionStrategy.OnPush')) {
+    if (!component.typescript.includes("ChangeDetectionStrategy.OnPush")) {
       // 컴포넌트가 OnPush에 적합한지 분석
       const suitability = this.analyzeOnPushSuitability(component);
 
       if (suitability.suitable) {
         opportunities.push({
-          type: 'change-detection',
-          description: 'Component can use OnPush change detection',
-          impact: 'critical',
+          type: "change-detection",
+          description: "Component can use OnPush change detection",
+          impact: "critical",
           location: { file: component.selector, line: 0 },
           autoFixable: true,
           reason: suitability.reason,
@@ -9252,15 +9337,15 @@ class AngularOptimizer {
 
   private applyOnPushStrategy(
     component: AngularComponent,
-    opportunity: OptimizationOpportunity,
+    opportunity: OptimizationOpportunity
   ): AngularComponent {
     const optimized = { ...component };
 
     // Import 추가
-    if (!optimized.typescript.includes('ChangeDetectionStrategy')) {
+    if (!optimized.typescript.includes("ChangeDetectionStrategy")) {
       optimized.typescript = optimized.typescript.replace(
         /@Component\({/,
-        `import { ChangeDetectionStrategy } from '@angular/core';\n\n@Component({`,
+        `import { ChangeDetectionStrategy } from '@angular/core';\n\n@Component({`
       );
     }
 
@@ -9268,11 +9353,11 @@ class AngularOptimizer {
     optimized.typescript = optimized.typescript.replace(
       /@Component\({([^}]*)\}/,
       (match, content) => {
-        if (!content.includes('changeDetection')) {
+        if (!content.includes("changeDetection")) {
           return `@Component({${content},\n  changeDetection: ChangeDetectionStrategy.OnPush\n}`;
         }
         return match;
-      },
+      }
     );
 
     return optimized;
@@ -9309,11 +9394,14 @@ class ChangeDetectionOptimizer {
     // 1. 불필요한 변경 감지 트리거 찾기
     const unnecessaryTriggers = this.findUnnecessaryTriggers(component);
     if (unnecessaryTriggers.length > 0) {
-      optimized = this.removeUnnecessaryTriggers(optimized, unnecessaryTriggers);
+      optimized = this.removeUnnecessaryTriggers(
+        optimized,
+        unnecessaryTriggers
+      );
       opportunities.push({
-        type: 'change-detection',
-        description: 'Removed unnecessary change detection triggers',
-        impact: 'high',
+        type: "change-detection",
+        description: "Removed unnecessary change detection triggers",
+        impact: "high",
         details: unnecessaryTriggers,
       });
     }
@@ -9322,9 +9410,9 @@ class ChangeDetectionOptimizer {
     const mutableData = this.findMutableDataStructures(component);
     if (mutableData.length > 0) {
       opportunities.push({
-        type: 'immutability',
-        description: 'Use immutable data structures',
-        impact: 'medium',
+        type: "immutability",
+        description: "Use immutable data structures",
+        impact: "medium",
         details: mutableData,
       });
     }
@@ -9332,11 +9420,14 @@ class ChangeDetectionOptimizer {
     // 3. markForCheck() 최적화
     const markForCheckOpportunities = this.analyzeMarkForCheck(component);
     if (markForCheckOpportunities.length > 0) {
-      optimized = this.optimizeMarkForCheck(optimized, markForCheckOpportunities);
+      optimized = this.optimizeMarkForCheck(
+        optimized,
+        markForCheckOpportunities
+      );
       opportunities.push({
-        type: 'mark-for-check',
-        description: 'Optimized markForCheck usage',
-        impact: 'medium',
+        type: "mark-for-check",
+        description: "Optimized markForCheck usage",
+        impact: "medium",
       });
     }
 
@@ -9350,8 +9441,11 @@ class ChangeDetectionOptimizer {
     const triggers: string[] = [];
 
     // 템플릿에서 함수 호출 찾기
-    const functionCalls = component.template.match(/\{\{[^}]*\([^}]*\)[^}]*\}\}/g) || [];
-    triggers.push(...functionCalls.map((call) => `Template function call: ${call}`));
+    const functionCalls =
+      component.template.match(/\{\{[^}]*\([^}]*\)[^}]*\}\}/g) || [];
+    triggers.push(
+      ...functionCalls.map((call) => `Template function call: ${call}`)
+    );
 
     // getter에서 복잡한 계산 찾기
     const getterRegex = /get\s+(\w+)\s*\(\s*\)\s*{([^}]+)}/g;
@@ -9378,9 +9472,9 @@ class RxJSOptimizer {
     if (leaks.length > 0) {
       optimized = this.addUnsubscribeLogic(optimized, leaks);
       opportunities.push({
-        type: 'memory-leak',
-        description: 'Added proper unsubscribe logic',
-        impact: 'critical',
+        type: "memory-leak",
+        description: "Added proper unsubscribe logic",
+        impact: "critical",
         details: leaks,
       });
     }
@@ -9388,25 +9482,32 @@ class RxJSOptimizer {
     // 2. 연산자 최적화
     const operatorOptimizations = this.optimizeOperators(component);
     if (operatorOptimizations.length > 0) {
-      optimized = this.applyOperatorOptimizations(optimized, operatorOptimizations);
+      optimized = this.applyOperatorOptimizations(
+        optimized,
+        operatorOptimizations
+      );
       opportunities.push(...operatorOptimizations);
     }
 
     // 3. shareReplay 사용
-    const shareReplayOpportunities = this.findShareReplayOpportunities(component);
+    const shareReplayOpportunities =
+      this.findShareReplayOpportunities(component);
     if (shareReplayOpportunities.length > 0) {
       optimized = this.addShareReplay(optimized, shareReplayOpportunities);
       opportunities.push({
-        type: 'share-replay',
-        description: 'Added shareReplay for shared subscriptions',
-        impact: 'high',
+        type: "share-replay",
+        description: "Added shareReplay for shared subscriptions",
+        impact: "high",
       });
     }
 
     // 4. async pipe 최적화
     const asyncPipeOptimizations = this.optimizeAsyncPipe(component);
     if (asyncPipeOptimizations.length > 0) {
-      optimized = this.applyAsyncPipeOptimizations(optimized, asyncPipeOptimizations);
+      optimized = this.applyAsyncPipeOptimizations(
+        optimized,
+        asyncPipeOptimizations
+      );
       opportunities.push(...asyncPipeOptimizations);
     }
 
@@ -9424,13 +9525,16 @@ class RxJSOptimizer {
     const matches = [...component.typescript.matchAll(subscribeRegex)];
 
     for (const match of matches) {
-      const hasUnsubscribe = this.checkUnsubscribePresence(component.typescript, match.index!);
+      const hasUnsubscribe = this.checkUnsubscribePresence(
+        component.typescript,
+        match.index!
+      );
 
       if (!hasUnsubscribe) {
         leaks.push({
           line: this.getLineNumber(component.typescript, match.index!),
-          type: 'missing-unsubscribe',
-          suggestion: 'Use takeUntil or async pipe',
+          type: "missing-unsubscribe",
+          suggestion: "Use takeUntil or async pipe",
         });
       }
     }
@@ -9438,7 +9542,10 @@ class RxJSOptimizer {
     return leaks;
   }
 
-  private addUnsubscribeLogic(component: AngularComponent, leaks: MemoryLeak[]): AngularComponent {
+  private addUnsubscribeLogic(
+    component: AngularComponent,
+    leaks: MemoryLeak[]
+  ): AngularComponent {
     let optimized = { ...component };
 
     // destroy$ subject 추가
@@ -9455,14 +9562,14 @@ class RxJSOptimizer {
     // takeUntil 추가
     optimized.typescript = optimized.typescript.replace(
       /\.subscribe\(/g,
-      '.pipe(takeUntil(this.destroy$)).subscribe(',
+      ".pipe(takeUntil(this.destroy$)).subscribe("
     );
 
     // imports 추가
-    if (!optimized.typescript.includes('takeUntil')) {
+    if (!optimized.typescript.includes("takeUntil")) {
       optimized.typescript = optimized.typescript.replace(
         /import\s*{([^}]+)}\s*from\s*'rxjs\/operators'/,
-        "import { $1, takeUntil } from 'rxjs/operators'",
+        "import { $1, takeUntil } from 'rxjs/operators'"
       );
     }
 
@@ -9474,7 +9581,7 @@ class RxJSOptimizer {
 class AngularBundleOptimizer {
   async optimizeBuild(
     project: AngularProject,
-    config: BuildOptimizationConfig,
+    config: BuildOptimizationConfig
   ): Promise<OptimizedBuildConfig> {
     const optimizations: BuildOptimization[] = [];
 
@@ -9507,7 +9614,10 @@ class AngularBundleOptimizer {
     };
   }
 
-  private generateAngularConfig(optimizations: BuildOptimization[], budgets: Budget[]): any {
+  private generateAngularConfig(
+    optimizations: BuildOptimization[],
+    budgets: Budget[]
+  ): any {
     return {
       projects: {
         app: {
@@ -9517,7 +9627,7 @@ class AngularBundleOptimizer {
                 aot: true,
                 buildOptimizer: true,
                 optimization: true,
-                outputHashing: 'all',
+                outputHashing: "all",
                 sourceMap: false,
                 namedChunks: false,
                 extractLicenses: true,
@@ -9528,8 +9638,8 @@ class AngularBundleOptimizer {
                 production: {
                   fileReplacements: [
                     {
-                      replace: 'src/environments/environment.ts',
-                      with: 'src/environments/environment.prod.ts',
+                      replace: "src/environments/environment.ts",
+                      with: "src/environments/environment.prod.ts",
                     },
                   ],
                   optimization: {
@@ -9554,14 +9664,14 @@ class AngularBundleOptimizer {
 class OptimizedAngularGenerator {
   generateOptimizedComponent(
     spec: ComponentSpec,
-    features: AngularFeatures,
+    features: AngularFeatures
   ): GeneratedAngularComponent {
     const component: GeneratedAngularComponent = {
       selector: this.generateSelector(spec.name),
-      template: '',
+      template: "",
       styles: [],
-      typescript: '',
-      spec: '',
+      typescript: "",
+      spec: "",
     };
 
     // 1. TypeScript 생성
@@ -9584,7 +9694,10 @@ class OptimizedAngularGenerator {
     return component;
   }
 
-  private generateOptimizedTypeScript(spec: ComponentSpec, features: AngularFeatures): string {
+  private generateOptimizedTypeScript(
+    spec: ComponentSpec,
+    features: AngularFeatures
+  ): string {
     const imports = this.generateImports(spec, features);
     const decorator = this.generateDecorator(spec, features);
     const classContent = this.generateClassContent(spec, features);
@@ -9592,12 +9705,15 @@ class OptimizedAngularGenerator {
     return `${imports}
 
 ${decorator}
-export class ${spec.name}Component implements OnInit${features.onPush ? ', OnDestroy' : ''} {
+export class ${spec.name}Component implements OnInit${features.onPush ? ", OnDestroy" : ""} {
 ${classContent}
 }`;
   }
 
-  private generateDecorator(spec: ComponentSpec, features: AngularFeatures): string {
+  private generateDecorator(
+    spec: ComponentSpec,
+    features: AngularFeatures
+  ): string {
     const decoratorProps: string[] = [
       `selector: '${this.generateSelector(spec.name)}'`,
       `templateUrl: './${spec.name.toLowerCase()}.component.html'`,
@@ -9605,20 +9721,22 @@ ${classContent}
     ];
 
     if (features.onPush) {
-      decoratorProps.push('changeDetection: ChangeDetectionStrategy.OnPush');
+      decoratorProps.push("changeDetection: ChangeDetectionStrategy.OnPush");
     }
 
     if (features.standalone) {
-      decoratorProps.push('standalone: true');
+      decoratorProps.push("standalone: true");
       decoratorProps.push(`imports: [${this.getStandaloneImports(spec)}]`);
     }
 
     if (features.encapsulation) {
-      decoratorProps.push(`encapsulation: ViewEncapsulation.${features.encapsulation}`);
+      decoratorProps.push(
+        `encapsulation: ViewEncapsulation.${features.encapsulation}`
+      );
     }
 
     return `@Component({
-  ${decoratorProps.join(',\n  ')}
+  ${decoratorProps.join(",\n  ")}
 })`;
   }
 }
@@ -9645,7 +9763,7 @@ interface NextJSOptimizationRule {
   description: string;
   check: (page: NextJSPage) => boolean;
   optimize: (page: NextJSPage) => NextJSPage;
-  category: 'performance' | 'seo' | 'ux' | 'bundle';
+  category: "performance" | "seo" | "ux" | "bundle";
 }
 
 interface NextJSPage {
@@ -9673,7 +9791,7 @@ class NextJSOptimizer {
 
   async optimizeNextJSApp(
     pages: NextJSPage[],
-    config: NextJSOptimizationConfig,
+    config: NextJSOptimizationConfig
   ): Promise<OptimizedNextJSApp> {
     const optimizations: AppliedOptimization[] = [];
     const optimizedPages: NextJSPage[] = [];
@@ -9698,7 +9816,8 @@ class NextJSOptimizer {
     }
 
     // 2. 이미지 최적화
-    const imageOptimizations = await this.imageOptimizer.optimize(optimizedPages);
+    const imageOptimizations =
+      await this.imageOptimizer.optimize(optimizedPages);
     optimizations.push(...imageOptimizations);
 
     // 3. 폰트 최적화
@@ -9706,7 +9825,8 @@ class NextJSOptimizer {
     optimizations.push(...fontOptimizations);
 
     // 4. 라우팅 최적화
-    const routeOptimizations = await this.routeOptimizer.optimize(optimizedPages);
+    const routeOptimizations =
+      await this.routeOptimizer.optimize(optimizedPages);
     optimizations.push(...routeOptimizations);
 
     // 5. next.config.js 최적화
@@ -9716,52 +9836,57 @@ class NextJSOptimizer {
       pages: optimizedPages,
       optimizations,
       config: optimizedConfig,
-      performanceGains: await this.estimatePerformanceGains(pages, optimizedPages),
+      performanceGains: await this.estimatePerformanceGains(
+        pages,
+        optimizedPages
+      ),
     };
   }
 
   private initializeRules() {
     // Static Generation 추천
     this.rules.push({
-      name: 'prefer-static-generation',
-      description: 'Use getStaticProps instead of getServerSideProps when possible',
-      category: 'performance',
-      check: (page) => page.hasGetServerSideProps && !this.requiresRealTimeData(page),
+      name: "prefer-static-generation",
+      description:
+        "Use getStaticProps instead of getServerSideProps when possible",
+      category: "performance",
+      check: (page) =>
+        page.hasGetServerSideProps && !this.requiresRealTimeData(page),
       optimize: this.convertToStaticGeneration.bind(this),
     });
 
     // ISR (Incremental Static Regeneration) 추가
     this.rules.push({
-      name: 'add-isr',
-      description: 'Add ISR for frequently updated static pages',
-      category: 'performance',
+      name: "add-isr",
+      description: "Add ISR for frequently updated static pages",
+      category: "performance",
       check: (page) => page.hasGetStaticProps && this.shouldUseISR(page),
       optimize: this.addISR.bind(this),
     });
 
     // Dynamic Imports
     this.rules.push({
-      name: 'add-dynamic-imports',
-      description: 'Use dynamic imports for heavy components',
-      category: 'bundle',
+      name: "add-dynamic-imports",
+      description: "Use dynamic imports for heavy components",
+      category: "bundle",
       check: (page) => this.hasHeavyComponents(page),
       optimize: this.addDynamicImports.bind(this),
     });
 
     // API Routes 최적화
     this.rules.push({
-      name: 'optimize-api-routes',
-      description: 'Optimize API routes for performance',
-      category: 'performance',
-      check: (page) => page.path.startsWith('/api/'),
+      name: "optimize-api-routes",
+      description: "Optimize API routes for performance",
+      category: "performance",
+      check: (page) => page.path.startsWith("/api/"),
       optimize: this.optimizeAPIRoute.bind(this),
     });
 
     // SEO 최적화
     this.rules.push({
-      name: 'add-seo-metadata',
-      description: 'Add proper SEO metadata',
-      category: 'seo',
+      name: "add-seo-metadata",
+      description: "Add proper SEO metadata",
+      category: "seo",
       check: (page) => !this.hasProperSEO(page),
       optimize: this.addSEOMetadata.bind(this),
     });
@@ -9773,13 +9898,13 @@ class NextJSOptimizer {
     // getServerSideProps를 getStaticProps로 변환
     optimized.component = optimized.component.replace(
       /export\s+async\s+function\s+getServerSideProps/,
-      'export async function getStaticProps',
+      "export async function getStaticProps"
     );
 
     // revalidate 추가 (ISR)
     optimized.component = optimized.component.replace(
       /return\s*{\s*props:\s*{([^}]*)}\s*}/,
-      'return {\n    props: {$1},\n    revalidate: 60 // ISR: revalidate every 60 seconds\n  }',
+      "return {\n    props: {$1},\n    revalidate: 60 // ISR: revalidate every 60 seconds\n  }"
     );
 
     optimized.hasGetStaticProps = true;
@@ -9795,18 +9920,20 @@ class NextJSOptimizer {
     for (const component of heavyComponents) {
       // 정적 import를 dynamic import로 변환
       optimized.component = optimized.component.replace(
-        new RegExp(`import\\s+${component.name}\\s+from\\s+['"]${component.path}['"]`),
+        new RegExp(
+          `import\\s+${component.name}\\s+from\\s+['"]${component.path}['"]`
+        ),
         `const ${component.name} = dynamic(() => import('${component.path}'), {
   loading: () => <LoadingSpinner />,
   ssr: ${component.needsSSR}
-})`,
+})`
       );
     }
 
     // dynamic import 추가
-    if (!optimized.imports.includes('dynamic')) {
+    if (!optimized.imports.includes("dynamic")) {
       optimized.component = `import dynamic from 'next/dynamic';\n${optimized.component}`;
-      optimized.imports.push('dynamic');
+      optimized.imports.push("dynamic");
     }
 
     return optimized;
@@ -9824,8 +9951,8 @@ class NextImageOptimizer {
         this.convertToNextImage(page);
         optimizations.push({
           page: page.path,
-          optimization: 'convert-to-next-image',
-          category: 'performance',
+          optimization: "convert-to-next-image",
+          category: "performance",
         });
       }
 
@@ -9834,8 +9961,8 @@ class NextImageOptimizer {
         this.addImageOptimization(page);
         optimizations.push({
           page: page.path,
-          optimization: 'add-image-optimization',
-          category: 'performance',
+          optimization: "add-image-optimization",
+          category: "performance",
         });
       }
     }
@@ -9848,9 +9975,9 @@ class NextImageOptimizer {
     page.component = page.component.replace(
       /<img\s+([^>]*?)src=["']([^"']+)["']([^>]*?)>/g,
       (match, before, src, after) => {
-        const alt = this.extractAlt(match) || 'Image';
-        const width = this.extractDimension(match, 'width') || '800';
-        const height = this.extractDimension(match, 'height') || '600';
+        const alt = this.extractAlt(match) || "Image";
+        const width = this.extractDimension(match, "width") || "800";
+        const height = this.extractDimension(match, "height") || "600";
 
         return `<Image 
           src="${src}"
@@ -9859,15 +9986,15 @@ class NextImageOptimizer {
           height={${height}}
           placeholder="blur"
           blurDataURL="${this.generateBlurDataURL()}"
-          ${this.shouldBePriority(src) ? 'priority' : ''}
+          ${this.shouldBePriority(src) ? "priority" : ""}
         />`;
-      },
+      }
     );
 
     // Import 추가
-    if (!page.imports.includes('Image')) {
+    if (!page.imports.includes("Image")) {
       page.component = `import Image from 'next/image';\n${page.component}`;
-      page.imports.push('Image');
+      page.imports.push("Image");
     }
   }
 }
@@ -9882,8 +10009,8 @@ class NextFontOptimizer {
     if (googleFonts.length > 0) {
       this.optimizeGoogleFonts(pages, googleFonts);
       optimizations.push({
-        optimization: 'optimize-google-fonts',
-        category: 'performance',
+        optimization: "optimize-google-fonts",
+        category: "performance",
       });
     }
 
@@ -9892,8 +10019,8 @@ class NextFontOptimizer {
     if (localFonts.length > 0) {
       this.optimizeLocalFonts(pages, localFonts);
       optimizations.push({
-        optimization: 'optimize-local-fonts',
-        category: 'performance',
+        optimization: "optimize-local-fonts",
+        category: "performance",
       });
     }
 
@@ -9902,20 +10029,20 @@ class NextFontOptimizer {
 
   private optimizeGoogleFonts(pages: NextJSPage[], fonts: string[]): void {
     // _app.js에 next/font/google 추가
-    const appPage = pages.find((p) => p.path === '/_app');
+    const appPage = pages.find((p) => p.path === "/_app");
     if (appPage) {
       const fontImports = fonts
         .map((font) => {
-          const varName = font.replace(/\s+/g, '_').toLowerCase();
+          const varName = font.replace(/\s+/g, "_").toLowerCase();
           return `const ${varName} = ${font}({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-${varName}'
 });`;
         })
-        .join('\n');
+        .join("\n");
 
-      appPage.component = `import { ${fonts.join(', ')} } from 'next/font/google';\n${fontImports}\n${appPage.component}`;
+      appPage.component = `import { ${fonts.join(", ")} } from 'next/font/google';\n${fontImports}\n${appPage.component}`;
     }
   }
 }
@@ -9933,8 +10060,8 @@ class RouteOptimizer {
     const routeGroups = this.suggestRouteGroups(pages);
     if (routeGroups.length > 0) {
       optimizations.push({
-        optimization: 'add-route-groups',
-        category: 'performance',
+        optimization: "add-route-groups",
+        category: "performance",
         details: routeGroups,
       });
     }
@@ -9943,8 +10070,8 @@ class RouteOptimizer {
     const parallelRoutes = this.suggestParallelRoutes(pages);
     if (parallelRoutes.length > 0) {
       optimizations.push({
-        optimization: 'add-parallel-routes',
-        category: 'ux',
+        optimization: "add-parallel-routes",
+        category: "ux",
         details: parallelRoutes,
       });
     }
@@ -9962,10 +10089,10 @@ class RouteOptimizer {
         (match, href, rest) => {
           // 중요한 링크는 prefetch, 덜 중요한 링크는 prefetch={false}
           const shouldPrefetch = this.shouldPrefetchRoute(href);
-          const prefetchAttr = shouldPrefetch ? '' : ' prefetch={false}';
+          const prefetchAttr = shouldPrefetch ? "" : " prefetch={false}";
 
           return `<Link href="${href}"${prefetchAttr}${rest}>`;
-        },
+        }
       );
     }
 
@@ -9982,35 +10109,35 @@ class NextConfigGenerator {
 
       images: {
         domains: this.extractImageDomains(optimizations),
-        formats: ['image/avif', 'image/webp'],
+        formats: ["image/avif", "image/webp"],
         deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
         imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
       },
 
       experimental: {
         optimizeCss: true,
-        optimizePackageImports: ['lodash', 'date-fns', '@mui/material'],
+        optimizePackageImports: ["lodash", "date-fns", "@mui/material"],
       },
 
       compiler: {
-        removeConsole: process.env.NODE_ENV === 'production',
+        removeConsole: process.env.NODE_ENV === "production",
       },
 
       headers: async () => [
         {
-          source: '/:path*',
+          source: "/:path*",
           headers: [
             {
-              key: 'X-DNS-Prefetch-Control',
-              value: 'on',
+              key: "X-DNS-Prefetch-Control",
+              value: "on",
             },
             {
-              key: 'X-XSS-Protection',
-              value: '1; mode=block',
+              key: "X-XSS-Protection",
+              value: "1; mode=block",
             },
             {
-              key: 'X-Frame-Options',
-              value: 'SAMEORIGIN',
+              key: "X-Frame-Options",
+              value: "SAMEORIGIN",
             },
           ],
         },
@@ -10020,25 +10147,28 @@ class NextConfigGenerator {
         // 번들 최적화
         if (!isServer) {
           config.optimization.splitChunks = {
-            chunks: 'all',
+            chunks: "all",
             cacheGroups: {
               default: false,
               vendors: false,
               framework: {
-                name: 'framework',
-                chunks: 'all',
+                name: "framework",
+                chunks: "all",
                 test: /[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types|use-subscription)[\\/]/,
                 priority: 40,
                 enforce: true,
               },
               lib: {
                 test(module) {
-                  return module.size() > 160000 && /node_modules[/\\]/.test(module.identifier());
+                  return (
+                    module.size() > 160000 &&
+                    /node_modules[/\\]/.test(module.identifier())
+                  );
                 },
                 name(module) {
-                  const hash = crypto.createHash('sha1');
+                  const hash = crypto.createHash("sha1");
                   hash.update(module.identifier());
-                  return hash.digest('hex').substring(0, 8);
+                  return hash.digest("hex").substring(0, 8);
                 },
                 priority: 30,
                 minChunks: 1,
@@ -10098,9 +10228,9 @@ class AppRouterOptimizer {
 
     // Dynamic 설정
     if (route.isDynamic) {
-      config.dynamic = 'force-dynamic';
+      config.dynamic = "force-dynamic";
     } else {
-      config.dynamic = 'auto';
+      config.dynamic = "auto";
     }
 
     // Revalidate 설정
@@ -10109,11 +10239,11 @@ class AppRouterOptimizer {
     }
 
     // Runtime 설정
-    config.runtime = route.needsNodeAPIs ? 'nodejs' : 'edge';
+    config.runtime = route.needsNodeAPIs ? "nodejs" : "edge";
 
     return `export const ${Object.entries(config)
       .map(([key, value]) => `${key} = ${JSON.stringify(value)}`)
-      .join(';\nexport const ')};`;
+      .join(";\nexport const ")};`;
   }
 }
 ```
@@ -19082,3 +19212,11931 @@ debug:
    - 디버깅 도구
 
 ---
+
+네, Task 4.69부터 4.80까지의 작업을 시작하겠습니다. 먼저 프로젝트 지식을 검색하여 관련 정보를 확인하겠습니다.## Task 4.69: 접근성 코드 생성
+
+### SubTask 4.69.1: ARIA 속성 적용
+
+```typescript
+// accessibility/aria-attributes-generator.ts
+export class AriaAttributesGenerator {
+  // 컴포넌트 타입별 ARIA 속성 매핑
+  private ariaMapping = {
+    button: {
+      role: "button",
+      attributes: [
+        "aria-pressed",
+        "aria-expanded",
+        "aria-label",
+        "aria-describedby",
+      ],
+    },
+    input: {
+      attributes: [
+        "aria-label",
+        "aria-describedby",
+        "aria-invalid",
+        "aria-required",
+      ],
+    },
+    navigation: {
+      role: "navigation",
+      attributes: ["aria-label", "aria-current"],
+    },
+    modal: {
+      role: "dialog",
+      attributes: ["aria-modal", "aria-labelledby", "aria-describedby"],
+    },
+    alert: {
+      role: "alert",
+      attributes: ["aria-live", "aria-atomic"],
+    },
+    menu: {
+      role: "menu",
+      attributes: ["aria-orientation", "aria-activedescendant"],
+    },
+  };
+
+  // ARIA 속성 자동 추가
+  async addAriaAttributes(component: any): Promise<string> {
+    const componentType = this.detectComponentType(component);
+    const ariaConfig = this.ariaMapping[componentType];
+
+    if (!ariaConfig) {
+      return component.code;
+    }
+
+    let enhancedCode = component.code;
+
+    // Role 추가
+    if (ariaConfig.role) {
+      enhancedCode = this.addRole(enhancedCode, ariaConfig.role);
+    }
+
+    // 필수 속성 추가
+    for (const attribute of ariaConfig.attributes) {
+      enhancedCode = await this.addAriaAttribute(
+        enhancedCode,
+        attribute,
+        component
+      );
+    }
+
+    // 상태 기반 ARIA 속성
+    enhancedCode = this.addStateBasedAria(enhancedCode, componentType);
+
+    return enhancedCode;
+  }
+
+  private addRole(code: string, role: string): string {
+    if (!code.includes("role=")) {
+      return code.replace(/<(\w+)([^>]*)>/, `<$1$2 role="${role}">`);
+    }
+    return code;
+  }
+
+  private async addAriaAttribute(
+    code: string,
+    attribute: string,
+    component: any
+  ): Promise<string> {
+    switch (attribute) {
+      case "aria-label":
+        return this.addAriaLabel(code, component);
+      case "aria-describedby":
+        return this.addAriaDescribedBy(code, component);
+      case "aria-invalid":
+        return this.addAriaInvalid(code);
+      case "aria-required":
+        return this.addAriaRequired(code);
+      case "aria-live":
+        return this.addAriaLive(code, component);
+      default:
+        return code;
+    }
+  }
+
+  private addAriaLabel(code: string, component: any): string {
+    if (!code.includes("aria-label=") && !component.hasVisibleText) {
+      const label = this.generateAccessibleLabel(component);
+      return code.replace(/<(\w+)([^>]*)>/, `<$1$2 aria-label="${label}">`);
+    }
+    return code;
+  }
+
+  private addAriaDescribedBy(code: string, component: any): string {
+    if (component.hasHelperText || component.hasError) {
+      const id = `${component.id}-description`;
+      return code.replace(/<(\w+)([^>]*)>/, `<$1$2 aria-describedby="${id}">`);
+    }
+    return code;
+  }
+
+  private addAriaInvalid(code: string): string {
+    // React example
+    if (code.includes("error") || code.includes("invalid")) {
+      return code.replace(
+        /<input([^>]*)>/,
+        '<input$1 aria-invalid={hasError ? "true" : "false"}>'
+      );
+    }
+    return code;
+  }
+
+  private addAriaRequired(code: string): string {
+    if (code.includes("required")) {
+      return code.replace(
+        /<input([^>]*)required([^>]*)>/,
+        '<input$1required$2 aria-required="true">'
+      );
+    }
+    return code;
+  }
+
+  private addAriaLive(code: string, component: any): string {
+    const liveRegion = component.priority === "high" ? "assertive" : "polite";
+    return code.replace(
+      /<(\w+)([^>]*)>/,
+      `<$1$2 aria-live="${liveRegion}" aria-atomic="true">`
+    );
+  }
+
+  private addStateBasedAria(code: string, componentType: string): string {
+    let enhanced = code;
+
+    if (componentType === "button") {
+      // 토글 버튼
+      if (code.includes("toggle") || code.includes("expand")) {
+        enhanced = enhanced.replace(
+          /<button([^>]*)>/,
+          "<button$1 aria-pressed={isPressed} aria-expanded={isExpanded}>"
+        );
+      }
+    }
+
+    if (componentType === "menu") {
+      // 메뉴 아이템 활성 상태
+      enhanced = enhanced.replace(
+        /<li([^>]*)>/g,
+        '<li$1 aria-current={isActive ? "page" : undefined}>'
+      );
+    }
+
+    return enhanced;
+  }
+
+  private detectComponentType(component: any): string {
+    const { name, type, hasInteraction } = component;
+
+    if (name.toLowerCase().includes("button") || hasInteraction) {
+      return "button";
+    }
+    if (
+      name.toLowerCase().includes("input") ||
+      name.toLowerCase().includes("field")
+    ) {
+      return "input";
+    }
+    if (name.toLowerCase().includes("nav")) {
+      return "navigation";
+    }
+    if (
+      name.toLowerCase().includes("modal") ||
+      name.toLowerCase().includes("dialog")
+    ) {
+      return "modal";
+    }
+    if (
+      name.toLowerCase().includes("alert") ||
+      name.toLowerCase().includes("notification")
+    ) {
+      return "alert";
+    }
+    if (name.toLowerCase().includes("menu")) {
+      return "menu";
+    }
+
+    return "generic";
+  }
+
+  private generateAccessibleLabel(component: any): string {
+    // 컴포넌트 컨텍스트를 기반으로 적절한 레이블 생성
+    return component.name.replace(/([A-Z])/g, " $1").trim();
+  }
+}
+```
+
+### SubTask 4.69.2: 키보드 네비게이션
+
+```typescript
+// accessibility/keyboard-navigation-generator.ts
+export class KeyboardNavigationGenerator {
+  // 키보드 네비게이션 패턴
+  private navigationPatterns = {
+    list: {
+      keys: ["ArrowUp", "ArrowDown", "Home", "End"],
+      handler: "handleListNavigation",
+    },
+    grid: {
+      keys: ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"],
+      handler: "handleGridNavigation",
+    },
+    tabs: {
+      keys: ["ArrowLeft", "ArrowRight", "Home", "End"],
+      handler: "handleTabNavigation",
+    },
+    menu: {
+      keys: ["ArrowUp", "ArrowDown", "Enter", "Escape"],
+      handler: "handleMenuNavigation",
+    },
+    modal: {
+      keys: ["Escape", "Tab"],
+      handler: "handleModalNavigation",
+    },
+  };
+
+  async addKeyboardNavigation(component: any): Promise<string> {
+    const pattern = this.detectNavigationPattern(component);
+    if (!pattern) return component.code;
+
+    const enhancedCode = this.injectKeyboardHandlers(
+      component.code,
+      pattern,
+      component.framework
+    );
+
+    return enhancedCode;
+  }
+
+  private injectKeyboardHandlers(
+    code: string,
+    pattern: any,
+    framework: string
+  ): string {
+    switch (framework) {
+      case "react":
+        return this.injectReactKeyboardHandlers(code, pattern);
+      case "vue":
+        return this.injectVueKeyboardHandlers(code, pattern);
+      case "angular":
+        return this.injectAngularKeyboardHandlers(code, pattern);
+      default:
+        return this.injectVanillaKeyboardHandlers(code, pattern);
+    }
+  }
+
+  private injectReactKeyboardHandlers(code: string, pattern: any): string {
+    const handlers = `
+  // Keyboard navigation handler
+  const ${pattern.handler} = useCallback((event: KeyboardEvent) => {
+    const { key } = event;
+    
+    switch (key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        focusNext();
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        focusPrevious();
+        break;
+      case 'Home':
+        event.preventDefault();
+        focusFirst();
+        break;
+      case 'End':
+        event.preventDefault();
+        focusLast();
+        break;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        selectCurrent();
+        break;
+      case 'Escape':
+        event.preventDefault();
+        handleEscape();
+        break;
+    }
+  }, [focusNext, focusPrevious, focusFirst, focusLast, selectCurrent]);
+
+  // Focus management utilities
+  const focusNext = () => {
+    const focusableElements = getFocusableElements();
+    const currentIndex = focusableElements.indexOf(document.activeElement);
+    const nextIndex = (currentIndex + 1) % focusableElements.length;
+    focusableElements[nextIndex]?.focus();
+  };
+
+  const focusPrevious = () => {
+    const focusableElements = getFocusableElements();
+    const currentIndex = focusableElements.indexOf(document.activeElement);
+    const prevIndex = currentIndex === 0 ? focusableElements.length - 1 : currentIndex - 1;
+    focusableElements[prevIndex]?.focus();
+  };
+
+  const focusFirst = () => {
+    const focusableElements = getFocusableElements();
+    focusableElements[0]?.focus();
+  };
+
+  const focusLast = () => {
+    const focusableElements = getFocusableElements();
+    focusableElements[focusableElements.length - 1]?.focus();
+  };
+
+  const getFocusableElements = (): HTMLElement[] => {
+    const container = containerRef.current;
+    if (!container) return [];
+    
+    return Array.from(
+      container.querySelectorAll(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    );
+  };
+
+  // Add keyboard event listener
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('keydown', ${pattern.handler});
+    
+    return () => {
+      container.removeEventListener('keydown', ${pattern.handler});
+    };
+  }, [${pattern.handler}]);
+`;
+
+    // Insert handlers into component
+    const insertPosition = code.indexOf("return (");
+    if (insertPosition !== -1) {
+      return (
+        code.slice(0, insertPosition) +
+        handlers +
+        "\n\n  " +
+        code.slice(insertPosition)
+      );
+    }
+
+    return code;
+  }
+
+  private injectVueKeyboardHandlers(code: string, pattern: any): string {
+    const handlers = `
+  methods: {
+    ${pattern.handler}(event) {
+      const { key } = event;
+      
+      switch (key) {
+        case 'ArrowDown':
+          event.preventDefault();
+          this.focusNext();
+          break;
+        case 'ArrowUp':
+          event.preventDefault();
+          this.focusPrevious();
+          break;
+        case 'Home':
+          event.preventDefault();
+          this.focusFirst();
+          break;
+        case 'End':
+          event.preventDefault();
+          this.focusLast();
+          break;
+        case 'Enter':
+        case ' ':
+          event.preventDefault();
+          this.selectCurrent();
+          break;
+        case 'Escape':
+          event.preventDefault();
+          this.handleEscape();
+          break;
+      }
+    },
+
+    focusNext() {
+      const focusableElements = this.getFocusableElements();
+      const currentIndex = focusableElements.indexOf(document.activeElement);
+      const nextIndex = (currentIndex + 1) % focusableElements.length;
+      focusableElements[nextIndex]?.focus();
+    },
+
+    focusPrevious() {
+      const focusableElements = this.getFocusableElements();
+      const currentIndex = focusableElements.indexOf(document.activeElement);
+      const prevIndex = currentIndex === 0 ? focusableElements.length - 1 : currentIndex - 1;
+      focusableElements[prevIndex]?.focus();
+    },
+
+    getFocusableElements() {
+      const container = this.$refs.container;
+      if (!container) return [];
+      
+      return Array.from(
+        container.querySelectorAll(
+          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+    }
+  },
+
+  mounted() {
+    this.$refs.container?.addEventListener('keydown', this.${pattern.handler});
+  },
+
+  beforeUnmount() {
+    this.$refs.container?.removeEventListener('keydown', this.${pattern.handler});
+  }
+`;
+
+    return code.replace(/export default {/, `export default {\n${handlers},\n`);
+  }
+
+  private detectNavigationPattern(component: any): any {
+    const { type, structure } = component;
+
+    if (structure.includes("list") || structure.includes("menu")) {
+      return this.navigationPatterns.list;
+    }
+    if (structure.includes("grid") || structure.includes("table")) {
+      return this.navigationPatterns.grid;
+    }
+    if (structure.includes("tabs")) {
+      return this.navigationPatterns.tabs;
+    }
+    if (type === "modal" || type === "dialog") {
+      return this.navigationPatterns.modal;
+    }
+
+    return null;
+  }
+
+  // Focus trap for modals
+  generateFocusTrap(): string {
+    return `
+class FocusTrap {
+  constructor(element) {
+    this.element = element;
+    this.focusableElements = null;
+    this.firstFocusableElement = null;
+    this.lastFocusableElement = null;
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+  }
+
+  activate() {
+    this.updateFocusableElements();
+    this.element.addEventListener('keydown', this.handleKeyDown);
+    
+    // Save current focus
+    this.previouslyFocusedElement = document.activeElement;
+    
+    // Focus first element
+    if (this.firstFocusableElement) {
+      this.firstFocusableElement.focus();
+    }
+  }
+
+  deactivate() {
+    this.element.removeEventListener('keydown', this.handleKeyDown);
+    
+    // Restore focus
+    if (this.previouslyFocusedElement) {
+      this.previouslyFocusedElement.focus();
+    }
+  }
+
+  handleKeyDown(event) {
+    if (event.key === 'Tab') {
+      if (event.shiftKey) {
+        // Shift + Tab
+        if (document.activeElement === this.firstFocusableElement) {
+          event.preventDefault();
+          this.lastFocusableElement.focus();
+        }
+      } else {
+        // Tab
+        if (document.activeElement === this.lastFocusableElement) {
+          event.preventDefault();
+          this.firstFocusableElement.focus();
+        }
+      }
+    }
+  }
+
+  updateFocusableElements() {
+    this.focusableElements = this.element.querySelectorAll(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    
+    this.firstFocusableElement = this.focusableElements[0];
+    this.lastFocusableElement = this.focusableElements[this.focusableElements.length - 1];
+  }
+}
+`;
+  }
+}
+```
+
+### SubTask 4.69.3: 스크린 리더 지원
+
+```typescript
+// accessibility/screen-reader-support.ts
+export class ScreenReaderSupport {
+  // 스크린 리더 지원을 위한 유틸리티
+  generateScreenReaderUtilities(): string {
+    return `
+// Screen reader announcements
+export class ScreenReaderAnnouncer {
+  private liveRegion: HTMLElement;
+
+  constructor() {
+    this.createLiveRegion();
+  }
+
+  private createLiveRegion() {
+    this.liveRegion = document.createElement('div');
+    this.liveRegion.setAttribute('role', 'status');
+    this.liveRegion.setAttribute('aria-live', 'polite');
+    this.liveRegion.setAttribute('aria-atomic', 'true');
+    this.liveRegion.className = 'sr-only';
+    document.body.appendChild(this.liveRegion);
+  }
+
+  announce(message: string, priority: 'polite' | 'assertive' = 'polite') {
+    this.liveRegion.setAttribute('aria-live', priority);
+    this.liveRegion.textContent = message;
+    
+    // Clear after announcement
+    setTimeout(() => {
+      this.liveRegion.textContent = '';
+    }, 1000);
+  }
+
+  announceError(error: string) {
+    this.announce(error, 'assertive');
+  }
+}
+
+// Screen reader only CSS class
+export const srOnly = \`
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .sr-only-focusable:active,
+  .sr-only-focusable:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: inherit;
+    margin: inherit;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+\`;
+
+// Skip navigation links
+export const SkipLinks = () => (
+  <div className="skip-links">
+    <a href="#main-content" className="sr-only-focusable">
+      Skip to main content
+    </a>
+    <a href="#main-navigation" className="sr-only-focusable">
+      Skip to navigation
+    </a>
+    <a href="#footer" className="sr-only-focusable">
+      Skip to footer
+    </a>
+  </div>
+);
+
+// Accessible loading states
+export const AccessibleLoader = ({ loading, children }) => {
+  const [announced, setAnnounced] = useState(false);
+  const announcer = useScreenReaderAnnouncer();
+
+  useEffect(() => {
+    if (loading && !announced) {
+      announcer.announce('Loading, please wait...');
+      setAnnounced(true);
+    } else if (!loading && announced) {
+      announcer.announce('Content loaded');
+      setAnnounced(false);
+    }
+  }, [loading, announced, announcer]);
+
+  if (loading) {
+    return (
+      <div role="status" aria-busy="true">
+        <span className="sr-only">Loading...</span>
+        <Spinner aria-hidden="true" />
+      </div>
+    );
+  }
+
+  return children;
+};
+
+// Form validation announcements
+export const useFormValidation = () => {
+  const announcer = useScreenReaderAnnouncer();
+
+  const announceError = (fieldName: string, error: string) => {
+    announcer.announceError(\`\${fieldName} error: \${error}\`);
+  };
+
+  const announceSuccess = (message: string) => {
+    announcer.announce(message);
+  };
+
+  return { announceError, announceSuccess };
+};
+
+// Table accessibility
+export const AccessibleTable = ({ data, columns }) => {
+  return (
+    <table role="table" aria-label="Data table">
+      <caption className="sr-only">
+        Table with {data.length} rows and {columns.length} columns
+      </caption>
+      <thead>
+        <tr role="row">
+          {columns.map((column, index) => (
+            <th 
+              key={index} 
+              role="columnheader"
+              scope="col"
+              aria-sort={column.sortable ? column.sortDirection : undefined}
+            >
+              {column.header}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((row, rowIndex) => (
+          <tr key={rowIndex} role="row">
+            {columns.map((column, colIndex) => (
+              <td 
+                key={colIndex} 
+                role="cell"
+                headers={\`col-\${colIndex}\`}
+              >
+                {row[column.field]}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+
+// Accessible notifications
+export class AccessibleNotificationSystem {
+  private container: HTMLElement;
+
+  constructor() {
+    this.createContainer();
+  }
+
+  private createContainer() {
+    this.container = document.createElement('div');
+    this.container.setAttribute('role', 'region');
+    this.container.setAttribute('aria-label', 'Notifications');
+    this.container.className = 'notification-container';
+    document.body.appendChild(this.container);
+  }
+
+  notify(message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') {
+    const notification = document.createElement('div');
+    notification.setAttribute('role', 'alert');
+    notification.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+    notification.className = \`notification notification-\${type}\`;
+    notification.textContent = message;
+
+    this.container.appendChild(notification);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      notification.remove();
+    }, 5000);
+  }
+}
+`;
+  }
+
+  // 컴포넌트별 스크린 리더 지원 코드 생성
+  enhanceForScreenReader(component: any): string {
+    const enhancements = [];
+
+    // 동적 콘텐츠 업데이트 알림
+    if (component.hasDynamicContent) {
+      enhancements.push(this.addLiveRegion(component));
+    }
+
+    // 폼 필드 설명
+    if (component.type === "form") {
+      enhancements.push(this.addFormDescriptions(component));
+    }
+
+    // 상태 변경 알림
+    if (component.hasStateChanges) {
+      enhancements.push(this.addStateAnnouncements(component));
+    }
+
+    // 오류 메시지 알림
+    if (component.hasErrors) {
+      enhancements.push(this.addErrorAnnouncements(component));
+    }
+
+    return enhancements.join("\n\n");
+  }
+
+  private addLiveRegion(component: any): string {
+    return `
+  // Live region for dynamic content updates
+  <div 
+    role="status" 
+    aria-live="polite" 
+    aria-atomic="true"
+    className="sr-only"
+  >
+    {dynamicContent && \`Updated: \${dynamicContent}\`}
+  </div>
+`;
+  }
+
+  private addFormDescriptions(component: any): string {
+    return `
+  // Form field with screen reader support
+  <div className="form-field">
+    <label htmlFor="${component.id}" id="${component.id}-label">
+      ${component.label}
+      {required && <span aria-label="required">*</span>}
+    </label>
+    <input
+      id="${component.id}"
+      type="${component.inputType}"
+      aria-labelledby="${component.id}-label"
+      aria-describedby="${component.id}-description ${component.id}-error"
+      aria-required={required}
+      aria-invalid={hasError}
+    />
+    <span id="${component.id}-description" className="sr-only">
+      ${component.description}
+    </span>
+    {hasError && (
+      <span id="${component.id}-error" role="alert" aria-live="assertive">
+        {errorMessage}
+      </span>
+    )}
+  </div>
+`;
+  }
+
+  private addStateAnnouncements(component: any): string {
+    return `
+  // State change announcements
+  useEffect(() => {
+    if (previousState !== currentState) {
+      announcer.announce(\`Status changed to \${currentState}\`);
+    }
+  }, [currentState, previousState, announcer]);
+`;
+  }
+
+  private addErrorAnnouncements(component: any): string {
+    return `
+  // Error announcements
+  useEffect(() => {
+    if (errors.length > 0) {
+      const errorCount = errors.length;
+      const errorMessage = errorCount === 1 
+        ? '1 error found' 
+        : \`\${errorCount} errors found\`;
+      announcer.announceError(errorMessage);
+    }
+  }, [errors, announcer]);
+`;
+  }
+}
+```
+
+### SubTask 4.69.4: 접근성 검증
+
+```typescript
+// accessibility/accessibility-validator.ts
+export class AccessibilityValidator {
+  private wcagCriteria = {
+    A: [
+      "1.1.1", // Non-text Content
+      "1.3.1", // Info and Relationships
+      "2.1.1", // Keyboard
+      "2.4.1", // Bypass Blocks
+      "3.3.2", // Labels or Instructions
+      "4.1.2", // Name, Role, Value
+    ],
+    AA: [
+      "1.4.3", // Contrast (Minimum)
+      "2.4.7", // Focus Visible
+      "3.1.1", // Language of Page
+    ],
+    AAA: [
+      "1.4.6", // Contrast (Enhanced)
+      "2.2.3", // No Timing
+    ],
+  };
+
+  async validateAccessibility(
+    component: any,
+    level: "A" | "AA" | "AAA" = "AA"
+  ): Promise<AccessibilityReport> {
+    const issues: AccessibilityIssue[] = [];
+
+    // 1. ARIA 속성 검증
+    issues.push(...(await this.validateAriaAttributes(component)));
+
+    // 2. 키보드 접근성 검증
+    issues.push(...(await this.validateKeyboardAccess(component)));
+
+    // 3. 색상 대비 검증
+    issues.push(...(await this.validateColorContrast(component)));
+
+    // 4. 포커스 표시 검증
+    issues.push(...(await this.validateFocusIndicators(component)));
+
+    // 5. 레이블 및 설명 검증
+    issues.push(...(await this.validateLabels(component)));
+
+    // 6. 시맨틱 마크업 검증
+    issues.push(...(await this.validateSemanticMarkup(component)));
+
+    return {
+      component: component.name,
+      level,
+      issues,
+      score: this.calculateAccessibilityScore(issues),
+      passed: issues.filter((i) => i.severity !== "error").length === 0,
+    };
+  }
+
+  private async validateAriaAttributes(
+    component: any
+  ): Promise<AccessibilityIssue[]> {
+    const issues: AccessibilityIssue[] = [];
+    const elements = this.extractElements(component.code);
+
+    for (const element of elements) {
+      // 필수 ARIA 속성 확인
+      if (element.role && !this.hasRequiredAriaAttributes(element)) {
+        issues.push({
+          type: "missing-aria-attribute",
+          severity: "error",
+          element: element.tag,
+          message: `Missing required ARIA attributes for role="${element.role}"`,
+          wcagCriterion: "4.1.2",
+          fix: this.suggestAriaFix(element),
+        });
+      }
+
+      // 잘못된 ARIA 사용 확인
+      if (this.hasInvalidAriaUsage(element)) {
+        issues.push({
+          type: "invalid-aria-usage",
+          severity: "error",
+          element: element.tag,
+          message: "Invalid ARIA attribute usage",
+          wcagCriterion: "4.1.2",
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  private async validateKeyboardAccess(
+    component: any
+  ): Promise<AccessibilityIssue[]> {
+    const issues: AccessibilityIssue[] = [];
+    const interactiveElements = this.findInteractiveElements(component.code);
+
+    for (const element of interactiveElements) {
+      // 키보드 접근 가능 여부 확인
+      if (!this.isKeyboardAccessible(element)) {
+        issues.push({
+          type: "keyboard-inaccessible",
+          severity: "error",
+          element: element.tag,
+          message: "Element is not keyboard accessible",
+          wcagCriterion: "2.1.1",
+          fix: this.suggestKeyboardFix(element),
+        });
+      }
+
+      // 포커스 순서 확인
+      if (element.tabindex && element.tabindex > 0) {
+        issues.push({
+          type: "positive-tabindex",
+          severity: "warning",
+          element: element.tag,
+          message: "Avoid using positive tabindex values",
+          wcagCriterion: "2.4.3",
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  private async validateColorContrast(
+    component: any
+  ): Promise<AccessibilityIssue[]> {
+    const issues: AccessibilityIssue[] = [];
+    const textElements = this.findTextElements(component.code);
+
+    for (const element of textElements) {
+      const contrast = await this.calculateContrast(
+        element.color,
+        element.backgroundColor
+      );
+
+      const requiredContrast = element.fontSize >= 18 ? 3.0 : 4.5;
+
+      if (contrast < requiredContrast) {
+        issues.push({
+          type: "insufficient-contrast",
+          severity: "error",
+          element: element.tag,
+          message: `Contrast ratio ${contrast}:1 is below required ${requiredContrast}:1`,
+          wcagCriterion: "1.4.3",
+          fix: this.suggestColorFix(element, requiredContrast),
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  private async validateFocusIndicators(
+    component: any
+  ): Promise<AccessibilityIssue[]> {
+    const issues: AccessibilityIssue[] = [];
+    const focusableElements = this.findFocusableElements(component.code);
+
+    for (const element of focusableElements) {
+      if (!this.hasFocusIndicator(element)) {
+        issues.push({
+          type: "missing-focus-indicator",
+          severity: "error",
+          element: element.tag,
+          message: "Focus indicator is not visible",
+          wcagCriterion: "2.4.7",
+          fix: this.suggestFocusIndicatorFix(element),
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  private async validateLabels(component: any): Promise<AccessibilityIssue[]> {
+    const issues: AccessibilityIssue[] = [];
+    const formElements = this.findFormElements(component.code);
+
+    for (const element of formElements) {
+      if (!this.hasAccessibleLabel(element)) {
+        issues.push({
+          type: "missing-label",
+          severity: "error",
+          element: element.tag,
+          message: "Form element missing accessible label",
+          wcagCriterion: "3.3.2",
+          fix: this.suggestLabelFix(element),
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  private async validateSemanticMarkup(
+    component: any
+  ): Promise<AccessibilityIssue[]> {
+    const issues: AccessibilityIssue[] = [];
+
+    // 헤딩 계층 구조 확인
+    const headingIssues = this.validateHeadingHierarchy(component.code);
+    issues.push(...headingIssues);
+
+    // 랜드마크 역할 확인
+    const landmarkIssues = this.validateLandmarks(component.code);
+    issues.push(...landmarkIssues);
+
+    // 리스트 구조 확인
+    const listIssues = this.validateListStructure(component.code);
+    issues.push(...listIssues);
+
+    return issues;
+  }
+
+  private calculateAccessibilityScore(issues: AccessibilityIssue[]): number {
+    const weights = {
+      error: 10,
+      warning: 5,
+      info: 1,
+    };
+
+    const totalWeight = issues.reduce((sum, issue) => {
+      return sum + weights[issue.severity];
+    }, 0);
+
+    // 100점 만점에서 감점
+    return Math.max(0, 100 - totalWeight);
+  }
+
+  // 자동 수정 제안 생성
+  generateAutomatedFixes(report: AccessibilityReport): string {
+    const fixes = [];
+
+    for (const issue of report.issues) {
+      if (issue.fix) {
+        fixes.push(`
+// Fix for ${issue.type} in ${issue.element}
+// WCAG ${issue.wcagCriterion}: ${issue.message}
+${issue.fix}
+`);
+      }
+    }
+
+    return fixes.join("\n\n");
+  }
+
+  // 접근성 테스트 코드 생성
+  generateAccessibilityTests(component: any): string {
+    return `
+import { render, screen } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
+import userEvent from '@testing-library/user-event';
+
+expect.extend(toHaveNoViolations);
+
+describe('${component.name} Accessibility Tests', () => {
+  test('should not have any accessibility violations', async () => {
+    const { container } = render(<${component.name} />);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  test('should be keyboard navigable', async () => {
+    const user = userEvent.setup();
+    render(<${component.name} />);
+    
+    // Tab through all interactive elements
+    const interactiveElements = screen.getAllByRole('button');
+    
+    for (const element of interactiveElements) {
+      await user.tab();
+      expect(element).toHaveFocus();
+    }
+  });
+
+  test('should announce changes to screen readers', () => {
+    render(<${component.name} />);
+    
+    const liveRegion = screen.getByRole('status');
+    expect(liveRegion).toBeInTheDocument();
+    expect(liveRegion).toHaveAttribute('aria-live', 'polite');
+  });
+
+  test('should have proper ARIA labels', () => {
+    render(<${component.name} />);
+    
+    const mainButton = screen.getByRole('button', { name: /save/i });
+    expect(mainButton).toHaveAttribute('aria-label');
+  });
+
+  test('should maintain focus trap in modal', async () => {
+    const user = userEvent.setup();
+    render(<${component.name} isOpen />);
+    
+    const firstFocusable = screen.getByRole('button', { name: /close/i });
+    const lastFocusable = screen.getByRole('button', { name: /submit/i });
+    
+    // Focus should wrap from last to first
+    lastFocusable.focus();
+    await user.tab();
+    expect(firstFocusable).toHaveFocus();
+    
+    // Focus should wrap from first to last with Shift+Tab
+    await user.tab({ shift: true });
+    expect(lastFocusable).toHaveFocus();
+  });
+});
+`;
+  }
+}
+```
+
+## Task 4.70: 배포 스크립트 생성
+
+### SubTask 4.70.1: CI/CD 파이프라인 생성
+
+```yaml
+# .github/workflows/main-pipeline.yml
+name: Main CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 코드 품질 검사
+  quality-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run type checking
+        run: npm run type-check
+
+      - name: Check code formatting
+        run: npm run format:check
+
+  # 테스트 실행
+  test:
+    runs-on: ubuntu-latest
+    needs: quality-check
+    strategy:
+      matrix:
+        test-suite: [unit, integration, e2e]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-env
+        with:
+          test-suite: ${{ matrix.test-suite }}
+
+      - name: Run ${{ matrix.test-suite }} tests
+        run: npm run test:${{ matrix.test-suite }}
+        env:
+          CI: true
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: ${{ matrix.test-suite }}
+
+  # 보안 스캔
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: quality-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run dependency audit
+        run: npm audit --production
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Run SAST scan
+        uses: AppThreat/sast-scan-action@master
+        with:
+          type: "nodejs,typescript"
+
+  # 빌드 및 도커 이미지 생성
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      image: ${{ steps.image.outputs.image }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate version
+        id: version
+        run: |
+          VERSION=$(date +%Y%m%d.%H%M%S)-${GITHUB_SHA::8}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          format: cyclonedx-json
+
+  # 배포
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup deployment tools
+        uses: ./.github/actions/setup-deploy
+        with:
+          environment: ${{ github.event.inputs.environment || 'staging' }}
+
+      - name: Deploy to Kubernetes
+        run: |
+          helm upgrade --install app ./charts/app \
+            --namespace ${{ github.event.inputs.environment || 'staging' }} \
+            --set image.tag=${{ needs.build.outputs.version }} \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --wait \
+            --timeout 10m
+
+      - name: Run smoke tests
+        run: |
+          npm run test:smoke -- \
+            --environment ${{ github.event.inputs.environment || 'staging' }}
+
+      - name: Update deployment status
+        uses: ./.github/actions/deployment-status
+        with:
+          environment: ${{ github.event.inputs.environment || 'staging' }}
+          version: ${{ needs.build.outputs.version }}
+          status: success
+```
+
+### SubTask 4.70.2: Docker 설정 생성
+
+```dockerfile
+# Dockerfile
+# 멀티스테이지 빌드를 사용한 최적화된 Docker 이미지
+
+# Stage 1: Dependencies
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# 의존성 파일 복사
+COPY package.json package-lock.json ./
+COPY packages/*/package.json ./packages/
+
+# 프로덕션 의존성만 설치
+RUN npm ci --only=production
+
+# Stage 2: Builder
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# 모든 의존성 설치 (dev 포함)
+COPY package.json package-lock.json ./
+COPY packages/*/package.json ./packages/
+RUN npm ci
+
+# 소스 코드 복사 및 빌드
+COPY . .
+RUN npm run build
+
+# Stage 3: Runner
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+# 보안을 위한 non-root 사용자 생성
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+
+# 필요한 파일들만 복사
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./
+
+# 환경 변수 설정
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# 헬스체크 추가
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node healthcheck.js
+
+# non-root 사용자로 전환
+USER nodejs
+
+# 포트 노출
+EXPOSE 3000
+
+# 애플리케이션 시작
+CMD ["node", "dist/index.js"]
+```
+
+```yaml
+# docker-compose.yml
+version: "3.8"
+
+services:
+  # 메인 애플리케이션
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILD_DATE=${BUILD_DATE}
+        - VERSION=${VERSION}
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - app-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "1"
+          memory: 1G
+
+  # PostgreSQL 데이터베이스
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Redis 캐시
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Nginx 리버스 프록시
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Prometheus 모니터링
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Grafana 대시보드
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3001:3000"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  app-network:
+    driver: bridge
+```
+
+### SubTask 4.70.3: 환경별 설정
+
+```typescript
+// config/environments/index.ts
+export interface EnvironmentConfig {
+  name: string;
+  apiUrl: string;
+  database: DatabaseConfig;
+  redis: RedisConfig;
+  logging: LoggingConfig;
+  security: SecurityConfig;
+  features: FeatureFlags;
+}
+
+// 개발 환경 설정
+export const development: EnvironmentConfig = {
+  name: "development",
+  apiUrl: "http://localhost:3000",
+  database: {
+    host: "localhost",
+    port: 5432,
+    database: "app_dev",
+    username: "dev_user",
+    password: process.env.DB_PASSWORD || "dev_password",
+    ssl: false,
+    pool: {
+      min: 2,
+      max: 10,
+    },
+  },
+  redis: {
+    host: "localhost",
+    port: 6379,
+    password: process.env.REDIS_PASSWORD,
+    db: 0,
+  },
+  logging: {
+    level: "debug",
+    pretty: true,
+    destination: "stdout",
+  },
+  security: {
+    cors: {
+      origin: ["http://localhost:3001", "http://localhost:5173"],
+      credentials: true,
+    },
+    rateLimit: {
+      windowMs: 15 * 60 * 1000, // 15분
+      max: 1000, // 개발 환경에서는 제한 완화
+    },
+  },
+  features: {
+    debugMode: true,
+    experimentalFeatures: true,
+    maintenanceMode: false,
+  },
+};
+
+// 스테이징 환경 설정
+export const staging: EnvironmentConfig = {
+  name: "staging",
+  apiUrl: "https://staging-api.example.com",
+  database: {
+    host: process.env.DB_HOST || "staging-db.example.com",
+    port: 5432,
+    database: "app_staging",
+    username: process.env.DB_USER || "staging_user",
+    password: process.env.DB_PASSWORD!,
+    ssl: true,
+    pool: {
+      min: 5,
+      max: 20,
+    },
+  },
+  redis: {
+    host: process.env.REDIS_HOST || "staging-redis.example.com",
+    port: 6379,
+    password: process.env.REDIS_PASSWORD!,
+    db: 0,
+    tls: true,
+  },
+  logging: {
+    level: "info",
+    pretty: false,
+    destination: "cloudwatch",
+    cloudwatch: {
+      region: "us-east-1",
+      logGroup: "/aws/ecs/app-staging",
+    },
+  },
+  security: {
+    cors: {
+      origin: ["https://staging.example.com"],
+      credentials: true,
+    },
+    rateLimit: {
+      windowMs: 15 * 60 * 1000,
+      max: 100,
+    },
+    helmet: {
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https:"],
+        },
+      },
+    },
+  },
+  features: {
+    debugMode: false,
+    experimentalFeatures: true,
+    maintenanceMode: false,
+  },
+};
+
+// 프로덕션 환경 설정
+export const production: EnvironmentConfig = {
+  name: "production",
+  apiUrl: "https://api.example.com",
+  database: {
+    host: process.env.DB_HOST!,
+    port: 5432,
+    database: "app_prod",
+    username: process.env.DB_USER!,
+    password: process.env.DB_PASSWORD!,
+    ssl: true,
+    pool: {
+      min: 10,
+      max: 50,
+    },
+    replication: {
+      master: {
+        host: process.env.DB_MASTER_HOST!,
+      },
+      slaves: [
+        { host: process.env.DB_SLAVE1_HOST! },
+        { host: process.env.DB_SLAVE2_HOST! },
+      ],
+    },
+  },
+  redis: {
+    cluster: true,
+    nodes: [
+      { host: process.env.REDIS_NODE1!, port: 6379 },
+      { host: process.env.REDIS_NODE2!, port: 6379 },
+      { host: process.env.REDIS_NODE3!, port: 6379 },
+    ],
+    password: process.env.REDIS_PASSWORD!,
+    tls: true,
+  },
+  logging: {
+    level: "warn",
+    pretty: false,
+    destination: "cloudwatch",
+    cloudwatch: {
+      region: process.env.AWS_REGION || "us-east-1",
+      logGroup: "/aws/ecs/app-production",
+    },
+  },
+  security: {
+    cors: {
+      origin: ["https://app.example.com", "https://www.example.com"],
+      credentials: true,
+    },
+    rateLimit: {
+      windowMs: 15 * 60 * 1000,
+      max: 50,
+      keyGenerator: (req) => req.user?.id || req.ip,
+    },
+    helmet: {
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'none'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          frameSrc: ["'none'"],
+        },
+      },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+    },
+  },
+  features: {
+    debugMode: false,
+    experimentalFeatures: false,
+    maintenanceMode: false,
+  },
+};
+
+// 환경 설정 로더
+export class ConfigLoader {
+  private static instance: ConfigLoader;
+  private config: EnvironmentConfig;
+
+  private constructor() {
+    const env = process.env.NODE_ENV || "development";
+    this.config = this.loadConfig(env);
+    this.validateConfig();
+  }
+
+  static getInstance(): ConfigLoader {
+    if (!ConfigLoader.instance) {
+      ConfigLoader.instance = new ConfigLoader();
+    }
+    return ConfigLoader.instance;
+  }
+
+  private loadConfig(env: string): EnvironmentConfig {
+    switch (env) {
+      case "development":
+        return development;
+      case "staging":
+        return staging;
+      case "production":
+        return production;
+      default:
+        throw new Error(`Unknown environment: ${env}`);
+    }
+  }
+
+  private validateConfig(): void {
+    // 필수 환경 변수 검증
+    const requiredEnvVars = [
+      "DB_PASSWORD",
+      "REDIS_PASSWORD",
+      "JWT_SECRET",
+      "ENCRYPTION_KEY",
+    ];
+
+    for (const envVar of requiredEnvVars) {
+      if (!process.env[envVar]) {
+        throw new Error(`Missing required environment variable: ${envVar}`);
+      }
+    }
+  }
+
+  getConfig(): EnvironmentConfig {
+    return this.config;
+  }
+}
+```
+
+### SubTask 4.70.4: 모니터링 설정
+
+```yaml
+# monitoring/prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: "production"
+    region: "us-east-1"
+
+# Alertmanager 설정
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# 규칙 파일 로드
+rule_files:
+  - "alerts/*.yml"
+
+# 스크레이프 대상 설정
+scrape_configs:
+  # 애플리케이션 메트릭
+  - job_name: "app"
+    static_configs:
+      - targets: ["app:3000"]
+    metrics_path: "/metrics"
+    scrape_interval: 5s
+
+  # Node Exporter
+  - job_name: "node"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # PostgreSQL Exporter
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  # Redis Exporter
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  # Kubernetes 메트릭
+  - job_name: "kubernetes-apiservers"
+    kubernetes_sd_configs:
+      - role: endpoints
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+      - source_labels:
+          [
+            __meta_kubernetes_namespace,
+            __meta_kubernetes_service_name,
+            __meta_kubernetes_endpoint_port_name,
+          ]
+        action: keep
+        regex: default;kubernetes;https
+
+  # 파드 메트릭
+  - job_name: "kubernetes-pods"
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+```
+
+```yaml
+# monitoring/alerts/app-alerts.yml
+groups:
+  - name: app_alerts
+    interval: 30s
+    rules:
+      # 높은 응답 시간
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, http_request_duration_seconds_bucket) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s (threshold: 0.5s)"
+
+      # 높은 오류율
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} (threshold: 5%)"
+
+      # 메모리 사용량
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 / 1024 > 1.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Process is using {{ $value }}GB of memory"
+
+      # 데이터베이스 연결 풀
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connection_pool_available < 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Only {{ $value }} connections available"
+
+      # Redis 연결 오류
+      - alert: RedisConnectionError
+        expr: redis_connection_errors_total > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis connection errors detected"
+          description: "{{ $value }} Redis connection errors"
+```
+
+```typescript
+// monitoring/grafana-dashboard.ts
+export const appDashboard = {
+  dashboard: {
+    id: null,
+    uid: "app-overview",
+    title: "Application Overview",
+    tags: ["app", "production"],
+    timezone: "browser",
+    panels: [
+      {
+        id: 1,
+        gridPos: { x: 0, y: 0, w: 12, h: 8 },
+        type: "graph",
+        title: "Request Rate",
+        targets: [
+          {
+            expr: "sum(rate(http_requests_total[5m]))",
+            legendFormat: "Requests/sec",
+          },
+        ],
+      },
+      {
+        id: 2,
+        gridPos: { x: 12, y: 0, w: 12, h: 8 },
+        type: "graph",
+        title: "Response Time (p95)",
+        targets: [
+          {
+            expr: "histogram_quantile(0.95, http_request_duration_seconds_bucket)",
+            legendFormat: "95th percentile",
+          },
+        ],
+      },
+      {
+        id: 3,
+        gridPos: { x: 0, y: 8, w: 12, h: 8 },
+        type: "graph",
+        title: "Error Rate",
+        targets: [
+          {
+            expr: 'sum(rate(http_requests_total{status=~"5.."}[5m]))',
+            legendFormat: "Errors/sec",
+          },
+        ],
+      },
+      {
+        id: 4,
+        gridPos: { x: 12, y: 8, w: 12, h: 8 },
+        type: "graph",
+        title: "Active Connections",
+        targets: [
+          {
+            expr: "app_active_connections",
+            legendFormat: "Connections",
+          },
+        ],
+      },
+      {
+        id: 5,
+        gridPos: { x: 0, y: 16, w: 24, h: 8 },
+        type: "table",
+        title: "Top Endpoints by Response Time",
+        targets: [
+          {
+            expr: "topk(10, histogram_quantile(0.95, http_request_duration_seconds_bucket) by (endpoint))",
+            format: "table",
+            instant: true,
+          },
+        ],
+      },
+    ],
+    refresh: "10s",
+    time: {
+      from: "now-1h",
+      to: "now",
+    },
+  },
+};
+```
+
+## Task 4.71: 서비스 컴포지션
+
+### SubTask 4.71.1: 마이크로서비스 조립
+
+```typescript
+// service-composition/microservice-assembler.ts
+export class MicroserviceAssembler {
+  private serviceRegistry: ServiceRegistry;
+  private configManager: ConfigurationManager;
+  private healthChecker: HealthChecker;
+
+  constructor() {
+    this.serviceRegistry = new ServiceRegistry();
+    this.configManager = new ConfigurationManager();
+    this.healthChecker = new HealthChecker();
+  }
+
+  async assembleServices(
+    serviceDefinitions: ServiceDefinition[]
+  ): Promise<AssembledArchitecture> {
+    const architecture = new AssembledArchitecture();
+
+    // 1. 서비스 등록
+    for (const definition of serviceDefinitions) {
+      const service = await this.createService(definition);
+      architecture.addService(service);
+    }
+
+    // 2. 서비스 간 통신 설정
+    await this.setupInterServiceCommunication(architecture);
+
+    // 3. API Gateway 구성
+    const apiGateway = await this.configureAPIGateway(architecture);
+    architecture.setAPIGateway(apiGateway);
+
+    // 4. 서비스 메시 구성
+    const serviceMesh = await this.configureServiceMesh(architecture);
+    architecture.setServiceMesh(serviceMesh);
+
+    // 5. 메시지 브로커 설정
+    const messageBroker = await this.configureMessageBroker(architecture);
+    architecture.setMessageBroker(messageBroker);
+
+    // 6. 상태 검증
+    await this.validateArchitecture(architecture);
+
+    return architecture;
+  }
+
+  private async createService(
+    definition: ServiceDefinition
+  ): Promise<MicroService> {
+    const service = new MicroService({
+      name: definition.name,
+      version: definition.version,
+      endpoints: definition.endpoints,
+      dependencies: definition.dependencies,
+      configuration: await this.configManager.getServiceConfig(definition.name),
+    });
+
+    // 서비스 레지스트리에 등록
+    await this.serviceRegistry.register(service);
+
+    // 헬스 체크 엔드포인트 추가
+    service.addEndpoint({
+      path: "/health",
+      method: "GET",
+      handler: async () => ({
+        status: "healthy",
+        service: service.name,
+        version: service.version,
+        timestamp: new Date().toISOString(),
+      }),
+    });
+
+    return service;
+  }
+
+  private async setupInterServiceCommunication(
+    architecture: AssembledArchitecture
+  ): Promise<void> {
+    const services = architecture.getServices();
+
+    for (const service of services) {
+      // 서비스 디스커버리 클라이언트 주입
+      service.setDiscoveryClient(
+        new ServiceDiscoveryClient(this.serviceRegistry)
+      );
+
+      // 서킷 브레이커 설정
+      service.setCircuitBreaker(
+        new CircuitBreaker({
+          timeout: 3000,
+          errorThreshold: 50,
+          resetTimeout: 30000,
+        })
+      );
+
+      // 재시도 정책 설정
+      service.setRetryPolicy(
+        new RetryPolicy({
+          maxAttempts: 3,
+          backoff: "exponential",
+          initialDelay: 100,
+        })
+      );
+
+      // 트레이싱 설정
+      service.setTracer(
+        new DistributedTracer({
+          serviceName: service.name,
+          samplingRate: 0.1,
+        })
+      );
+    }
+  }
+
+  private async configureAPIGateway(
+    architecture: AssembledArchitecture
+  ): Promise<APIGateway> {
+    const gateway = new APIGateway({
+      port: 8080,
+      services: architecture.getServices().map((s) => ({
+        name: s.name,
+        url: s.getUrl(),
+        prefix: `/${s.name}`,
+      })),
+    });
+
+    // 미들웨어 설정
+    gateway.use(new AuthenticationMiddleware());
+    gateway.use(new RateLimitingMiddleware());
+    gateway.use(new LoggingMiddleware());
+    gateway.use(new CorsMiddleware());
+
+    // 라우팅 규칙 설정
+    for (const service of architecture.getServices()) {
+      gateway.addRoute({
+        path: `/${service.name}/*`,
+        target: service.getUrl(),
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        middleware: [
+          new ServiceAuthMiddleware(service.name),
+          new RequestValidationMiddleware(),
+        ],
+      });
+    }
+
+    return gateway;
+  }
+
+  private async configureServiceMesh(
+    architecture: AssembledArchitecture
+  ): Promise<ServiceMesh> {
+    return new ServiceMesh({
+      type: "istio",
+      configuration: {
+        trafficManagement: {
+          loadBalancing: "round-robin",
+          retries: {
+            attempts: 3,
+            perTryTimeout: "30s",
+          },
+          circuitBreaker: {
+            consecutiveErrors: 5,
+            interval: "30s",
+            baseEjectionTime: "30s",
+          },
+        },
+        security: {
+          mtls: {
+            mode: "STRICT",
+          },
+          authorization: {
+            enabled: true,
+            policies: this.generateAuthorizationPolicies(architecture),
+          },
+        },
+        observability: {
+          metrics: {
+            enabled: true,
+            providers: ["prometheus"],
+          },
+          tracing: {
+            enabled: true,
+            sampling: 0.1,
+          },
+        },
+      },
+    });
+  }
+
+  private async configureMessageBroker(
+    architecture: AssembledArchitecture
+  ): Promise<MessageBroker> {
+    const broker = new MessageBroker({
+      type: "kafka",
+      brokers: ["kafka-1:9092", "kafka-2:9092", "kafka-3:9092"],
+      configuration: {
+        clientId: "app-services",
+        connectionTimeout: 3000,
+        retry: {
+          retries: 5,
+          initialRetryTime: 100,
+        },
+      },
+    });
+
+    // 이벤트 토픽 생성
+    const topics = await this.generateEventTopics(architecture);
+    for (const topic of topics) {
+      await broker.createTopic(topic);
+    }
+
+    // 서비스별 프로듀서/컨슈머 설정
+    for (const service of architecture.getServices()) {
+      const producer = await broker.createProducer({
+        allowAutoTopicCreation: false,
+        transactionalId: `${service.name}-producer`,
+      });
+      service.setEventProducer(producer);
+
+      const consumer = await broker.createConsumer({
+        groupId: `${service.name}-group`,
+        sessionTimeout: 30000,
+        heartbeatInterval: 3000,
+      });
+      service.setEventConsumer(consumer);
+
+      // 이벤트 핸들러 등록
+      await this.registerEventHandlers(service, consumer);
+    }
+
+    return broker;
+  }
+
+  private async validateArchitecture(
+    architecture: AssembledArchitecture
+  ): Promise<void> {
+    const validations = [
+      this.validateServiceConnectivity(architecture),
+      this.validateDependencies(architecture),
+      this.validateSecurityPolicies(architecture),
+      this.validateScalability(architecture),
+    ];
+
+    const results = await Promise.all(validations);
+    const failures = results.filter((r) => !r.passed);
+
+    if (failures.length > 0) {
+      throw new ArchitectureValidationError(
+        "Architecture validation failed",
+        failures
+      );
+    }
+  }
+}
+```
+
+### SubTask 4.71.2: 서비스 메시 구성
+
+```yaml
+# service-mesh/istio-config.yaml
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: production-mesh
+spec:
+  profile: production
+  meshConfig:
+    defaultConfig:
+      proxyStatsMatcher:
+        inclusionRegexps:
+          - ".*outlier_detection.*"
+          - ".*circuit_breakers.*"
+          - ".*upstream_rq_retry.*"
+          - ".*upstream_rq_pending.*"
+          - ".*osconfig.*"
+    extensionProviders:
+      - name: prometheus
+        prometheus:
+          service: prometheus.monitoring.svc.cluster.local
+          port: 9090
+      - name: jaeger
+        jaeger:
+          service: jaeger-collector.tracing.svc.cluster.local
+          port: 9411
+  values:
+    telemetry:
+      v2:
+        prometheus:
+          wasmEnabled: true
+    global:
+      tracer:
+        zipkin:
+          address: jaeger-collector.tracing.svc.cluster.local:9411
+    pilot:
+      autoscaleEnabled: true
+      autoscaleMin: 2
+      autoscaleMax: 5
+      resources:
+        requests:
+          cpu: 500m
+          memory: 2Gi
+        limits:
+          cpu: 1000m
+          memory: 4Gi
+```
+
+```typescript
+// service-mesh/mesh-configuration.ts
+export class ServiceMeshConfiguration {
+  async configureTrafficManagement(services: Service[]): Promise<void> {
+    // 가상 서비스 생성
+    for (const service of services) {
+      await this.createVirtualService({
+        name: `${service.name}-vs`,
+        hosts: [service.name],
+        http: [
+          {
+            match: [{ headers: { "x-version": { exact: "v2" } } }],
+            route: [
+              {
+                destination: {
+                  host: service.name,
+                  subset: "v2",
+                },
+                weight: 100,
+              },
+            ],
+          },
+          {
+            route: [
+              {
+                destination: {
+                  host: service.name,
+                  subset: "v1",
+                },
+                weight: 90,
+              },
+              {
+                destination: {
+                  host: service.name,
+                  subset: "v2",
+                },
+                weight: 10,
+              },
+            ],
+          },
+        ],
+        tcp: [
+          {
+            match: [{ port: 27017 }],
+            route: [
+              {
+                destination: {
+                  host: "mongodb",
+                  port: { number: 27017 },
+                },
+              },
+            ],
+          },
+        ],
+        timeout: "30s",
+        retries: {
+          attempts: 3,
+          perTryTimeout: "10s",
+          retryOn: "gateway-error,connect-failure,refused-stream",
+        },
+      });
+    }
+
+    // 대상 규칙 생성
+    for (const service of services) {
+      await this.createDestinationRule({
+        name: `${service.name}-dr`,
+        host: service.name,
+        trafficPolicy: {
+          connectionPool: {
+            tcp: {
+              maxConnections: 100,
+            },
+            http: {
+              http1MaxPendingRequests: 100,
+              http2MaxRequests: 100,
+              maxRequestsPerConnection: 2,
+            },
+          },
+          loadBalancer: {
+            simple: "LEAST_REQUEST",
+          },
+          outlierDetection: {
+            consecutiveErrors: 5,
+            interval: "30s",
+            baseEjectionTime: "30s",
+            maxEjectionPercent: 50,
+            minHealthPercent: 30,
+          },
+        },
+        subsets: [
+          {
+            name: "v1",
+            labels: { version: "v1" },
+          },
+          {
+            name: "v2",
+            labels: { version: "v2" },
+          },
+        ],
+      });
+    }
+  }
+
+  async configureSecurityPolicies(namespace: string): Promise<void> {
+    // 네임스페이스별 mTLS 정책
+    await this.createPeerAuthentication({
+      name: "default",
+      namespace,
+      spec: {
+        mtls: {
+          mode: "STRICT",
+        },
+      },
+    });
+
+    // 권한 부여 정책
+    await this.createAuthorizationPolicy({
+      name: "allow-internal",
+      namespace,
+      spec: {
+        action: "ALLOW",
+        rules: [
+          {
+            from: [
+              {
+                source: {
+                  namespaces: [namespace],
+                },
+              },
+            ],
+            to: [
+              {
+                operation: {
+                  methods: ["GET", "POST", "PUT", "DELETE"],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    // 외부 트래픽에 대한 정책
+    await this.createAuthorizationPolicy({
+      name: "allow-ingress",
+      namespace,
+      spec: {
+        action: "ALLOW",
+        rules: [
+          {
+            from: [
+              {
+                source: {
+                  principals: [
+                    "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account",
+                  ],
+                },
+              },
+            ],
+            to: [
+              {
+                operation: {
+                  methods: ["GET", "POST"],
+                  paths: ["/api/*"],
+                },
+              },
+            ],
+            when: [
+              {
+                key: "request.headers[authorization]",
+                values: ["Bearer*"],
+              },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  async configureObservability(): Promise<void> {
+    // 텔레메트리 구성
+    await this.createTelemetry({
+      name: "default-metrics",
+      spec: {
+        metrics: [
+          {
+            providers: [{ name: "prometheus" }],
+            dimensions: {
+              request_protocol: 'request.protocol | "unknown"',
+              response_code: "response.code | 200",
+            },
+          },
+        ],
+        tracing: [
+          {
+            providers: [{ name: "jaeger" }],
+            randomSamplingPercentage: 1.0,
+          },
+        ],
+        accessLogging: [
+          {
+            providers: [{ name: "otel" }],
+          },
+        ],
+      },
+    });
+
+    // 커스텀 메트릭
+    await this.createTelemetry({
+      name: "custom-metrics",
+      spec: {
+        metrics: [
+          {
+            providers: [{ name: "prometheus" }],
+            dimensions: {
+              user_id: 'request.headers["x-user-id"] | "anonymous"',
+              api_version: 'request.headers["x-api-version"] | "v1"',
+            },
+            tags_to_remove: ["request_protocol", "response_flags"],
+          },
+        ],
+      },
+    });
+  }
+}
+```
+
+### SubTask 4.71.3: 서비스 디스커버리
+
+```typescript
+// service-discovery/discovery-service.ts
+export class ServiceDiscovery {
+  private registry: Map<string, ServiceInstance[]> = new Map();
+  private watchers: Map<string, Set<ServiceWatcher>> = new Map();
+  private healthChecker: HealthChecker;
+  private cache: DiscoveryCache;
+
+  constructor(config: ServiceDiscoveryConfig) {
+    this.healthChecker = new HealthChecker(config.healthCheck);
+    this.cache = new DiscoveryCache(config.cache);
+    this.startHealthChecking();
+  }
+
+  // 서비스 등록
+  async register(service: ServiceRegistration): Promise<void> {
+    const instance: ServiceInstance = {
+      id: `${service.name}-${uuidv4()}`,
+      name: service.name,
+      address: service.address,
+      port: service.port,
+      metadata: service.metadata || {},
+      tags: service.tags || [],
+      healthCheckUrl:
+        service.healthCheckUrl ||
+        `http://${service.address}:${service.port}/health`,
+      registrationTime: new Date(),
+      status: "healthy",
+    };
+
+    // 레지스트리에 추가
+    const instances = this.registry.get(service.name) || [];
+    instances.push(instance);
+    this.registry.set(service.name, instances);
+
+    // 캐시 무효화
+    this.cache.invalidate(service.name);
+
+    // 워처들에게 알림
+    await this.notifyWatchers(service.name, "registered", instance);
+
+    // 하트비트 시작
+    this.startHeartbeat(instance);
+
+    console.log(`Service registered: ${instance.id}`);
+  }
+
+  // 서비스 해제
+  async deregister(instanceId: string): Promise<void> {
+    for (const [serviceName, instances] of this.registry.entries()) {
+      const index = instances.findIndex((i) => i.id === instanceId);
+      if (index !== -1) {
+        const instance = instances[index];
+        instances.splice(index, 1);
+
+        if (instances.length === 0) {
+          this.registry.delete(serviceName);
+        }
+
+        // 캐시 무효화
+        this.cache.invalidate(serviceName);
+
+        // 워처들에게 알림
+        await this.notifyWatchers(serviceName, "deregistered", instance);
+
+        console.log(`Service deregistered: ${instanceId}`);
+        return;
+      }
+    }
+  }
+
+  // 서비스 인스턴스 조회
+  async discover(serviceName: string): Promise<ServiceInstance[]> {
+    // 캐시 확인
+    const cached = this.cache.get(serviceName);
+    if (cached) {
+      return cached;
+    }
+
+    // 건강한 인스턴스만 반환
+    const instances = this.registry.get(serviceName) || [];
+    const healthyInstances = instances.filter((i) => i.status === "healthy");
+
+    // 캐시에 저장
+    this.cache.set(serviceName, healthyInstances);
+
+    return healthyInstances;
+  }
+
+  // 서비스 감시
+  watch(serviceName: string, watcher: ServiceWatcher): () => void {
+    const watchers = this.watchers.get(serviceName) || new Set();
+    watchers.add(watcher);
+    this.watchers.set(serviceName, watchers);
+
+    // 현재 상태 즉시 알림
+    const instances = this.registry.get(serviceName) || [];
+    watcher.onUpdate(instances);
+
+    // 감시 해제 함수 반환
+    return () => {
+      watchers.delete(watcher);
+      if (watchers.size === 0) {
+        this.watchers.delete(serviceName);
+      }
+    };
+  }
+
+  // 헬스 체크
+  private async startHealthChecking(): Promise<void> {
+    setInterval(async () => {
+      for (const [serviceName, instances] of this.registry.entries()) {
+        for (const instance of instances) {
+          try {
+            const isHealthy = await this.healthChecker.check(
+              instance.healthCheckUrl
+            );
+            const previousStatus = instance.status;
+            instance.status = isHealthy ? "healthy" : "unhealthy";
+            instance.lastHealthCheck = new Date();
+
+            if (previousStatus !== instance.status) {
+              await this.notifyWatchers(
+                serviceName,
+                "status-changed",
+                instance
+              );
+            }
+
+            // 연속 실패 시 제거
+            if (!isHealthy) {
+              instance.failureCount = (instance.failureCount || 0) + 1;
+              if (instance.failureCount >= 3) {
+                await this.deregister(instance.id);
+              }
+            } else {
+              instance.failureCount = 0;
+            }
+          } catch (error) {
+            console.error(`Health check failed for ${instance.id}:`, error);
+            instance.status = "unhealthy";
+            instance.failureCount = (instance.failureCount || 0) + 1;
+          }
+        }
+      }
+    }, 10000); // 10초마다 헬스 체크
+  }
+
+  // 워처들에게 알림
+  private async notifyWatchers(
+    serviceName: string,
+    event: string,
+    instance: ServiceInstance
+  ): Promise<void> {
+    const watchers = this.watchers.get(serviceName) || new Set();
+    const instances = this.registry.get(serviceName) || [];
+
+    for (const watcher of watchers) {
+      try {
+        await watcher.onUpdate(instances, { event, instance });
+      } catch (error) {
+        console.error("Watcher notification failed:", error);
+      }
+    }
+  }
+
+  // 하트비트 처리
+  private startHeartbeat(instance: ServiceInstance): void {
+    const heartbeatInterval = setInterval(() => {
+      instance.lastHeartbeat = new Date();
+
+      // 하트비트 타임아웃 체크
+      const timeout = 60000; // 60초
+      const lastBeat = instance.lastHeartbeat.getTime();
+      const now = Date.now();
+
+      if (now - lastBeat > timeout) {
+        clearInterval(heartbeatInterval);
+        this.deregister(instance.id);
+      }
+    }, 30000); // 30초마다 하트비트
+  }
+}
+
+// 로드 밸런서와 통합
+export class ServiceDiscoveryLoadBalancer {
+  private discovery: ServiceDiscovery;
+  private loadBalancers: Map<string, LoadBalancer> = new Map();
+
+  constructor(discovery: ServiceDiscovery) {
+    this.discovery = discovery;
+  }
+
+  async getEndpoint(
+    serviceName: string,
+    strategy: LoadBalancingStrategy = "round-robin"
+  ): Promise<string> {
+    const instances = await this.discovery.discover(serviceName);
+
+    if (instances.length === 0) {
+      throw new Error(`No healthy instances found for service: ${serviceName}`);
+    }
+
+    // 로드 밸런서 가져오기 또는 생성
+    let loadBalancer = this.loadBalancers.get(serviceName);
+    if (!loadBalancer) {
+      loadBalancer = this.createLoadBalancer(strategy);
+      this.loadBalancers.set(serviceName, loadBalancer);
+
+      // 서비스 변경 감시
+      this.discovery.watch(serviceName, {
+        onUpdate: (newInstances) => {
+          loadBalancer.updateInstances(newInstances);
+        },
+      });
+    }
+
+    // 인스턴스 선택
+    const instance = loadBalancer.selectInstance(instances);
+    return `http://${instance.address}:${instance.port}`;
+  }
+
+  private createLoadBalancer(strategy: LoadBalancingStrategy): LoadBalancer {
+    switch (strategy) {
+      case "round-robin":
+        return new RoundRobinLoadBalancer();
+      case "least-connections":
+        return new LeastConnectionsLoadBalancer();
+      case "weighted":
+        return new WeightedLoadBalancer();
+      case "ip-hash":
+        return new IPHashLoadBalancer();
+      default:
+        return new RandomLoadBalancer();
+    }
+  }
+}
+```
+
+### SubTask 4.71.4: 로드 밸런싱
+
+```typescript
+// load-balancing/load-balancers.ts
+export abstract class LoadBalancer {
+  protected instances: ServiceInstance[] = [];
+  protected healthChecker: HealthChecker;
+
+  constructor() {
+    this.healthChecker = new HealthChecker();
+  }
+
+  abstract selectInstance(instances: ServiceInstance[]): ServiceInstance;
+
+  updateInstances(instances: ServiceInstance[]): void {
+    this.instances = instances.filter((i) => i.status === "healthy");
+  }
+
+  protected getHealthyInstances(): ServiceInstance[] {
+    return this.instances.filter((i) => i.status === "healthy");
+  }
+}
+
+// 라운드 로빈 로드 밸런서
+export class RoundRobinLoadBalancer extends LoadBalancer {
+  private currentIndex = 0;
+
+  selectInstance(instances: ServiceInstance[]): ServiceInstance {
+    const healthyInstances = instances.filter((i) => i.status === "healthy");
+    if (healthyInstances.length === 0) {
+      throw new Error("No healthy instances available");
+    }
+
+    const instance =
+      healthyInstances[this.currentIndex % healthyInstances.length];
+    this.currentIndex++;
+    return instance;
+  }
+}
+
+// 최소 연결 로드 밸런서
+export class LeastConnectionsLoadBalancer extends LoadBalancer {
+  private connections: Map<string, number> = new Map();
+
+  selectInstance(instances: ServiceInstance[]): ServiceInstance {
+    const healthyInstances = instances.filter((i) => i.status === "healthy");
+    if (healthyInstances.length === 0) {
+      throw new Error("No healthy instances available");
+    }
+
+    // 연결 수가 가장 적은 인스턴스 선택
+    let selectedInstance = healthyInstances[0];
+    let minConnections = this.connections.get(selectedInstance.id) || 0;
+
+    for (const instance of healthyInstances) {
+      const connections = this.connections.get(instance.id) || 0;
+      if (connections < minConnections) {
+        selectedInstance = instance;
+        minConnections = connections;
+      }
+    }
+
+    // 연결 수 증가
+    this.connections.set(selectedInstance.id, minConnections + 1);
+
+    return selectedInstance;
+  }
+
+  releaseConnection(instanceId: string): void {
+    const current = this.connections.get(instanceId) || 0;
+    if (current > 0) {
+      this.connections.set(instanceId, current - 1);
+    }
+  }
+}
+
+// 가중치 기반 로드 밸런서
+export class WeightedLoadBalancer extends LoadBalancer {
+  private weightedInstances: Array<{
+    instance: ServiceInstance;
+    weight: number;
+  }> = [];
+  private totalWeight = 0;
+
+  selectInstance(instances: ServiceInstance[]): ServiceInstance {
+    const healthyInstances = instances.filter((i) => i.status === "healthy");
+    if (healthyInstances.length === 0) {
+      throw new Error("No healthy instances available");
+    }
+
+    // 가중치 계산
+    this.calculateWeights(healthyInstances);
+
+    // 가중치 기반 선택
+    const random = Math.random() * this.totalWeight;
+    let accumulator = 0;
+
+    for (const weighted of this.weightedInstances) {
+      accumulator += weighted.weight;
+      if (random <= accumulator) {
+        return weighted.instance;
+      }
+    }
+
+    return this.weightedInstances[0].instance;
+  }
+
+  private calculateWeights(instances: ServiceInstance[]): void {
+    this.weightedInstances = [];
+    this.totalWeight = 0;
+
+    for (const instance of instances) {
+      // CPU, 메모리, 응답 시간 등을 고려한 가중치 계산
+      const cpuWeight = 100 - (instance.metadata.cpuUsage || 50);
+      const memoryWeight = 100 - (instance.metadata.memoryUsage || 50);
+      const responseTimeWeight = Math.max(
+        0,
+        100 - (instance.metadata.avgResponseTime || 0) / 10
+      );
+
+      const weight = (cpuWeight + memoryWeight + responseTimeWeight) / 3;
+
+      this.weightedInstances.push({ instance, weight });
+      this.totalWeight += weight;
+    }
+  }
+}
+
+// IP 해시 로드 밸런서
+export class IPHashLoadBalancer extends LoadBalancer {
+  selectInstance(
+    instances: ServiceInstance[],
+    clientIP: string
+  ): ServiceInstance {
+    const healthyInstances = instances.filter((i) => i.status === "healthy");
+    if (healthyInstances.length === 0) {
+      throw new Error("No healthy instances available");
+    }
+
+    // IP 주소를 해시하여 인스턴스 선택
+    const hash = this.hashIP(clientIP);
+    const index = hash % healthyInstances.length;
+
+    return healthyInstances[index];
+  }
+
+  private hashIP(ip: string): number {
+    let hash = 0;
+    for (let i = 0; i < ip.length; i++) {
+      const char = ip.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+  }
+}
+
+// 적응형 로드 밸런서
+export class AdaptiveLoadBalancer extends LoadBalancer {
+  private performanceTracker: PerformanceTracker;
+  private strategy: LoadBalancer;
+
+  constructor() {
+    super();
+    this.performanceTracker = new PerformanceTracker();
+    this.strategy = new RoundRobinLoadBalancer();
+  }
+
+  selectInstance(instances: ServiceInstance[]): ServiceInstance {
+    // 성능 메트릭에 따라 전략 변경
+    this.adaptStrategy(instances);
+
+    // 선택된 전략으로 인스턴스 선택
+    const instance = this.strategy.selectInstance(instances);
+
+    // 성능 추적
+    this.performanceTracker.recordSelection(instance.id);
+
+    return instance;
+  }
+
+  private adaptStrategy(instances: ServiceInstance[]): void {
+    const metrics = this.performanceTracker.getMetrics();
+
+    // 응답 시간 편차가 크면 최소 연결 전략 사용
+    if (metrics.responseTimeVariance > 100) {
+      this.strategy = new LeastConnectionsLoadBalancer();
+    }
+    // CPU 사용률 편차가 크면 가중치 전략 사용
+    else if (metrics.cpuUsageVariance > 30) {
+      this.strategy = new WeightedLoadBalancer();
+    }
+    // 그 외에는 라운드 로빈 사용
+    else {
+      this.strategy = new RoundRobinLoadBalancer();
+    }
+  }
+}
+```
+
+---
+
+## Task 4.72: API 게이트웨이 설정
+
+### SubTask 4.72.1: 라우팅 규칙 생성
+
+```typescript
+// api-gateway/routing-rules.ts
+export class RoutingRuleGenerator {
+  private serviceRegistry: ServiceRegistry;
+  private routeMatcher: RouteMatcher;
+
+  constructor() {
+    this.serviceRegistry = new ServiceRegistry();
+    this.routeMatcher = new RouteMatcher();
+  }
+
+  async generateRoutingRules(
+    services: MicroService[]
+  ): Promise<RoutingConfiguration> {
+    const routes: Route[] = [];
+    const middlewares: RouteMiddleware[] = [];
+
+    // 서비스별 라우트 생성
+    for (const service of services) {
+      const serviceRoutes = await this.createServiceRoutes(service);
+      routes.push(...serviceRoutes);
+    }
+
+    // 글로벌 라우트 생성
+    const globalRoutes = this.createGlobalRoutes();
+    routes.push(...globalRoutes);
+
+    // 미들웨어 체인 구성
+    const middlewareChain = this.createMiddlewareChain();
+
+    return {
+      routes: this.optimizeRoutes(routes),
+      middlewares: middlewareChain,
+      fallback: this.createFallbackRoute(),
+    };
+  }
+
+  private async createServiceRoutes(service: MicroService): Route[] {
+    const routes: Route[] = [];
+    const basePath = `/api/${service.version}/${service.name}`;
+
+    // 서비스 엔드포인트별 라우트
+    for (const endpoint of service.endpoints) {
+      routes.push({
+        id: `${service.name}-${endpoint.path}`,
+        path: `${basePath}${endpoint.path}`,
+        method: endpoint.method,
+        handler: {
+          type: "proxy",
+          target: {
+            service: service.name,
+            endpoint: endpoint.name,
+          },
+        },
+        middleware: ["authentication", "rateLimit", "validation", "logging"],
+        metadata: {
+          service: service.name,
+          version: service.version,
+          deprecated: endpoint.deprecated || false,
+        },
+        config: {
+          timeout: endpoint.timeout || 30000,
+          retries: endpoint.retries || 3,
+          cache: endpoint.cache || { enabled: false },
+        },
+      });
+    }
+
+    // 서비스 레벨 와일드카드 라우트
+    routes.push({
+      id: `${service.name}-wildcard`,
+      path: `${basePath}/*`,
+      method: "*",
+      handler: {
+        type: "service-proxy",
+        target: {
+          service: service.name,
+        },
+      },
+      priority: 100, // 낮은 우선순위
+    });
+
+    return routes;
+  }
+
+  private createGlobalRoutes(): Route[] {
+    return [
+      // 헬스 체크
+      {
+        id: "health",
+        path: "/health",
+        method: "GET",
+        handler: {
+          type: "direct",
+          handler: async () => ({
+            status: "healthy",
+            timestamp: new Date().toISOString(),
+          }),
+        },
+        middleware: [],
+      },
+      // 메트릭
+      {
+        id: "metrics",
+        path: "/metrics",
+        method: "GET",
+        handler: {
+          type: "direct",
+          handler: async () => this.getMetrics(),
+        },
+        middleware: ["authentication"],
+      },
+      // API 문서
+      {
+        id: "docs",
+        path: "/api/docs",
+        method: "GET",
+        handler: {
+          type: "static",
+          path: "./api-docs",
+        },
+        middleware: [],
+      },
+      // GraphQL 엔드포인트
+      {
+        id: "graphql",
+        path: "/graphql",
+        method: ["GET", "POST"],
+        handler: {
+          type: "graphql",
+          schema: "./graphql/schema.graphql",
+        },
+        middleware: ["authentication", "graphql-validation"],
+      },
+    ];
+  }
+
+  private optimizeRoutes(routes: Route[]): Route[] {
+    // 라우트 정렬 (구체적인 경로가 먼저)
+    const sorted = routes.sort((a, b) => {
+      const aSpecificity = this.calculateSpecificity(a.path);
+      const bSpecificity = this.calculateSpecificity(b.path);
+      return bSpecificity - aSpecificity;
+    });
+
+    // 라우트 트리 생성 (빠른 매칭을 위해)
+    const routeTree = this.buildRouteTree(sorted);
+
+    // 최적화된 라우트 반환
+    return sorted.map((route) => ({
+      ...route,
+      matcher: this.createOptimizedMatcher(route, routeTree),
+    }));
+  }
+
+  private calculateSpecificity(path: string): number {
+    let score = 0;
+    const segments = path.split("/");
+
+    for (const segment of segments) {
+      if (segment === "*") score += 1;
+      else if (segment.startsWith(":")) score += 10;
+      else if (segment) score += 100;
+    }
+
+    return score;
+  }
+
+  private createMiddlewareChain(): RouteMiddleware[] {
+    return [
+      // 요청 ID 생성
+      {
+        name: "request-id",
+        handler: async (req, res, next) => {
+          req.id = req.headers["x-request-id"] || uuidv4();
+          res.setHeader("x-request-id", req.id);
+          next();
+        },
+      },
+      // CORS
+      {
+        name: "cors",
+        handler: createCorsMiddleware({
+          origin: process.env.ALLOWED_ORIGINS?.split(",") || "*",
+          credentials: true,
+          methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        }),
+      },
+      // 보안 헤더
+      {
+        name: "security-headers",
+        handler: helmet({
+          contentSecurityPolicy: {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'", "'unsafe-inline'"],
+            },
+          },
+        }),
+      },
+      // 요청 로깅
+      {
+        name: "logging",
+        handler: async (req, res, next) => {
+          const start = Date.now();
+          res.on("finish", () => {
+            const duration = Date.now() - start;
+            logger.info("Request completed", {
+              requestId: req.id,
+              method: req.method,
+              path: req.path,
+              statusCode: res.statusCode,
+              duration,
+            });
+          });
+          next();
+        },
+      },
+    ];
+  }
+}
+
+// 라우트 매처 구현
+export class RouteMatcher {
+  private compiledRoutes: Map<string, CompiledRoute> = new Map();
+
+  compileRoute(route: Route): CompiledRoute {
+    const cached = this.compiledRoutes.get(route.id);
+    if (cached) return cached;
+
+    const regex = this.pathToRegex(route.path);
+    const params = this.extractParams(route.path);
+
+    const compiled = {
+      ...route,
+      regex,
+      params,
+      match: (path: string) => {
+        const match = regex.exec(path);
+        if (!match) return null;
+
+        const paramValues: Record<string, string> = {};
+        params.forEach((param, index) => {
+          paramValues[param] = match[index + 1];
+        });
+
+        return { params: paramValues, path };
+      },
+    };
+
+    this.compiledRoutes.set(route.id, compiled);
+    return compiled;
+  }
+
+  private pathToRegex(path: string): RegExp {
+    const pattern = path
+      .replace(/\*/g, ".*")
+      .replace(/:(\w+)/g, "([^/]+)")
+      .replace(/\//g, "\\/");
+
+    return new RegExp(`^${pattern}$`);
+  }
+
+  private extractParams(path: string): string[] {
+    const params: string[] = [];
+    const regex = /:(\w+)/g;
+    let match;
+
+    while ((match = regex.exec(path)) !== null) {
+      params.push(match[1]);
+    }
+
+    return params;
+  }
+}
+```
+
+### SubTask 4.72.2: 인증/인가 통합
+
+```typescript
+// api-gateway/auth-integration.ts
+export class APIGatewayAuth {
+  private authProviders: Map<string, AuthProvider> = new Map();
+  private policyEngine: PolicyEngine;
+  private tokenValidator: TokenValidator;
+  private sessionManager: SessionManager;
+
+  constructor() {
+    this.policyEngine = new PolicyEngine();
+    this.tokenValidator = new TokenValidator();
+    this.sessionManager = new SessionManager();
+    this.initializeProviders();
+  }
+
+  private initializeProviders(): void {
+    // JWT 프로바이더
+    this.authProviders.set(
+      "jwt",
+      new JWTAuthProvider({
+        publicKey: process.env.JWT_PUBLIC_KEY,
+        algorithms: ["RS256", "HS256"],
+        issuer: process.env.JWT_ISSUER,
+      })
+    );
+
+    // OAuth2 프로바이더
+    this.authProviders.set(
+      "oauth2",
+      new OAuth2Provider({
+        authorizationURL: process.env.OAUTH2_AUTH_URL,
+        tokenURL: process.env.OAUTH2_TOKEN_URL,
+        clientID: process.env.OAUTH2_CLIENT_ID,
+        clientSecret: process.env.OAUTH2_CLIENT_SECRET,
+      })
+    );
+
+    // API Key 프로바이더
+    this.authProviders.set(
+      "apikey",
+      new APIKeyProvider({
+        headerName: "X-API-Key",
+        queryParam: "api_key",
+      })
+    );
+
+    // mTLS 프로바이더
+    this.authProviders.set(
+      "mtls",
+      new MTLSProvider({
+        caFile: process.env.CA_CERT_FILE,
+        verifyDepth: 2,
+      })
+    );
+  }
+
+  // 인증 미들웨어
+  createAuthMiddleware(options: AuthMiddlewareOptions = {}): RequestHandler {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        // 인증 제외 경로 확인
+        if (this.isExcludedPath(req.path, options.excludePaths)) {
+          return next();
+        }
+
+        // 인증 수행
+        const authResult = await this.authenticate(req, options);
+
+        if (!authResult.authenticated) {
+          return res.status(401).json({
+            error: "Unauthorized",
+            message: authResult.error || "Authentication required",
+          });
+        }
+
+        // 요청에 사용자 정보 추가
+        req.user = authResult.user;
+        req.auth = authResult;
+
+        // 인가 확인
+        const authorized = await this.authorize(req, authResult.user, options);
+
+        if (!authorized) {
+          return res.status(403).json({
+            error: "Forbidden",
+            message: "Insufficient permissions",
+          });
+        }
+
+        next();
+      } catch (error) {
+        console.error("Auth middleware error:", error);
+        res.status(500).json({
+          error: "Internal Server Error",
+          message: "Authentication service unavailable",
+        });
+      }
+    };
+  }
+
+  private async authenticate(
+    req: Request,
+    options: AuthMiddlewareOptions
+  ): Promise<AuthResult> {
+    // 인증 방법 감지
+    const authMethod = this.detectAuthMethod(req);
+
+    if (!authMethod) {
+      return {
+        authenticated: false,
+        error: "No authentication credentials provided",
+      };
+    }
+
+    // 프로바이더 선택
+    const provider = this.authProviders.get(authMethod);
+
+    if (!provider) {
+      return {
+        authenticated: false,
+        error: "Unsupported authentication method",
+      };
+    }
+
+    try {
+      // 인증 수행
+      const credentials = await provider.extractCredentials(req);
+      const validationResult = await provider.validate(credentials);
+
+      if (!validationResult.valid) {
+        return {
+          authenticated: false,
+          error: validationResult.error,
+        };
+      }
+
+      // 사용자 정보 조회
+      const user = await this.getUserInfo(validationResult.subject, authMethod);
+
+      // 세션 생성 (필요한 경우)
+      if (options.createSession) {
+        const session = await this.sessionManager.createSession(user);
+        res.setHeader("X-Session-ID", session.id);
+      }
+
+      return {
+        authenticated: true,
+        user,
+        method: authMethod,
+        metadata: validationResult.metadata,
+      };
+    } catch (error) {
+      console.error("Authentication error:", error);
+      return {
+        authenticated: false,
+        error: "Authentication failed",
+      };
+    }
+  }
+
+  private async authorize(
+    req: Request,
+    user: User,
+    options: AuthMiddlewareOptions
+  ): Promise<boolean> {
+    // 정책 기반 인가
+    const context: PolicyContext = {
+      user,
+      resource: req.path,
+      action: req.method.toLowerCase(),
+      environment: {
+        ip: req.ip,
+        timestamp: new Date(),
+        headers: req.headers,
+      },
+    };
+
+    // 필수 역할 확인
+    if (options.requiredRoles?.length) {
+      const hasRole = options.requiredRoles.some((role) =>
+        user.roles?.includes(role)
+      );
+      if (!hasRole) return false;
+    }
+
+    // 필수 권한 확인
+    if (options.requiredPermissions?.length) {
+      const hasPermission = await this.checkPermissions(
+        user,
+        options.requiredPermissions
+      );
+      if (!hasPermission) return false;
+    }
+
+    // 정책 평가
+    const policyResult = await this.policyEngine.evaluate(context);
+
+    return policyResult.allowed;
+  }
+
+  private detectAuthMethod(req: Request): string | null {
+    // Bearer 토큰
+    if (req.headers.authorization?.startsWith("Bearer ")) {
+      return "jwt";
+    }
+
+    // API Key
+    if (req.headers["x-api-key"] || req.query.api_key) {
+      return "apikey";
+    }
+
+    // OAuth2
+    if (req.headers.authorization?.startsWith("OAuth ")) {
+      return "oauth2";
+    }
+
+    // mTLS
+    if (req.connection.getPeerCertificate && req.connection.authorized) {
+      return "mtls";
+    }
+
+    return null;
+  }
+
+  // 권한 정책 엔진
+  async createAuthorizationPolicies(
+    services: MicroService[]
+  ): Promise<Policy[]> {
+    const policies: Policy[] = [];
+
+    // 서비스별 정책 생성
+    for (const service of services) {
+      // 기본 서비스 접근 정책
+      policies.push({
+        id: `${service.name}-access`,
+        name: `${service.name} Access Policy`,
+        effect: "allow",
+        subjects: [`service:${service.name}`],
+        resources: [`/api/*/service.name}/*`],
+        actions: ["read", "write"],
+        conditions: {
+          "ip-whitelist": service.allowedIPs || [],
+          "time-window": service.accessWindow || "00:00-23:59",
+        },
+      });
+
+      // 엔드포인트별 정책
+      for (const endpoint of service.endpoints) {
+        if (endpoint.requiredPermissions) {
+          policies.push({
+            id: `${service.name}-${endpoint.name}`,
+            name: `${endpoint.name} Endpoint Policy`,
+            effect: "allow",
+            subjects: endpoint.allowedRoles || ["*"],
+            resources: [`${endpoint.path}`],
+            actions: [endpoint.method.toLowerCase()],
+            conditions: {
+              permissions: endpoint.requiredPermissions,
+            },
+          });
+        }
+      }
+    }
+
+    // 글로벌 정책
+    policies.push(
+      {
+        id: "deny-anonymous",
+        name: "Deny Anonymous Access",
+        effect: "deny",
+        subjects: ["anonymous"],
+        resources: ["/api/*"],
+        actions: ["*"],
+        priority: 100,
+      },
+      {
+        id: "allow-health-check",
+        name: "Allow Health Check",
+        effect: "allow",
+        subjects: ["*"],
+        resources: ["/health", "/metrics"],
+        actions: ["read"],
+        priority: 0,
+      }
+    );
+
+    return policies;
+  }
+}
+
+// Token 검증기
+export class TokenValidator {
+  private cache: NodeCache;
+  private jwksClient: any;
+
+  constructor() {
+    this.cache = new NodeCache({ stdTTL: 600 }); // 10분 캐시
+    this.jwksClient = jwksRsa({
+      jwksUri: process.env.JWKS_URI,
+      cache: true,
+      cacheMaxAge: 600000,
+    });
+  }
+
+  async validateJWT(token: string): Promise<TokenValidationResult> {
+    try {
+      // 캐시 확인
+      const cached = this.cache.get<TokenValidationResult>(token);
+      if (cached) return cached;
+
+      // 토큰 디코드
+      const decoded = jwt.decode(token, { complete: true });
+
+      if (!decoded) {
+        return { valid: false, error: "Invalid token format" };
+      }
+
+      // 키 가져오기
+      const key = await this.getSigningKey(decoded.header.kid);
+
+      // 토큰 검증
+      const verified = jwt.verify(token, key, {
+        algorithms: ["RS256"],
+        issuer: process.env.JWT_ISSUER,
+        audience: process.env.JWT_AUDIENCE,
+      });
+
+      const result = {
+        valid: true,
+        subject: verified.sub,
+        claims: verified,
+        metadata: {
+          issuer: verified.iss,
+          audience: verified.aud,
+          expiry: new Date(verified.exp * 1000),
+        },
+      };
+
+      // 캐시 저장
+      this.cache.set(token, result);
+
+      return result;
+    } catch (error) {
+      return {
+        valid: false,
+        error: error.message,
+      };
+    }
+  }
+
+  private async getSigningKey(kid: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.jwksClient.getSigningKey(kid, (err: any, key: any) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(key.getPublicKey());
+        }
+      });
+    });
+  }
+}
+```
+
+### SubTask 4.72.3: Rate Limiting
+
+```typescript
+// api-gateway/rate-limiting.ts
+export class RateLimiter {
+  private limiters: Map<string, Limiter> = new Map();
+  private store: RateLimitStore;
+
+  constructor(storeType: "memory" | "redis" = "redis") {
+    this.store =
+      storeType === "redis"
+        ? new RedisRateLimitStore()
+        : new MemoryRateLimitStore();
+  }
+
+  // Rate limiting 미들웨어 생성
+  createMiddleware(options: RateLimitOptions = {}): RequestHandler {
+    const limiter = this.createLimiter(options);
+
+    return async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        // 제외 경로 확인
+        if (this.isExcluded(req, options)) {
+          return next();
+        }
+
+        // 키 생성
+        const key = await this.generateKey(req, options);
+
+        // Rate limit 확인
+        const result = await limiter.consume(key);
+
+        // 헤더 설정
+        res.setHeader("X-RateLimit-Limit", result.limit.toString());
+        res.setHeader("X-RateLimit-Remaining", result.remaining.toString());
+        res.setHeader(
+          "X-RateLimit-Reset",
+          new Date(result.resetAt).toISOString()
+        );
+
+        if (!result.allowed) {
+          // Retry-After 헤더
+          const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);
+          res.setHeader("Retry-After", retryAfter.toString());
+
+          return res.status(429).json({
+            error: "Too Many Requests",
+            message: "Rate limit exceeded",
+            limit: result.limit,
+            windowMs: options.windowMs,
+            retryAfter,
+          });
+        }
+
+        next();
+      } catch (error) {
+        console.error("Rate limiting error:", error);
+        // 오류 시 요청 허용 (fail open)
+        next();
+      }
+    };
+  }
+
+  // 동적 rate limiting
+  async createDynamicLimiter(): Promise<DynamicRateLimiter> {
+    return new DynamicRateLimiter({
+      store: this.store,
+      rules: [
+        // 기본 규칙
+        {
+          match: { path: "/api/*" },
+          limits: {
+            anonymous: { windowMs: 60000, max: 10 },
+            authenticated: { windowMs: 60000, max: 100 },
+            premium: { windowMs: 60000, max: 1000 },
+          },
+        },
+        // AI 엔드포인트 (더 제한적)
+        {
+          match: { path: "/api/*/ai/*" },
+          limits: {
+            anonymous: { windowMs: 300000, max: 5 },
+            authenticated: { windowMs: 300000, max: 50 },
+            premium: { windowMs: 300000, max: 500 },
+          },
+        },
+        // 파일 업로드 (크기 기반)
+        {
+          match: { path: "/api/*/upload", method: "POST" },
+          limits: {
+            anonymous: { windowMs: 3600000, max: 5, maxSize: 10485760 }, // 10MB
+            authenticated: { windowMs: 3600000, max: 50, maxSize: 104857600 }, // 100MB
+            premium: { windowMs: 3600000, max: 500, maxSize: 1073741824 }, // 1GB
+          },
+        },
+      ],
+    });
+  }
+
+  private createLimiter(options: RateLimitOptions): Limiter {
+    const key = this.getLimiterKey(options);
+
+    let limiter = this.limiters.get(key);
+    if (!limiter) {
+      limiter = new Limiter({
+        store: this.store,
+        windowMs: options.windowMs || 60000, // 1분
+        max: options.max || 100,
+        keyPrefix: options.keyPrefix || "rl:",
+        skipSuccessfulRequests: options.skipSuccessfulRequests || false,
+        skipFailedRequests: options.skipFailedRequests || false,
+      });
+      this.limiters.set(key, limiter);
+    }
+
+    return limiter;
+  }
+
+  private async generateKey(
+    req: Request,
+    options: RateLimitOptions
+  ): Promise<string> {
+    const keyGenerator = options.keyGenerator || this.defaultKeyGenerator;
+    const baseKey = await keyGenerator(req);
+
+    // 경로 기반 분리
+    if (options.segmentByPath) {
+      const pathSegment = req.path.split("/")[2] || "root";
+      return `${baseKey}:${pathSegment}`;
+    }
+
+    return baseKey;
+  }
+
+  private defaultKeyGenerator = (req: Request): string => {
+    // 인증된 사용자
+    if (req.user?.id) {
+      return `user:${req.user.id}`;
+    }
+
+    // API Key
+    if (req.headers["x-api-key"]) {
+      return `apikey:${crypto
+        .createHash("sha256")
+        .update(req.headers["x-api-key"] as string)
+        .digest("hex")}`;
+    }
+
+    // IP 주소
+    return `ip:${req.ip}`;
+  };
+
+  private isExcluded(req: Request, options: RateLimitOptions): boolean {
+    // 제외 경로
+    if (options.excludePaths) {
+      const isExcluded = options.excludePaths.some((path) =>
+        req.path.startsWith(path)
+      );
+      if (isExcluded) return true;
+    }
+
+    // 제외 사용자
+    if (options.excludeUsers && req.user) {
+      return options.excludeUsers.includes(req.user.id);
+    }
+
+    return false;
+  }
+
+  private getLimiterKey(options: RateLimitOptions): string {
+    return `${options.windowMs}:${options.max}:${options.keyPrefix || "default"}`;
+  }
+}
+
+// 분산 Rate Limiting
+export class DistributedRateLimiter {
+  private redis: Redis;
+  private lua: LuaScript;
+
+  constructor(redis: Redis) {
+    this.redis = redis;
+    this.lua = new LuaScript();
+    this.loadScripts();
+  }
+
+  private loadScripts(): void {
+    // Sliding window rate limiting Lua script
+    this.lua.register(
+      "slidingWindow",
+      `
+      local key = KEYS[1]
+      local now = tonumber(ARGV[1])
+      local window = tonumber(ARGV[2])
+      local limit = tonumber(ARGV[3])
+      
+      local clearBefore = now - window
+      
+      -- Remove old entries
+      redis.call('zremrangebyscore', key, 0, clearBefore)
+      
+      -- Count current entries
+      local current = redis.call('zcard', key)
+      
+      if current < limit then
+        -- Add new entry
+        redis.call('zadd', key, now, now)
+        redis.call('expire', key, window)
+        return {1, limit - current - 1}
+      else
+        return {0, 0}
+      end
+    `
+    );
+
+    // Token bucket Lua script
+    this.lua.register(
+      "tokenBucket",
+      `
+      local key = KEYS[1]
+      local capacity = tonumber(ARGV[1])
+      local tokens = tonumber(ARGV[2])
+      local refillRate = tonumber(ARGV[3])
+      local now = tonumber(ARGV[4])
+      
+      local bucket = redis.call('hmget', key, 'tokens', 'lastRefill')
+      local currentTokens = tonumber(bucket[1]) or capacity
+      local lastRefill = tonumber(bucket[2]) or now
+      
+      -- Calculate tokens to add
+      local elapsed = math.max(0, now - lastRefill)
+      local tokensToAdd = math.floor(elapsed * refillRate / 1000)
+      currentTokens = math.min(capacity, currentTokens + tokensToAdd)
+      
+      if currentTokens >= tokens then
+        currentTokens = currentTokens - tokens
+        redis.call('hmset', key, 'tokens', currentTokens, 'lastRefill', now)
+        redis.call('expire', key, 3600)
+        return {1, currentTokens}
+      else
+        redis.call('hmset', key, 'tokens', currentTokens, 'lastRefill', now)
+        redis.call('expire', key, 3600)
+        return {0, currentTokens}
+      end
+    `
+    );
+  }
+
+  async checkLimit(
+    key: string,
+    options: RateLimitOptions
+  ): Promise<RateLimitResult> {
+    const now = Date.now();
+
+    if (options.algorithm === "token-bucket") {
+      const result = await this.lua.execute(
+        "tokenBucket",
+        [key],
+        [options.capacity, 1, options.refillRate, now]
+      );
+
+      return {
+        allowed: result[0] === 1,
+        remaining: result[1],
+        limit: options.capacity,
+        resetAt: now + options.windowMs,
+      };
+    } else {
+      // Sliding window by default
+      const result = await this.lua.execute(
+        "slidingWindow",
+        [key],
+        [now, options.windowMs, options.max]
+      );
+
+      return {
+        allowed: result[0] === 1,
+        remaining: result[1],
+        limit: options.max,
+        resetAt: now + options.windowMs,
+      };
+    }
+  }
+}
+
+// 적응형 Rate Limiting
+export class AdaptiveRateLimiter {
+  private metrics: MetricsCollector;
+  private analyzer: TrafficAnalyzer;
+
+  constructor() {
+    this.metrics = new MetricsCollector();
+    this.analyzer = new TrafficAnalyzer();
+  }
+
+  async adjustLimits(): Promise<void> {
+    const metrics = await this.metrics.getSystemMetrics();
+    const analysis = await this.analyzer.analyze(metrics);
+
+    // CPU 사용률이 높으면 제한 강화
+    if (metrics.cpu > 80) {
+      await this.tightenLimits(0.8);
+    }
+    // 여유가 있으면 제한 완화
+    else if (metrics.cpu < 50 && metrics.errorRate < 0.01) {
+      await this.relaxLimits(1.2);
+    }
+
+    // 이상 트래픽 감지
+    if (analysis.anomalyDetected) {
+      await this.applyAnomalyLimits(analysis.anomalySource);
+    }
+  }
+
+  private async tightenLimits(factor: number): Promise<void> {
+    // 모든 리미터의 제한을 factor만큼 감소
+    for (const [key, limiter] of this.limiters) {
+      limiter.updateLimit(Math.floor(limiter.getLimit() * factor));
+    }
+  }
+
+  private async relaxLimits(factor: number): Promise<void> {
+    // 모든 리미터의 제한을 factor만큼 증가
+    for (const [key, limiter] of this.limiters) {
+      limiter.updateLimit(Math.ceil(limiter.getLimit() * factor));
+    }
+  }
+}
+```
+
+### SubTask 4.72.4: API 버전관리
+
+```typescript
+// api-gateway/api-versioning.ts
+export class APIVersionManager {
+  private versions: Map<string, APIVersion> = new Map();
+  private migrationStrategies: Map<string, MigrationStrategy> = new Map();
+
+  async registerVersion(version: APIVersion): Promise<void> {
+    this.versions.set(version.version, version);
+
+    // 마이그레이션 전략 등록
+    if (version.previousVersion) {
+      const strategy = await this.createMigrationStrategy(
+        version.previousVersion,
+        version.version
+      );
+      this.migrationStrategies.set(
+        `${version.previousVersion}->${version.version}`,
+        strategy
+      );
+    }
+  }
+
+  // 버전 라우팅 미들웨어
+  createVersioningMiddleware(): RequestHandler {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        // 버전 추출
+        const requestedVersion = this.extractVersion(req);
+
+        if (!requestedVersion) {
+          // 기본 버전 사용
+          req.apiVersion = this.getDefaultVersion();
+        } else {
+          // 버전 유효성 검사
+          const version = this.versions.get(requestedVersion);
+
+          if (!version) {
+            return res.status(400).json({
+              error: "Invalid API Version",
+              message: `Version ${requestedVersion} is not supported`,
+              supportedVersions: Array.from(this.versions.keys()),
+            });
+          }
+
+          // 폐기된 버전 확인
+          if (version.deprecated) {
+            res.setHeader("X-API-Deprecation", "true");
+            res.setHeader("X-API-Deprecation-Date", version.deprecationDate);
+            res.setHeader("X-API-Sunset-Date", version.sunsetDate);
+
+            if (new Date() > new Date(version.sunsetDate)) {
+              return res.status(410).json({
+                error: "API Version Sunset",
+                message: `Version ${requestedVersion} is no longer available`,
+                sunset: version.sunsetDate,
+                alternative: version.alternativeVersion,
+              });
+            }
+          }
+
+          req.apiVersion = version;
+        }
+
+        // 버전별 라우팅
+        await this.routeToVersion(req, res, next);
+      } catch (error) {
+        console.error("Versioning error:", error);
+        next(error);
+      }
+    };
+  }
+
+  private extractVersion(req: Request): string | null {
+    // 1. URL 경로에서 추출 (/api/v1/...)
+    const pathMatch = req.path.match(/^\/api\/v(\d+(?:\.\d+)?)/);
+    if (pathMatch) {
+      return `v${pathMatch[1]}`;
+    }
+
+    // 2. Accept 헤더에서 추출
+    const accept = req.headers.accept;
+    if (accept) {
+      const versionMatch = accept.match(
+        /application\/vnd\.api\+json;\s*version=(\d+(?:\.\d+)?)/
+      );
+      if (versionMatch) {
+        return `v${versionMatch[1]}`;
+      }
+    }
+
+    // 3. 커스텀 헤더에서 추출
+    const versionHeader = req.headers["x-api-version"] as string;
+    if (versionHeader) {
+      return versionHeader;
+    }
+
+    // 4. 쿼리 파라미터에서 추출
+    const versionQuery = req.query.version as string;
+    if (versionQuery) {
+      return versionQuery;
+    }
+
+    return null;
+  }
+
+  private async routeToVersion(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    const version = req.apiVersion;
+
+    // 버전별 변환 적용
+    if (version.transformRequest) {
+      req = await version.transformRequest(req);
+    }
+
+    // 버전별 핸들러 실행
+    const handler = version.handlers[req.method]?.[req.path];
+
+    if (handler) {
+      await handler(req, res, next);
+    } else {
+      // 버전 간 마이그레이션 시도
+      const migrated = await this.tryMigration(req, version);
+
+      if (migrated) {
+        req = migrated;
+      }
+
+      next();
+    }
+
+    // 응답 변환
+    if (version.transformResponse) {
+      const originalSend = res.send;
+      res.send = function (data: any) {
+        const transformed = version.transformResponse(data, req);
+        return originalSend.call(this, transformed);
+      };
+    }
+  }
+
+  private async tryMigration(
+    req: Request,
+    targetVersion: APIVersion
+  ): Promise<Request | null> {
+    // 가장 가까운 버전에서 마이그레이션 경로 찾기
+    const migrationPath = this.findMigrationPath(
+      req.originalVersion || "v1",
+      targetVersion.version
+    );
+
+    if (!migrationPath) {
+      return null;
+    }
+
+    let migratedReq = req;
+
+    // 마이그레이션 경로 적용
+    for (const step of migrationPath) {
+      const strategy = this.migrationStrategies.get(step);
+      if (strategy) {
+        migratedReq = await strategy.migrateRequest(migratedReq);
+      }
+    }
+
+    return migratedReq;
+  }
+
+  // 버전 변환 전략
+  private async createMigrationStrategy(
+    fromVersion: string,
+    toVersion: string
+  ): Promise<MigrationStrategy> {
+    return {
+      from: fromVersion,
+      to: toVersion,
+
+      migrateRequest: async (req: Request): Promise<Request> => {
+        const migrated = { ...req };
+
+        // 경로 마이그레이션
+        migrated.path = this.migratePath(req.path, fromVersion, toVersion);
+
+        // 파라미터 마이그레이션
+        migrated.body = await this.migrateRequestBody(
+          req.body,
+          fromVersion,
+          toVersion
+        );
+
+        // 헤더 마이그레이션
+        migrated.headers = this.migrateHeaders(
+          req.headers,
+          fromVersion,
+          toVersion
+        );
+
+        return migrated;
+      },
+
+      migrateResponse: async (res: any): Promise<any> => {
+        // 응답 구조 변환
+        return this.migrateResponseBody(res, fromVersion, toVersion);
+      },
+    };
+  }
+
+  // OpenAPI 스펙 생성
+  async generateOpenAPISpec(version: string): Promise<OpenAPISpec> {
+    const apiVersion = this.versions.get(version);
+
+    if (!apiVersion) {
+      throw new Error(`Version ${version} not found`);
+    }
+
+    return {
+      openapi: "3.0.0",
+      info: {
+        title: "API Documentation",
+        version: apiVersion.version,
+        description: apiVersion.description,
+        ...(apiVersion.deprecated && {
+          "x-deprecated": true,
+          "x-deprecation-date": apiVersion.deprecationDate,
+          "x-sunset-date": apiVersion.sunsetDate,
+        }),
+      },
+      servers: [
+        {
+          url: `/api/${version}`,
+          description: "API Server",
+        },
+      ],
+      paths: await this.generatePaths(apiVersion),
+      components: {
+        schemas: await this.generateSchemas(apiVersion),
+        securitySchemes: this.generateSecuritySchemes(),
+      },
+    };
+  }
+
+  // 버전 비교 도구
+  async generateVersionComparison(
+    v1: string,
+    v2: string
+  ): Promise<VersionComparison> {
+    const version1 = this.versions.get(v1);
+    const version2 = this.versions.get(v2);
+
+    if (!version1 || !version2) {
+      throw new Error("Invalid versions for comparison");
+    }
+
+    return {
+      versions: [v1, v2],
+      endpoints: {
+        added: this.findAddedEndpoints(version1, version2),
+        removed: this.findRemovedEndpoints(version1, version2),
+        changed: this.findChangedEndpoints(version1, version2),
+      },
+      schemas: {
+        added: this.findAddedSchemas(version1, version2),
+        removed: this.findRemovedSchemas(version1, version2),
+        changed: this.findChangedSchemas(version1, version2),
+      },
+      breakingChanges: this.findBreakingChanges(version1, version2),
+      migrationGuide: await this.generateMigrationGuide(v1, v2),
+    };
+  }
+}
+
+// 버전 호환성 검사
+export class VersionCompatibilityChecker {
+  async checkCompatibility(
+    oldVersion: APIVersion,
+    newVersion: APIVersion
+  ): Promise<CompatibilityReport> {
+    const issues: CompatibilityIssue[] = [];
+
+    // 엔드포인트 호환성
+    issues.push(
+      ...(await this.checkEndpointCompatibility(oldVersion, newVersion))
+    );
+
+    // 스키마 호환성
+    issues.push(
+      ...(await this.checkSchemaCompatibility(oldVersion, newVersion))
+    );
+
+    // 보안 호환성
+    issues.push(
+      ...(await this.checkSecurityCompatibility(oldVersion, newVersion))
+    );
+
+    return {
+      compatible: issues.filter((i) => i.severity === "breaking").length === 0,
+      issues,
+      migrationRequired: issues.length > 0,
+      estimatedEffort: this.estimateMigrationEffort(issues),
+    };
+  }
+
+  private async checkEndpointCompatibility(
+    oldVersion: APIVersion,
+    newVersion: APIVersion
+  ): Promise<CompatibilityIssue[]> {
+    const issues: CompatibilityIssue[] = [];
+
+    // 제거된 엔드포인트
+    for (const [path, endpoint] of oldVersion.endpoints) {
+      if (!newVersion.endpoints.has(path)) {
+        issues.push({
+          type: "endpoint_removed",
+          severity: "breaking",
+          path,
+          message: `Endpoint ${path} was removed`,
+          migration: `Use alternative endpoint or version ${oldVersion.version}`,
+        });
+      }
+    }
+
+    // 변경된 엔드포인트
+    for (const [path, oldEndpoint] of oldVersion.endpoints) {
+      const newEndpoint = newVersion.endpoints.get(path);
+
+      if (newEndpoint) {
+        // 메서드 변경
+        if (oldEndpoint.method !== newEndpoint.method) {
+          issues.push({
+            type: "method_changed",
+            severity: "breaking",
+            path,
+            message: `Method changed from ${oldEndpoint.method} to ${newEndpoint.method}`,
+          });
+        }
+
+        // 필수 파라미터 추가
+        const newRequired = newEndpoint.parameters
+          .filter((p) => p.required)
+          .filter(
+            (p) => !oldEndpoint.parameters.find((op) => op.name === p.name)
+          );
+
+        for (const param of newRequired) {
+          issues.push({
+            type: "required_parameter_added",
+            severity: "breaking",
+            path,
+            message: `Required parameter ${param.name} was added`,
+          });
+        }
+      }
+    }
+
+    return issues;
+  }
+}
+```
+
+## Task 4.73: 데이터베이스 통합
+
+### SubTask 4.73.1: 스키마 마이그레이션
+
+```typescript
+// database/schema-migration.ts
+export class SchemaMigrationManager {
+  private migrationRunner: MigrationRunner;
+  private schemaValidator: SchemaValidator;
+  private backupManager: BackupManager;
+
+  constructor(config: DatabaseConfig) {
+    this.migrationRunner = new MigrationRunner(config);
+    this.schemaValidator = new SchemaValidator();
+    this.backupManager = new BackupManager(config);
+  }
+
+  async runMigrations(targetVersion?: string): Promise<MigrationResult> {
+    const startTime = Date.now();
+    const results: MigrationExecutionResult[] = [];
+
+    try {
+      // 1. 현재 스키마 상태 확인
+      const currentVersion = await this.getCurrentVersion();
+      console.log(`Current schema version: ${currentVersion}`);
+
+      // 2. 백업 생성
+      const backupId = await this.backupManager.createBackup({
+        type: "pre-migration",
+        version: currentVersion,
+      });
+
+      // 3. 대기 중인 마이그레이션 찾기
+      const pendingMigrations = await this.findPendingMigrations(
+        currentVersion,
+        targetVersion
+      );
+
+      if (pendingMigrations.length === 0) {
+        console.log("No pending migrations");
+        return {
+          success: true,
+          migrationsRun: 0,
+          currentVersion,
+        };
+      }
+
+      // 4. 마이그레이션 실행
+      for (const migration of pendingMigrations) {
+        console.log(
+          `Running migration: ${migration.version} - ${migration.name}`
+        );
+
+        const result = await this.executeMigration(migration);
+        results.push(result);
+
+        if (!result.success) {
+          throw new Error(
+            `Migration ${migration.version} failed: ${result.error}`
+          );
+        }
+      }
+
+      // 5. 스키마 검증
+      const validationResult = await this.schemaValidator.validate();
+      if (!validationResult.valid) {
+        throw new Error("Schema validation failed after migration");
+      }
+
+      const endTime = Date.now();
+
+      return {
+        success: true,
+        migrationsRun: results.length,
+        currentVersion: results[results.length - 1].version,
+        duration: endTime - startTime,
+        results,
+      };
+    } catch (error) {
+      console.error("Migration failed:", error);
+
+      // 롤백 시도
+      await this.rollback(results);
+
+      throw error;
+    }
+  }
+
+  private async executeMigration(
+    migration: Migration
+  ): Promise<MigrationExecutionResult> {
+    const transaction = await this.migrationRunner.beginTransaction();
+
+    try {
+      // DDL 실행
+      if (migration.ddl) {
+        for (const statement of migration.ddl) {
+          await transaction.execute(statement);
+        }
+      }
+
+      // DML 실행
+      if (migration.dml) {
+        for (const statement of migration.dml) {
+          await transaction.execute(statement);
+        }
+      }
+
+      // 프로그래밍 마이그레이션 실행
+      if (migration.execute) {
+        await migration.execute(transaction);
+      }
+
+      // 마이그레이션 기록
+      await this.recordMigration(migration, transaction);
+
+      await transaction.commit();
+
+      return {
+        version: migration.version,
+        success: true,
+        duration: Date.now() - migration.startTime,
+      };
+    } catch (error) {
+      await transaction.rollback();
+
+      return {
+        version: migration.version,
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  async generateMigration(
+    name: string,
+    changes: SchemaChange[]
+  ): Promise<Migration> {
+    const version = this.generateVersion();
+    const timestamp = new Date().toISOString();
+
+    const migration: Migration = {
+      version,
+      name,
+      timestamp,
+      up: [],
+      down: [],
+    };
+
+    // 변경사항별 SQL 생성
+    for (const change of changes) {
+      const sql = await this.generateSQL(change);
+      migration.up.push(...sql.up);
+      migration.down.push(...sql.down);
+    }
+
+    // 마이그레이션 파일 생성
+    await this.saveMigrationFile(migration);
+
+    return migration;
+  }
+
+  private async generateSQL(
+    change: SchemaChange
+  ): Promise<{ up: string[]; down: string[] }> {
+    switch (change.type) {
+      case "create_table":
+        return this.generateCreateTableSQL(change);
+
+      case "alter_table":
+        return this.generateAlterTableSQL(change);
+
+      case "create_index":
+        return this.generateCreateIndexSQL(change);
+
+      case "add_constraint":
+        return this.generateAddConstraintSQL(change);
+
+      default:
+        throw new Error(`Unknown change type: ${change.type}`);
+    }
+  }
+
+  private generateCreateTableSQL(change: CreateTableChange): {
+    up: string[];
+    down: string[];
+  } {
+    const columns = change.columns
+      .map((col) => {
+        const parts = [col.name, col.type];
+
+        if (col.primaryKey) parts.push("PRIMARY KEY");
+        if (col.notNull) parts.push("NOT NULL");
+        if (col.unique) parts.push("UNIQUE");
+        if (col.default !== undefined) parts.push(`DEFAULT ${col.default}`);
+
+        return parts.join(" ");
+      })
+      .join(",\n  ");
+
+    const constraints = change.constraints
+      ?.map((c) => {
+        switch (c.type) {
+          case "foreign_key":
+            return `CONSTRAINT ${c.name} FOREIGN KEY (${c.columns.join(", ")}) REFERENCES ${c.references.table}(${c.references.columns.join(", ")})`;
+          case "check":
+            return `CONSTRAINT ${c.name} CHECK (${c.condition})`;
+          default:
+            return "";
+        }
+      })
+      .filter(Boolean)
+      .join(",\n  ");
+
+    const up = [
+      `
+CREATE TABLE ${change.tableName} (
+  ${columns}${constraints ? ",\n  " + constraints : ""}
+);`,
+    ];
+
+    const down = [`DROP TABLE IF EXISTS ${change.tableName};`];
+
+    return { up, down };
+  }
+
+  // 마이그레이션 추적
+  async trackMigration(migration: Migration): Promise<void> {
+    await this.migrationRunner.execute(
+      `
+      INSERT INTO schema_migrations (
+        version,
+        name,
+        executed_at,
+        execution_time,
+        checksum
+      ) VALUES (?, ?, ?, ?, ?)
+    `,
+      [
+        migration.version,
+        migration.name,
+        new Date(),
+        migration.executionTime,
+        this.calculateChecksum(migration),
+      ]
+    );
+  }
+
+  // 롤백 기능
+  async rollback(steps: number = 1): Promise<RollbackResult> {
+    const migrations = await this.getExecutedMigrations();
+    const toRollback = migrations.slice(-steps);
+
+    const results: RollbackExecutionResult[] = [];
+
+    for (const migration of toRollback.reverse()) {
+      try {
+        console.log(`Rolling back: ${migration.version} - ${migration.name}`);
+
+        const result = await this.executeMigrationDown(migration);
+        results.push(result);
+
+        if (!result.success) {
+          throw new Error(`Rollback failed for ${migration.version}`);
+        }
+      } catch (error) {
+        console.error(`Rollback error:`, error);
+        break;
+      }
+    }
+
+    return {
+      success: results.every((r) => r.success),
+      migrationsRolledBack: results.filter((r) => r.success).length,
+      results,
+    };
+  }
+}
+
+// 스키마 버전 관리
+export class SchemaVersionControl {
+  private git: SimpleGit;
+  private schemaPath: string;
+
+  constructor(schemaPath: string) {
+    this.schemaPath = schemaPath;
+    this.git = simpleGit(schemaPath);
+  }
+
+  async initializeRepository(): Promise<void> {
+    await this.git.init();
+    await this.git.add(".gitignore");
+    await this.git.commit("Initial schema repository");
+  }
+
+  async saveSchemaSnapshot(
+    version: string,
+    schema: DatabaseSchema
+  ): Promise<void> {
+    const filename = `schema-${version}.json`;
+    const filepath = path.join(this.schemaPath, "snapshots", filename);
+
+    await fs.writeFile(filepath, JSON.stringify(schema, null, 2));
+
+    await this.git.add(filepath);
+    await this.git.commit(`Schema snapshot for version ${version}`);
+    await this.git.addTag(version);
+  }
+
+  async compareVersions(v1: string, v2: string): Promise<SchemaComparison> {
+    const schema1 = await this.loadSchema(v1);
+    const schema2 = await this.loadSchema(v2);
+
+    return {
+      version1: v1,
+      version2: v2,
+      changes: this.detectChanges(schema1, schema2),
+      compatible: this.checkCompatibility(schema1, schema2),
+    };
+  }
+
+  private detectChanges(
+    schema1: DatabaseSchema,
+    schema2: DatabaseSchema
+  ): SchemaChange[] {
+    const changes: SchemaChange[] = [];
+
+    // 테이블 변경 감지
+    for (const [tableName, table2] of Object.entries(schema2.tables)) {
+      const table1 = schema1.tables[tableName];
+
+      if (!table1) {
+        changes.push({
+          type: "create_table",
+          tableName,
+          table: table2,
+        });
+      } else {
+        // 컬럼 변경 감지
+        const columnChanges = this.detectColumnChanges(table1, table2);
+        changes.push(...columnChanges);
+
+        // 인덱스 변경 감지
+        const indexChanges = this.detectIndexChanges(table1, table2);
+        changes.push(...indexChanges);
+      }
+    }
+
+    // 삭제된 테이블 감지
+    for (const tableName of Object.keys(schema1.tables)) {
+      if (!schema2.tables[tableName]) {
+        changes.push({
+          type: "drop_table",
+          tableName,
+        });
+      }
+    }
+
+    return changes;
+  }
+}
+```
+
+### SubTask 4.73.2: 연결 풀 설정
+
+```typescript
+// database/connection-pool.ts
+export class ConnectionPoolManager {
+  private pools: Map<string, ConnectionPool> = new Map();
+  private monitor: PoolMonitor;
+  private healthChecker: HealthChecker;
+
+  constructor() {
+    this.monitor = new PoolMonitor();
+    this.healthChecker = new HealthChecker();
+    this.startMonitoring();
+  }
+
+  async createPool(name: string, config: PoolConfig): Promise<ConnectionPool> {
+    const pool = new ConnectionPool({
+      ...config,
+      name,
+      // 기본 설정
+      min: config.min || 2,
+      max: config.max || 10,
+      idleTimeoutMillis: config.idleTimeoutMillis || 30000,
+      connectionTimeoutMillis: config.connectionTimeoutMillis || 3000,
+      // 재시도 설정
+      retryAttempts: config.retryAttempts || 3,
+      retryDelay: config.retryDelay || 1000,
+      // 검증 설정
+      testOnBorrow: config.testOnBorrow !== false,
+      validationQuery: config.validationQuery || "SELECT 1",
+      // 이벤트 핸들러
+      onConnect: this.handleConnect.bind(this),
+      onError: this.handleError.bind(this),
+      onAcquire: this.handleAcquire.bind(this),
+      onRelease: this.handleRelease.bind(this),
+    });
+
+    // 연결 풀 초기화
+    await pool.initialize();
+
+    // 풀 등록
+    this.pools.set(name, pool);
+
+    // 모니터링 시작
+    this.monitor.registerPool(name, pool);
+
+    return pool;
+  }
+
+  // 동적 풀 크기 조정
+  async adjustPoolSize(poolName: string): Promise<void> {
+    const pool = this.pools.get(poolName);
+    if (!pool) return;
+
+    const metrics = await this.monitor.getPoolMetrics(poolName);
+    const recommendation = this.calculateOptimalSize(metrics);
+
+    if (recommendation.shouldResize) {
+      console.log(
+        `Resizing pool ${poolName}: min=${recommendation.min}, max=${recommendation.max}`
+      );
+
+      await pool.resize({
+        min: recommendation.min,
+        max: recommendation.max,
+      });
+    }
+  }
+
+  private calculateOptimalSize(metrics: PoolMetrics): PoolSizeRecommendation {
+    const {
+      activeConnections,
+      idleConnections,
+      waitingRequests,
+      averageWaitTime,
+      connectionUtilization,
+    } = metrics;
+
+    const totalConnections = activeConnections + idleConnections;
+    const utilization = connectionUtilization;
+
+    // 높은 활용률과 대기 요청이 있으면 풀 크기 증가
+    if (utilization > 0.8 && waitingRequests > 0) {
+      return {
+        shouldResize: true,
+        min: Math.max(totalConnections, 5),
+        max: Math.min(totalConnections * 1.5, 50),
+      };
+    }
+
+    // 낮은 활용률이면 풀 크기 감소
+    if (utilization < 0.3 && totalConnections > 5) {
+      return {
+        shouldResize: true,
+        min: Math.max(2, totalConnections * 0.5),
+        max: Math.max(10, totalConnections * 0.7),
+      };
+    }
+
+    return { shouldResize: false };
+  }
+
+  // 연결 상태 모니터링
+  private startMonitoring(): void {
+    setInterval(async () => {
+      for (const [name, pool] of this.pools) {
+        try {
+          // 풀 상태 확인
+          const health = await this.checkPoolHealth(pool);
+
+          if (!health.healthy) {
+            console.warn(`Pool ${name} is unhealthy:`, health.issues);
+            await this.handleUnhealthyPool(name, pool, health);
+          }
+
+          // 동적 크기 조정
+          await this.adjustPoolSize(name);
+
+          // 메트릭 수집
+          const metrics = await pool.getMetrics();
+          this.monitor.recordMetrics(name, metrics);
+        } catch (error) {
+          console.error(`Error monitoring pool ${name}:`, error);
+        }
+      }
+    }, 10000); // 10초마다
+  }
+
+  private async checkPoolHealth(pool: ConnectionPool): Promise<PoolHealth> {
+    const issues: string[] = [];
+    let healthy = true;
+
+    // 1. 연결 가능성 확인
+    try {
+      const testConn = await pool.acquire();
+      await testConn.query("SELECT 1");
+      await pool.release(testConn);
+    } catch (error) {
+      healthy = false;
+      issues.push(`Connection test failed: ${error.message}`);
+    }
+
+    // 2. 풀 포화도 확인
+    const metrics = await pool.getMetrics();
+    if (metrics.connectionUtilization > 0.95) {
+      issues.push("Pool is near capacity");
+    }
+
+    // 3. 대기 시간 확인
+    if (metrics.averageWaitTime > 5000) {
+      issues.push("High connection wait time");
+    }
+
+    // 4. 오류율 확인
+    if (metrics.errorRate > 0.1) {
+      healthy = false;
+      issues.push("High error rate");
+    }
+
+    return { healthy, issues };
+  }
+
+  // 멀티 데이터베이스 지원
+  async createMultiDatabasePool(
+    config: MultiDatabaseConfig
+  ): Promise<MultiDatabasePool> {
+    const pools: Map<string, ConnectionPool> = new Map();
+
+    // 각 데이터베이스별 풀 생성
+    for (const [dbName, dbConfig] of Object.entries(config.databases)) {
+      const pool = await this.createPool(`${config.name}-${dbName}`, dbConfig);
+      pools.set(dbName, pool);
+    }
+
+    // 라우팅 규칙 설정
+    const router = new DatabaseRouter(config.routingRules);
+
+    return new MultiDatabasePool({
+      name: config.name,
+      pools,
+      router,
+      defaultDatabase: config.defaultDatabase,
+    });
+  }
+
+  // 연결 풀 워밍
+  async warmPool(poolName: string): Promise<void> {
+    const pool = this.pools.get(poolName);
+    if (!pool) return;
+
+    console.log(`Warming pool ${poolName}...`);
+
+    const config = pool.getConfig();
+    const connections: Connection[] = [];
+
+    try {
+      // 최소 연결 수만큼 미리 생성
+      for (let i = 0; i < config.min; i++) {
+        const conn = await pool.acquire();
+        connections.push(conn);
+      }
+
+      // 연결 검증
+      await Promise.all(connections.map((conn) => conn.query("SELECT 1")));
+
+      console.log(
+        `Pool ${poolName} warmed with ${connections.length} connections`
+      );
+    } finally {
+      // 연결 반환
+      for (const conn of connections) {
+        await pool.release(conn);
+      }
+    }
+  }
+}
+
+// 연결 풀 구현
+export class ConnectionPool {
+  private config: PoolConfig;
+  private connections: Connection[] = [];
+  private availableConnections: Connection[] = [];
+  private waitingQueue: Array<{
+    resolve: (conn: Connection) => void;
+    reject: (error: Error) => void;
+    timestamp: number;
+  }> = [];
+  private stats: PoolStatistics;
+
+  constructor(config: PoolConfig) {
+    this.config = config;
+    this.stats = new PoolStatistics();
+  }
+
+  async acquire(): Promise<Connection> {
+    const startTime = Date.now();
+
+    // 사용 가능한 연결 확인
+    let connection = this.availableConnections.pop();
+
+    if (connection) {
+      // 연결 유효성 검사
+      if (await this.validateConnection(connection)) {
+        this.stats.recordAcquisition(Date.now() - startTime);
+        return connection;
+      } else {
+        // 유효하지 않은 연결 제거
+        await this.removeConnection(connection);
+      }
+    }
+
+    // 새 연결 생성 가능 여부 확인
+    if (this.connections.length < this.config.max) {
+      try {
+        connection = await this.createConnection();
+        this.connections.push(connection);
+        this.stats.recordAcquisition(Date.now() - startTime);
+        return connection;
+      } catch (error) {
+        this.stats.recordError(error);
+        throw error;
+      }
+    }
+
+    // 대기열에 추가
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        const index = this.waitingQueue.findIndex(
+          (item) => item.resolve === resolve
+        );
+        if (index !== -1) {
+          this.waitingQueue.splice(index, 1);
+          reject(new Error("Connection timeout"));
+        }
+      }, this.config.connectionTimeoutMillis);
+
+      this.waitingQueue.push({
+        resolve: (conn: Connection) => {
+          clearTimeout(timeout);
+          this.stats.recordAcquisition(Date.now() - startTime);
+          resolve(conn);
+        },
+        reject: (error: Error) => {
+          clearTimeout(timeout);
+          this.stats.recordError(error);
+          reject(error);
+        },
+        timestamp: startTime,
+      });
+    });
+  }
+
+  async release(connection: Connection): Promise<void> {
+    // 연결 상태 확인
+    if (!connection || connection.released) {
+      return;
+    }
+
+    connection.released = true;
+
+    // 대기 중인 요청이 있으면 즉시 할당
+    const waiting = this.waitingQueue.shift();
+    if (waiting) {
+      connection.released = false;
+      waiting.resolve(connection);
+      return;
+    }
+
+    // 연결 풀로 반환
+    if (this.connections.includes(connection)) {
+      this.availableConnections.push(connection);
+
+      // 유휴 타임아웃 설정
+      this.setIdleTimeout(connection);
+    }
+
+    this.stats.recordRelease();
+  }
+
+  private async createConnection(): Promise<Connection> {
+    const connection = new Connection(this.config);
+
+    // 재시도 로직
+    let lastError: Error;
+    for (let i = 0; i < this.config.retryAttempts; i++) {
+      try {
+        await connection.connect();
+
+        // 연결 설정
+        await this.configureConnection(connection);
+
+        return connection;
+      } catch (error) {
+        lastError = error;
+        if (i < this.config.retryAttempts - 1) {
+          await this.delay(this.config.retryDelay * Math.pow(2, i));
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  private async configureConnection(connection: Connection): Promise<void> {
+    // 트랜잭션 격리 수준 설정
+    if (this.config.isolationLevel) {
+      await connection.query(
+        `SET TRANSACTION ISOLATION LEVEL ${this.config.isolationLevel}`
+      );
+    }
+
+    // 타임아웃 설정
+    if (this.config.queryTimeout) {
+      await connection.query(
+        `SET statement_timeout = ${this.config.queryTimeout}`
+      );
+    }
+
+    // 애플리케이션 이름 설정
+    if (this.config.applicationName) {
+      await connection.query(
+        `SET application_name = '${this.config.applicationName}'`
+      );
+    }
+  }
+
+  private async validateConnection(connection: Connection): Promise<boolean> {
+    if (!this.config.testOnBorrow) {
+      return true;
+    }
+
+    try {
+      await connection.query(this.config.validationQuery);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // 연결 풀 통계
+  async getMetrics(): Promise<PoolMetrics> {
+    const active = this.connections.length - this.availableConnections.length;
+    const idle = this.availableConnections.length;
+    const waiting = this.waitingQueue.length;
+
+    return {
+      activeConnections: active,
+      idleConnections: idle,
+      totalConnections: this.connections.length,
+      waitingRequests: waiting,
+      connectionUtilization: active / this.config.max,
+      averageWaitTime: this.stats.getAverageWaitTime(),
+      errorRate: this.stats.getErrorRate(),
+      throughput: this.stats.getThroughput(),
+    };
+  }
+}
+
+// 읽기/쓰기 분리 연결 풀
+export class ReadWriteSplitPool {
+  private writePool: ConnectionPool;
+  private readPools: ConnectionPool[];
+  private loadBalancer: LoadBalancer;
+
+  constructor(config: ReadWritePoolConfig) {
+    this.writePool = new ConnectionPool(config.write);
+    this.readPools = config.read.map((cfg) => new ConnectionPool(cfg));
+    this.loadBalancer = new RoundRobinLoadBalancer();
+  }
+
+  async getWriteConnection(): Promise<Connection> {
+    return this.writePool.acquire();
+  }
+
+  async getReadConnection(): Promise<Connection> {
+    const pool = this.loadBalancer.selectPool(this.readPools);
+    return pool.acquire();
+  }
+
+  // 트랜잭션은 항상 쓰기 연결 사용
+  async beginTransaction(): Promise<Transaction> {
+    const connection = await this.getWriteConnection();
+    return new Transaction(connection, async () => {
+      await this.writePool.release(connection);
+    });
+  }
+
+  // 읽기 전용 트랜잭션
+  async beginReadOnlyTransaction(): Promise<Transaction> {
+    const connection = await this.getReadConnection();
+    await connection.query("SET TRANSACTION READ ONLY");
+
+    return new Transaction(connection, async () => {
+      const pool = this.findPoolForConnection(connection);
+      await pool.release(connection);
+    });
+  }
+}
+```
+
+### SubTask 4.73.3: 백업/복구 설정
+
+```typescript
+// database/backup-restore.ts
+export class DatabaseBackupManager {
+  private backupStrategies: Map<string, BackupStrategy> = new Map();
+  private storageProviders: Map<string, StorageProvider> = new Map();
+  private scheduler: BackupScheduler;
+
+  constructor(config: BackupConfig) {
+    this.initializeStrategies();
+    this.initializeStorageProviders(config);
+    this.scheduler = new BackupScheduler(this);
+  }
+
+  private initializeStrategies(): void {
+    // 전체 백업
+    this.backupStrategies.set("full", new FullBackupStrategy());
+
+    // 증분 백업
+    this.backupStrategies.set("incremental", new IncrementalBackupStrategy());
+
+    // 차등 백업
+    this.backupStrategies.set("differential", new DifferentialBackupStrategy());
+
+    // 시점 복구
+    this.backupStrategies.set("pitr", new PointInTimeRecoveryStrategy());
+  }
+
+  async createBackup(options: BackupOptions): Promise<BackupResult> {
+    const startTime = Date.now();
+    const backupId = this.generateBackupId();
+
+    try {
+      console.log(`Starting ${options.type} backup: ${backupId}`);
+
+      // 1. 백업 전략 선택
+      const strategy = this.backupStrategies.get(options.type);
+      if (!strategy) {
+        throw new Error(`Unknown backup type: ${options.type}`);
+      }
+
+      // 2. 백업 메타데이터 생성
+      const metadata: BackupMetadata = {
+        id: backupId,
+        type: options.type,
+        startTime: new Date(),
+        databases: options.databases || ["all"],
+        compression: options.compression || "gzip",
+        encryption: options.encryption || false,
+      };
+
+      // 3. 백업 실행
+      const backupData = await strategy.execute({
+        ...options,
+        metadata,
+      });
+
+      // 4. 압축
+      if (metadata.compression) {
+        backupData.data = await this.compress(
+          backupData.data,
+          metadata.compression
+        );
+      }
+
+      // 5. 암호화
+      if (metadata.encryption) {
+        backupData.data = await this.encrypt(backupData.data);
+      }
+
+      // 6. 저장
+      const storage = this.storageProviders.get(options.storage || "local");
+      const storagePath = await storage.save(backupId, backupData);
+
+      // 7. 메타데이터 저장
+      metadata.endTime = new Date();
+      metadata.size = backupData.data.length;
+      metadata.storagePath = storagePath;
+      metadata.checksum = this.calculateChecksum(backupData.data);
+
+      await this.saveMetadata(metadata);
+
+      const duration = Date.now() - startTime;
+
+      console.log(`Backup completed: ${backupId} (${duration}ms)`);
+
+      return {
+        success: true,
+        backupId,
+        metadata,
+        duration,
+      };
+    } catch (error) {
+      console.error(`Backup failed: ${error.message}`);
+
+      // 정리 작업
+      await this.cleanupFailedBackup(backupId);
+
+      throw error;
+    }
+  }
+
+  async restore(
+    backupId: string,
+    options: RestoreOptions = {}
+  ): Promise<RestoreResult> {
+    const startTime = Date.now();
+
+    try {
+      console.log(`Starting restore from backup: ${backupId}`);
+
+      // 1. 메타데이터 로드
+      const metadata = await this.loadMetadata(backupId);
+      if (!metadata) {
+        throw new Error(`Backup not found: ${backupId}`);
+      }
+
+      // 2. 백업 데이터 로드
+      const storage = this.storageProviders.get(
+        options.storage || this.detectStorage(metadata)
+      );
+      let backupData = await storage.load(metadata.storagePath);
+
+      // 3. 검증
+      if (!this.verifyChecksum(backupData, metadata.checksum)) {
+        throw new Error("Backup data corrupted");
+      }
+
+      // 4. 복호화
+      if (metadata.encryption) {
+        backupData = await this.decrypt(backupData);
+      }
+
+      // 5. 압축 해제
+      if (metadata.compression) {
+        backupData = await this.decompress(backupData, metadata.compression);
+      }
+
+      // 6. 복구 전략 선택
+      const strategy = this.backupStrategies.get(metadata.type);
+
+      // 7. 복구 실행
+      const result = await strategy.restore({
+        data: backupData,
+        metadata,
+        targetDatabase: options.targetDatabase,
+        targetTime: options.targetTime,
+        skipConstraints: options.skipConstraints,
+        parallel: options.parallel || 4,
+      });
+
+      const duration = Date.now() - startTime;
+
+      console.log(`Restore completed in ${duration}ms`);
+
+      return {
+        success: true,
+        backupId,
+        duration,
+        tablesRestored: result.tablesRestored,
+        rowsRestored: result.rowsRestored,
+      };
+    } catch (error) {
+      console.error(`Restore failed: ${error.message}`);
+      throw error;
+    }
+  }
+
+  // 자동 백업 스케줄링
+  async scheduleBackup(schedule: BackupSchedule): Promise<void> {
+    await this.scheduler.add({
+      id: schedule.id,
+      cron: schedule.cron,
+      backupOptions: schedule.options,
+      retention: schedule.retention,
+      notifications: schedule.notifications,
+    });
+  }
+
+  // 백업 보관 정책
+  async applyRetentionPolicy(
+    policy: RetentionPolicy
+  ): Promise<RetentionResult> {
+    const backups = await this.listBackups();
+    const toDelete: BackupMetadata[] = [];
+    const now = Date.now();
+
+    for (const backup of backups) {
+      const age = now - backup.endTime.getTime();
+
+      // 일별 백업 보관
+      if (backup.type === "full" && age > policy.daily * 86400000) {
+        // 주별 백업으로 승격 확인
+        if (!this.shouldPromoteToWeekly(backup, policy)) {
+          toDelete.push(backup);
+        }
+      }
+
+      // 주별 백업 보관
+      if (backup.promoted === "weekly" && age > policy.weekly * 604800000) {
+        // 월별 백업으로 승격 확인
+        if (!this.shouldPromoteToMonthly(backup, policy)) {
+          toDelete.push(backup);
+        }
+      }
+
+      // 월별 백업 보관
+      if (backup.promoted === "monthly" && age > policy.monthly * 2592000000) {
+        // 연별 백업으로 승격 확인
+        if (!this.shouldPromoteToYearly(backup, policy)) {
+          toDelete.push(backup);
+        }
+      }
+    }
+
+    // 백업 삭제
+    const deleted = [];
+    for (const backup of toDelete) {
+      try {
+        await this.deleteBackup(backup.id);
+        deleted.push(backup.id);
+      } catch (error) {
+        console.error(`Failed to delete backup ${backup.id}:`, error);
+      }
+    }
+
+    return {
+      backupsAnalyzed: backups.length,
+      backupsDeleted: deleted.length,
+      spaceFreed: toDelete.reduce((sum, b) => sum + b.size, 0),
+      deletedBackupIds: deleted,
+    };
+  }
+
+  // 백업 검증
+  async verifyBackup(backupId: string): Promise<BackupVerification> {
+    const metadata = await this.loadMetadata(backupId);
+    const issues: string[] = [];
+
+    // 1. 파일 존재 확인
+    const storage = this.storageProviders.get(this.detectStorage(metadata));
+    const exists = await storage.exists(metadata.storagePath);
+
+    if (!exists) {
+      issues.push("Backup file not found");
+    }
+
+    // 2. 체크섬 검증
+    if (exists) {
+      const data = await storage.load(metadata.storagePath);
+      if (!this.verifyChecksum(data, metadata.checksum)) {
+        issues.push("Checksum mismatch");
+      }
+    }
+
+    // 3. 복구 테스트 (선택적)
+    if (metadata.type === "full" && issues.length === 0) {
+      try {
+        await this.testRestore(backupId);
+      } catch (error) {
+        issues.push(`Restore test failed: ${error.message}`);
+      }
+    }
+
+    return {
+      backupId,
+      valid: issues.length === 0,
+      issues,
+      metadata,
+      verifiedAt: new Date(),
+    };
+  }
+}
+
+// 백업 전략 구현
+export class FullBackupStrategy implements BackupStrategy {
+  async execute(options: BackupExecutionOptions): Promise<BackupData> {
+    const dumper = new DatabaseDumper(options.connection);
+    const data: BackupData = {
+      type: "full",
+      data: Buffer.alloc(0),
+      metadata: options.metadata,
+    };
+
+    // 스키마 백업
+    const schema = await dumper.dumpSchema({
+      includeTables: options.includeTables,
+      excludeTables: options.excludeTables,
+    });
+
+    // 데이터 백업
+    const tableData = await dumper.dumpData({
+      includeTables: options.includeTables,
+      excludeTables: options.excludeTables,
+      parallel: options.parallel || 4,
+      batchSize: options.batchSize || 1000,
+    });
+
+    // 결합
+    data.data = Buffer.concat([
+      Buffer.from(
+        JSON.stringify({
+          schema,
+          data: tableData,
+          metadata: options.metadata,
+        })
+      ),
+    ]);
+
+    return data;
+  }
+
+  async restore(options: RestoreExecutionOptions): Promise<RestoreStats> {
+    const restorer = new DatabaseRestorer(options.connection);
+    const backupContent = JSON.parse(options.data.toString());
+
+    // 1. 스키마 복구
+    if (!options.dataOnly) {
+      await restorer.restoreSchema(backupContent.schema, {
+        dropExisting: options.dropExisting,
+        skipConstraints: options.skipConstraints,
+      });
+    }
+
+    // 2. 데이터 복구
+    const stats = await restorer.restoreData(backupContent.data, {
+      parallel: options.parallel,
+      batchSize: options.batchSize || 1000,
+      skipDuplicates: options.skipDuplicates,
+    });
+
+    // 3. 제약조건 재생성
+    if (!options.skipConstraints && !options.dataOnly) {
+      await restorer.restoreConstraints(backupContent.schema);
+    }
+
+    // 4. 인덱스 재생성
+    if (!options.skipIndexes && !options.dataOnly) {
+      await restorer.rebuildIndexes(backupContent.schema);
+    }
+
+    return stats;
+  }
+}
+
+// 증분 백업 전략
+export class IncrementalBackupStrategy implements BackupStrategy {
+  async execute(options: BackupExecutionOptions): Promise<BackupData> {
+    const lastBackup = await this.findLastBackup(options.metadata.databases);
+
+    if (!lastBackup) {
+      // 첫 백업은 전체 백업으로
+      return new FullBackupStrategy().execute(options);
+    }
+
+    const changes = await this.captureChanges(lastBackup.timestamp, options);
+
+    return {
+      type: "incremental",
+      data: Buffer.from(
+        JSON.stringify({
+          baseBackupId: lastBackup.id,
+          changes,
+          metadata: options.metadata,
+        })
+      ),
+      metadata: options.metadata,
+    };
+  }
+
+  private async captureChanges(
+    since: Date,
+    options: BackupExecutionOptions
+  ): Promise<DatabaseChanges> {
+    const changes: DatabaseChanges = {
+      inserts: [],
+      updates: [],
+      deletes: [],
+    };
+
+    // WAL 또는 변경 추적 테이블에서 변경사항 추출
+    if (options.changeTrackingMethod === "wal") {
+      return this.extractFromWAL(since, options);
+    } else if (options.changeTrackingMethod === "cdc") {
+      return this.extractFromCDC(since, options);
+    } else {
+      return this.extractFromTimestamps(since, options);
+    }
+  }
+}
+
+// 시점 복구 (Point-in-Time Recovery)
+export class PointInTimeRecoveryManager {
+  private walArchive: WALArchive;
+  private baseBackups: Map<string, BackupMetadata> = new Map();
+
+  async enablePITR(database: string): Promise<void> {
+    // WAL 아카이빙 활성화
+    await this.enableWALArchiving(database);
+
+    // 베이스 백업 생성
+    const baseBackup = await this.createBaseBackup(database);
+    this.baseBackups.set(database, baseBackup);
+
+    // WAL 수집 시작
+    this.startWALCollection(database);
+  }
+
+  async restoreToPoint(
+    database: string,
+    targetTime: Date
+  ): Promise<RestoreResult> {
+    // 1. 적절한 베이스 백업 찾기
+    const baseBackup = this.findBaseBackupBefore(database, targetTime);
+
+    if (!baseBackup) {
+      throw new Error("No base backup found before target time");
+    }
+
+    // 2. 베이스 백업 복구
+    await this.restoreBaseBackup(baseBackup);
+
+    // 3. WAL 적용
+    const walFiles = await this.walArchive.getWALFiles(
+      baseBackup.endTime,
+      targetTime
+    );
+
+    for (const walFile of walFiles) {
+      await this.applyWAL(walFile, targetTime);
+    }
+
+    return {
+      success: true,
+      restoredToTime: targetTime,
+      baseBackupUsed: baseBackup.id,
+      walFilesApplied: walFiles.length,
+    };
+  }
+}
+```
+
+### SubTask 4.73.4: 복제 설정
+
+```typescript
+// database/replication.ts
+export class DatabaseReplicationManager {
+  private replicationStreams: Map<string, ReplicationStream> = new Map();
+  private monitor: ReplicationMonitor;
+  private conflictResolver: ConflictResolver;
+
+  constructor() {
+    this.monitor = new ReplicationMonitor();
+    this.conflictResolver = new ConflictResolver();
+  }
+
+  async setupReplication(config: ReplicationConfig): Promise<ReplicationSetup> {
+    const setup = new ReplicationSetup();
+
+    try {
+      // 1. 마스터 설정
+      const master = await this.configureMaster(config.master);
+      setup.master = master;
+
+      // 2. 슬레이브 설정
+      for (const slaveConfig of config.slaves) {
+        const slave = await this.configureSlave(slaveConfig, master);
+        setup.slaves.push(slave);
+      }
+
+      // 3. 복제 스트림 시작
+      for (const slave of setup.slaves) {
+        const stream = await this.createReplicationStream(master, slave);
+        this.replicationStreams.set(slave.id, stream);
+      }
+
+      // 4. 모니터링 시작
+      this.monitor.startMonitoring(setup);
+
+      return setup;
+    } catch (error) {
+      await this.cleanup(setup);
+      throw error;
+    }
+  }
+
+  private async configureMaster(config: MasterConfig): Promise<MasterNode> {
+    const master = new MasterNode(config);
+
+    // 바이너리 로그 활성화
+    await master.execute(`
+      SET GLOBAL log_bin = ON;
+      SET GLOBAL binlog_format = 'ROW';
+      SET GLOBAL server_id = ${config.serverId};
+    `);
+
+    // 복제 사용자 생성
+    await master.execute(`
+      CREATE USER IF NOT EXISTS '${config.replicationUser}'@'%' 
+      IDENTIFIED BY '${config.replicationPassword}';
+      
+      GRANT REPLICATION SLAVE ON *.* 
+      TO '${config.replicationUser}'@'%';
+    `);
+
+    // 바이너리 로그 위치 기록
+    const position = await master.getBinaryLogPosition();
+    master.setInitialPosition(position);
+
+    return master;
+  }
+
+  private async configureSlave(
+    config: SlaveConfig,
+    master: MasterNode
+  ): Promise<SlaveNode> {
+    const slave = new SlaveNode(config);
+
+    // 서버 ID 설정
+    await slave.execute(`
+      SET GLOBAL server_id = ${config.serverId};
+      SET GLOBAL read_only = ${config.readOnly ? 1 : 0};
+    `);
+
+    // 마스터 연결 정보 설정
+    await slave.execute(`
+      CHANGE MASTER TO
+        MASTER_HOST = '${master.host}',
+        MASTER_PORT = ${master.port},
+        MASTER_USER = '${master.replicationUser}',
+        MASTER_PASSWORD = '${master.replicationPassword}',
+        MASTER_LOG_FILE = '${master.binlogFile}',
+        MASTER_LOG_POS = ${master.binlogPosition};
+    `);
+
+    // 복제 시작
+    await slave.execute("START SLAVE");
+
+    // 상태 확인
+    const status = await slave.getSlaveStatus();
+    if (!status.slaveIORunning || !status.slaveSQLRunning) {
+      throw new Error(`Slave ${slave.id} failed to start replication`);
+    }
+
+    return slave;
+  }
+
+  // 양방향 복제 (Multi-Master)
+  async setupMultiMasterReplication(
+    nodes: MultiMasterConfig[]
+  ): Promise<MultiMasterSetup> {
+    const setup = new MultiMasterSetup();
+
+    // 각 노드를 마스터로 설정
+    for (const nodeConfig of nodes) {
+      const node = await this.configureMasterNode(nodeConfig);
+      setup.nodes.push(node);
+    }
+
+    // 모든 노드 간 복제 설정
+    for (let i = 0; i < setup.nodes.length; i++) {
+      for (let j = 0; j < setup.nodes.length; j++) {
+        if (i !== j) {
+          await this.setupReplicationChannel(
+            setup.nodes[i],
+            setup.nodes[j],
+            `channel_${i}_to_${j}`
+          );
+        }
+      }
+    }
+
+    // 충돌 해결 설정
+    await this.configureConflictResolution(setup);
+
+    return setup;
+  }
+
+  // 복제 지연 모니터링
+  async monitorReplicationLag(): Promise<ReplicationLagReport> {
+    const report: ReplicationLagReport = {
+      timestamp: new Date(),
+      slaves: [],
+    };
+
+    for (const [slaveId, stream] of this.replicationStreams) {
+      const lag = await stream.getReplicationLag();
+
+      report.slaves.push({
+        slaveId,
+        lagSeconds: lag.seconds,
+        lagBytes: lag.bytes,
+        status: this.evaluateLagStatus(lag),
+      });
+
+      // 지연이 임계값을 초과하면 알림
+      if (lag.seconds > 10) {
+        await this.handleHighReplicationLag(slaveId, lag);
+      }
+    }
+
+    return report;
+  }
+
+  private evaluateLagStatus(lag: ReplicationLag): string {
+    if (lag.seconds < 1) return "healthy";
+    if (lag.seconds < 5) return "warning";
+    if (lag.seconds < 30) return "critical";
+    return "severe";
+  }
+
+  // 자동 장애 조치
+  async setupAutomaticFailover(config: FailoverConfig): Promise<void> {
+    const failoverManager = new FailoverManager({
+      ...config,
+      onFailoverStart: async (failed, candidate) => {
+        console.log(`Starting failover from ${failed.id} to ${candidate.id}`);
+      },
+      onFailoverComplete: async (newMaster, slaves) => {
+        console.log(`Failover complete. New master: ${newMaster.id}`);
+        await this.reconfigureTopology(newMaster, slaves);
+      },
+    });
+
+    // 헬스 체크 설정
+    failoverManager.startHealthChecking({
+      interval: 5000,
+      timeout: 3000,
+      maxFailures: 3,
+    });
+
+    // 자동 장애 조치 활성화
+    failoverManager.enableAutomaticFailover();
+  }
+
+  // 읽기 부하 분산
+  createReadLoadBalancer(slaves: SlaveNode[]): ReadLoadBalancer {
+    return new ReadLoadBalancer({
+      slaves,
+      strategy: "least-lag", // 지연이 가장 적은 슬레이브 선택
+      healthCheck: async (slave) => {
+        const status = await slave.getSlaveStatus();
+        return status.slaveIORunning && status.slaveSQLRunning;
+      },
+      lagThreshold: 5, // 5초 이상 지연된 슬레이브 제외
+    });
+  }
+
+  // 복제 토폴로지 시각화
+  async getReplicationTopology(): Promise<ReplicationTopology> {
+    const topology: ReplicationTopology = {
+      nodes: [],
+      connections: [],
+    };
+
+    // 모든 노드 수집
+    for (const [id, stream] of this.replicationStreams) {
+      const node = await stream.getNodeInfo();
+      topology.nodes.push({
+        id: node.id,
+        type: node.type,
+        host: node.host,
+        port: node.port,
+        status: node.status,
+        lag: node.type === "slave" ? await stream.getReplicationLag() : null,
+      });
+
+      // 연결 정보
+      if (node.type === "slave") {
+        topology.connections.push({
+          from: node.masterId,
+          to: node.id,
+          type: "replication",
+          status: "active",
+        });
+      }
+    }
+
+    return topology;
+  }
+}
+
+// 복제 충돌 해결
+export class ConflictResolver {
+  private strategies: Map<string, ConflictResolutionStrategy> = new Map();
+
+  constructor() {
+    this.registerDefaultStrategies();
+  }
+
+  private registerDefaultStrategies(): void {
+    // 타임스탬프 기반
+    this.strategies.set("timestamp", {
+      resolve: async (conflict) => {
+        return conflict.changes.reduce((latest, change) =>
+          change.timestamp > latest.timestamp ? change : latest
+        );
+      },
+    });
+
+    // 버전 기반
+    this.strategies.set("version", {
+      resolve: async (conflict) => {
+        return conflict.changes.reduce((highest, change) =>
+          change.version > highest.version ? change : highest
+        );
+      },
+    });
+
+    // 사용자 정의 우선순위
+    this.strategies.set("priority", {
+      resolve: async (conflict) => {
+        return conflict.changes.reduce((highest, change) =>
+          change.priority > highest.priority ? change : highest
+        );
+      },
+    });
+
+    // 병합
+    this.strategies.set("merge", {
+      resolve: async (conflict) => {
+        return this.mergeChanges(conflict.changes);
+      },
+    });
+  }
+
+  async resolveConflict(
+    conflict: ReplicationConflict,
+    strategy: string = "timestamp"
+  ): Promise<ConflictResolution> {
+    const resolver = this.strategies.get(strategy);
+
+    if (!resolver) {
+      throw new Error(`Unknown conflict resolution strategy: ${strategy}`);
+    }
+
+    const resolution = await resolver.resolve(conflict);
+
+    // 해결 기록
+    await this.recordResolution({
+      conflictId: conflict.id,
+      strategy,
+      resolution,
+      timestamp: new Date(),
+    });
+
+    return resolution;
+  }
+
+  private async mergeChanges(changes: Change[]): Promise<Change> {
+    // 컬럼별로 최신 값 선택
+    const merged: any = {};
+
+    for (const change of changes) {
+      for (const [column, value] of Object.entries(change.data)) {
+        if (!merged[column] || change.timestamp > merged[column].timestamp) {
+          merged[column] = { value, timestamp: change.timestamp };
+        }
+      }
+    }
+
+    return {
+      data: Object.entries(merged).reduce((acc, [key, val]: [string, any]) => {
+        acc[key] = val.value;
+        return acc;
+      }, {}),
+      timestamp: new Date(),
+      merged: true,
+    };
+  }
+}
+
+// 복제 스트림 관리
+export class ReplicationStream {
+  private connection: Connection;
+  private binlogParser: BinlogParser;
+  private position: BinlogPosition;
+  private handlers: Map<string, EventHandler> = new Map();
+
+  async start(): Promise<void> {
+    // 바이너리 로그 스트리밍 시작
+    const stream = await this.connection.startBinlogStream({
+      startPosition: this.position,
+      includeSchema: true,
+      includeTableMap: true,
+    });
+
+    stream.on("binlog", async (event) => {
+      await this.handleBinlogEvent(event);
+    });
+
+    stream.on("error", (error) => {
+      console.error("Replication stream error:", error);
+      this.reconnect();
+    });
+  }
+
+  private async handleBinlogEvent(event: BinlogEvent): Promise<void> {
+    const parsed = this.binlogParser.parse(event);
+
+    switch (parsed.type) {
+      case "WRITE_ROWS":
+        await this.handleInsert(parsed);
+        break;
+
+      case "UPDATE_ROWS":
+        await this.handleUpdate(parsed);
+        break;
+
+      case "DELETE_ROWS":
+        await this.handleDelete(parsed);
+        break;
+
+      case "QUERY":
+        await this.handleQuery(parsed);
+        break;
+    }
+
+    // 위치 업데이트
+    this.position = parsed.nextPosition;
+  }
+
+  async getReplicationLag(): Promise<ReplicationLag> {
+    const masterPosition = await this.getMasterPosition();
+    const slavePosition = this.position;
+
+    return {
+      seconds: await this.calculateTimeLag(masterPosition, slavePosition),
+      bytes: masterPosition.position - slavePosition.position,
+      behindMaster: masterPosition.position > slavePosition.position,
+    };
+  }
+}
+```
+
+프로젝트의 인프라 구성 관련 작업들을 시작하겠습니다. 먼저 프로젝트 지식에서 관련 정보를 확인해보겠습니다.프로젝트 지식을 기반으로 Phase 4의 Task 4.74-4.80에 대한 상세 작업 지시서를 작성하겠습니다. 이 작업들은 T-Developer의 프로덕션 배포를 위한 인프라 구성 작업입니다.
+
+## Phase 4: Tasks 4.74-4.80 - 인프라 및 배포 구성
+
+### 📋 개요
+
+- **목표**: T-Developer 시스템의 프로덕션 배포를 위한 인프라 구성
+- **범위**: 7개 Tasks × 4 SubTasks = 28개 작업 단위
+- **기간**: 예상 3-4주
+- **전제조건**: 핵심 에이전트 구현 완료 (Tasks 4.1-4.73)
+
+---
+
+## 📝 세부 작업지시서
+
+### Task 4.74: 메시지 큐 통합
+
+#### SubTask 4.74.1: 큐 구성
+
+**담당자**: 인프라 엔지니어  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```typescript
+// infrastructure/messaging/queue-configuration.ts
+import { SQSClient, CreateQueueCommand } from "@aws-sdk/client-sqs";
+import { EventBridgeClient, PutRuleCommand } from "@aws-sdk/client-eventbridge";
+
+export class QueueConfiguration {
+  private sqsClient: SQSClient;
+  private eventBridgeClient: EventBridgeClient;
+
+  async setupQueues(): Promise<void> {
+    // 에이전트 작업 큐
+    await this.createFIFOQueue("agent-tasks", {
+      VisibilityTimeout: 300,
+      MessageRetentionPeriod: 86400,
+      FifoQueue: true,
+      ContentBasedDeduplication: true,
+      RedrivePolicy: JSON.stringify({
+        deadLetterTargetArn: "arn:aws:sqs:region:account:agent-tasks-dlq.fifo",
+        maxReceiveCount: 3,
+      }),
+    });
+
+    // UI 생성 요청 큐
+    await this.createStandardQueue("ui-generation-requests", {
+      VisibilityTimeout: 600,
+      MessageRetentionPeriod: 172800,
+      DelaySeconds: 0,
+      ReceiveMessageWaitTimeSeconds: 20,
+    });
+
+    // 컴포넌트 매칭 큐
+    await this.createStandardQueue("component-matching", {
+      VisibilityTimeout: 120,
+      MessageRetentionPeriod: 43200,
+    });
+
+    // 결과 전달 큐
+    await this.createStandardQueue("results-delivery", {
+      VisibilityTimeout: 60,
+      MessageRetentionPeriod: 7200,
+    });
+
+    // EventBridge 규칙 설정
+    await this.setupEventRules();
+  }
+
+  private async createFIFOQueue(name: string, attributes: any): Promise<void> {
+    const command = new CreateQueueCommand({
+      QueueName: `${name}.fifo`,
+      Attributes: {
+        ...attributes,
+        FifoQueue: "true",
+      },
+    });
+
+    await this.sqsClient.send(command);
+  }
+
+  private async setupEventRules(): Promise<void> {
+    // 에이전트 완료 이벤트
+    await this.eventBridgeClient.send(
+      new PutRuleCommand({
+        Name: "agent-completion-rule",
+        EventPattern: JSON.stringify({
+          source: ["tdeveloper.agents"],
+          "detail-type": ["Agent Task Completed"],
+        }),
+        State: "ENABLED",
+      })
+    );
+
+    // 에러 이벤트
+    await this.eventBridgeClient.send(
+      new PutRuleCommand({
+        Name: "error-handling-rule",
+        EventPattern: JSON.stringify({
+          source: ["tdeveloper.agents"],
+          "detail-type": ["Agent Error", "Processing Failed"],
+        }),
+        State: "ENABLED",
+      })
+    );
+  }
+}
+```
+
+#### SubTask 4.74.2: 프로듀서/컨슈머 설정
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```python
+# backend/src/messaging/producers/agent_producer.py
+from typing import Dict, Any, Optional
+import json
+import boto3
+from dataclasses import dataclass, asdict
+import uuid
+from datetime import datetime
+
+@dataclass
+class AgentTaskMessage:
+    task_id: str
+    agent_type: str
+    action: str
+    payload: Dict[str, Any]
+    priority: int = 0
+    correlation_id: Optional[str] = None
+    timestamp: Optional[str] = None
+
+    def __post_init__(self):
+        if not self.correlation_id:
+            self.correlation_id = str(uuid.uuid4())
+        if not self.timestamp:
+            self.timestamp = datetime.utcnow().isoformat()
+
+class AgentTaskProducer:
+    def __init__(self, queue_url: str, region: str = 'us-east-1'):
+        self.queue_url = queue_url
+        self.sqs_client = boto3.client('sqs', region_name=region)
+        self.eventbridge_client = boto3.client('events', region_name=region)
+
+    async def send_task(self, message: AgentTaskMessage) -> str:
+        """Send task to agent queue"""
+        try:
+            # Send to SQS
+            response = self.sqs_client.send_message(
+                QueueUrl=self.queue_url,
+                MessageBody=json.dumps(asdict(message)),
+                MessageGroupId=message.agent_type,
+                MessageDeduplicationId=f"{message.task_id}-{message.timestamp}",
+                MessageAttributes={
+                    'agent_type': {
+                        'StringValue': message.agent_type,
+                        'DataType': 'String'
+                    },
+                    'priority': {
+                        'StringValue': str(message.priority),
+                        'DataType': 'Number'
+                    },
+                    'correlation_id': {
+                        'StringValue': message.correlation_id,
+                        'DataType': 'String'
+                    }
+                }
+            )
+
+            # Emit event
+            await self._emit_task_event(message, response['MessageId'])
+
+            return response['MessageId']
+
+        except Exception as e:
+            await self._handle_send_error(message, e)
+            raise
+
+    async def send_batch(self, messages: List[AgentTaskMessage]) -> List[str]:
+        """Send multiple tasks in batch"""
+        entries = []
+
+        for i, message in enumerate(messages[:10]):  # SQS limit
+            entries.append({
+                'Id': str(i),
+                'MessageBody': json.dumps(asdict(message)),
+                'MessageGroupId': message.agent_type,
+                'MessageDeduplicationId': f"{message.task_id}-{message.timestamp}",
+                'MessageAttributes': {
+                    'agent_type': {
+                        'StringValue': message.agent_type,
+                        'DataType': 'String'
+                    }
+                }
+            })
+
+        response = self.sqs_client.send_message_batch(
+            QueueUrl=self.queue_url,
+            Entries=entries
+        )
+
+        return [msg['MessageId'] for msg in response.get('Successful', [])]
+```
+
+```python
+# backend/src/messaging/consumers/agent_consumer.py
+import asyncio
+from typing import Callable, Dict, Any, Optional
+import json
+import logging
+from abc import ABC, abstractmethod
+
+class BaseAgentConsumer(ABC):
+    def __init__(
+        self,
+        queue_url: str,
+        handler: Callable,
+        max_workers: int = 10,
+        visibility_timeout: int = 300
+    ):
+        self.queue_url = queue_url
+        self.handler = handler
+        self.max_workers = max_workers
+        self.visibility_timeout = visibility_timeout
+        self.sqs_client = boto3.client('sqs')
+        self.running = False
+        self.workers = []
+
+    async def start(self):
+        """Start consuming messages"""
+        self.running = True
+
+        # Start worker tasks
+        for i in range(self.max_workers):
+            worker = asyncio.create_task(self._worker(i))
+            self.workers.append(worker)
+
+        # Wait for all workers
+        await asyncio.gather(*self.workers)
+
+    async def stop(self):
+        """Stop consuming messages"""
+        self.running = False
+
+        # Cancel all workers
+        for worker in self.workers:
+            worker.cancel()
+
+        await asyncio.gather(*self.workers, return_exceptions=True)
+
+    async def _worker(self, worker_id: int):
+        """Worker coroutine"""
+        logger = logging.getLogger(f"worker-{worker_id}")
+
+        while self.running:
+            try:
+                # Receive messages
+                response = self.sqs_client.receive_message(
+                    QueueUrl=self.queue_url,
+                    MaxNumberOfMessages=1,
+                    VisibilityTimeout=self.visibility_timeout,
+                    WaitTimeSeconds=20,
+                    MessageAttributeNames=['All']
+                )
+
+                messages = response.get('Messages', [])
+
+                for message in messages:
+                    await self._process_message(message, logger)
+
+            except Exception as e:
+                logger.error(f"Worker error: {e}")
+                await asyncio.sleep(5)
+
+    async def _process_message(self, message: Dict[str, Any], logger):
+        """Process single message"""
+        try:
+            # Parse message
+            body = json.loads(message['Body'])
+
+            # Process with handler
+            result = await self.handler(body)
+
+            # Delete message on success
+            self.sqs_client.delete_message(
+                QueueUrl=self.queue_url,
+                ReceiptHandle=message['ReceiptHandle']
+            )
+
+            # Emit success event
+            await self._emit_success_event(body, result)
+
+        except Exception as e:
+            logger.error(f"Processing error: {e}")
+            await self._handle_processing_error(message, e)
+
+    @abstractmethod
+    async def _handle_processing_error(self, message: Dict[str, Any], error: Exception):
+        """Handle processing errors"""
+        pass
+```
+
+#### SubTask 4.74.3: DLQ (Dead Letter Queue) 설정
+
+**담당자**: 인프라 엔지니어  
+**예상 소요시간**: 6시간
+
+**작업 내용**:
+
+```typescript
+// infrastructure/messaging/dlq-configuration.ts
+export class DLQConfiguration {
+  async setupDeadLetterQueues(): Promise<void> {
+    // 각 메인 큐에 대한 DLQ 생성
+    const dlqConfigs = [
+      {
+        name: "agent-tasks-dlq.fifo",
+        type: "fifo",
+        retentionPeriod: 1209600, // 14 days
+        alarmThreshold: 10,
+      },
+      {
+        name: "ui-generation-dlq",
+        type: "standard",
+        retentionPeriod: 604800, // 7 days
+        alarmThreshold: 5,
+      },
+      {
+        name: "component-matching-dlq",
+        type: "standard",
+        retentionPeriod: 604800,
+        alarmThreshold: 20,
+      },
+    ];
+
+    for (const config of dlqConfigs) {
+      await this.createDLQ(config);
+      await this.setupDLQAlarms(config);
+      await this.setupDLQProcessor(config);
+    }
+  }
+
+  private async setupDLQProcessor(config: DLQConfig): Promise<void> {
+    // Lambda function for DLQ processing
+    const lambdaCode = `
+      exports.handler = async (event) => {
+        const messages = event.Records;
+        
+        for (const message of messages) {
+          const body = JSON.parse(message.body);
+          
+          // Log to CloudWatch
+          console.error('DLQ Message:', {
+            queue: '${config.name}',
+            messageId: message.messageId,
+            body: body,
+            attributes: message.messageAttributes,
+            receiveCount: message.attributes.ApproximateReceiveCount
+          });
+          
+          // Store in S3 for analysis
+          await storeInS3(message);
+          
+          // Send alert if critical
+          if (isCriticalError(body)) {
+            await sendAlert(message);
+          }
+        }
+      };
+    `;
+
+    // Deploy Lambda
+    await this.deployLambda({
+      functionName: `dlq-processor-${config.name}`,
+      code: lambdaCode,
+      environment: {
+        S3_BUCKET: "tdeveloper-dlq-storage",
+        SNS_TOPIC: "tdeveloper-critical-alerts",
+      },
+    });
+  }
+}
+```
+
+#### SubTask 4.74.4: 모니터링 통합
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```python
+# infrastructure/monitoring/queue_monitoring.py
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+import boto3
+from prometheus_client import Counter, Histogram, Gauge
+import time
+
+@dataclass
+class QueueMetrics:
+    messages_sent = Counter('queue_messages_sent_total', 'Total messages sent', ['queue'])
+    messages_received = Counter('queue_messages_received_total', 'Total messages received', ['queue'])
+    messages_failed = Counter('queue_messages_failed_total', 'Total messages failed', ['queue'])
+    processing_duration = Histogram('queue_processing_duration_seconds', 'Message processing duration', ['queue'])
+    queue_depth = Gauge('queue_depth', 'Current queue depth', ['queue'])
+    dlq_messages = Gauge('dlq_messages', 'Messages in DLQ', ['queue'])
+
+class QueueMonitor:
+    def __init__(self):
+        self.cloudwatch = boto3.client('cloudwatch')
+        self.sqs = boto3.client('sqs')
+        self.metrics = QueueMetrics()
+
+    async def start_monitoring(self, queues: List[str]):
+        """Start monitoring queues"""
+        while True:
+            for queue_url in queues:
+                await self.collect_metrics(queue_url)
+
+            await asyncio.sleep(60)  # Collect every minute
+
+    async def collect_metrics(self, queue_url: str):
+        """Collect metrics for a single queue"""
+        try:
+            # Get queue attributes
+            response = self.sqs.get_queue_attributes(
+                QueueUrl=queue_url,
+                AttributeNames=['All']
+            )
+
+            attributes = response['Attributes']
+            queue_name = queue_url.split('/')[-1]
+
+            # Update Prometheus metrics
+            self.metrics.queue_depth.labels(queue=queue_name).set(
+                int(attributes.get('ApproximateNumberOfMessages', 0))
+            )
+
+            # Send to CloudWatch
+            await self.send_cloudwatch_metrics(queue_name, attributes)
+
+        except Exception as e:
+            logger.error(f"Error collecting metrics for {queue_url}: {e}")
+
+    async def send_cloudwatch_metrics(self, queue_name: str, attributes: Dict[str, str]):
+        """Send metrics to CloudWatch"""
+        metrics = [
+            {
+                'MetricName': 'QueueDepth',
+                'Value': int(attributes.get('ApproximateNumberOfMessages', 0)),
+                'Unit': 'Count'
+            },
+            {
+                'MetricName': 'OldestMessageAge',
+                'Value': int(attributes.get('ApproximateAgeOfOldestMessage', 0)),
+                'Unit': 'Seconds'
+            },
+            {
+                'MetricName': 'InFlightMessages',
+                'Value': int(attributes.get('ApproximateNumberOfMessagesNotVisible', 0)),
+                'Unit': 'Count'
+            }
+        ]
+
+        self.cloudwatch.put_metric_data(
+            Namespace='TDeveloper/Queues',
+            MetricData=[
+                {
+                    **metric,
+                    'Dimensions': [
+                        {'Name': 'QueueName', 'Value': queue_name}
+                    ],
+                    'Timestamp': time.time()
+                }
+                for metric in metrics
+            ]
+        )
+```
+
+### Task 4.75: 캐싱 레이어 구성
+
+#### SubTask 4.75.1: Redis 클러스터 설정
+
+**담당자**: 인프라 엔지니어  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```typescript
+// infrastructure/cache/redis-cluster-setup.ts
+import {
+  ElastiCacheClient,
+  CreateCacheClusterCommand,
+  CreateReplicationGroupCommand,
+} from "@aws-sdk/client-elasticache";
+
+export class RedisClusterSetup {
+  private elasticacheClient: ElastiCacheClient;
+
+  async setupRedisCluster(): Promise<void> {
+    // Production Redis Cluster
+    await this.createReplicationGroup({
+      ReplicationGroupId: "tdeveloper-cache-prod",
+      ReplicationGroupDescription: "T-Developer production cache cluster",
+      Engine: "redis",
+      CacheNodeType: "cache.r6g.xlarge",
+      NumCacheClusters: 3, // 1 primary + 2 replicas
+      AutomaticFailoverEnabled: true,
+      MultiAZEnabled: true,
+      CacheSubnetGroupName: "tdeveloper-cache-subnet",
+      SecurityGroupIds: ["sg-cache-prod"],
+      AtRestEncryptionEnabled: true,
+      TransitEncryptionEnabled: true,
+      SnapshotRetentionLimit: 7,
+      PreferredMaintenanceWindow: "sun:05:00-sun:06:00",
+      NotificationTopicArn: "arn:aws:sns:region:account:cache-alerts",
+    });
+
+    // Configure Redis parameters
+    await this.configureRedisParameters();
+
+    // Setup connection pooling
+    await this.setupConnectionPooling();
+  }
+
+  private async configureRedisParameters(): Promise<void> {
+    const parameters = {
+      "maxmemory-policy": "allkeys-lru",
+      timeout: "300",
+      "tcp-keepalive": "60",
+      maxclients: "10000",
+      "slowlog-log-slower-than": "10000",
+      "slowlog-max-len": "128",
+    };
+
+    // Create parameter group
+    await this.elasticacheClient.send(
+      new CreateCacheParameterGroupCommand({
+        CacheParameterGroupName: "tdeveloper-redis-params",
+        CacheParameterGroupFamily: "redis7",
+        Description: "T-Developer Redis parameters",
+      })
+    );
+
+    // Apply parameters
+    await this.applyParameters("tdeveloper-redis-params", parameters);
+  }
+
+  private async setupConnectionPooling(): Promise<void> {
+    // Redis connection pool configuration
+    const poolConfig = {
+      min: 10,
+      max: 100,
+      acquireTimeoutMillis: 30000,
+      idleTimeoutMillis: 30000,
+      evictionRunIntervalMillis: 10000,
+      enableOfflineQueue: true,
+      enableReadyCheck: true,
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times: number) => {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+      },
+    };
+
+    // Save configuration
+    await this.savePoolConfiguration(poolConfig);
+  }
+}
+```
+
+#### SubTask 4.75.2: 캐싱 전략 구현
+
+**담당자**: 백엔드 아키텍트  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+
+```python
+# backend/src/cache/caching_strategies.py
+from typing import Any, Optional, Dict, Callable, TypeVar, Generic
+from abc import ABC, abstractmethod
+import asyncio
+import hashlib
+import json
+from datetime import timedelta
+import redis.asyncio as redis
+from functools import wraps
+import pickle
+
+T = TypeVar('T')
+
+class CacheStrategy(ABC, Generic[T]):
+    """Base cache strategy interface"""
+
+    @abstractmethod
+    async def get(self, key: str) -> Optional[T]:
+        pass
+
+    @abstractmethod
+    async def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
+        pass
+
+    @abstractmethod
+    async def delete(self, key: str) -> None:
+        pass
+
+    @abstractmethod
+    async def exists(self, key: str) -> bool:
+        pass
+
+class WriteThrough(CacheStrategy[T]):
+    """Write-through caching strategy"""
+
+    def __init__(self, cache_client: redis.Redis, data_store: Any):
+        self.cache = cache_client
+        self.store = data_store
+
+    async def get(self, key: str) -> Optional[T]:
+        # Try cache first
+        cached = await self.cache.get(key)
+        if cached:
+            return pickle.loads(cached)
+
+        # Load from store
+        value = await self.store.get(key)
+        if value:
+            # Update cache
+            await self.cache.set(key, pickle.dumps(value))
+
+        return value
+
+    async def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
+        # Write to both cache and store
+        await asyncio.gather(
+            self.cache.set(key, pickle.dumps(value), ex=ttl),
+            self.store.set(key, value)
+        )
+
+class WriteBehind(CacheStrategy[T]):
+    """Write-behind (write-back) caching strategy"""
+
+    def __init__(self, cache_client: redis.Redis, data_store: Any, flush_interval: int = 60):
+        self.cache = cache_client
+        self.store = data_store
+        self.flush_interval = flush_interval
+        self.write_queue: asyncio.Queue = asyncio.Queue()
+        self.flush_task = None
+
+    async def start(self):
+        """Start the background flush task"""
+        self.flush_task = asyncio.create_task(self._flush_worker())
+
+    async def stop(self):
+        """Stop the background flush task"""
+        if self.flush_task:
+            self.flush_task.cancel()
+            await self.flush_task
+
+    async def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
+        # Write to cache immediately
+        await self.cache.set(key, pickle.dumps(value), ex=ttl)
+
+        # Queue for later write to store
+        await self.write_queue.put((key, value))
+
+    async def _flush_worker(self):
+        """Background worker to flush writes to store"""
+        batch = []
+
+        while True:
+            try:
+                # Collect writes for batch processing
+                timeout = asyncio.create_task(asyncio.sleep(self.flush_interval))
+
+                while len(batch) < 100:  # Max batch size
+                    get_task = asyncio.create_task(self.write_queue.get())
+                    done, pending = await asyncio.wait(
+                        {get_task, timeout},
+                        return_when=asyncio.FIRST_COMPLETED
+                    )
+
+                    if get_task in done:
+                        batch.append(get_task.result())
+                    else:
+                        get_task.cancel()
+                        break
+
+                # Flush batch to store
+                if batch:
+                    await self._flush_batch(batch)
+                    batch = []
+
+            except asyncio.CancelledError:
+                # Final flush on shutdown
+                if batch:
+                    await self._flush_batch(batch)
+                raise
+            except Exception as e:
+                logger.error(f"Flush worker error: {e}")
+
+class CacheAside(CacheStrategy[T]):
+    """Cache-aside (lazy loading) strategy"""
+
+    def __init__(self, cache_client: redis.Redis):
+        self.cache = cache_client
+
+    async def get(self, key: str) -> Optional[T]:
+        cached = await self.cache.get(key)
+        return pickle.loads(cached) if cached else None
+
+    async def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
+        await self.cache.set(key, pickle.dumps(value), ex=ttl)
+
+class ReadThrough(CacheStrategy[T]):
+    """Read-through caching strategy with automatic loading"""
+
+    def __init__(self, cache_client: redis.Redis, loader: Callable[[str], T]):
+        self.cache = cache_client
+        self.loader = loader
+
+    async def get(self, key: str) -> Optional[T]:
+        # Check cache
+        cached = await self.cache.get(key)
+        if cached:
+            return pickle.loads(cached)
+
+        # Load from source
+        value = await self.loader(key)
+        if value is not None:
+            await self.cache.set(key, pickle.dumps(value))
+
+        return value
+
+# Caching decorators
+def cached(
+    strategy: CacheStrategy,
+    key_prefix: str = "",
+    ttl: Optional[int] = 3600,
+    key_builder: Optional[Callable] = None
+):
+    """Decorator for caching function results"""
+
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Build cache key
+            if key_builder:
+                cache_key = key_builder(*args, **kwargs)
+            else:
+                # Default key building
+                key_parts = [key_prefix, func.__name__]
+                key_parts.extend(str(arg) for arg in args)
+                key_parts.extend(f"{k}={v}" for k, v in sorted(kwargs.items()))
+                cache_key = ":".join(key_parts)
+
+            # Try to get from cache
+            cached_value = await strategy.get(cache_key)
+            if cached_value is not None:
+                return cached_value
+
+            # Execute function
+            result = await func(*args, **kwargs)
+
+            # Store in cache
+            await strategy.set(cache_key, result, ttl)
+
+            return result
+
+        return wrapper
+
+    return decorator
+
+# Multi-level caching
+class MultiLevelCache(CacheStrategy[T]):
+    """Multi-level caching with L1 (local) and L2 (distributed) caches"""
+
+    def __init__(self, l1_cache: Dict[str, T], l2_cache: redis.Redis):
+        self.l1_cache = l1_cache
+        self.l2_cache = l2_cache
+        self.l1_max_size = 1000
+
+    async def get(self, key: str) -> Optional[T]:
+        # Check L1
+        if key in self.l1_cache:
+            return self.l1_cache[key]
+
+        # Check L2
+        cached = await self.l2_cache.get(key)
+        if cached:
+            value = pickle.loads(cached)
+            # Promote to L1
+            self._add_to_l1(key, value)
+            return value
+
+        return None
+
+    def _add_to_l1(self, key: str, value: T):
+        """Add to L1 cache with LRU eviction"""
+        if len(self.l1_cache) >= self.l1_max_size:
+            # Simple LRU: remove first item
+            first_key = next(iter(self.l1_cache))
+            del self.l1_cache[first_key]
+
+        self.l1_cache[key] = value
+```
+
+#### SubTask 4.75.3: 캐시 무효화
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```typescript
+// backend/src/cache/cache-invalidation.ts
+export class CacheInvalidation {
+  private redis: Redis;
+  private patterns: Map<string, InvalidationPattern>;
+
+  constructor() {
+    this.patterns = new Map();
+    this.setupInvalidationPatterns();
+  }
+
+  private setupInvalidationPatterns(): void {
+    // Agent results invalidation
+    this.addPattern("agent:*:result", {
+      triggers: ["agent.completed", "agent.failed"],
+      cascade: ["ui:*:preview", "component:*:match"],
+      ttl: 3600,
+    });
+
+    // Component cache invalidation
+    this.addPattern("component:*", {
+      triggers: ["component.updated", "component.deleted"],
+      cascade: ["search:component:*"],
+      ttl: 86400,
+    });
+
+    // User session invalidation
+    this.addPattern("session:*", {
+      triggers: ["user.logout", "session.expired"],
+      cascade: ["user:*:preferences", "user:*:history"],
+      ttl: 1800,
+    });
+  }
+
+  async invalidate(key: string | string[], reason?: string): Promise<void> {
+    const keys = Array.isArray(key) ? key : [key];
+
+    // Log invalidation
+    logger.info("Cache invalidation", {
+      keys,
+      reason,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Delete keys
+    await this.redis.del(...keys);
+
+    // Handle cascading invalidations
+    for (const k of keys) {
+      await this.handleCascade(k);
+    }
+
+    // Emit invalidation event
+    await this.emitInvalidationEvent(keys, reason);
+  }
+
+  async invalidatePattern(pattern: string): Promise<number> {
+    let cursor = "0";
+    let count = 0;
+
+    do {
+      const [newCursor, keys] = await this.redis.scan(
+        cursor,
+        "MATCH",
+        pattern,
+        "COUNT",
+        100
+      );
+
+      cursor = newCursor;
+
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+        count += keys.length;
+      }
+    } while (cursor !== "0");
+
+    return count;
+  }
+
+  async setupTagBasedInvalidation(): Promise<void> {
+    // Tag-based cache invalidation
+    const taggedCache = new TaggedCache(this.redis);
+
+    // Example: Invalidate all caches tagged with 'user:123'
+    await taggedCache.invalidateByTag("user:123");
+
+    // Example: Invalidate multiple tags
+    await taggedCache.invalidateByTags(["project:456", "team:789"]);
+  }
+}
+
+class TaggedCache {
+  constructor(private redis: Redis) {}
+
+  async setWithTags(
+    key: string,
+    value: any,
+    tags: string[],
+    ttl?: number
+  ): Promise<void> {
+    const pipeline = this.redis.pipeline();
+
+    // Set the value
+    pipeline.set(key, JSON.stringify(value));
+    if (ttl) {
+      pipeline.expire(key, ttl);
+    }
+
+    // Store key-tag relationships
+    for (const tag of tags) {
+      pipeline.sadd(`tag:${tag}`, key);
+      pipeline.expire(`tag:${tag}`, ttl || 86400);
+    }
+
+    await pipeline.exec();
+  }
+
+  async invalidateByTag(tag: string): Promise<number> {
+    // Get all keys with this tag
+    const keys = await this.redis.smembers(`tag:${tag}`);
+
+    if (keys.length === 0) {
+      return 0;
+    }
+
+    // Delete all keys and the tag set
+    const pipeline = this.redis.pipeline();
+    pipeline.del(...keys);
+    pipeline.del(`tag:${tag}`);
+
+    await pipeline.exec();
+
+    return keys.length;
+  }
+}
+```
+
+#### SubTask 4.75.4: 캐시 워밍
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```python
+# backend/src/cache/cache_warming.py
+import asyncio
+from typing import List, Dict, Any, Callable
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+import logging
+
+@dataclass
+class WarmingStrategy:
+    name: str
+    priority: int
+    schedule: str  # Cron expression
+    data_source: Callable
+    key_pattern: str
+    ttl: int
+    batch_size: int = 100
+    parallel_workers: int = 5
+
+class CacheWarmer:
+    def __init__(self, cache_client, strategies: List[WarmingStrategy]):
+        self.cache = cache_client
+        self.strategies = sorted(strategies, key=lambda s: s.priority, reverse=True)
+        self.running = False
+        self.tasks = []
+
+    async def start(self):
+        """Start cache warming process"""
+        self.running = True
+
+        # Schedule warming tasks
+        for strategy in self.strategies:
+            task = asyncio.create_task(self._run_strategy(strategy))
+            self.tasks.append(task)
+
+        # Start periodic warming
+        asyncio.create_task(self._periodic_warming())
+
+    async def _run_strategy(self, strategy: WarmingStrategy):
+        """Run a single warming strategy"""
+        logger.info(f"Starting cache warming: {strategy.name}")
+
+        try:
+            # Fetch data from source
+            data = await strategy.data_source()
+
+            # Process in batches
+            for i in range(0, len(data), strategy.batch_size):
+                batch = data[i:i + strategy.batch_size]
+                await self._warm_batch(batch, strategy)
+
+                # Avoid overloading
+                await asyncio.sleep(0.1)
+
+            logger.info(f"Completed cache warming: {strategy.name}, {len(data)} items")
+
+        except Exception as e:
+            logger.error(f"Cache warming failed: {strategy.name}, error: {e}")
+
+    async def _warm_batch(self, batch: List[Any], strategy: WarmingStrategy):
+        """Warm a batch of cache entries"""
+        tasks = []
+
+        for item in batch:
+            key = self._build_key(strategy.key_pattern, item)
+            task = self.cache.set(key, item, ex=strategy.ttl)
+            tasks.append(task)
+
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def warm_critical_paths(self):
+        """Warm critical application paths"""
+        critical_data = [
+            # Popular UI components
+            {
+                'pattern': 'component:popular:*',
+                'source': self._get_popular_components,
+                'ttl': 3600
+            },
+            # Frequently used templates
+            {
+                'pattern': 'template:frequent:*',
+                'source': self._get_frequent_templates,
+                'ttl': 7200
+            },
+            # Recent project data
+            {
+                'pattern': 'project:recent:*',
+                'source': self._get_recent_projects,
+                'ttl': 1800
+            }
+        ]
+
+        for config in critical_data:
+            data = await config['source']()
+            await self._warm_data(data, config['pattern'], config['ttl'])
+
+    async def _get_popular_components(self) -> List[Dict[str, Any]]:
+        """Fetch popular components from analytics"""
+        # Query analytics for top components
+        query = """
+        SELECT component_id, usage_count, metadata
+        FROM component_analytics
+        WHERE period = 'last_7_days'
+        ORDER BY usage_count DESC
+        LIMIT 100
+        """
+
+        return await self.db.fetch_all(query)
+
+    async def predictive_warming(self):
+        """Predictive cache warming based on usage patterns"""
+        predictor = UsagePredictor()
+
+        # Analyze access patterns
+        patterns = await predictor.analyze_patterns()
+
+        # Predict next likely accesses
+        predictions = await predictor.predict_next_accesses(patterns)
+
+        # Warm predicted keys
+        for prediction in predictions:
+            if prediction.confidence > 0.7:
+                await self._warm_prediction(prediction)
+
+    async def _warm_prediction(self, prediction):
+        """Warm cache based on prediction"""
+        data = await prediction.data_source()
+
+        await self.cache.set(
+            prediction.key,
+            data,
+            ex=prediction.ttl
+        )
+
+        # Track prediction accuracy
+        await self._track_prediction(prediction)
+```
+
+### Task 4.76: 컨테이너화
+
+#### SubTask 4.76.1: Dockerfile 생성
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```dockerfile
+# backend/Dockerfile
+# Build stage
+FROM node:18-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++ git
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY backend/package*.json ./backend/
+
+# Install dependencies
+RUN npm ci --only=production
+RUN npm ci --prefix backend
+
+# Copy source code
+COPY backend/ ./backend/
+COPY shared/ ./shared/
+COPY tsconfig*.json ./
+
+# Build application
+RUN npm run build --prefix backend
+
+# Runtime stage
+FROM node:18-alpine AS runtime
+
+# Install runtime dependencies
+RUN apk add --no-cache tini curl
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder --chown=nodejs:nodejs /app/backend/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/backend/node_modules ./backend/node_modules
+
+# Copy configuration files
+COPY --chown=nodejs:nodejs backend/config ./config
+COPY --chown=nodejs:nodejs backend/scripts ./scripts
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Switch to non-root user
+USER nodejs
+
+# Use tini for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start application
+CMD ["node", "dist/server.js"]
+```
+
+```dockerfile
+# frontend/Dockerfile
+# Build stage
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY frontend/package*.json ./frontend/
+
+# Install dependencies
+RUN npm ci --prefix frontend
+
+# Copy source code
+COPY frontend/ ./frontend/
+COPY shared/ ./shared/
+
+# Build application
+ARG NODE_ENV=production
+ARG REACT_APP_API_URL
+ARG REACT_APP_WS_URL
+
+ENV NODE_ENV=$NODE_ENV
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ENV REACT_APP_WS_URL=$REACT_APP_WS_URL
+
+RUN npm run build --prefix frontend
+
+# Runtime stage
+FROM nginx:alpine
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy custom nginx config
+COPY frontend/nginx.conf /etc/nginx/nginx.conf
+COPY frontend/default.conf /etc/nginx/conf.d/default.conf
+
+# Copy built application
+COPY --from=builder /app/frontend/build /usr/share/nginx/html
+
+# Add security headers
+RUN echo 'add_header X-Frame-Options "SAMEORIGIN" always;' >> /etc/nginx/conf.d/security.conf && \
+    echo 'add_header X-Content-Type-Options "nosniff" always;' >> /etc/nginx/conf.d/security.conf && \
+    echo 'add_header X-XSS-Protection "1; mode=block" always;' >> /etc/nginx/conf.d/security.conf
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD curl -f http://localhost/health || exit 1
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+#### SubTask 4.76.2: 멀티스테이지 빌드
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 6시간
+
+**작업 내용**:
+
+```dockerfile
+# agents/Dockerfile.multi-stage
+# Base stage with common dependencies
+FROM python:3.10-slim AS base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Poetry installation
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+ENV PATH="/root/.local/bin:$PATH"
+
+# Dependencies stage
+FROM base AS dependencies
+
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock ./
+
+# Install dependencies
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-interaction --no-ansi --no-root --only main
+
+# Development stage
+FROM dependencies AS development
+
+# Install dev dependencies
+RUN poetry install --no-interaction --no-ansi --no-root
+
+# Copy source code
+COPY . .
+
+# Install package
+RUN poetry install --no-interaction --no-ansi
+
+# Development command
+CMD ["python", "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+
+# Test stage
+FROM development AS test
+
+# Run tests
+RUN poetry run pytest tests/ --cov=app --cov-report=xml
+
+# Production build stage
+FROM dependencies AS build
+
+WORKDIR /app
+
+# Copy source code
+COPY . .
+
+# Build wheel
+RUN poetry build
+
+# Production runtime stage
+FROM python:3.10-slim AS production
+
+# Create non-root user
+RUN useradd -m -u 1001 appuser
+
+WORKDIR /app
+
+# Copy built wheel and dependencies
+COPY --from=build /app/dist/*.whl ./
+COPY --from=dependencies /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+
+# Install application
+RUN pip install --no-cache-dir *.whl && \
+    rm *.whl
+
+# Copy configuration
+COPY config ./config
+
+# Change ownership
+RUN chown -R appuser:appuser /app
+
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD python -c "import requests; requests.get('http://localhost:8000/health')"
+
+EXPOSE 8000
+
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+#### SubTask 4.76.3: 이미지 최적화
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+````bash
+#!/bin/bash
+# scripts/optimize-docker-images.sh
+
+# Image optimization script
+set -e
+
+echo "Starting Docker image optimization..."
+
+# Function to analyze image
+analyze_image() {
+    local image=$1
+    echo "Analyzing $image..."
+
+    # Use dive for image analysis
+    docker run --rm -it \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        wagoodman/dive:latest $image
+}
+
+# Function to optimize image
+optimize_image() {
+    local dockerfile=$1
+    local context=$2
+    local tag=$3
+
+    echo "Optimizing $tag..."
+
+    # Build with BuildKit
+    DOCKER_BUILDKIT=1 docker build \
+        --progress=plain \
+        --cache-from $tag:cache \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        -f $dockerfile \
+        -t $tag \
+        -t $tag:cache \
+        $context
+
+    # Squash layers (if experimental features enabled)
+    docker build --squash -t $tag:squashed .
+
+    # Security scan
+    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+        aquasec/trivy image $tag
+}
+
+# Optimization techniques implementation
+cat > docker-optimization.md << 'EOF'
+# Docker Image Optimization Techniques
+
+## 1. Multi-stage builds
+- Separate build and runtime stages
+- Copy only necessary artifacts
+
+## 2. Layer caching
+- Order Dockerfile commands by change frequency
+- Combine RUN commands
+- Use .dockerignore
+
+## 3. Base image selection
+- Use alpine or slim variants
+- Consider distroless images
+
+## 4. Package management
+- Remove package manager cache
+- Don't install recommended packages
+- Clean up after installation
+
+## 5. File optimization
+- Minimize file permissions
+- Remove unnecessary files
+- Use specific COPY commands
+
+## 6. Build arguments
+- Use ARG for build-time variables
+- Leverage BuildKit cache mounts
+
+## Example optimized Dockerfile:
+```dockerfile
+# syntax=docker/dockerfile:1.4
+FROM node:18-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production
+
+FROM node:18-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
+COPY . .
+RUN npm run build
+
+FROM gcr.io/distroless/nodejs18-debian11
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+USER nonroot
+EXPOSE 3000
+CMD ["dist/server.js"]
+````
+
+EOF
+
+# Size comparison script
+
+cat > compare-sizes.sh << 'EOF'
+#!/bin/bash
+echo "Image Size Comparison:"
+echo "====================="
+docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | grep tdeveloper
+EOF
+
+chmod +x compare-sizes.sh
+
+````
+
+#### SubTask 4.76.4: 레지스트리 푸시
+**담당자**: DevOps 엔지니어
+**예상 소요시간**: 6시간
+
+**작업 내용**:
+```typescript
+// infrastructure/scripts/registry-push.ts
+import { ECRClient, CreateRepositoryCommand, PutLifecyclePolicyCommand, GetAuthorizationTokenCommand } from '@aws-sdk/client-ecr';
+import { execSync } from 'child_process';
+
+export class RegistryManager {
+  private ecrClient: ECRClient;
+  private registryUrl: string;
+
+  async setupECRRepositories(): Promise<void> {
+    const repositories = [
+      'tdeveloper/backend',
+      'tdeveloper/frontend',
+      'tdeveloper/agents',
+      'tdeveloper/workers'
+    ];
+
+    for (const repo of repositories) {
+      await this.createRepository(repo);
+      await this.setLifecyclePolicy(repo);
+    }
+  }
+
+  private async createRepository(name: string): Promise<void> {
+    try {
+      await this.ecrClient.send(new CreateRepositoryCommand({
+        repositoryName: name,
+        imageScanningConfiguration: {
+          scanOnPush: true
+        },
+        encryptionConfiguration: {
+          encryptionType: 'AES256'
+        },
+        imageTagMutability: 'MUTABLE'
+      }));
+
+      console.log(`Created ECR repository: ${name}`);
+    } catch (error) {
+      if (error.name !== 'RepositoryAlreadyExistsException') {
+        throw error;
+      }
+    }
+  }
+
+  private async setLifecyclePolicy(repositoryName: string): Promise<void> {
+    const policy = {
+      rules: [
+        {
+          rulePriority: 1,
+          description: 'Keep last 10 images',
+          selection: {
+            tagStatus: 'tagged',
+            tagPrefixList: ['v'],
+            countType: 'imageCountMoreThan',
+            countNumber: 10
+          },
+          action: {
+            type: 'expire'
+          }
+        },
+        {
+          rulePriority: 2,
+          description: 'Remove untagged after 7 days',
+          selection: {
+            tagStatus: 'untagged',
+            countType: 'sinceImagePushed',
+            countUnit: 'days',
+            countNumber: 7
+          },
+          action: {
+            type: 'expire'
+          }
+        }
+      ]
+    };
+
+    await this.ecrClient.send(new PutLifecyclePolicyCommand({
+      repositoryName,
+      lifecyclePolicyText: JSON.stringify(policy)
+    }));
+  }
+
+  async pushImages(version: string): Promise<void> {
+    // Get ECR login token
+    const authResponse = await this.ecrClient.send(new GetAuthorizationTokenCommand({}));
+    const authData = authResponse.authorizationData[0];
+    const token = Buffer.from(authData.authorizationToken, 'base64').toString();
+    const [username, password] = token.split(':');
+
+    // Docker login
+    execSync(`echo ${password} | docker login --username ${username} --password-stdin ${authData.proxyEndpoint}`);
+
+    // Tag and push images
+    const images = [
+      { local: 'tdeveloper-backend', remote: 'tdeveloper/backend' },
+      { local: 'tdeveloper-frontend', remote: 'tdeveloper/frontend' },
+      { local: 'tdeveloper-agents', remote: 'tdeveloper/agents' }
+    ];
+
+    for (const image of images) {
+      const remoteTag = `${this.registryUrl}/${image.remote}:${version}`;
+
+      // Tag image
+      execSync(`docker tag ${image.local}:latest ${remoteTag}`);
+
+      // Push image
+      console.log(`Pushing ${remoteTag}...`);
+      execSync(`docker push ${remoteTag}`);
+
+      // Also push latest tag
+      const latestTag = `${this.registryUrl}/${image.remote}:latest`;
+      execSync(`docker tag ${image.local}:latest ${latestTag}`);
+      execSync(`docker push ${latestTag}`);
+    }
+  }
+}
+
+// GitHub Actions workflow for automated push
+const githubWorkflow = `
+name: Build and Push Images
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: \${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: \${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build and push images
+      env:
+        ECR_REGISTRY: \${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: \${{ github.sha }}
+      run: |
+        # Build images
+        docker-compose build
+
+        # Tag and push
+        docker tag tdeveloper-backend \$ECR_REGISTRY/tdeveloper/backend:\$IMAGE_TAG
+        docker push \$ECR_REGISTRY/tdeveloper/backend:\$IMAGE_TAG
+
+        # Push with version tag if tagged
+        if [[ "\${{ github.ref }}" == refs/tags/* ]]; then
+          VERSION=\${GITHUB_REF#refs/tags/}
+          docker tag tdeveloper-backend \$ECR_REGISTRY/tdeveloper/backend:\$VERSION
+          docker push \$ECR_REGISTRY/tdeveloper/backend:\$VERSION
+        fi
+`;
+````
+
+### Task 4.77: 오케스트레이션 설정
+
+#### SubTask 4.77.1: Kubernetes 매니페스트
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```yaml
+# k8s/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tdeveloper
+  labels:
+    name: tdeveloper
+    environment: production
+
+---
+# k8s/backend/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: tdeveloper
+  labels:
+    app: backend
+    component: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        version: v1
+    spec:
+      serviceAccountName: backend-sa
+      containers:
+        - name: backend
+          image: ECR_REGISTRY/tdeveloper/backend:latest
+          ports:
+            - containerPort: 3000
+              name: http
+            - containerPort: 9090
+              name: metrics
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secrets
+                  key: redis-url
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: backend-config
+
+---
+# k8s/backend/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: tdeveloper
+  labels:
+    app: backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+    - port: 9090
+      targetPort: 9090
+      protocol: TCP
+      name: metrics
+  selector:
+    app: backend
+
+---
+# k8s/backend/hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: tdeveloper
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: "1000"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      selectPolicy: Max
+
+---
+# k8s/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tdeveloper-ingress
+  namespace: tdeveloper
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/websocket-services: "backend"
+spec:
+  tls:
+    - hosts:
+        - api.tdeveloper.com
+      secretName: tdeveloper-tls
+  rules:
+    - host: api.tdeveloper.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+```
+
+#### SubTask 4.77.2: Helm 차트 생성
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```yaml
+# helm/tdeveloper/Chart.yaml
+apiVersion: v2
+name: tdeveloper
+description: T-Developer Helm chart for Kubernetes
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+dependencies:
+  - name: redis
+    version: 17.3.14
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: postgresql
+    version: 12.1.2
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+
+---
+# helm/tdeveloper/values.yaml
+global:
+  environment: production
+  domain: tdeveloper.com
+
+backend:
+  replicaCount: 3
+  image:
+    repository: ECR_REGISTRY/tdeveloper/backend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: LOG_LEVEL
+      value: info
+
+  secrets:
+    - name: DATABASE_URL
+      key: database-url
+      ref: backend-secrets
+    - name: REDIS_URL
+      key: redis-url
+      ref: backend-secrets
+
+frontend:
+  replicaCount: 2
+  image:
+    repository: ECR_REGISTRY/tdeveloper/frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+
+agents:
+  enabled: true
+  workers:
+    nlInput:
+      replicas: 2
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 2Gi
+    uiSelection:
+      replicas: 2
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+    generation:
+      replicas: 3
+      resources:
+        requests:
+          cpu: 2000m
+          memory: 4Gi
+
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    enabled: true
+    existingSecret: redis-secret
+    existingSecretPasswordKey: password
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 10Gi
+
+postgresql:
+  enabled: true
+  auth:
+    existingSecret: postgres-secret
+  primary:
+    persistence:
+      enabled: true
+      size: 50Gi
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: api.tdeveloper.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: tdeveloper-tls
+      hosts:
+        - api.tdeveloper.com
+
+monitoring:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+  grafana:
+    enabled: true
+    dashboards:
+      enabled: true
+
+---
+# helm/tdeveloper/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tdeveloper.fullname" . }}-backend
+  labels:
+    {{- include "tdeveloper.labels" . | nindent 4 }}
+    component: backend
+spec:
+  {{- if not .Values.backend.autoscaling.enabled }}
+  replicas: {{ .Values.backend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "tdeveloper.selectorLabels" . | nindent 6 }}
+      component: backend
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "tdeveloper.selectorLabels" . | nindent 8 }}
+        component: backend
+    spec:
+      serviceAccountName: {{ include "tdeveloper.serviceAccountName" . }}
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.service.targetPort }}
+              protocol: TCP
+          env:
+            {{- range .Values.backend.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+            {{- range .Values.backend.secrets }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .ref }}
+                  key: {{ .key }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+```
+
+#### SubTask 4.77.3: 오토스케일링 설정
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```yaml
+# k8s/autoscaling/keda-scaledobjects.yaml
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: agent-workers-scaler
+  namespace: tdeveloper
+spec:
+  scaleTargetRef:
+    name: agent-workers
+  minReplicaCount: 2
+  maxReplicaCount: 50
+  cooldownPeriod: 300
+  triggers:
+    - type: aws-sqs-queue
+      metadata:
+        queueURL: https://sqs.us-east-1.amazonaws.com/123456789/agent-tasks.fifo
+        queueLength: "10"
+        awsRegion: "us-east-1"
+        identityOwner: pod
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus:9090
+        metricName: agent_processing_queue_depth
+        threshold: "20"
+        query: |
+          avg(agent_processing_queue_depth{namespace="tdeveloper"})
+
+---
+# k8s/autoscaling/vpa.yaml
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: backend-vpa
+  namespace: tdeveloper
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: backend
+        minAllowed:
+          cpu: 250m
+          memory: 256Mi
+        maxAllowed:
+          cpu: 2
+          memory: 2Gi
+        controlledResources: ["cpu", "memory"]
+
+---
+# k8s/autoscaling/cluster-autoscaler.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+  labels:
+    app: cluster-autoscaler
+spec:
+  selector:
+    matchLabels:
+      app: cluster-autoscaler
+  template:
+    metadata:
+      labels:
+        app: cluster-autoscaler
+    spec:
+      serviceAccountName: cluster-autoscaler
+      containers:
+        - image: k8s.gcr.io/autoscaling/cluster-autoscaler:v1.26.0
+          name: cluster-autoscaler
+          resources:
+            limits:
+              cpu: 100m
+              memory: 300Mi
+            requests:
+              cpu: 100m
+              memory: 300Mi
+          command:
+            - ./cluster-autoscaler
+            - --v=4
+            - --stderrthreshold=info
+            - --cloud-provider=aws
+            - --skip-nodes-with-local-storage=false
+            - --expander=least-waste
+            - --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/tdeveloper
+            - --balance-similar-node-groups
+            - --skip-nodes-with-system-pods=false
+```
+
+```python
+# scripts/autoscaling-policies.py
+from typing import Dict, List
+import boto3
+
+class AutoScalingManager:
+    def __init__(self):
+        self.asg_client = boto3.client('autoscaling')
+        self.cloudwatch = boto3.client('cloudwatch')
+
+    def setup_asg_policies(self):
+        """Setup Auto Scaling Group policies"""
+
+        # Target tracking scaling policy
+        self.asg_client.put_scaling_policy(
+            AutoScalingGroupName='tdeveloper-workers-asg',
+            PolicyName='target-tracking-cpu',
+            PolicyType='TargetTrackingScaling',
+            TargetTrackingConfiguration={
+                'TargetValue': 70.0,
+                'PredefinedMetricSpecification': {
+                    'PredefinedMetricType': 'ASGAverageCPUUtilization'
+                },
+                'ScaleInCooldown': 300,
+                'ScaleOutCooldown': 60
+            }
+        )
+
+        # Step scaling policy for queue depth
+        self.asg_client.put_scaling_policy(
+            AutoScalingGroupName='tdeveloper-workers-asg',
+            PolicyName='queue-depth-scaling',
+            PolicyType='StepScaling',
+            StepAdjustments=[
+                {
+                    'MetricIntervalLowerBound': 0,
+                    'MetricIntervalUpperBound': 50,
+                    'ScalingAdjustment': 1
+                },
+                {
+                    'MetricIntervalLowerBound': 50,
+                    'MetricIntervalUpperBound': 100,
+                    'ScalingAdjustment': 2
+                },
+                {
+                    'MetricIntervalLowerBound': 100,
+                    'ScalingAdjustment': 4
+                }
+            ],
+            MetricAggregationType='Average',
+            EstimatedInstanceWarmup': 300
+        )
+
+        # Create CloudWatch alarms
+        self.create_scaling_alarms()
+
+    def create_scaling_alarms(self):
+        """Create CloudWatch alarms for scaling"""
+
+        # High queue depth alarm
+        self.cloudwatch.put_metric_alarm(
+            AlarmName='tdeveloper-high-queue-depth',
+            ComparisonOperator='GreaterThanThreshold',
+            EvaluationPeriods=2,
+            MetricName='ApproximateNumberOfMessages',
+            Namespace='AWS/SQS',
+            Period=300,
+            Statistic='Average',
+            Threshold=100.0,
+            ActionsEnabled=True,
+            AlarmActions=[
+                'arn:aws:autoscaling:region:account:scalingPolicy:...'
+            ],
+            AlarmDescription='Trigger scale out when queue depth is high',
+            Dimensions=[
+                {
+                    'Name': 'QueueName',
+                    'Value': 'agent-tasks.fifo'
+                }
+            ]
+        )
+```
+
+#### SubTask 4.77.4: 롤링 업데이트
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 6시간
+
+**작업 내용**:
+
+```yaml
+# k8s/deployment-strategies/rolling-update.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: tdeveloper
+spec:
+  replicas: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2 # 최대 2개의 추가 파드
+      maxUnavailable: 1 # 최대 1개의 파드 비활성화
+  template:
+    spec:
+      containers:
+        - name: backend
+          image: ECR_REGISTRY/tdeveloper/backend:v2.0.0
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          # Pre-stop hook for graceful shutdown
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+
+---
+# k8s/deployment-strategies/blue-green.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: tdeveloper
+spec:
+  selector:
+    app: backend
+    version: green # Switch between blue/green
+  ports:
+    - port: 80
+      targetPort: 3000
+
+---
+# Blue deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-blue
+  namespace: tdeveloper
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: backend
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: backend
+        version: blue
+    spec:
+      containers:
+        - name: backend
+          image: ECR_REGISTRY/tdeveloper/backend:v1.0.0
+
+---
+# Green deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-green
+  namespace: tdeveloper
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: backend
+      version: green
+  template:
+    metadata:
+      labels:
+        app: backend
+        version: green
+    spec:
+      containers:
+        - name: backend
+          image: ECR_REGISTRY/tdeveloper/backend:v2.0.0
+
+---
+# k8s/deployment-strategies/canary.yaml
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: backend
+  namespace: tdeveloper
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  service:
+    port: 80
+    targetPort: 3000
+    gateways:
+      - public-gateway.istio-system.svc.cluster.local
+    hosts:
+      - api.tdeveloper.com
+  analysis:
+    interval: 1m
+    threshold: 5
+    maxWeight: 50
+    stepWeight: 10
+    metrics:
+      - name: request-success-rate
+        thresholdRange:
+          min: 99
+        interval: 1m
+      - name: request-duration
+        thresholdRange:
+          max: 500
+        interval: 30s
+    webhooks:
+      - name: acceptance-test
+        url: http://flagger-loadtester.test/
+        timeout: 30s
+        metadata:
+          type: bash
+          cmd: "curl -sd 'test' http://backend-canary.tdeveloper/test | grep success"
+```
+
+```bash
+#!/bin/bash
+# scripts/rolling-update.sh
+
+# Rolling update script with health checks
+set -e
+
+NAMESPACE="tdeveloper"
+DEPLOYMENT="backend"
+NEW_IMAGE="ECR_REGISTRY/tdeveloper/backend:v2.0.0"
+
+echo "Starting rolling update to ${NEW_IMAGE}"
+
+# Update deployment image
+kubectl set image deployment/${DEPLOYMENT} \
+  backend=${NEW_IMAGE} \
+  -n ${NAMESPACE} \
+  --record
+
+# Wait for rollout to complete
+kubectl rollout status deployment/${DEPLOYMENT} -n ${NAMESPACE}
+
+# Verify deployment
+READY=$(kubectl get deployment ${DEPLOYMENT} -n ${NAMESPACE} -o jsonpath='{.status.readyReplicas}')
+DESIRED=$(kubectl get deployment ${DEPLOYMENT} -n ${NAMESPACE} -o jsonpath='{.spec.replicas}')
+
+if [ "$READY" -eq "$DESIRED" ]; then
+  echo "✅ Rolling update completed successfully"
+  echo "Ready replicas: ${READY}/${DESIRED}"
+
+  # Run smoke tests
+  ./scripts/smoke-tests.sh
+else
+  echo "❌ Rolling update failed"
+  echo "Ready replicas: ${READY}/${DESIRED}"
+
+  # Rollback
+  kubectl rollout undo deployment/${DEPLOYMENT} -n ${NAMESPACE}
+  exit 1
+fi
+
+# Update canary for gradual rollout
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rollout-config
+  namespace: ${NAMESPACE}
+data:
+  strategy: |
+    stages:
+    - setWeight: 10
+      pause: {duration: 10m}
+    - setWeight: 25
+      pause: {duration: 10m}
+    - setWeight: 50
+      pause: {duration: 10m}
+    - setWeight: 75
+      pause: {duration: 10m}
+    - setWeight: 100
+EOF
+```
+
+### Task 4.78: 모니터링 설정
+
+#### SubTask 4.78.1: Prometheus 메트릭
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```yaml
+# k8s/monitoring/prometheus-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'tdeveloper-prod'
+        
+    alerting:
+      alertmanagers:
+      - static_configs:
+        - targets: ['alertmanager:9093']
+
+    rule_files:
+      - '/etc/prometheus/rules/*.yml'
+
+    scrape_configs:
+      # Backend metrics
+      - job_name: 'backend'
+        kubernetes_sd_configs:
+        - role: pod
+          namespaces:
+            names: ['tdeveloper']
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_app]
+          action: keep
+          regex: backend
+        - source_labels: [__meta_kubernetes_pod_name]
+          target_label: pod
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: namespace
+        
+      # Agent metrics
+      - job_name: 'agents'
+        kubernetes_sd_configs:
+        - role: pod
+          namespaces:
+            names: ['tdeveloper']
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_component]
+          action: keep
+          regex: agent-.*
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+          action: keep
+          regex: true
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+          action: replace
+          target_label: __address__
+          regex: ([^:]+)(?::\d+)?
+          replacement: $1:${1}
+          
+      # Node exporter
+      - job_name: 'node-exporter'
+        kubernetes_sd_configs:
+        - role: node
+        relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/${1}/proxy/metrics
+          
+      # Custom metrics
+      - job_name: 'custom-metrics'
+        static_configs:
+        - targets:
+          - 'queue-metrics-exporter:9090'
+          - 'cache-metrics-exporter:9091'
+          - 'agent-metrics-exporter:9092'
+
+---
+# k8s/monitoring/prometheus-rules.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  alerts.yml: |
+    groups:
+    - name: tdeveloper.rules
+      interval: 30s
+      rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+            /
+            sum(rate(http_requests_total[5m])) by (service)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High error rate on {{ $labels.service }}"
+          description: "{{ $labels.service }} has error rate of {{ $value | humanizePercentage }}"
+          
+      # Agent processing latency
+      - alert: AgentHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(agent_processing_duration_seconds_bucket[5m])) by (agent_type, le)
+          ) > 10
+        for: 10m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "High processing latency for {{ $labels.agent_type }}"
+          description: "95th percentile latency is {{ $value }}s"
+          
+      # Queue depth
+      - alert: QueueBacklog
+        expr: |
+          aws_sqs_approximate_number_of_messages_visible > 1000
+        for: 15m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: "High queue depth for {{ $labels.queue_name }}"
+          description: "Queue has {{ $value }} messages waiting"
+          
+      # Memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            container_memory_usage_bytes{namespace="tdeveloper"}
+            / 
+            container_spec_memory_limit_bytes{namespace="tdeveloper"}
+          ) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: "High memory usage in {{ $labels.pod }}"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+```
+
+```python
+# backend/src/metrics/custom_metrics.py
+from prometheus_client import Counter, Histogram, Gauge, Info
+from prometheus_client import start_http_server
+import time
+
+# Agent metrics
+agent_requests_total = Counter(
+    'agent_requests_total',
+    'Total number of agent requests',
+    ['agent_type', 'action']
+)
+
+agent_processing_duration = Histogram(
+    'agent_processing_duration_seconds',
+    'Time spent processing agent requests',
+    ['agent_type', 'action'],
+    buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0)
+)
+
+agent_active_sessions = Gauge(
+    'agent_active_sessions',
+    'Number of active agent sessions',
+    ['agent_type']
+)
+
+# Component metrics
+component_cache_hits = Counter(
+    'component_cache_hits_total',
+    'Total number of component cache hits',
+    ['component_type']
+)
+
+component_cache_misses = Counter(
+    'component_cache_misses_total',
+    'Total number of component cache misses',
+    ['component_type']
+)
+
+# UI generation metrics
+ui_generation_requests = Counter(
+    'ui_generation_requests_total',
+    'Total UI generation requests',
+    ['framework', 'status']
+)
+
+ui_generation_duration = Histogram(
+    'ui_generation_duration_seconds',
+    'Time to generate UI components',
+    ['framework'],
+    buckets=(1.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0)
+)
+
+# System info
+system_info = Info(
+    'tdeveloper_system',
+    'T-Developer system information'
+)
+
+system_info.info({
+    'version': '1.0.0',
+    'environment': 'production',
+    'region': 'us-east-1'
+})
+
+class MetricsCollector:
+    def __init__(self):
+        # Start metrics server
+        start_http_server(9090)
+
+    def record_agent_request(self, agent_type: str, action: str):
+        agent_requests_total.labels(
+            agent_type=agent_type,
+            action=action
+        ).inc()
+
+    def record_agent_processing(self, agent_type: str, action: str, duration: float):
+        agent_processing_duration.labels(
+            agent_type=agent_type,
+            action=action
+        ).observe(duration)
+
+    def update_active_sessions(self, agent_type: str, count: int):
+        agent_active_sessions.labels(
+            agent_type=agent_type
+        ).set(count)
+
+    def record_cache_access(self, component_type: str, hit: bool):
+        if hit:
+            component_cache_hits.labels(
+                component_type=component_type
+            ).inc()
+        else:
+            component_cache_misses.labels(
+                component_type=component_type
+            ).inc()
+```
+
+#### SubTask 4.78.2: Grafana 대시보드
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```json
+{
+  "dashboard": {
+    "id": null,
+    "uid": "tdeveloper-main",
+    "title": "T-Developer Main Dashboard",
+    "tags": ["tdeveloper", "production"],
+    "timezone": "browser",
+    "schemaVersion": 30,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+        "type": "graph",
+        "title": "Request Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{namespace=\"tdeveloper\"}[5m])) by (service)",
+            "legendFormat": "{{ service }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "reqps", "label": "Requests/sec" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 2,
+        "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+        "type": "graph",
+        "title": "Error Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{namespace=\"tdeveloper\",status=~\"5..\"}[5m])) by (service) / sum(rate(http_requests_total{namespace=\"tdeveloper\"}[5m])) by (service)",
+            "legendFormat": "{{ service }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "percentunit", "label": "Error Rate" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 3,
+        "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+        "type": "graph",
+        "title": "Response Time (P95)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"tdeveloper\"}[5m])) by (service, le))",
+            "legendFormat": "{{ service }}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "s", "label": "Response Time" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 4,
+        "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+        "type": "graph",
+        "title": "Agent Processing Time",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(agent_processing_duration_seconds_bucket[5m])) by (agent_type, le))",
+            "legendFormat": "{{ agent_type }}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+        "type": "table",
+        "title": "Queue Status",
+        "targets": [
+          {
+            "expr": "aws_sqs_approximate_number_of_messages_visible",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "gridPos": { "x": 0, "y": 16, "w": 8, "h": 8 },
+        "type": "stat",
+        "title": "Active Users",
+        "targets": [
+          {
+            "expr": "sum(active_user_sessions)",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 7,
+        "gridPos": { "x": 8, "y": 16, "w": 8, "h": 8 },
+        "type": "stat",
+        "title": "Cache Hit Rate",
+        "targets": [
+          {
+            "expr": "sum(rate(component_cache_hits_total[5m])) / (sum(rate(component_cache_hits_total[5m])) + sum(rate(component_cache_misses_total[5m])))",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "unit": "percentunit",
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 8,
+        "gridPos": { "x": 16, "y": 16, "w": 8, "h": 8 },
+        "type": "stat",
+        "title": "UI Components Generated",
+        "targets": [
+          {
+            "expr": "sum(increase(ui_generation_requests_total{status=\"success\"}[1h]))",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      }
+    ]
+  }
+}
+```
+
+```python
+# scripts/grafana-dashboard-generator.py
+import json
+from typing import Dict, List, Any
+
+class GrafanaDashboardGenerator:
+    def __init__(self):
+        self.panels = []
+        self.current_y = 0
+
+    def add_row(self, title: str):
+        """Add a row separator"""
+        self.panels.append({
+            "type": "row",
+            "title": title,
+            "gridPos": {"x": 0, "y": self.current_y, "w": 24, "h": 1}
+        })
+        self.current_y += 1
+
+    def add_graph_panel(
+        self,
+        title: str,
+        queries: List[Dict[str, str]],
+        width: int = 8,
+        height: int = 8,
+        yaxis_format: str = "short"
+    ):
+        """Add a graph panel"""
+        targets = []
+        for i, query in enumerate(queries):
+            targets.append({
+                "expr": query["expr"],
+                "legendFormat": query.get("legend", ""),
+                "refId": chr(65 + i)  # A, B, C...
+            })
+
+        panel = {
+            "id": len(self.panels) + 1,
+            "type": "graph",
+            "title": title,
+            "gridPos": {
+                "x": (len(self.panels) * width) % 24,
+                "y": self.current_y,
+                "w": width,
+                "h": height
+            },
+            "targets": targets,
+            "yaxes": [
+                {"format": yaxis_format},
+                {"format": "short"}
+            ]
+        }
+
+        self.panels.append(panel)
+
+        # Update Y position if we've filled a row
+        if (len(self.panels) * width) % 24 == 0:
+            self.current_y += height
+
+    def generate_agent_dashboard(self) -> Dict[str, Any]:
+        """Generate agent-specific dashboard"""
+        self.add_row("Agent Overview")
+
+        # Request rate by agent
+        self.add_graph_panel(
+            "Agent Request Rate",
+            [{"expr": "sum(rate(agent_requests_total[5m])) by (agent_type)", "legend": "{{ agent_type }}"}],
+            width=12
+        )
+
+        # Processing time by agent
+        self.add_graph_panel(
+            "Agent Processing Time (P95)",
+            [{"expr": "histogram_quantile(0.95, sum(rate(agent_processing_duration_seconds_bucket[5m])) by (agent_type, le))", "legend": "{{ agent_type }}"}],
+            width=12,
+            yaxis_format="s"
+        )
+
+        self.add_row("Agent Details")
+
+        # Individual agent panels
+        agents = ["nl-input", "ui-selection", "parser", "component-decision", "match-rate", "search", "generation", "assembly", "download"]
+
+        for agent in agents:
+            self.add_graph_panel(
+                f"{agent.title()} Agent Metrics",
+                [
+                    {"expr": f"rate(agent_requests_total{{agent_type=\"{agent}\"}}[5m])", "legend": "Requests/sec"},
+                    {"expr": f"histogram_quantile(0.95, rate(agent_processing_duration_seconds_bucket{{agent_type=\"{agent}\"}}[5m]))", "legend": "P95 Latency"}
+                ],
+                width=8,
+                height=6
+            )
+
+        return {
+            "dashboard": {
+                "title": "T-Developer Agent Dashboard",
+                "panels": self.panels,
+                "schemaVersion": 30,
+                "version": 1,
+                "timezone": "browser"
+            }
+        }
+```
+
+#### SubTask 4.78.3: 알림 규칙
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 6시간
+
+**작업 내용**:
+
+```yaml
+# k8s/monitoring/alertmanager-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      slack_api_url: 'YOUR_SLACK_WEBHOOK_URL'
+      pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+      - match:
+          severity: critical
+        receiver: pagerduty
+        continue: true
+      - match:
+          severity: warning
+        receiver: slack-warnings
+      - match:
+          team: ml
+        receiver: ml-team
+      - match:
+          team: infra
+        receiver: infra-team
+
+    receivers:
+    - name: 'default'
+      slack_configs:
+      - channel: '#alerts'
+        title: 'T-Developer Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        
+    - name: 'pagerduty'
+      pagerduty_configs:
+      - service_key: 'YOUR_PAGERDUTY_SERVICE_KEY'
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        
+    - name: 'slack-warnings'
+      slack_configs:
+      - channel: '#warnings'
+        send_resolved: true
+        title: 'Warning: {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'warning'
+        
+    - name: 'ml-team'
+      slack_configs:
+      - channel: '#ml-alerts'
+        title: 'ML Team Alert: {{ .GroupLabels.alertname }}'
+        
+    - name: 'infra-team'
+      slack_configs:
+      - channel: '#infra-alerts'
+        email_configs:
+        - to: 'infra-oncall@tdeveloper.com'
+
+    inhibit_rules:
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      equal: ['alertname', 'cluster', 'service']
+```
+
+```python
+# backend/src/monitoring/alert_rules.py
+from dataclasses import dataclass
+from typing import List, Dict, Any
+import yaml
+
+@dataclass
+class AlertRule:
+    name: str
+    expr: str
+    for_duration: str
+    labels: Dict[str, str]
+    annotations: Dict[str, str]
+
+class AlertRuleGenerator:
+    def __init__(self):
+        self.rules = []
+
+    def add_sla_rules(self):
+        """Add SLA monitoring rules"""
+
+        # API availability
+        self.rules.append(AlertRule(
+            name="APIUnavailable",
+            expr='up{job="backend"} == 0',
+            for_duration="1m",
+            labels={"severity": "critical", "team": "backend"},
+            annotations={
+                "summary": "API endpoint is down",
+                "description": "Backend API has been unavailable for more than 1 minute"
+            }
+        ))
+
+        # Error rate SLA
+        self.rules.append(AlertRule(
+            name="HighErrorRate",
+            expr='(sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) > 0.01',
+            for_duration="5m",
+            labels={"severity": "critical", "team": "backend"},
+            annotations={
+                "summary": "Error rate exceeds SLA",
+                "description": "Error rate is {{ $value | humanizePercentage }}, exceeding 1% SLA"
+            }
+        ))
+
+        # Response time SLA
+        self.rules.append(AlertRule(
+            name="SlowResponseTime",
+            expr='histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 2',
+            for_duration="10m",
+            labels={"severity": "warning", "team": "backend"},
+            annotations={
+                "summary": "Response time exceeds SLA",
+                "description": "95th percentile response time is {{ $value }}s, exceeding 2s SLA"
+            }
+        ))
+
+    def add_resource_rules(self):
+        """Add resource monitoring rules"""
+
+        # CPU usage
+        self.rules.append(AlertRule(
+            name="HighCPUUsage",
+            expr='rate(container_cpu_usage_seconds_total{namespace="tdeveloper"}[5m]) > 0.8',
+            for_duration="10m",
+            labels={"severity": "warning", "team": "infra"},
+            annotations={
+                "summary": "High CPU usage detected",
+                "description": "CPU usage is {{ $value | humanizePercentage }} for {{ $labels.pod }}"
+            }
+        ))
+
+        # Memory usage
+        self.rules.append(AlertRule(
+            name="HighMemoryUsage",
+            expr='(container_memory_usage_bytes{namespace="tdeveloper"} / container_spec_memory_limit_bytes) > 0.9',
+            for_duration="10m",
+            labels={"severity": "warning", "team": "infra"},
+            annotations={
+                "summary": "High memory usage detected",
+                "description": "Memory usage is {{ $value | humanizePercentage }} for {{ $labels.pod }}"
+            }
+        ))
+
+        # Disk usage
+        self.rules.append(AlertRule(
+            name="DiskSpaceLow",
+            expr='(node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1',
+            for_duration="5m",
+            labels={"severity": "critical", "team": "infra"},
+            annotations={
+                "summary": "Disk space running low",
+                "description": "Only {{ $value | humanizePercentage }} disk space remaining on {{ $labels.instance }}"
+            }
+        ))
+
+    def add_business_rules(self):
+        """Add business metric rules"""
+
+        # UI generation failures
+        self.rules.append(AlertRule(
+            name="UIGenerationFailureRate",
+            expr='(sum(rate(ui_generation_requests_total{status="failure"}[15m])) / sum(rate(ui_generation_requests_total[15m]))) > 0.05',
+            for_duration="15m",
+            labels={"severity": "warning", "team": "ml"},
+            annotations={
+                "summary": "High UI generation failure rate",
+                "description": "{{ $value | humanizePercentage }} of UI generation requests are failing"
+            }
+        ))
+
+        # Agent timeout rate
+        self.rules.append(AlertRule(
+            name="AgentTimeoutRate",
+            expr='(sum(rate(agent_timeouts_total[10m])) by (agent_type) / sum(rate(agent_requests_total[10m])) by (agent_type)) > 0.1',
+            for_duration="10m",
+            labels={"severity": "warning", "team": "ml"},
+            annotations={
+                "summary": "High agent timeout rate",
+                "description": "{{ $labels.agent_type }} agent has {{ $value | humanizePercentage }} timeout rate"
+            }
+        ))
+
+        # Queue processing delay
+        self.rules.append(AlertRule(
+            name="QueueProcessingDelay",
+            expr='aws_sqs_approximate_age_of_oldest_message > 600',
+            for_duration="5m",
+            labels={"severity": "warning", "team": "infra"},
+            annotations={
+                "summary": "Queue processing delayed",
+                "description": "Oldest message in {{ $labels.queue_name }} is {{ $value }}s old"
+            }
+        ))
+
+    def generate_yaml(self) -> str:
+        """Generate Prometheus rules YAML"""
+        rules_dict = {
+            "groups": [{
+                "name": "tdeveloper.rules",
+                "interval": "30s",
+                "rules": [
+                    {
+                        "alert": rule.name,
+                        "expr": rule.expr,
+                        "for": rule.for_duration,
+                        "labels": rule.labels,
+                        "annotations": rule.annotations
+                    }
+                    for rule in self.rules
+                ]
+            }]
+        }
+
+        return yaml.dump(rules_dict, default_flow_style=False)
+```
+
+#### SubTask 4.78.4: 추적 설정
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```typescript
+// backend/src/tracing/tracer-setup.ts
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+import { Resource } from "@opentelemetry/resources";
+import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
+import { JaegerExporter } from "@opentelemetry/exporter-jaeger";
+import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { registerInstrumentations } from "@opentelemetry/instrumentation";
+import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
+import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
+import { RedisInstrumentation } from "@opentelemetry/instrumentation-redis";
+import { AWSXRayIdGenerator } from "@opentelemetry/id-generator-aws-xray";
+import { AWSXRayPropagator } from "@opentelemetry/propagator-aws-xray";
+import { W3CTraceContextPropagator } from "@opentelemetry/core";
+import { CompositePropagator } from "@opentelemetry/core";
+
+export class TracerSetup {
+  private provider: NodeTracerProvider;
+
+  async initialize(): Promise<void> {
+    // Create resource
+    const resource = Resource.default().merge(
+      new Resource({
+        [SemanticResourceAttributes.SERVICE_NAME]: "tdeveloper-backend",
+        [SemanticResourceAttributes.SERVICE_VERSION]:
+          process.env.APP_VERSION || "1.0.0",
+        [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]:
+          process.env.NODE_ENV || "production",
+        "service.namespace": "tdeveloper",
+        "service.instance.id": process.env.HOSTNAME || "unknown",
+      })
+    );
+
+    // Create provider
+    this.provider = new NodeTracerProvider({
+      resource,
+      idGenerator: new AWSXRayIdGenerator(),
+    });
+
+    // Setup exporters
+    this.setupExporters();
+
+    // Register instrumentations
+    this.registerInstrumentations();
+
+    // Set global propagator
+    const propagator = new CompositePropagator({
+      propagators: [new W3CTraceContextPropagator(), new AWSXRayPropagator()],
+    });
+
+    this.provider.register({ propagator });
+  }
+
+  private setupExporters(): void {
+    // Jaeger exporter
+    const jaegerExporter = new JaegerExporter({
+      endpoint: process.env.JAEGER_ENDPOINT || "http://jaeger:14268/api/traces",
+      tags: [
+        { key: "environment", value: process.env.NODE_ENV || "production" },
+      ],
+    });
+
+    // X-Ray exporter (if using AWS)
+    const xrayExporter = new AWSXRayExporter({
+      serviceName: "tdeveloper-backend",
+    });
+
+    // Add span processors
+    this.provider.addSpanProcessor(new BatchSpanProcessor(jaegerExporter));
+
+    if (process.env.USE_XRAY === "true") {
+      this.provider.addSpanProcessor(new BatchSpanProcessor(xrayExporter));
+    }
+  }
+
+  private registerInstrumentations(): void {
+    registerInstrumentations({
+      instrumentations: [
+        new HttpInstrumentation({
+          requestHook: (span, request) => {
+            span.setAttributes({
+              "http.request.body.size": request.headers["content-length"] || 0,
+              "http.user_agent": request.headers["user-agent"],
+            });
+          },
+          responseHook: (span, response) => {
+            span.setAttributes({
+              "http.response.body.size":
+                response.headers["content-length"] || 0,
+            });
+          },
+        }),
+        new ExpressInstrumentation({
+          requestHook: (span, info) => {
+            span.updateName(
+              `${info.request.method} ${info.layerType}/${info.route}`
+            );
+          },
+        }),
+        new RedisInstrumentation(),
+        new DynamoDBInstrumentation(),
+        new SQSInstrumentation(),
+      ],
+    });
+  }
+}
+
+// Custom instrumentation for agents
+export class AgentInstrumentation {
+  static traceAgent(agentType: string) {
+    return function (
+      target: any,
+      propertyKey: string,
+      descriptor: PropertyDescriptor
+    ) {
+      const originalMethod = descriptor.value;
+
+      descriptor.value = async function (...args: any[]) {
+        const tracer = trace.getTracer("tdeveloper-agents");
+        const span = tracer.startSpan(`agent.${agentType}.${propertyKey}`, {
+          attributes: {
+            "agent.type": agentType,
+            "agent.method": propertyKey,
+            "agent.args": JSON.stringify(args),
+          },
+        });
+
+        const ctx = trace.setSpan(context.active(), span);
+
+        try {
+          const result = await context.with(ctx, () =>
+            originalMethod.apply(this, args)
+          );
+
+          span.setAttributes({
+            "agent.result.size": JSON.stringify(result).length,
+            "agent.success": true,
+          });
+
+          return result;
+        } catch (error) {
+          span.recordException(error);
+          span.setAttributes({
+            "agent.success": false,
+            "agent.error": error.message,
+          });
+          throw error;
+        } finally {
+          span.end();
+        }
+      };
+
+      return descriptor;
+    };
+  }
+}
+```
+
+```yaml
+# k8s/monitoring/jaeger-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:1.35
+          ports:
+            - containerPort: 5775
+              protocol: UDP
+            - containerPort: 6831
+              protocol: UDP
+            - containerPort: 6832
+              protocol: UDP
+            - containerPort: 5778
+              protocol: TCP
+            - containerPort: 16686
+              protocol: TCP
+            - containerPort: 14268
+              protocol: TCP
+            - containerPort: 14250
+              protocol: TCP
+          env:
+            - name: COLLECTOR_ZIPKIN_HTTP_PORT
+              value: "9411"
+            - name: SPAN_STORAGE_TYPE
+              value: elasticsearch
+            - name: ES_SERVER_URLS
+              value: http://elasticsearch:9200
+            - name: ES_TAGS_AS_FIELDS_ALL
+              value: "true"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+
+---
+# Trace sampling configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trace-sampling-config
+  namespace: tdeveloper
+data:
+  sampling.json: |
+    {
+      "service_strategies": [
+        {
+          "service": "tdeveloper-backend",
+          "type": "adaptive",
+          "max_traces_per_second": 100,
+          "sampling_rate": 0.1
+        },
+        {
+          "service": "tdeveloper-agents",
+          "type": "probabilistic",
+          "sampling_rate": 0.05
+        }
+      ],
+      "default_strategy": {
+        "type": "probabilistic",
+        "sampling_rate": 0.01
+      }
+    }
+```
+
+### Task 4.79: 로깅 시스템 구성
+
+#### SubTask 4.79.1: 로그 수집기 설정
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```yaml
+# k8s/logging/fluent-bit-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: logging
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush         5
+        Log_Level     info
+        Daemon        off
+        Parsers_File  parsers.conf
+        HTTP_Server   On
+        HTTP_Listen   0.0.0.0
+        HTTP_Port     2020
+        
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/*tdeveloper*.log
+        Parser            docker
+        Tag               kube.*
+        Refresh_Interval  5
+        Mem_Buf_Limit     50MB
+        Skip_Long_Lines   On
+        
+    [INPUT]
+        Name              systemd
+        Tag               host.*
+        Read_From_Tail    On
+        
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+        Kube_Tag_Prefix     kube.var.log.containers.
+        Merge_Log           On
+        Keep_Log            Off
+        K8S-Logging.Parser  On
+        K8S-Logging.Exclude On
+        
+    [FILTER]
+        Name          parser
+        Match         kube.*
+        Key_Name      log
+        Parser        json
+        Reserve_Data  On
+        
+    [FILTER]
+        Name          record_modifier
+        Match         *
+        Record        cluster_name tdeveloper-prod
+        Record        environment production
+        
+    [OUTPUT]
+        Name              es
+        Match             kube.*
+        Host              elasticsearch.logging.svc.cluster.local
+        Port              9200
+        Logstash_Format   On
+        Logstash_Prefix   tdeveloper
+        Include_Tag_Key   On
+        Tag_Key           @tag
+        Generate_ID       On
+        Buffer_Size       256KB
+        
+    [OUTPUT]
+        Name              s3
+        Match             kube.*
+        bucket            tdeveloper-logs-archive
+        region            us-east-1
+        use_put_object    On
+        total_file_size   50M
+        upload_timeout    10m
+
+  parsers.conf: |
+    [PARSER]
+        Name         json
+        Format       json
+        Time_Key     timestamp
+        Time_Format  %Y-%m-%dT%H:%M:%S.%LZ
+        
+    [PARSER]
+        Name         docker
+        Format       json
+        Time_Key     time
+        Time_Format  %Y-%m-%dT%H:%M:%S.%L
+        Time_Keep    On
+        
+    [PARSER]
+        Name         syslog
+        Format       regex
+        Regex        ^\<(?<priority>[0-9]+)\>(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
+        Time_Key     time
+        Time_Format  %b %d %H:%M:%S
+
+---
+# k8s/logging/fluent-bit-daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit
+  namespace: logging
+  labels:
+    app: fluent-bit
+spec:
+  selector:
+    matchLabels:
+      app: fluent-bit
+  template:
+    metadata:
+      labels:
+        app: fluent-bit
+    spec:
+      serviceAccountName: fluent-bit
+      containers:
+        - name: fluent-bit
+          image: fluent/fluent-bit:2.0
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: config
+              mountPath: /fluent-bit/etc/
+          resources:
+            limits:
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
+      volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: config
+          configMap:
+            name: fluent-bit-config
+```
+
+```python
+# backend/src/logging/structured_logger.py
+import json
+import logging
+from datetime import datetime
+from typing import Any, Dict, Optional
+import traceback
+from contextvars import ContextVar
+
+# Context variables for request tracking
+request_id_var: ContextVar[Optional[str]] = ContextVar('request_id', default=None)
+user_id_var: ContextVar[Optional[str]] = ContextVar('user_id', default=None)
+session_id_var: ContextVar[Optional[str]] = ContextVar('session_id', default=None)
+
+class StructuredLogger:
+    def __init__(self, name: str):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+
+        # JSON formatter
+        handler = logging.StreamHandler()
+        handler.setFormatter(JSONFormatter())
+        self.logger.addHandler(handler)
+
+    def _build_log_entry(
+        self,
+        level: str,
+        message: str,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Build structured log entry"""
+        entry = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'level': level,
+            'message': message,
+            'logger': self.logger.name,
+            'request_id': request_id_var.get(),
+            'user_id': user_id_var.get(),
+            'session_id': session_id_var.get(),
+            'environment': os.getenv('NODE_ENV', 'development'),
+            'service': 'tdeveloper-backend',
+            'version': os.getenv('APP_VERSION', '1.0.0')
+        }
+
+        # Add custom fields
+        entry.update(kwargs)
+
+        # Add error details if present
+        if 'error' in kwargs and isinstance(kwargs['error'], Exception):
+            error = kwargs['error']
+            entry['error'] = {
+                'type': type(error).__name__,
+                'message': str(error),
+                'stacktrace': traceback.format_exc()
+            }
+
+        return entry
+
+    def info(self, message: str, **kwargs):
+        entry = self._build_log_entry('info', message, **kwargs)
+        self.logger.info(json.dumps(entry))
+
+    def warning(self, message: str, **kwargs):
+        entry = self._build_log_entry('warning', message, **kwargs)
+        self.logger.warning(json.dumps(entry))
+
+    def error(self, message: str, **kwargs):
+        entry = self._build_log_entry('error', message, **kwargs)
+        self.logger.error(json.dumps(entry))
+
+    def debug(self, message: str, **kwargs):
+        entry = self._build_log_entry('debug', message, **kwargs)
+        self.logger.debug(json.dumps(entry))
+
+    def agent_event(
+        self,
+        agent_type: str,
+        event_type: str,
+        **kwargs
+    ):
+        """Log agent-specific events"""
+        self.info(
+            f"Agent event: {event_type}",
+            agent_type=agent_type,
+            event_type=event_type,
+            category='agent_event',
+            **kwargs
+        )
+
+    def api_request(
+        self,
+        method: str,
+        path: str,
+        status_code: int,
+        duration_ms: float,
+        **kwargs
+    ):
+        """Log API requests"""
+        self.info(
+            f"{method} {path} {status_code}",
+            http_method=method,
+            http_path=path,
+            http_status_code=status_code,
+            duration_ms=duration_ms,
+            category='api_request',
+            **kwargs
+        )
+
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        # Log record is already JSON from StructuredLogger
+        return record.getMessage()
+
+# Middleware for request tracking
+async def logging_middleware(request, call_next):
+    import uuid
+
+    # Set request context
+    request_id = str(uuid.uuid4())
+    request_id_var.set(request_id)
+
+    # Extract user info if available
+    if hasattr(request.state, 'user'):
+        user_id_var.set(request.state.user.id)
+
+    # Log request
+    logger = StructuredLogger(__name__)
+    start_time = time.time()
+
+    try:
+        response = await call_next(request)
+
+        # Log response
+        duration_ms = (time.time() - start_time) * 1000
+        logger.api_request(
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+            request_size=request.headers.get('content-length', 0),
+            response_size=response.headers.get('content-length', 0)
+        )
+
+        return response
+
+    except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        logger.error(
+            f"Request failed: {str(e)}",
+            error=e,
+            method=request.method,
+            path=request.url.path,
+            duration_ms=duration_ms
+        )
+        raise
+```
+
+#### SubTask 4.79.2: 로그 파싱/필터링
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 6시간
+
+**작업 내용**:
+
+```yaml
+# k8s/logging/logstash-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+  namespace: logging
+data:
+  logstash.yml: |
+    http.host: "0.0.0.0"
+    xpack.monitoring.elasticsearch.hosts: [ "elasticsearch:9200" ]
+
+  pipeline.conf: |
+    input {
+      beats {
+        port => 5044
+      }
+      
+      kafka {
+        bootstrap_servers => "kafka:9092"
+        topics => ["tdeveloper-logs"]
+        codec => json
+      }
+    }
+
+    filter {
+      # Parse JSON logs
+      if [message] =~ /^\{.*\}$/ {
+        json {
+          source => "message"
+          target => "parsed"
+        }
+        
+        mutate {
+          remove_field => ["message"]
+        }
+      }
+      
+      # Extract agent metrics
+      if [parsed][category] == "agent_event" {
+        mutate {
+          add_field => {
+            "[@metadata][index_suffix]" => "agents"
+          }
+        }
+        
+        # Calculate processing time
+        if [parsed][start_time] and [parsed][end_time] {
+          ruby {
+            code => "
+              start_time = event.get('[parsed][start_time]').to_f
+              end_time = event.get('[parsed][end_time]').to_f
+              duration = end_time - start_time
+              event.set('[parsed][duration_seconds]', duration)
+            "
+          }
+        }
+      }
+      
+      # Extract API metrics
+      if [parsed][category] == "api_request" {
+        mutate {
+          add_field => {
+            "[@metadata][index_suffix]" => "api"
+          }
+        }
+        
+        # Parse user agent
+        if [parsed][user_agent] {
+          useragent {
+            source => "[parsed][user_agent]"
+            target => "[parsed][ua]"
+          }
+        }
+      }
+      
+      # Error log processing
+      if [parsed][level] == "error" {
+        mutate {
+          add_field => {
+            "[@metadata][index_suffix]" => "errors"
+          }
+        }
+        
+        # Extract stack trace
+        if [parsed][error][stacktrace] {
+          mutate {
+            split => { "[parsed][error][stacktrace]" => "\n" }
+          }
+        }
+      }
+      
+      # Add geo information for IP addresses
+      if [parsed][client_ip] {
+        geoip {
+          source => "[parsed][client_ip]"
+          target => "[parsed][geoip]"
+        }
+      }
+      
+      # Enrich with metadata
+      mutate {
+        add_field => {
+          "environment" => "%{[parsed][environment]}"
+          "service" => "%{[parsed][service]}"
+          "version" => "%{[parsed][version]}"
+        }
+      }
+      
+      # Drop sensitive fields
+      mutate {
+        remove_field => [
+          "[parsed][password]",
+          "[parsed][api_key]",
+          "[parsed][token]",
+          "[parsed][credit_card]"
+        ]
+      }
+    }
+
+    output {
+      # Primary output to Elasticsearch
+      elasticsearch {
+        hosts => ["elasticsearch:9200"]
+        index => "tdeveloper-%{[@metadata][index_suffix]}-%{+YYYY.MM.dd}"
+        template_name => "tdeveloper"
+        template => "/usr/share/logstash/templates/tdeveloper.json"
+        template_overwrite => true
+      }
+      
+      # Send errors to dedicated index
+      if [parsed][level] == "error" {
+        elasticsearch {
+          hosts => ["elasticsearch:9200"]
+          index => "tdeveloper-errors-%{+YYYY.MM.dd}"
+        }
+      }
+      
+      # Send metrics to monitoring system
+      if [parsed][category] in ["agent_event", "api_request"] {
+        statsd {
+          host => "statsd"
+          port => 8125
+          gauge => {
+            "tdeveloper.%{[parsed][category]}.duration" => "%{[parsed][duration_ms]}"
+          }
+          increment => [
+            "tdeveloper.%{[parsed][category]}.count"
+          ]
+        }
+      }
+      
+      # Archive to S3
+      if [parsed][level] in ["error", "warning"] {
+        s3 {
+          region => "us-east-1"
+          bucket => "tdeveloper-logs-archive"
+          prefix => "important/%{+YYYY/MM/dd}/"
+          time_file => 300
+          codec => "json_lines"
+        }
+      }
+    }
+```
+
+```python
+# backend/src/logging/log_filters.py
+import re
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
+
+@dataclass
+class LogFilter:
+    name: str
+    pattern: Optional[re.Pattern] = None
+    fields: Optional[Dict[str, Any]] = None
+    action: str = "include"  # include, exclude, redact
+
+class LogFilterEngine:
+    def __init__(self):
+        self.filters: List[LogFilter] = []
+        self._setup_default_filters()
+
+    def _setup_default_filters(self):
+        """Setup default security filters"""
+
+        # Redact sensitive data
+        self.add_filter(LogFilter(
+            name="redact_passwords",
+            pattern=re.compile(r'"password"\s*:\s*"[^"]*"'),
+            action="redact"
+        ))
+
+        self.add_filter(LogFilter(
+            name="redact_tokens",
+            pattern=re.compile(r'"(token|api_key|secret)"\s*:\s*"[^"]*"'),
+            action="redact"
+        ))
+
+        # Exclude health checks
+        self.add_filter(LogFilter(
+            name="exclude_health_checks",
+            fields={"http_path": "/health"},
+            action="exclude"
+        ))
+
+        # Exclude debug logs in production
+        if os.getenv('NODE_ENV') == 'production':
+            self.add_filter(LogFilter(
+                name="exclude_debug",
+                fields={"level": "debug"},
+                action="exclude"
+            ))
+
+    def add_filter(self, filter: LogFilter):
+        self.filters.append(filter)
+
+    def apply_filters(self, log_entry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Apply all filters to log entry"""
+
+        for filter in self.filters:
+            if filter.action == "exclude":
+                if self._matches_filter(log_entry, filter):
+                    return None  # Exclude this log
+
+            elif filter.action == "redact":
+                log_entry = self._redact_sensitive_data(log_entry, filter)
+
+            elif filter.action == "include":
+                if not self._matches_filter(log_entry, filter):
+                    return None  # Don't include this log
+
+        return log_entry
+
+    def _matches_filter(self, log_entry: Dict[str, Any], filter: LogFilter) -> bool:
+        """Check if log entry matches filter criteria"""
+
+        # Check field matches
+        if filter.fields:
+            for field, value in filter.fields.items():
+                if self._get_nested_field(log_entry, field) != value:
+                    return False
+
+        # Check pattern matches
+        if filter.pattern:
+            log_str = json.dumps(log_entry)
+            if not filter.pattern.search(log_str):
+                return False
+
+        return True
+
+    def _redact_sensitive_data(
+        self,
+        log_entry: Dict[str, Any],
+        filter: LogFilter
+    ) -> Dict[str, Any]:
+        """Redact sensitive data from log entry"""
+
+        log_str = json.dumps(log_entry)
+
+        if filter.pattern:
+            # Replace matched patterns with redacted text
+            log_str = filter.pattern.sub('"[REDACTED]"', log_str)
+
+        return json.loads(log_str)
+
+    def _get_nested_field(self, data: Dict[str, Any], path: str) -> Any:
+        """Get nested field value by dot notation path"""
+
+        keys = path.split('.')
+        value = data
+
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                return None
+
+        return value
+
+# Log aggregation and analysis
+class LogAggregator:
+    def __init__(self, elasticsearch_client):
+        self.es = elasticsearch_client
+
+    async def aggregate_agent_performance(
+        self,
+        start_time: str,
+        end_time: str
+    ) -> Dict[str, Any]:
+        """Aggregate agent performance metrics from logs"""
+
+        query = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {"term": {"category": "agent_event"}},
+                        {"range": {"timestamp": {"gte": start_time, "lte": end_time}}}
+                    ]
+                }
+            },
+            "aggs": {
+                "by_agent": {
+                    "terms": {"field": "agent_type"},
+                    "aggs": {
+                        "avg_duration": {"avg": {"field": "duration_ms"}},
+                        "success_rate": {
+                            "filters": {
+                                "filters": {
+                                    "success": {"term": {"success": True}},
+                                    "failure": {"term": {"success": False}}
+                                }
+                            }
+                        },
+                        "percentiles": {
+                            "percentiles": {
+                                "field": "duration_ms",
+                                "percents": [50, 95, 99]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        result = await self.es.search(
+            index="tdeveloper-agents-*",
+            body=query
+        )
+
+        return self._format_aggregation_results(result)
+```
+
+#### SubTask 4.79.3: 중앙 로깅 설정
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```yaml
+# k8s/logging/elasticsearch-cluster.yaml
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: tdeveloper-logging
+  namespace: logging
+spec:
+  version: 8.6.0
+  nodeSets:
+    - name: master
+      count: 3
+      config:
+        node.roles: ["master"]
+        node.store.allow_mmap: false
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 2Gi
+                  cpu: 1
+                limits:
+                  memory: 2Gi
+                  cpu: 2
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+            storageClassName: gp3
+    - name: data
+      count: 3
+      config:
+        node.roles: ["data", "ingest"]
+        node.store.allow_mmap: false
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 4Gi
+                  cpu: 2
+                limits:
+                  memory: 8Gi
+                  cpu: 4
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 100Gi
+            storageClassName: gp3
+
+---
+# Index templates
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch-templates
+  namespace: logging
+data:
+  tdeveloper-template.json: |
+    {
+      "index_patterns": ["tdeveloper-*"],
+      "template": {
+        "settings": {
+          "number_of_shards": 3,
+          "number_of_replicas": 1,
+          "index.lifecycle.name": "tdeveloper-ilm-policy",
+          "index.codec": "best_compression",
+          "index.refresh_interval": "30s"
+        },
+        "mappings": {
+          "properties": {
+            "timestamp": {
+              "type": "date",
+              "format": "strict_date_optional_time||epoch_millis"
+            },
+            "level": {
+              "type": "keyword"
+            },
+            "service": {
+              "type": "keyword"
+            },
+            "environment": {
+              "type": "keyword"
+            },
+            "request_id": {
+              "type": "keyword"
+            },
+            "user_id": {
+              "type": "keyword"
+            },
+            "agent_type": {
+              "type": "keyword"
+            },
+            "duration_ms": {
+              "type": "double"
+            },
+            "message": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            },
+            "error": {
+              "properties": {
+                "type": {
+                  "type": "keyword"
+                },
+                "message": {
+                  "type": "text"
+                },
+                "stacktrace": {
+                  "type": "text"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+---
+# Kibana configuration
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: tdeveloper-kibana
+  namespace: logging
+spec:
+  version: 8.6.0
+  count: 2
+  elasticsearchRef:
+    name: tdeveloper-logging
+  podTemplate:
+    spec:
+      containers:
+        - name: kibana
+          resources:
+            requests:
+              memory: 1Gi
+              cpu: 0.5
+            limits:
+              memory: 2Gi
+              cpu: 1
+          env:
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=1800"
+  config:
+    server.publicBaseUrl: https://logs.tdeveloper.com
+    xpack.security.encryptionKey: ${KIBANA_ENCRYPTION_KEY}
+    xpack.reporting.encryptionKey: ${KIBANA_REPORTING_KEY}
+    xpack.encryptedSavedObjects.encryptionKey: ${KIBANA_SAVED_OBJECTS_KEY}
+```
+
+```typescript
+// backend/src/logging/central-logger.ts
+import { Client } from '@elastic/elasticsearch';
+import winston from 'winston';
+import { ElasticsearchTransport } from 'winston-elasticsearch';
+
+export class CentralLogger {
+  private logger: winston.Logger;
+  private esClient: Client;
+
+  constructor() {
+    this.esClient = new Client({
+      node: process.env.ELASTICSEARCH_URL || 'http://elasticsearch:9200',
+      auth: {
+        username: process.env.ELASTICSEARCH_USER,
+        password: process.env.ELASTICSEARCH_PASSWORD
+      }
+    });
+
+    this.setupLogger();
+  }
+
+  private setupLogger(): void {
+    const esTransport = new ElasticsearchTransport({
+      client: this.esClient,
+      index: 'tdeveloper',
+      level: 'info',
+      dataStream: true,
+      transformer: (logData) => {
+        return {
+          '@timestamp': new Date().toISOString(),
+          message: logData.message,
+          severity: logData.level,
+          fields: logData.meta,
+          service: {
+            name: 'tdeveloper-backend',
+            version: process.env.APP_VERSION,
+            environment: process.env.NODE_ENV
+          }
+        };
+      }
+    });
+
+    this.logger = winston.createLogger({
+      level: process.env.LOG_LEVEL || 'info',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.errors({ stack: true }),
+        winston.format.json()
+      ),
+      defaultMeta: {
+        service: 'tdeveloper-backend',
+        environment: process.env.NODE_ENV
+      },
+      transports: [
+        esTransport,
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.simple()
+          )
+        })
+      ]
+    });
+  }
+
+  // Centralized log search
+  async searchLogs(query: LogSearchQuery): Promise<LogSearchResult> {
+    const esQuery = {
+      index: 'tdeveloper-*',
+      body: {
+        query: this.buildESQuery(query),
+        sort: [{ timestamp: { order: 'desc' } }],
+        size: query.limit || 100,
+        from: query.offset || 0,
+        aggs: {
+          log_levels: {
+            terms: { field: 'level' }
+          },
+          services: {
+            terms: { field: 'service' }
+          },
+          time_histogram: {
+            date_histogram: {
+              field: 'timestamp',
+              interval: query.interval || '1h'
+            }
+          }
+        }
+      }
+    };
+
+    const response = await this.esClient.search(esQuery);
+
+    return {
+      logs: response.hits.hits.map(hit => hit._source),
+      total: response.hits.total.value,
+      aggregations: response.aggregations
+    };
+  }
+
+  private buildESQuery(query: LogSearchQuery): any {
+    const must = [];
+    const filter = [];
+
+    // Time range
+    if (query.startTime || query.endTime) {
+      filter.push({
+        range: {
+          timestamp: {
+            gte: query.startTime,
+            lte: query.endTime
+          }
+        }
+      });
+    }
+
+    // Text search
+    if (query.search) {
+      must.push({
+        multi_match: {
+          query: query.search,
+          fields: ['message', 'error.message']
+        }
+      });
+    }
+
+    // Filters
+    if (query.level) {
+      filter.push({ term: { level: query.level } });
+    }
+
+    if (query.service) {
+      filter.push({ term: { service: query.service } });
+    }
+
+    if (query.requestId) {
+      filter.push({ term: { request_id: query.requestId } });
+    }
+
+    if (query.userId) {
+      filter.push({ term: { user_id: query.userId } });
+    }
+
+    return {
+      bool: {
+        must,
+        filter
+      }
+    };
+  }
+
+  // Log correlation
+  async correlateLogsget
+    requestId: string,
+    timeWindow: number = 300000 // 5 minutes
+  ): Promise<CorrelatedLogs> {
+    const logs = await this.searchLogs({
+      requestId,
+      limit: 1000
+    });
+
+    const correlatedLogs = {
+      request: logs.logs[0],
+      related: [],
+      timeline: []
+    };
+
+    // Find related logs by user and session
+    if (logs.logs[0]) {
+      const { user_id, session_id, timestamp } = logs.logs[0];
+
+      const relatedQuery = {
+        startTime: new Date(new Date(timestamp).getTime() - timeWindow),
+        endTime: new Date(new Date(timestamp).getTime() + timeWindow),
+        userId: user_id,
+        sessionId: session_id
+      };
+
+      const related = await this.searchLogs(relatedQuery);
+      correlatedLogs.related = related.logs;
+
+      // Build timeline
+      correlatedLogs.timeline = this.buildTimeline(related.logs);
+    }
+
+    return correlatedLogs;
+  }
+}
+```
+
+#### SubTask 4.79.4: 로그 보관 정책
+
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 6시간
+
+**작업 내용**:
+
+```yaml
+# k8s/logging/log-retention-policy.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ilm-policies
+  namespace: logging
+data:
+  tdeveloper-ilm-policy.json: |
+    {
+      "policy": {
+        "phases": {
+          "hot": {
+            "min_age": "0ms",
+            "actions": {
+              "rollover": {
+                "max_size": "50GB",
+                "max_age": "7d"
+              },
+              "set_priority": {
+                "priority": 100
+              }
+            }
+          },
+          "warm": {
+            "min_age": "7d",
+            "actions": {
+              "set_priority": {
+                "priority": 50
+              },
+              "shrink": {
+                "number_of_shards": 1
+              },
+              "forcemerge": {
+                "max_num_segments": 1
+              }
+            }
+          },
+          "cold": {
+            "min_age": "30d",
+            "actions": {
+              "set_priority": {
+                "priority": 0
+              },
+              "searchable_snapshot": {
+                "snapshot_repository": "s3_repository"
+              }
+            }
+          },
+          "delete": {
+            "min_age": "90d",
+            "actions": {
+              "delete": {}
+            }
+          }
+        }
+      }
+    }
+
+---
+# S3 repository for snapshots
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch-s3-repository
+  namespace: logging
+data:
+  setup-repository.sh: |
+    #!/bin/bash
+
+    # Wait for Elasticsearch to be ready
+    until curl -s http://elasticsearch:9200/_cluster/health | grep -q '"status":"green\|yellow"'; do
+      echo "Waiting for Elasticsearch..."
+      sleep 5
+    done
+
+    # Create S3 repository
+    curl -X PUT "http://elasticsearch:9200/_snapshot/s3_repository" \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "type": "s3",
+        "settings": {
+          "bucket": "tdeveloper-log-snapshots",
+          "region": "us-east-1",
+          "compress": true,
+          "chunk_size": "100mb",
+          "max_restore_bytes_per_sec": "1gb",
+          "max_snapshot_bytes_per_sec": "200mb"
+        }
+      }'
+
+    # Create snapshot lifecycle policy
+    curl -X PUT "http://elasticsearch:9200/_slm/policy/daily-snapshots" \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "schedule": "0 30 2 * * ?",
+        "name": "<tdeveloper-{now/d}>",
+        "repository": "s3_repository",
+        "config": {
+          "indices": ["tdeveloper-*"],
+          "ignore_unavailable": true,
+          "include_global_state": false
+        },
+        "retention": {
+          "expire_after": "30d",
+          "min_count": 5,
+          "max_count": 50
+        }
+      }'
+```
+
+```python
+# scripts/log-archival.py
+import boto3
+import gzip
+import json
+from datetime import datetime, timedelta
+from elasticsearch import Elasticsearch
+import os
+
+class LogArchivalService:
+    def __init__(self):
+        self.es = Elasticsearch(os.getenv('ELASTICSEARCH_URL'))
+        self.s3 = boto3.client('s3')
+        self.bucket = 'tdeveloper-log-archive'
+
+    async def archive_old_logs(self, days_to_keep: int = 30):
+        """Archive logs older than specified days"""
+
+        cutoff_date = datetime.now() - timedelta(days=days_to_keep)
+
+        # Query for old logs
+        query = {
+            "query": {
+                "range": {
+                    "timestamp": {
+                        "lt": cutoff_date.isoformat()
+                    }
+                }
+            },
+            "size": 10000,
+            "sort": [{"timestamp": "asc"}]
+        }
+
+        # Process in batches
+        while True:
+            response = self.es.search(
+                index="tdeveloper-*",
+                body=query,
+                scroll='5m'
+            )
+
+            if not response['hits']['hits']:
+                break
+
+            # Archive batch
+            await self._archive_batch(response['hits']['hits'])
+
+            # Delete from Elasticsearch
+            await self._delete_batch(response['hits']['hits'])
+
+            # Get next batch
+            query["search_after"] = response['hits']['hits'][-1]['sort']
+
+    async def _archive_batch(self, logs):
+        """Archive a batch of logs to S3"""
+
+        # Group by date and service
+        grouped_logs = {}
+
+        for hit in logs:
+            log = hit['_source']
+            date = log['timestamp'][:10]  # YYYY-MM-DD
+            service = log.get('service', 'unknown')
+
+            key = f"{date}/{service}"
+            if key not in grouped_logs:
+                grouped_logs[key] = []
+
+            grouped_logs[key].append(log)
+
+        # Upload to S3
+        for key, logs in grouped_logs.items():
+            await self._upload_to_s3(key, logs)
+
+    async def _upload_to_s3(self, key_prefix: str, logs: list):
+        """Upload logs to S3 with compression"""
+
+        # Convert to JSONL and compress
+        jsonl_data = '\n'.join(json.dumps(log) for log in logs)
+        compressed_data = gzip.compress(jsonl_data.encode('utf-8'))
+
+        # Generate S3 key
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        s3_key = f"logs/{key_prefix}/{timestamp}.jsonl.gz"
+
+        # Upload
+        self.s3.put_object(
+            Bucket=self.bucket,
+            Key=s3_key,
+            Body=compressed_data,
+            ContentType='application/x-gzip',
+            Metadata={
+                'log-count': str(len(logs)),
+                'date-range': f"{logs[0]['timestamp']}_{logs[-1]['timestamp']}"
+            }
+        )
+
+        print(f"Archived {len(logs)} logs to s3://{self.bucket}/{s3_key}")
+
+    async def restore_logs(self, date: str, service: str = None):
+        """Restore archived logs back to Elasticsearch"""
+
+        # List objects in S3
+        prefix = f"logs/{date}/"
+        if service:
+            prefix += f"{service}/"
+
+        response = self.s3.list_objects_v2(
+            Bucket=self.bucket,
+            Prefix=prefix
+        )
+
+        if 'Contents' not in response:
+            print(f"No archived logs found for {date}")
+            return
+
+        # Restore each file
+        for obj in response['Contents']:
+            await self._restore_file(obj['Key'])
+
+    async def _restore_file(self, s3_key: str):
+        """Restore a single archive file"""
+
+        # Download from S3
+        response = self.s3.get_object(
+            Bucket=self.bucket,
+            Key=s3_key
+        )
+
+        # Decompress
+        compressed_data = response['Body'].read()
+        jsonl_data = gzip.decompress(compressed_data).decode('utf-8')
+
+        # Parse logs
+        logs = [json.loads(line) for line in jsonl_data.strip().split('\n')]
+
+        # Bulk index to Elasticsearch
+        bulk_body = []
+        for log in logs:
+            bulk_body.extend([
+                {"index": {"_index": f"tdeveloper-restored-{log['timestamp'][:7]}"}},
+                log
+            ])
+
+        self.es.bulk(body=bulk_body)
+        print(f"Restored {len(logs)} logs from {s3_key}")
+
+# Retention policy enforcement
+class RetentionPolicyEnforcer:
+    def __init__(self):
+        self.policies = {
+            'tdeveloper-api-*': {'hot': 7, 'warm': 30, 'delete': 90},
+            'tdeveloper-agents-*': {'hot': 14, 'warm': 60, 'delete': 180},
+            'tdeveloper-errors-*': {'hot': 30, 'warm': 90, 'delete': 365}
+        }
+
+    async def enforce_policies(self):
+        """Enforce retention policies"""
+
+        for pattern, policy in self.policies.items():
+            await self._enforce_pattern_policy(pattern, policy)
+
+    async def _enforce_pattern_policy(self, pattern: str, policy: dict):
+        """Enforce policy for specific index pattern"""
+
+        # Get indices matching pattern
+        indices = self.es.indices.get(index=pattern)
+
+        for index_name, index_info in indices.items():
+            creation_date = datetime.fromtimestamp(
+                int(index_info['settings']['index']['creation_date']) / 1000
+            )
+
+            age_days = (datetime.now() - creation_date).days
+
+            # Apply appropriate action based on age
+            if age_days > policy['delete']:
+                await self._delete_index(index_name)
+            elif age_days > policy['warm']:
+                await self._move_to_cold(index_name)
+            elif age_days > policy['hot']:
+                await self._move_to_warm(index_name)
+```
+
+### Task 4.80: 배포 검증
+
+#### SubTask 4.80.1: 통합 테스트 실행
+
+**담당자**: QA 엔지니어  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```python
+# tests/integration/deployment_tests.py
+import pytest
+import asyncio
+import aiohttp
+from typing import Dict, List, Any
+import json
+import time
+
+class DeploymentIntegrationTests:
+    def __init__(self, base_url: str):
+        self.base_url = base_url
+        self.session = None
+
+    async def setup(self):
+        self.session = aiohttp.ClientSession()
+
+    async def teardown(self):
+        if self.session:
+            await self.session.close()
+
+    async def test_health_endpoints(self) -> Dict[str, bool]:
+        """Test all service health endpoints"""
+
+        endpoints = [
+            '/health',
+            '/api/health',
+            '/agents/health',
+            '/metrics/health'
+        ]
+
+        results = {}
+
+        for endpoint in endpoints:
+            try:
+                async with self.session.get(
+                    f"{self.base_url}{endpoint}",
+                    timeout=aiohttp.ClientTimeout(total=5)
+                ) as response:
+                    results[endpoint] = response.status == 200
+            except Exception as e:
+                results[endpoint] = False
+                print(f"Health check failed for {endpoint}: {e}")
+
+        return results
+
+    async def test_api_endpoints(self) -> Dict[str, Any]:
+        """Test core API endpoints"""
+
+        test_cases = [
+            {
+                'name': 'Create UI Request',
+                'method': 'POST',
+                'endpoint': '/api/ui/generate',
+                'data': {
+                    'description': 'Create a login form with email and password',
+                    'framework': 'react',
+                    'styling': 'tailwind'
+                }
+            },
+            {
+                'name': 'Get Components',
+                'method': 'GET',
+                'endpoint': '/api/components',
+                'params': {'limit': 10}
+            },
+            {
+                'name': 'Search Components',
+                'method': 'POST',
+                'endpoint': '/api/components/search',
+                'data': {
+                    'query': 'button',
+                    'framework': 'react'
+                }
+            }
+        ]
+
+        results = {}
+
+        for test in test_cases:
+            try:
+                result = await self._execute_api_test(test)
+                results[test['name']] = result
+            except Exception as e:
+                results[test['name']] = {
+                    'success': False,
+                    'error': str(e)
+                }
+
+        return results
+
+    async def test_agent_workflow(self) -> Dict[str, Any]:
+        """Test complete agent workflow"""
+
+        # Step 1: Submit UI generation request
+        request_data = {
+            'description': 'Create a responsive navigation bar with logo, menu items, and user profile',
+            'framework': 'react',
+            'styling': 'tailwind',
+            'typescript': True
+        }
+
+        start_time = time.time()
+
+        async with self.session.post(
+            f"{self.base_url}/api/ui/generate",
+            json=request_data
+        ) as response:
+            if response.status != 202:
+                return {'success': False, 'error': 'Failed to submit request'}
+
+            result = await response.json()
+            task_id = result['task_id']
+
+        # Step 2: Poll for completion
+        max_attempts = 60  # 5 minutes timeout
+        attempt = 0
+
+        while attempt < max_attempts:
+            async with self.session.get(
+                f"{self.base_url}/api/tasks/{task_id}"
+            ) as response:
+                if response.status == 200:
+                    task_status = await response.json()
+
+                    if task_status['status'] == 'completed':
+                        end_time = time.time()
+                        return {
+                            'success': True,
+                            'duration': end_time - start_time,
+                            'result': task_status['result']
+                        }
+                    elif task_status['status'] == 'failed':
+                        return {
+                            'success': False,
+                            'error': task_status.get('error', 'Unknown error')
+                        }
+
+            await asyncio.sleep(5)
+            attempt += 1
+
+        return {'success': False, 'error': 'Timeout waiting for completion'}
+
+    async def test_websocket_connection(self) -> bool:
+        """Test WebSocket connectivity"""
+
+        try:
+            async with self.session.ws_connect(
+                f"{self.base_url.replace('http', 'ws')}/ws"
+            ) as ws:
+                # Send test message
+                await ws.send_json({'type': 'ping'})
+
+                # Wait for response
+                msg = await ws.receive_json(timeout=5)
+
+                return msg.get('type') == 'pong'
+        except Exception as e:
+            print(f"WebSocket test failed: {e}")
+            return False
+
+    async def test_database_connectivity(self) -> Dict[str, bool]:
+        """Test database connections"""
+
+        endpoints = {
+            'dynamodb': '/api/health/database',
+            'redis': '/api/health/cache',
+            'elasticsearch': '/api/health/search'
+        }
+
+        results = {}
+
+        for service, endpoint in endpoints.items():
+            try:
+                async with self.session.get(
+                    f"{self.base_url}{endpoint}"
+                ) as response:
+                    data = await response.json()
+                    results[service] = data.get('status') == 'healthy'
+            except Exception:
+                results[service] = False
+
+        return results
+
+    async def test_queue_processing(self) -> bool:
+        """Test message queue processing"""
+
+        # Submit test message
+        test_message = {
+            'type': 'test',
+            'timestamp': time.time(),
+            'data': {'test': True}
+        }
+
+        async with self.session.post(
+            f"{self.base_url}/api/queues/test",
+            json=test_message
+        ) as response:
+            if response.status != 200:
+                return False
+
+            result = await response.json()
+            message_id = result['message_id']
+
+        # Verify processing
+        await asyncio.sleep(2)
+
+        async with self.session.get(
+            f"{self.base_url}/api/queues/test/{message_id}"
+        ) as response:
+            if response.status == 200:
+                data = await response.json()
+                return data.get('processed') == True
+
+        return False
+
+# Smoke test runner
+class SmokeTestRunner:
+    def __init__(self, environment: str):
+        self.environment = environment
+        self.base_urls = {
+            'dev': 'https://dev-api.tdeveloper.com',
+            'staging': 'https://staging-api.tdeveloper.com',
+            'production': 'https://api.tdeveloper.com'
+        }
+
+    async def run_smoke_tests(self) -> Dict[str, Any]:
+        """Run smoke tests for deployment"""
+
+        base_url = self.base_urls.get(self.environment)
+        if not base_url:
+            raise ValueError(f"Unknown environment: {self.environment}")
+
+        tester = DeploymentIntegrationTests(base_url)
+        await tester.setup()
+
+        try:
+            results = {
+                'environment': self.environment,
+                'timestamp': datetime.utcnow().isoformat(),
+                'tests': {}
+            }
+
+            # Critical path tests
+            print("Testing health endpoints...")
+            results['tests']['health'] = await tester.test_health_endpoints()
+
+            print("Testing API endpoints...")
+            results['tests']['api'] = await tester.test_api_endpoints()
+
+            print("Testing agent workflow...")
+            results['tests']['workflow'] = await tester.test_agent_workflow()
+
+            print("Testing WebSocket...")
+            results['tests']['websocket'] = await tester.test_websocket_connection()
+
+            print("Testing databases...")
+            results['tests']['databases'] = await tester.test_database_connectivity()
+
+            print("Testing queues...")
+            results['tests']['queues'] = await tester.test_queue_processing()
+
+            # Calculate overall status
+            all_passed = all(
+                all(v for v in test.values()) if isinstance(test, dict) else test
+                for test in results['tests'].values()
+            )
+
+            results['status'] = 'passed' if all_passed else 'failed'
+
+            return results
+
+        finally:
+            await tester.teardown()
+```
+
+#### SubTask 4.80.2: 성능 테스트
+
+**담당자**: 성능 엔지니어  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```python
+# tests/performance/load_tests.py
+from locust import HttpUser, task, between, events
+from locust.runners import MasterRunner
+import json
+import time
+import random
+
+class TDeveloperUser(HttpUser):
+    wait_time = between(1, 3)
+
+    def on_start(self):
+        """Initialize user session"""
+        # Login or get token
+        response = self.client.post("/api/auth/token", json={
+            "client_id": "test_client",
+            "client_secret": "test_secret"
+        })
+
+        if response.status_code == 200:
+            self.token = response.json()["access_token"]
+            self.client.headers.update({
+                "Authorization": f"Bearer {self.token}"
+            })
+
+    @task(3)
+    def generate_ui_simple(self):
+        """Test simple UI generation"""
+        with self.client.post(
+            "/api/ui/generate",
+            json={
+                "description": f"Create a {random.choice(['button', 'form', 'card', 'list'])} component",
+                "framework": random.choice(['react', 'vue', 'angular']),
+                "styling": "tailwind"
+            },
+            catch_response=True
+        ) as response:
+            if response.status_code == 202:
+                response.success()
+            else:
+                response.failure(f"Got status code {response.status_code}")
+
+    @task(2)
+    def generate_ui_complex(self):
+        """Test complex UI generation"""
+        descriptions = [
+            "Create a complete dashboard with sidebar navigation, header with user profile, and main content area with charts",
+            "Build an e-commerce product listing page with filters, sorting, pagination, and product cards",
+            "Design a multi-step form wizard with validation, progress indicator, and data persistence"
+        ]
+
+        with self.client.post(
+            "/api/ui/generate",
+            json={
+                "description": random.choice(descriptions),
+                "framework": "react",
+                "styling": "tailwind",
+                "typescript": True,
+                "includeTests": True
+            },
+            catch_response=True
+        ) as response:
+            if response.status_code == 202:
+                task_id = response.json()["task_id"]
+                self.wait_for_completion(task_id)
+                response.success()
+            else:
+                response.failure(f"Got status code {response.status_code}")
+
+    @task(1)
+    def search_components(self):
+        """Test component search"""
+        queries = ["button", "form", "navigation", "table", "modal", "chart"]
+
+        self.client.post(
+            "/api/components/search",
+            json={
+                "query": random.choice(queries),
+                "framework": "react",
+                "limit": 10
+            },
+            name="/api/components/search"
+        )
+
+    def wait_for_completion(self, task_id: str, timeout: int = 300):
+        """Wait for async task completion"""
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            with self.client.get(
+                f"/api/tasks/{task_id}",
+                catch_response=True
+            ) as response:
+                if response.status_code == 200:
+                    status = response.json()["status"]
+                    if status == "completed":
+                        response.success()
+                        return True
+                    elif status == "failed":
+                        response.failure("Task failed")
+                        return False
+
+            time.sleep(2)
+
+        return False
+
+# Custom statistics
+@events.init_command_line_parser.add_listener
+def _(parser):
+    parser.add_argument(
+        '--test-duration',
+        type=int,
+        default=300,
+        help='Test duration in seconds'
+    )
+
+@events.test_start.add_listener
+def on_test_start(environment, **kwargs):
+    print(f"Starting performance test in {environment.parsed_options.host}")
+
+@events.request.add_listener
+def on_request(request_type, name, response_time, **kwargs):
+    # Custom metric collection
+    if response_time > 5000:  # Log slow requests
+        print(f"Slow request: {name} took {response_time}ms")
+
+# Stress test scenarios
+class StressTestScenarios:
+    @staticmethod
+    def spike_test(runner):
+        """Sudden spike in traffic"""
+        stages = [
+            {"duration": 60, "users": 10, "spawn_rate": 1},
+            {"duration": 30, "users": 100, "spawn_rate": 10},  # Spike
+            {"duration": 120, "users": 100, "spawn_rate": 0},  # Sustain
+            {"duration": 60, "users": 10, "spawn_rate": -5},   # Ramp down
+        ]
+
+        for stage in stages:
+            runner.start(
+                user_count=stage["users"],
+                spawn_rate=stage["spawn_rate"]
+            )
+            time.sleep(stage["duration"])
+
+    @staticmethod
+    def endurance_test(runner):
+        """Long-running steady load"""
+        runner.start(user_count=50, spawn_rate=2)
+        time.sleep(3600)  # 1 hour
+
+    @staticmethod
+    def breakpoint_test(runner):
+        """Find system breaking point"""
+        current_users = 10
+        increment = 10
+
+        while True:
+            runner.start(
+                user_count=current_users,
+                spawn_rate=increment
+            )
+
+            time.sleep(120)  # 2 minutes per level
+
+            # Check error rate
+            stats = runner.stats.total
+            error_rate = stats.fail_ratio
+
+            if error_rate > 0.1:  # 10% error threshold
+                print(f"Breaking point found at {current_users} users")
+                break
+
+            current_users += increment
+
+# Performance metrics collector
+class PerformanceMetricsCollector:
+    def __init__(self):
+        self.metrics = {
+            'response_times': [],
+            'throughput': [],
+            'error_rates': [],
+            'cpu_usage': [],
+            'memory_usage': []
+        }
+
+    async def collect_metrics(self, duration: int):
+        """Collect performance metrics during test"""
+
+        start_time = time.time()
+
+        while time.time() - start_time < duration:
+            # Collect application metrics
+            app_metrics = await self._get_app_metrics()
+
+            # Collect infrastructure metrics
+            infra_metrics = await self._get_infra_metrics()
+
+            # Store metrics
+            self.metrics['response_times'].append(app_metrics['p95_latency'])
+            self.metrics['throughput'].append(app_metrics['requests_per_second'])
+            self.metrics['error_rates'].append(app_metrics['error_rate'])
+            self.metrics['cpu_usage'].append(infra_metrics['cpu_percent'])
+            self.metrics['memory_usage'].append(infra_metrics['memory_percent'])
+
+            await asyncio.sleep(5)
+
+    def generate_report(self) -> Dict[str, Any]:
+        """Generate performance test report"""
+
+        return {
+            'summary': {
+                'avg_response_time': np.mean(self.metrics['response_times']),
+                'p95_response_time': np.percentile(self.metrics['response_times'], 95),
+                'avg_throughput': np.mean(self.metrics['throughput']),
+                'max_throughput': max(self.metrics['throughput']),
+                'avg_error_rate': np.mean(self.metrics['error_rates']),
+                'avg_cpu_usage': np.mean(self.metrics['cpu_usage']),
+                'avg_memory_usage': np.mean(self.metrics['memory_usage'])
+            },
+            'details': self.metrics,
+            'recommendations': self._generate_recommendations()
+        }
+
+    def _generate_recommendations(self) -> List[str]:
+        """Generate performance recommendations"""
+
+        recommendations = []
+
+        if np.mean(self.metrics['response_times']) > 2000:
+            recommendations.append("Response times are high. Consider optimizing database queries or adding caching.")
+
+        if np.mean(self.metrics['cpu_usage']) > 80:
+            recommendations.append("CPU usage is high. Consider horizontal scaling or code optimization.")
+
+        if np.mean(self.metrics['memory_usage']) > 85:
+            recommendations.append("Memory usage is high. Check for memory leaks or increase instance size.")
+
+        if max(self.metrics['error_rates']) > 0.05:
+            recommendations.append("Error rate spikes detected. Review error logs and add circuit breakers.")
+
+        return recommendations
+```
+
+#### SubTask 4.80.3: 보안 스캔
+
+**담당자**: 보안 엔지니어  
+**예상 소요시간**: 8시간
+
+**작업 내용**:
+
+```bash
+#!/bin/bash
+# scripts/security-scan.sh
+
+set -e
+
+echo "Starting comprehensive security scan..."
+
+# 1. Container Image Scanning
+echo "=== Container Image Security Scan ==="
+
+# Scan with Trivy
+for image in $(docker images --format "{{.Repository}}:{{.Tag}}" | grep tdeveloper); do
+    echo "Scanning $image with Trivy..."
+    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+        aquasec/trivy image --severity HIGH,CRITICAL \
+        --format json \
+        --output trivy-$image.json \
+        $image
+done
+
+# Scan with Clair
+echo "Running Clair scan..."
+docker run --rm --network=host \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    arminc/clair-scanner --ip localhost tdeveloper-backend:latest
+
+# 2. Dependency Scanning
+echo "=== Dependency Vulnerability Scan ==="
+
+# Node.js dependencies
+echo "Scanning Node.js dependencies..."
+cd backend && npm audit --json > npm-audit.json
+npx snyk test --json > snyk-report.json
+
+# Python dependencies
+echo "Scanning Python dependencies..."
+cd ../agents && pip-audit --format json > pip-audit.json
+safety check --json > safety-report.json
+
+# 3. Code Security Analysis
+echo "=== Static Code Analysis ==="
+
+# JavaScript/TypeScript with ESLint security plugin
+echo "Running ESLint security checks..."
+npx eslint . --ext .js,.ts,.tsx \
+    --plugin security \
+    --rule 'security/detect-object-injection: error' \
+    --format json > eslint-security.json
+
+# Python with Bandit
+echo "Running Bandit security checks..."
+bandit -r agents/ -f json -o bandit-report.json
+
+# 4. Infrastructure Security
+echo "=== Infrastructure Security Scan ==="
+
+# Kubernetes security
+echo "Scanning Kubernetes configurations..."
+docker run --rm -v $(pwd)/k8s:/k8s \
+    kubesec/kubesec:latest scan /k8s/**/*.yaml > kubesec-report.json
+
+# Terraform security (if using IaC)
+echo "Scanning Terraform configurations..."
+tfsec infrastructure/ --format json > tfsec-report.json
+
+# 5. API Security Testing
+echo "=== API Security Testing ==="
+
+# OWASP ZAP scan
+echo "Running OWASP ZAP scan..."
+docker run -t owasp/zap2docker-stable zap-baseline.py \
+    -t https://api.tdeveloper.com \
+    -J zap-report.json
+
+# 6. Secrets Detection
+echo "=== Secrets Detection ==="
+
+# GitLeaks scan
+echo "Scanning for secrets in code..."
+docker run --rm -v $(pwd):/code \
+    zricethezav/gitleaks:latest detect \
+    --source="/code" \
+    --report-format json \
+    --report-path gitleaks-report.json
+
+# TruffleHog scan
+echo "Running TruffleHog scan..."
+trufflehog git file://. --json > trufflehog-report.json
+
+# 7. SSL/TLS Configuration
+echo "=== SSL/TLS Security Check ==="
+
+# TestSSL scan
+docker run --rm -ti \
+    drwetter/testssl.sh:latest \
+    --json-pretty \
+    https://api.tdeveloper.com > testssl-report.json
+
+# 8. Generate Security Report
+echo "=== Generating Security Report ==="
+
+python3 << 'EOF'
+import json
+import os
+from datetime import datetime
+
+def load_json_report(filename):
+    try:
+        with open(filename, 'r') as f:
+            return json.load(f)
+    except:
+        return None
+
+# Collect all reports
+reports = {
+    'timestamp': datetime.utcnow().isoformat(),
+    'scans': {
+        'container_images': {
+            'trivy': load_json_report('trivy-tdeveloper-backend.json'),
+            'clair': load_json_report('clair-report.json')
+        },
+        'dependencies': {
+            'npm': load_json_report('npm-audit.json'),
+            'python': load_json_report('pip-audit.json')
+        },
+        'code_analysis': {
+            'eslint': load_json_report('eslint-security.json'),
+            'bandit': load_json_report('bandit-report.json')
+        },
+        'infrastructure': {
+            'kubernetes': load_json_report('kubesec-report.json'),
+            'terraform': load_json_report('tfsec-report.json')
+        },
+        'api_security': {
+            'zap': load_json_report('zap-report.json')
+        },
+        'secrets': {
+            'gitleaks': load_json_report('gitleaks-report.json'),
+            'trufflehog': load_json_report('trufflehog-report.json')
+        },
+        'ssl_tls': load_json_report('testssl-report.json')
+    }
+}
+
+# Calculate severity summary
+severity_counts = {
+    'critical': 0,
+    'high': 0,
+    'medium': 0,
+    'low': 0
+}
+
+# Count vulnerabilities
+# ... (counting logic)
+
+reports['summary'] = {
+    'total_vulnerabilities': sum(severity_counts.values()),
+    'by_severity': severity_counts,
+    'scan_date': datetime.utcnow().isoformat(),
+    'status': 'PASS' if severity_counts['critical'] == 0 else 'FAIL'
+}
+
+# Save report
+with open('security-scan-report.json', 'w') as f:
+    json.dump(reports, f, indent=2)
+
+print(f"Security scan complete. Status: {reports['summary']['status']}")
+print(f"Found {reports['summary']['total_vulnerabilities']} vulnerabilities")
+EOF
+```
+
+```python
+# backend/src/security/security_headers.py
+from typing import Dict
+
+class SecurityHeaders:
+    @staticmethod
+    def get_security_headers() -> Dict[str, str]:
+        """Get comprehensive security headers"""
+
+        return {
+            # Prevent XSS attacks
+            'X-XSS-Protection': '1; mode=block',
+            'X-Content-Type-Options': 'nosniff',
+
+            # Prevent clickjacking
+            'X-Frame-Options': 'DENY',
+            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' wss://api.tdeveloper.com https://api.tdeveloper.com",
+
+            # HTTPS enforcement
+            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+
+            # Prevent information disclosure
+            'X-Permitted-Cross-Domain-Policies': 'none',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+
+            # Additional security
+            'Feature-Policy': "geolocation 'none'; microphone 'none'; camera 'none'",
+            'Permissions-Policy': 'geolocation=(), microphone=(), camera=()'
+        }
+
+# Security middleware
+from fastapi import Request, Response
+from fastapi.middleware.base import BaseHTTPMiddleware
+
+class SecurityMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        # Add security headers
+        headers = SecurityHeaders.get_security_headers()
+        for header, value in headers.items():
+            response.headers[header] = value
+
+        # Remove sensitive headers
+        response.headers.pop('X-Powered-By', None)
+        response.headers.pop('Server', None)
+
+        return response
+
+# Rate limiting
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
+
+# Input validation
+from pydantic import BaseModel, validator
+import bleach
+
+class SecureInputModel(BaseModel):
+    description: str
+
+    @validator('description')
+    def sanitize_description(cls, v):
+        # Remove any HTML tags
+        cleaned = bleach.clean(v, tags=[], strip=True)
+
+        # Limit length
+        if len(cleaned) > 1000:
+            raise ValueError('Description too long')
+
+        return cleaned
+```
+
+#### SubTask 4.80.4: 배포 체크리스트
+
+**담당자**: DevOps 리드  
+**예상 소요시간**: 6시간
+
+**작업 내용**:
+
+```yaml
+# deployment/checklist.yaml
+deployment_checklist:
+  pre_deployment:
+    infrastructure:
+      - name: "Verify Kubernetes cluster health"
+        command: "kubectl get nodes"
+        expected: "All nodes Ready"
+
+      - name: "Check resource availability"
+        command: "kubectl top nodes"
+        expected: "CPU < 80%, Memory < 85%"
+
+      - name: "Verify database connectivity"
+        command: "scripts/check-databases.sh"
+        expected: "All databases accessible"
+
+      - name: "Check SSL certificates"
+        command: "scripts/check-certificates.sh"
+        expected: "Valid for > 30 days"
+
+    code_quality:
+      - name: "Run unit tests"
+        command: "npm test"
+        expected: "All tests pass"
+
+      - name: "Run integration tests"
+        command: "npm run test:integration"
+        expected: "All tests pass"
+
+      - name: "Check code coverage"
+        command: "npm run coverage"
+        expected: "> 80% coverage"
+
+      - name: "Run linting"
+        command: "npm run lint"
+        expected: "No errors"
+
+    security:
+      - name: "Run security scan"
+        command: "scripts/security-scan.sh"
+        expected: "No critical vulnerabilities"
+
+      - name: "Check secrets management"
+        command: "scripts/check-secrets.sh"
+        expected: "All secrets in vault"
+
+    documentation:
+      - name: "Update API documentation"
+        command: "npm run docs:generate"
+        expected: "Docs generated"
+
+      - name: "Update CHANGELOG"
+        command: "scripts/update-changelog.sh"
+        expected: "Changes documented"
+
+  deployment:
+    steps:
+      - name: "Create deployment backup"
+        command: "scripts/backup-current.sh"
+
+      - name: "Deploy to staging"
+        command: "scripts/deploy-staging.sh"
+
+      - name: "Run smoke tests on staging"
+        command: "npm run test:smoke:staging"
+
+      - name: "Deploy to production (canary)"
+        command: "scripts/deploy-canary.sh"
+
+      - name: "Monitor canary metrics"
+        command: "scripts/monitor-canary.sh"
+        duration: "15m"
+
+      - name: "Full production rollout"
+        command: "scripts/deploy-production.sh"
+
+  post_deployment:
+    validation:
+      - name: "Run smoke tests"
+        command: "npm run test:smoke:production"
+        expected: "All critical paths working"
+
+      - name: "Check application metrics"
+        command: "scripts/check-metrics.sh"
+        expected: "Normal operational ranges"
+
+      - name: "Verify logging"
+        command: "scripts/check-logs.sh"
+        expected: "No error spike"
+
+      - name: "Test rollback procedure"
+        command: "scripts/test-rollback.sh"
+        expected: "Rollback successful"
+
+    monitoring:
+      - name: "Set up alerts"
+        command: "scripts/configure-alerts.sh"
+
+      - name: "Configure dashboards"
+        command: "scripts/setup-dashboards.sh"
+
+      - name: "Enable synthetic monitoring"
+        command: "scripts/enable-synthetics.sh"
+
+    communication:
+      - name: "Send deployment notification"
+        command: "scripts/notify-deployment.sh"
+
+      - name: "Update status page"
+        command: "scripts/update-status.sh"
+
+      - name: "Document known issues"
+        command: "scripts/document-issues.sh"
+```
+
+```python
+# scripts/deployment-validator.py
+import subprocess
+import json
+import yaml
+from typing import Dict, List, Tuple
+from datetime import datetime
+import sys
+
+class DeploymentValidator:
+    def __init__(self, checklist_file: str):
+        with open(checklist_file, 'r') as f:
+            self.checklist = yaml.safe_load(f)
+
+        self.results = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'status': 'pending',
+            'phases': {}
+        }
+
+    def run_validation(self) -> bool:
+        """Run through deployment checklist"""
+
+        all_passed = True
+
+        # Pre-deployment checks
+        print("=" * 50)
+        print("PRE-DEPLOYMENT VALIDATION")
+        print("=" * 50)
+
+        pre_deploy_passed = self._validate_phase(
+            'pre_deployment',
+            self.checklist['deployment_checklist']['pre_deployment']
+        )
+        all_passed &= pre_deploy_passed
+
+        if not pre_deploy_passed:
+            print("\n❌ Pre-deployment validation failed. Aborting deployment.")
+            self.results['status'] = 'failed'
+            self._save_results()
+            return False
+
+        # Continue with deployment if pre-checks pass
+        if self._confirm_deployment():
+            print("\n" + "=" * 50)
+            print("DEPLOYMENT EXECUTION")
+            print("=" * 50)
+
+            deploy_passed = self._execute_deployment(
+                self.checklist['deployment_checklist']['deployment']
+            )
+            all_passed &= deploy_passed
+
+            if deploy_passed:
+                print("\n" + "=" * 50)
+                print("POST-DEPLOYMENT VALIDATION")
+                print("=" * 50)
+
+                post_deploy_passed = self._validate_phase(
+                    'post_deployment',
+                    self.checklist['deployment_checklist']['post_deployment']
+                )
+                all_passed &= post_deploy_passed
+
+        self.results['status'] = 'passed' if all_passed else 'failed'
+        self._save_results()
+
+        return all_passed
+
+    def _validate_phase(self, phase_name: str, phase_config: Dict) -> bool:
+        """Validate a deployment phase"""
+
+        phase_results = {}
+        phase_passed = True
+
+        for category, checks in phase_config.items():
+            print(f"\n{category.upper()}:")
+            category_results = []
+
+            for check in checks:
+                result = self._run_check(check)
+                category_results.append(result)
+
+                status_icon = "✅" if result['passed'] else "❌"
+                print(f"  {status_icon} {check['name']}")
+
+                if not result['passed']:
+                    print(f"     Error: {result['error']}")
+                    phase_passed = False
+
+            phase_results[category] = category_results
+
+        self.results['phases'][phase_name] = {
+            'passed': phase_passed,
+            'categories': phase_results
+        }
+
+        return phase_passed
+
+    def _run_check(self, check: Dict) -> Dict:
+        """Run a single check"""
+
+        try:
+            result = subprocess.run(
+                check['command'],
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            passed = result.returncode == 0
+
+            # Check expected output if specified
+            if passed and 'expected' in check:
+                output = result.stdout.strip()
+                passed = check['expected'] in output
+
+            return {
+                'name': check['name'],
+                'command': check['command'],
+                'passed': passed,
+                'output': result.stdout,
+                'error': result.stderr if not passed else None
+            }
+
+        except subprocess.TimeoutExpired:
+            return {
+                'name': check['name'],
+                'command': check['command'],
+                'passed': False,
+                'error': 'Command timed out'
+            }
+        except Exception as e:
+            return {
+                'name': check['name'],
+                'command': check['command'],
+                'passed': False,
+                'error': str(e)
+            }
+
+    def _execute_deployment(self, deployment_config: Dict) -> bool:
+        """Execute deployment steps"""
+
+        deployment_results = []
+
+        for step in deployment_config['steps']:
+            print(f"\nExecuting: {step['name']}")
+
+            result = self._run_check(step)
+            deployment_results.append(result)
+
+            if not result['passed']:
+                print(f"❌ Deployment step failed: {step['name']}")
+                print(f"   Error: {result['error']}")
+
+                # Attempt rollback
+                if self._confirm_rollback():
+                    self._execute_rollback()
+
+                return False
+
+            # Handle monitoring steps
+            if 'duration' in step:
+                print(f"   Monitoring for {step['duration']}...")
+                # In real implementation, would monitor metrics
+
+        self.results['phases']['deployment'] = {
+            'passed': True,
+            'steps': deployment_results
+        }
+
+        return True
+
+    def _confirm_deployment(self) -> bool:
+        """Confirm deployment continuation"""
+
+        response = input("\nPre-deployment checks passed. Continue with deployment? (yes/no): ")
+        return response.lower() == 'yes'
+
+    def _confirm_rollback(self) -> bool:
+        """Confirm rollback execution"""
+
+        response = input("\nDeployment failed. Execute rollback? (yes/no): ")
+        return response.lower() == 'yes'
+
+    def _execute_rollback(self):
+        """Execute rollback procedure"""
+
+        print("\nExecuting rollback...")
+        subprocess.run("scripts/rollback.sh", shell=True)
+
+    def _save_results(self):
+        """Save validation results"""
+
+        filename = f"deployment-validation-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
+
+        with open(filename, 'w') as f:
+            json.dump(self.results, f, indent=2)
+
+        print(f"\nValidation results saved to: {filename}")
+
+# Deployment automation script
+class DeploymentAutomation:
+    def __init__(self):
+        self.validator = DeploymentValidator('deployment/checklist.yaml')
+
+    def deploy(self, version: str, environment: str):
+        """Automated deployment with validation"""
+
+        print(f"Starting deployment of version {version} to {environment}")
+
+        # Set environment variables
+        os.environ['DEPLOY_VERSION'] = version
+        os.environ['DEPLOY_ENV'] = environment
+
+        # Run validation and deployment
+        if self.validator.run_validation():
+            print("\n✅ Deployment completed successfully!")
+
+            # Send notifications
+            self._send_notifications(success=True, version=version, environment=environment)
+        else:
+            print("\n❌ Deployment failed!")
+
+            # Send failure notifications
+            self._send_notifications(success=False, version=version, environment=environment)
+            sys.exit(1)
+
+    def _send_notifications(self, success: bool, version: str, environment: str):
+        """Send deployment notifications"""
+
+        status = "succeeded" if success else "failed"
+
+        # Slack notification
+        slack_message = {
+            'text': f'Deployment {status}',
+            'attachments': [{
+                'color': 'good' if success else 'danger',
+                'fields': [
+                    {'title': 'Version', 'value': version},
+                    {'title': 'Environment', 'value': environment},
+                    {'title': 'Time', 'value': datetime.now().isoformat()}
+                ]
+            }]
+        }
+
+        # Send to Slack webhook
+        # requests.post(SLACK_WEBHOOK_URL, json=slack_message)
+
+        # Email notification
+        # send_email(...)
+
+if __name__ == "__main__":
+    automation = DeploymentAutomation()
+    automation.deploy(
+        version=sys.argv[1] if len(sys.argv) > 1 else "latest",
+        environment=sys.argv[2] if len(sys.argv) > 2 else "production"
+    )
+```
+
+---
+
+## 📊 Phase 4 Tasks 4.74-4.80 완료 요약
+
+### 구현된 인프라 구성요소
+
+#### 1. **메시지 큐 시스템 (Task 4.74)**
+
+- ✅ AWS SQS FIFO 큐 구성
+- ✅ EventBridge 이벤트 라우팅
+- ✅ Dead Letter Queue 처리
+- ✅ 큐 모니터링 및 메트릭
+
+#### 2. **캐싱 레이어 (Task 4.75)**
+
+- ✅ Redis 클러스터 설정 (3노드)
+- ✅ 다양한 캐싱 전략 구현
+- ✅ 캐시 무효화 메커니즘
+- ✅ 캐시 워밍 및 예측
+
+#### 3. **컨테이너화 (Task 4.76)**
+
+- ✅ 멀티스테이지 Dockerfile
+- ✅ 이미지 최적화 (<100MB)
+- ✅ ECR 레지스트리 통합
+- ✅ 보안 스캐닝 통합
+
+#### 4. **오케스트레이션 (Task 4.77)**
+
+- ✅ Kubernetes 매니페스트
+- ✅ Helm 차트 생성
+- ✅ 오토스케일링 (HPA/VPA/CA)
+- ✅ 롤링 업데이트 전략
+
+#### 5. **모니터링 시스템 (Task 4.78)**
+
+- ✅ Prometheus 메트릭 수집
+- ✅ Grafana 대시보드
+- ✅ AlertManager 알림 규칙
+- ✅ Jaeger 분산 추적
+
+#### 6. **로깅 시스템 (Task 4.79)**
+
+- ✅ Fluent Bit 로그 수집
+- ✅ Elasticsearch 중앙 저장소
+- ✅ 로그 파싱 및 필터링
+- ✅ 보관 정책 및 아카이빙
+
+#### 7. **배포 검증 (Task 4.80)**
+
+- ✅ 통합 테스트 스위트
+- ✅ 성능 테스트 (Locust)
+- ✅ 보안 스캔 자동화
+- ✅ 배포 체크리스트 및 자동화
+
+### 기술적 성과
+
+1. **확장성**
+   - 자동 스케일링으로 부하 대응
+   - 마이크로서비스 아키텍처 지원
+   - 분산 시스템 모니터링
+
+2. **안정성**
+   - 99.9% 가용성 목표
+   - 자동 복구 메커니즘
+   - 포괄적인 에러 처리
+
+3. **보안**
+   - 컨테이너 이미지 스캔
+   - 비밀 관리 시스템
+   - 네트워크 정책 적용
+
+4. **운영 효율성**
+   - 자동화된 배포 프로세스
+   - 실시간 모니터링 및 알림
+   - 중앙화된 로깅 시스템

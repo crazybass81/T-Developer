@@ -1,336 +1,184 @@
 # backend/src/agents/implementations/ui_selection/component_library_matcher.py
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 
 @dataclass
-class ComponentLibraryMatch:
-    library_name: str
-    compatibility_score: float
-    available_components: List[str]
-    missing_components: List[str]
-    installation_complexity: str
-    bundle_impact: str
+class ComponentLibrary:
+    name: str
+    framework: str
+    components: List[str]
+    score: float
+    bundle_size: str
+    typescript_support: bool
+    accessibility_score: float
     maintenance_status: str
 
 class ComponentLibraryMatcher:
-    """컴포넌트 라이브러리 매칭"""
+    """컴포넌트 라이브러리 매칭 시스템"""
     
     COMPONENT_LIBRARIES = {
         'react': {
-            'material-ui': {
-                'components': ['Button', 'TextField', 'Select', 'Table', 'Dialog', 'Drawer', 'AppBar', 'Card', 'Chip', 'Avatar'],
-                'bundle_size': 'large',
-                'installation': 'easy',
-                'maintenance': 'active',
-                'popularity': 'high'
-            },
-            'ant-design': {
-                'components': ['Button', 'Input', 'Select', 'Table', 'Modal', 'Drawer', 'Menu', 'Card', 'Tag', 'Avatar', 'Form', 'DatePicker'],
-                'bundle_size': 'large',
-                'installation': 'easy',
-                'maintenance': 'active',
-                'popularity': 'high'
-            },
-            'chakra-ui': {
-                'components': ['Button', 'Input', 'Select', 'Table', 'Modal', 'Drawer', 'Box', 'Flex', 'Text', 'Heading'],
-                'bundle_size': 'medium',
-                'installation': 'easy',
-                'maintenance': 'active',
-                'popularity': 'medium'
-            },
             'react-bootstrap': {
-                'components': ['Button', 'Form', 'Table', 'Modal', 'Navbar', 'Card', 'Alert', 'Badge'],
+                'components': ['Button', 'Modal', 'Form', 'Table', 'Card', 'Navbar'],
                 'bundle_size': 'medium',
-                'installation': 'easy',
+                'typescript': True,
+                'accessibility': 0.8,
                 'maintenance': 'active',
-                'popularity': 'medium'
+                'use_cases': ['bootstrap_design', 'rapid_prototyping']
+            },
+            'semantic-ui-react': {
+                'components': ['Button', 'Menu', 'Form', 'Grid', 'Card', 'Modal'],
+                'bundle_size': 'large',
+                'typescript': True,
+                'accessibility': 0.7,
+                'maintenance': 'maintenance',
+                'use_cases': ['semantic_design', 'content_heavy']
+            },
+            'react-select': {
+                'components': ['Select', 'AsyncSelect', 'CreatableSelect'],
+                'bundle_size': 'small',
+                'typescript': True,
+                'accessibility': 0.9,
+                'maintenance': 'active',
+                'use_cases': ['forms', 'data_selection']
             }
         },
         'vue': {
-            'vuetify': {
-                'components': ['VBtn', 'VTextField', 'VSelect', 'VDataTable', 'VDialog', 'VNavigationDrawer', 'VAppBar', 'VCard'],
+            'element-plus': {
+                'components': ['Button', 'Form', 'Table', 'Dialog', 'Menu', 'DatePicker'],
                 'bundle_size': 'large',
-                'installation': 'easy',
+                'typescript': True,
+                'accessibility': 0.8,
                 'maintenance': 'active',
-                'popularity': 'high'
+                'use_cases': ['admin_panels', 'enterprise']
             },
             'quasar': {
-                'components': ['QBtn', 'QInput', 'QSelect', 'QTable', 'QDialog', 'QDrawer', 'QHeader', 'QCard'],
-                'bundle_size': 'medium',
-                'installation': 'moderate',
+                'components': ['QBtn', 'QForm', 'QTable', 'QDialog', 'QMenu'],
+                'bundle_size': 'large',
+                'typescript': True,
+                'accessibility': 0.85,
                 'maintenance': 'active',
-                'popularity': 'medium'
-            },
-            'element-plus': {
-                'components': ['ElButton', 'ElInput', 'ElSelect', 'ElTable', 'ElDialog', 'ElDrawer', 'ElMenu', 'ElCard'],
-                'bundle_size': 'medium',
-                'installation': 'easy',
-                'maintenance': 'active',
-                'popularity': 'medium'
+                'use_cases': ['spa', 'mobile', 'desktop']
             }
         },
         'angular': {
-            'angular-material': {
-                'components': ['MatButton', 'MatInput', 'MatSelect', 'MatTable', 'MatDialog', 'MatSidenav', 'MatToolbar', 'MatCard'],
-                'bundle_size': 'large',
-                'installation': 'easy',
-                'maintenance': 'active',
-                'popularity': 'high'
-            },
             'ng-bootstrap': {
-                'components': ['NgbButton', 'NgbInput', 'NgbSelect', 'NgbTable', 'NgbModal', 'NgbNavbar', 'NgbCard'],
+                'components': ['NgbModal', 'NgbDropdown', 'NgbDatepicker'],
                 'bundle_size': 'medium',
-                'installation': 'easy',
+                'typescript': True,
+                'accessibility': 0.9,
                 'maintenance': 'active',
-                'popularity': 'medium'
+                'use_cases': ['bootstrap_integration']
+            },
+            'primeng': {
+                'components': ['Button', 'DataTable', 'Calendar', 'Dialog'],
+                'bundle_size': 'large',
+                'typescript': True,
+                'accessibility': 0.8,
+                'maintenance': 'active',
+                'use_cases': ['enterprise', 'data_heavy']
             }
         }
     }
 
-    async def find_best_matches(
+    async def match_libraries(
         self,
         framework: str,
-        design_system: str,
-        required_components: List[str]
-    ) -> List[ComponentLibraryMatch]:
-        """최적의 컴포넌트 라이브러리 찾기"""
+        requirements: Dict[str, Any]
+    ) -> List[ComponentLibrary]:
+        """컴포넌트 라이브러리 매칭"""
         
         framework_libraries = self.COMPONENT_LIBRARIES.get(framework, {})
-        matches = []
+        if not framework_libraries:
+            return []
+        
+        matched_libraries = []
+        required_components = requirements.get('required_components', [])
         
         for lib_name, lib_specs in framework_libraries.items():
-            match = await self._evaluate_library_match(
-                lib_name,
-                lib_specs,
-                required_components,
-                design_system
+            # 컴포넌트 매칭 점수 계산
+            match_score = self._calculate_match_score(
+                lib_specs, requirements, required_components
             )
-            matches.append(match)
+            
+            if match_score > 0.3:  # 최소 매칭 임계값
+                library = ComponentLibrary(
+                    name=lib_name,
+                    framework=framework,
+                    components=lib_specs['components'],
+                    score=match_score,
+                    bundle_size=lib_specs['bundle_size'],
+                    typescript_support=lib_specs['typescript'],
+                    accessibility_score=lib_specs['accessibility'],
+                    maintenance_status=lib_specs['maintenance']
+                )
+                matched_libraries.append(library)
         
-        # 호환성 점수로 정렬
-        matches.sort(key=lambda x: x.compatibility_score, reverse=True)
-        
-        return matches
+        # 점수 기준 정렬
+        matched_libraries.sort(key=lambda x: x.score, reverse=True)
+        return matched_libraries[:5]  # 상위 5개만 반환
 
-    async def _evaluate_library_match(
+    def _calculate_match_score(
         self,
-        library_name: str,
-        library_specs: Dict[str, Any],
-        required_components: List[str],
-        design_system: str
-    ) -> ComponentLibraryMatch:
-        """라이브러리 매칭 평가"""
+        lib_specs: Dict[str, Any],
+        requirements: Dict[str, Any],
+        required_components: List[str]
+    ) -> float:
+        """매칭 점수 계산"""
         
-        available_components = library_specs['components']
+        score = 0.0
         
-        # 컴포넌트 매칭 계산
-        matched_components = []
-        missing_components = []
+        # 필수 컴포넌트 매칭
+        if required_components:
+            matched_components = set(lib_specs['components']) & set(required_components)
+            component_match_ratio = len(matched_components) / len(required_components)
+            score += component_match_ratio * 0.4
+        else:
+            score += 0.4  # 필수 컴포넌트가 없으면 기본 점수
         
-        for req_comp in required_components:
-            if self._component_exists(req_comp, available_components):
-                matched_components.append(req_comp)
-            else:
-                # 유사 컴포넌트 찾기
-                similar = self._find_similar_component(req_comp, available_components)
-                if similar:
-                    matched_components.append(f"{req_comp} (as {similar})")
-                else:
-                    missing_components.append(req_comp)
+        # TypeScript 지원
+        if requirements.get('typescript_required', False):
+            if lib_specs['typescript']:
+                score += 0.2
+        else:
+            score += 0.1
         
-        # 호환성 점수 계산
-        compatibility_score = len(matched_components) / len(required_components) if required_components else 1.0
+        # 접근성 요구사항
+        if requirements.get('accessibility_important', False):
+            score += lib_specs['accessibility'] * 0.2
         
-        # 디자인 시스템과의 호환성 보너스
-        if self._is_design_system_compatible(library_name, design_system):
-            compatibility_score += 0.1
+        # 번들 크기 고려
+        performance_critical = requirements.get('performance_critical', False)
+        if performance_critical:
+            bundle_scores = {'small': 0.2, 'medium': 0.1, 'large': 0.0}
+            score += bundle_scores.get(lib_specs['bundle_size'], 0)
+        else:
+            score += 0.1
         
-        return ComponentLibraryMatch(
-            library_name=library_name,
-            compatibility_score=min(compatibility_score, 1.0),
-            available_components=matched_components,
-            missing_components=missing_components,
-            installation_complexity=library_specs['installation'],
-            bundle_impact=library_specs['bundle_size'],
-            maintenance_status=library_specs['maintenance']
-        )
+        # 유지보수 상태
+        maintenance_scores = {'active': 0.1, 'maintenance': 0.05, 'deprecated': 0.0}
+        score += maintenance_scores.get(lib_specs['maintenance'], 0)
+        
+        return min(1.0, score)
 
-    def _component_exists(self, required: str, available: List[str]) -> bool:
-        """컴포넌트 존재 여부 확인"""
-        
-        # 정확한 매칭
-        if required in available:
-            return True
-        
-        # 대소문자 무시 매칭
-        required_lower = required.lower()
-        for comp in available:
-            if comp.lower() == required_lower:
-                return True
-        
-        # 부분 매칭
-        for comp in available:
-            if required_lower in comp.lower() or comp.lower() in required_lower:
-                return True
-        
-        return False
-
-    def _find_similar_component(self, required: str, available: List[str]) -> Optional[str]:
-        """유사한 컴포넌트 찾기"""
-        
-        # 컴포넌트 매핑 테이블
-        component_mappings = {
-            'button': ['btn', 'button'],
-            'input': ['textfield', 'input', 'field'],
-            'select': ['dropdown', 'select', 'picker'],
-            'table': ['datatable', 'table', 'grid'],
-            'modal': ['dialog', 'modal', 'popup'],
-            'drawer': ['sidebar', 'drawer', 'sidenav'],
-            'navbar': ['appbar', 'toolbar', 'header', 'navbar'],
-            'card': ['card', 'panel'],
-            'form': ['form', 'formgroup'],
-            'datepicker': ['datepicker', 'calendar']
-        }
-        
-        required_lower = required.lower()
-        
-        for canonical, variants in component_mappings.items():
-            if required_lower in variants:
-                # 사용 가능한 컴포넌트에서 매칭되는 것 찾기
-                for comp in available:
-                    comp_lower = comp.lower()
-                    for variant in variants:
-                        if variant in comp_lower:
-                            return comp
-        
-        return None
-
-    def _is_design_system_compatible(self, library_name: str, design_system: str) -> bool:
-        """디자인 시스템과의 호환성 확인"""
-        
-        compatibility_map = {
-            'material-ui': ['material-ui', 'material-design'],
-            'ant-design': ['ant-design'],
-            'chakra-ui': ['chakra-ui'],
-            'vuetify': ['vuetify', 'material-design'],
-            'quasar': ['quasar'],
-            'angular-material': ['angular-material', 'material-design']
-        }
-        
-        compatible_systems = compatibility_map.get(library_name, [])
-        return design_system in compatible_systems
-
-    async def generate_installation_guide(
+    async def get_component_recommendations(
         self,
-        matches: List[ComponentLibraryMatch],
-        framework: str
-    ) -> Dict[str, Any]:
-        """설치 가이드 생성"""
+        framework: str,
+        component_type: str
+    ) -> List[Dict[str, Any]]:
+        """특정 컴포넌트 타입에 대한 추천"""
         
-        if not matches:
-            return {'error': 'No compatible libraries found'}
+        recommendations = []
+        framework_libraries = self.COMPONENT_LIBRARIES.get(framework, {})
         
-        best_match = matches[0]
+        for lib_name, lib_specs in framework_libraries.items():
+            if component_type in lib_specs['components']:
+                recommendations.append({
+                    'library': lib_name,
+                    'component': component_type,
+                    'accessibility_score': lib_specs['accessibility'],
+                    'bundle_size': lib_specs['bundle_size'],
+                    'typescript_support': lib_specs['typescript']
+                })
         
-        installation_commands = {
-            'react': {
-                'material-ui': [
-                    'npm install @mui/material @emotion/react @emotion/styled',
-                    'npm install @mui/icons-material'
-                ],
-                'ant-design': [
-                    'npm install antd',
-                    'npm install @ant-design/icons'
-                ],
-                'chakra-ui': [
-                    'npm install @chakra-ui/react @emotion/react @emotion/styled framer-motion'
-                ]
-            },
-            'vue': {
-                'vuetify': [
-                    'npm install vuetify',
-                    'npm install @mdi/font'
-                ],
-                'quasar': [
-                    'npm install quasar @quasar/extras'
-                ]
-            },
-            'angular': {
-                'angular-material': [
-                    'ng add @angular/material'
-                ]
-            }
-        }
-        
-        commands = installation_commands.get(framework, {}).get(best_match.library_name, [])
-        
-        return {
-            'recommended_library': best_match.library_name,
-            'installation_commands': commands,
-            'setup_steps': self._generate_setup_steps(best_match.library_name, framework),
-            'import_examples': self._generate_import_examples(best_match.library_name, framework),
-            'basic_usage': self._generate_usage_examples(best_match.library_name, framework)
-        }
-
-    def _generate_setup_steps(self, library: str, framework: str) -> List[str]:
-        """설정 단계 생성"""
-        
-        setup_steps = {
-            'material-ui': [
-                'Install the package and dependencies',
-                'Wrap your app with ThemeProvider',
-                'Import and use components'
-            ],
-            'ant-design': [
-                'Install the package',
-                'Import CSS in your main file',
-                'Import and use components'
-            ],
-            'chakra-ui': [
-                'Install the package and dependencies',
-                'Wrap your app with ChakraProvider',
-                'Import and use components'
-            ]
-        }
-        
-        return setup_steps.get(library, ['Install the package', 'Configure as needed', 'Import and use components'])
-
-    def _generate_import_examples(self, library: str, framework: str) -> List[str]:
-        """임포트 예제 생성"""
-        
-        import_examples = {
-            'material-ui': [
-                "import { Button, TextField } from '@mui/material';",
-                "import { ThemeProvider, createTheme } from '@mui/material/styles';"
-            ],
-            'ant-design': [
-                "import { Button, Input } from 'antd';",
-                "import 'antd/dist/antd.css';"
-            ],
-            'chakra-ui': [
-                "import { Button, Input } from '@chakra-ui/react';",
-                "import { ChakraProvider } from '@chakra-ui/react';"
-            ]
-        }
-        
-        return import_examples.get(library, [f"import {{ Component }} from '{library}';"])
-
-    def _generate_usage_examples(self, library: str, framework: str) -> List[str]:
-        """사용 예제 생성"""
-        
-        usage_examples = {
-            'material-ui': [
-                '<Button variant="contained" color="primary">Click me</Button>',
-                '<TextField label="Name" variant="outlined" />'
-            ],
-            'ant-design': [
-                '<Button type="primary">Click me</Button>',
-                '<Input placeholder="Enter name" />'
-            ],
-            'chakra-ui': [
-                '<Button colorScheme="blue">Click me</Button>',
-                '<Input placeholder="Enter name" />'
-            ]
-        }
-        
-        return usage_examples.get(library, ['<Component>Example</Component>'])
+        return recommendations
