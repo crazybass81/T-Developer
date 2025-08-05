@@ -1,8 +1,0 @@
-{
-  "devDependencies": {
-    "@aws-sdk/client-bedrock": "^3.859.0",
-    "@types/node": "^24.2.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
-  }
-}
