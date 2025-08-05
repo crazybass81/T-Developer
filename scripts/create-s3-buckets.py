@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import boto3
 import json
 from botocore.exceptions import ClientError
@@ -45,24 +46,32 @@ def set_bucket_policy(s3_client, bucket_name):
         ]
     }
     
-    s3_client.put_bucket_policy(
-        Bucket=bucket_name,
-        Policy=json.dumps(bucket_policy)
-    )
+    try:
+        s3_client.put_bucket_policy(
+            Bucket=bucket_name,
+            Policy=json.dumps(bucket_policy)
+        )
+        print(f"  📋 버킷 정책 설정 완료: {bucket_name}")
+    except ClientError as e:
+        print(f"  ⚠️ 버킷 정책 설정 실패: {e}")
 
 def main():
+    print("🔧 S3 버킷 생성 중...")
+    
     region = 'us-east-1'
     s3_client = boto3.client('s3', region_name=region)
     
     buckets = [
         't-developer-artifacts',
-        't-developer-components',
+        't-developer-components', 
         't-developer-templates',
         't-developer-backups'
     ]
     
     for bucket in buckets:
         create_bucket_if_not_exists(s3_client, bucket, region)
+    
+    print("\n✅ S3 버킷 설정 완료!")
 
 if __name__ == "__main__":
     main()
