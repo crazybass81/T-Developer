@@ -46,3 +46,10 @@ npm install
 - `.eslintrc.js` - ESLint 코드 품질 검사 설정
 - `.prettierrc` - Prettier 코드 포맷팅 설정
 - `.editorconfig` - 에디터 공통 설정
+
+### SubTask 0.2.1: DynamoDB 로컬 설정
+- `docker-compose.dev.yml` - DynamoDB Local 및 Redis 설정
+- `scripts/setup-local-db.ts` - 로컬 DB 테이블 생성 스크립트
+- DynamoDB Local: http://localhost:8000
+- DynamoDB Admin: http://localhost:8001
+- Redis: localhost:6380
