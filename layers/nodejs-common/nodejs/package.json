@@ -1,0 +1,13 @@
+{
+  "name": "t-developer-common-layer",
+  "version": "1.0.0",
+  "dependencies": {
+    "@aws-sdk/client-bedrock": "^3.0.0",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/client-s3": "^3.0.0",
+    "axios": "^1.6.0",
+    "lodash": "^4.17.21",
+    "uuid": "^9.0.0",
+    "joi": "^17.11.0"
+  }
+}

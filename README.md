@@ -64,3 +64,9 @@ npm install
 - 전체 80개 모델 액세스 확인 완료
 - Claude 3.5 Sonnet, Nova Pro/Lite, Titan 모델 사용 가능
 - TypeScript 설정 및 AWS SDK 통합
+
+### SubTask 0.2.4: Lambda 레이어 준비
+- `scripts/create-lambda-layers.sh` - Lambda 레이어 생성 스크립트
+- Node.js 공통 레이어 (6.7MB): AWS SDK, axios, lodash, uuid, joi
+- Python 공통 레이어 (62.7MB): boto3, requests, pandas, numpy, pydantic
+- 레이어 ZIP 파일 생성 완료: `layers/` 디렉토리
