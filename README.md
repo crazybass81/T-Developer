@@ -57,6 +57,7 @@ npm install
 ### SubTask 0.2.2: S3 버킷 생성 스크립트
 - `scripts/create-s3-buckets.py` - S3 버킷 생성 자동화 스크립트
 - t-developer-artifacts, components, templates, backups 버킷 확인
+<<<<<<< HEAD
 - CloudFront 연동을 위한 버킷 정책 설정
 
 ### SubTask 0.2.3: Bedrock 모델 액세스 요청
@@ -70,3 +71,6 @@ npm install
 - Node.js 공통 레이어 (6.7MB): AWS SDK, axios, lodash, uuid, joi
 - Python 공통 레이어 (62.7MB): boto3, requests, pandas, numpy, pydantic
 - 레이어 ZIP 파일 생성 완료: `layers/` 디렉토리
+=======
+- CloudFront 연동을 위한 버킷 정책 설정
+>>>>>>> parent of a1245e2 (docs: Update README with SubTask 0.2.3 completion)
