@@ -1,0 +1,63 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Backend",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/src/main.ts",
+      "outFiles": ["${workspaceFolder}/backend/dist/**/*.js"],
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "env": {
+        "NODE_ENV": "development",
+        "DEBUG": "t-developer:*"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "restart": true,
+      "protocol": "inspector"
+    },
+    {
+      "name": "Debug Agent",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/src/agents/${input:agentName}-agent.ts",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "env": {
+        "NODE_ENV": "development",
+        "DEBUG": "agent:*"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Tests",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": ["--runInBand", "--no-cache"],
+      "env": {
+        "NODE_ENV": "test"
+      },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Attach to Process",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "restart": true,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "."
+    }
+  ],
+  "inputs": [
+    {
+      "id": "agentName",
+      "description": "Agent name to debug",
+      "default": "nl-input",
+      "type": "promptString"
+    }
+  ]
+}
