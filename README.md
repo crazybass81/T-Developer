@@ -58,3 +58,9 @@ npm install
 - `scripts/create-s3-buckets.py` - S3 버킷 생성 자동화 스크립트
 - t-developer-artifacts, components, templates, backups 버킷 확인
 - CloudFront 연동을 위한 버킷 정책 설정
+
+### SubTask 0.2.3: Bedrock 모델 액세스 요청
+- `scripts/request-bedrock-access.ts` - Bedrock 모델 액세스 확인 스크립트
+- 전체 80개 모델 액세스 확인 완료
+- Claude 3.5 Sonnet, Nova Pro/Lite, Titan 모델 사용 가능
+- TypeScript 설정 및 AWS SDK 통합
