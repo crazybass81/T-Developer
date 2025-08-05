@@ -1,47 +1,47 @@
-# T-Developer MVP .gitignore
-
-# Environment variables
-.env
-.env.local
-.env.production
-.env.staging
-
-# Security files
-*.key
-*.pem
-*.crt
-*.csr
-
 # Dependencies
 node_modules/
-__pycache__/
-*.pyc
-.venv/
-.venv-*/
+.pnp
+.pnp.js
 
-# Build outputs
-dist/
-build/
+# Testing
 coverage/
+*.lcov
+.nyc_output
+
+# Production
+build/
+dist/
 *.log
+
+# Environment
+.env
+.env.local
+.env.*.local
 
 # AWS
 .aws/
+*.pem
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Test reports
-test-reports/
-*.lcov
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+ENV/
 
-# Temporary files
-*.tmp
-*.temp
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
