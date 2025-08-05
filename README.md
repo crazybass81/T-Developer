@@ -35,3 +35,8 @@ npm install
 - `scripts/setup-aws-profile.py` - AWS 계정 설정 확인 스크립트
 - `scripts/aws-policy.json` - T-Developer 필요 IAM 정책
 - AWS 계정 (036284794745) 연결 확인 완료
+
+### SubTask 0.1.3: 프로젝트 저장소 초기화
+- `scripts/init-repository.sh` - Git 저장소 초기화 스크립트
+- `.gitignore` - Git 무시 파일 설정
+- Git 저장소 초기화 및 기본 커밋 완료
