@@ -40,3 +40,9 @@ npm install
 - `scripts/init-repository.sh` - Git 저장소 초기화 스크립트
 - `.gitignore` - Git 무시 파일 설정
 - Git 저장소 초기화 및 기본 커밋 완료
+
+### SubTask 0.1.5: 개발 도구 설정 파일 생성
+- `.vscode/settings.json` - VS Code 에디터 설정
+- `.eslintrc.js` - ESLint 코드 품질 검사 설정
+- `.prettierrc` - Prettier 코드 포맷팅 설정
+- `.editorconfig` - 에디터 공통 설정
