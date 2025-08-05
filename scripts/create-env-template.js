@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-// scripts/create-env-template.js
 const fs = require('fs');
 const path = require('path');
 
@@ -72,12 +70,3 @@ console.log('✅ .env.example 파일 생성 완료!');
 console.log('📋 다음 단계:');
 console.log('1. .env.example을 .env로 복사');
 console.log('2. 실제 값으로 환경 변수 업데이트');
-console.log('3. AWS 자격 증명 설정');
-console.log('4. API 키 획득 및 설정');
-
-// .env 파일이 없으면 템플릿을 복사
-const envPath = path.join(process.cwd(), '.env');
-if (!fs.existsSync(envPath)) {
-    fs.copyFileSync(envExamplePath, envPath);
-    console.log('✅ .env 파일도 생성했습니다 (실제 값으로 업데이트 필요)');
-}
