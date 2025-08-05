@@ -52,6 +52,7 @@ npm install
 - `scripts/setup-local-db.ts` - 로컬 DB 테이블 생성 스크립트
 - DynamoDB Local: http://localhost:8000
 - DynamoDB Admin: http://localhost:8001
+<<<<<<< HEAD
 - Redis: localhost:6380
 
 ### SubTask 0.2.2: S3 버킷 생성 스크립트
@@ -78,3 +79,6 @@ npm install
 =======
 - CloudFront 연동을 위한 버킷 정책 설정
 >>>>>>> parent of a1245e2 (docs: Update README with SubTask 0.2.3 completion)
+=======
+- Redis: localhost:6380
+>>>>>>> parent of c45652f (docs: Update README with SubTask 0.2.2 completion)
