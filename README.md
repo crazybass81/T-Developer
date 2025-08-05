@@ -53,3 +53,8 @@ npm install
 - DynamoDB Local: http://localhost:8000
 - DynamoDB Admin: http://localhost:8001
 - Redis: localhost:6380
+
+### SubTask 0.2.2: S3 버킷 생성 스크립트
+- `scripts/create-s3-buckets.py` - S3 버킷 생성 자동화 스크립트
+- t-developer-artifacts, components, templates, backups 버킷 확인
+- CloudFront 연동을 위한 버킷 정책 설정
