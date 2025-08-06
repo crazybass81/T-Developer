@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "node",
+      "args": ["/home/ec2-user/mcp-servers/src/filesystem/dist/index.js"],
+      "env": {}
+    },
+    "memory": {
+      "command": "node", 
+      "args": ["/home/ec2-user/mcp-servers/src/memory/dist/index.js"],
+      "env": {}
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "dependencies": {
+    "@aws-sdk/client-bedrock": "^3.859.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.859.0",
+    "@aws-sdk/client-dynamodb": "^3.859.0",
+    "@aws-sdk/lib-dynamodb": "^3.859.0",
+    "@slack/web-api": "^7.9.3",
+    "axios": "^1.11.0",
+    "chalk": "^5.5.0",
+    "ioredis": "^5.7.0",
+    "js-yaml": "^4.1.0",
+    "nodemailer": "^7.0.5",
+    "twilio": "^5.8.0"
+  },
+  "name": "t-developermvp",
+  "version": "1.0.0",
+  "description": "AI-powered multi-agent development platform.",
+  "main": ".changelog.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.0",
+    "@types/uuid": "^10.0.0",
+    "compression-webpack-plugin": "^11.1.0",
+    "terser-webpack-plugin": "^5.3.14",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2",
+    "webpack": "^5.101.0",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^6.0.1",
+    "webpack-node-externals": "^3.0.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "verify:env": "node scripts/verify-environment.js",
+    "phase0:check": "node scripts/phase0-checklist-simple.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

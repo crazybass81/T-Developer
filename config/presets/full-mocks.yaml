@@ -1,0 +1,17 @@
+name: full-mocks
+description: All services mocked for offline development
+env:
+  NODE_ENV: development
+  USE_MOCKS: true
+  MOCK_LATENCY: true
+mocks:
+  enabled: true
+  services:
+    - bedrock
+    - dynamodb
+    - s3
+  latency:
+    min: 100
+    max: 500
+  errors:
+    rate: 0.05

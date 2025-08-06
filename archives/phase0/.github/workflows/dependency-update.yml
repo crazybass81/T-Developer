@@ -1,0 +1,54 @@
+name: Dependency Update Automation
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # 매주 월요일 오전 9시
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    name: Update Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+      
+      - name: Update npm dependencies
+        run: |
+          cd backend
+          npx npm-check-updates -u --target minor
+          npm install
+          npm audit fix
+      
+      - name: Run tests after update
+        run: |
+          cd backend
+          npm test
+        continue-on-error: true
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update dependencies'
+          title: '🔄 Weekly Dependency Update'
+          body: |
+            ## Automated Dependency Update
+            
+            This PR contains the following updates:
+            - Minor version updates for all dependencies
+            - Security patches applied via `npm audit fix`
+            
+            ### Checklist
+            - [ ] All tests pass
+            - [ ] No breaking changes identified
+            - [ ] Security vulnerabilities resolved
+          branch: deps/weekly-update
+          delete-branch: true

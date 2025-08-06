@@ -1,30 +1,33 @@
-FROM python:3.11-slim
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    tesseract-ocr \
-    tesseract-ocr-kor \
-    tesseract-ocr-jpn \
-    tesseract-ocr-chi-sim \
-    && rm -rf /var/lib/apt/lists/*
+COPY package*.json ./
+RUN npm ci --only=production
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
 COPY . .
+RUN npm run build
 
-# Create non-root user
-RUN useradd -m -u 1000 agent && chown -R agent:agent /app
-USER agent
+FROM node:18-alpine AS runtime
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/v1/agents/nl-input/health')"
+RUN apk add --no-cache dumb-init
+
+WORKDIR /app
+
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
+COPY --chown=nodejs:nodejs healthcheck.js ./
+
+USER nodejs
 
 EXPOSE 8000
 
-CMD ["python", "main.py"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node healthcheck.js || exit 1
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/main.js"]

@@ -1,0 +1,81 @@
+import { {{className}}Agent } from '@/agents/{{name}}-agent';
+import { logger } from '@/config/logger';
+
+describe('{{className}}Agent', () => {
+  let agent: {{className}}Agent;
+
+  beforeEach(() => {
+    agent = new {{className}}Agent();
+  });
+
+  describe('constructor', () => {
+    it('should initialize with correct properties', () => {
+      expect(agent.name).toBe('{{name}}');
+      expect(agent.type).toBe('{{type}}');
+    });
+  });
+
+  describe('execute', () => {
+    it('should execute successfully with valid input', async () => {
+      const input = { test: 'data' };
+      
+      const result = await agent.execute(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      expect(result.metadata.agentName).toBe('{{name}}');
+    });
+
+    it('should throw error with invalid input', async () => {
+      await expect(agent.execute(null)).rejects.toThrow('Input is required');
+    });
+  });
+
+  {{#if_eq type 'processing'}}
+  describe('processData', () => {
+    it('should process data correctly', async () => {
+      const input = { data: 'test' };
+      const result = await agent.execute(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(input);
+    });
+  });
+  {{/if_eq}}
+
+  {{#if_eq type 'analysis'}}
+  describe('analyzeData', () => {
+    it('should analyze data correctly', async () => {
+      const input = { data: 'test' };
+      const result = await agent.execute(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.data.analyzed).toBe(true);
+    });
+  });
+  {{/if_eq}}
+
+  {{#if_eq type 'generation'}}
+  describe('generateOutput', () => {
+    it('should generate output correctly', async () => {
+      const input = { data: 'test' };
+      const result = await agent.execute(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.data.generated).toBe(true);
+    });
+  });
+  {{/if_eq}}
+
+  {{#if_eq type 'integration'}}
+  describe('integrateServices', () => {
+    it('should integrate services correctly', async () => {
+      const input = { data: 'test' };
+      const result = await agent.execute(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.data.integrated).toBe(true);
+    });
+  });
+  {{/if_eq}}
+});

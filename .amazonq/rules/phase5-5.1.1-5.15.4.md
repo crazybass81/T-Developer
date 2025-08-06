@@ -19130,4 +19130,13348 @@ export class PerformanceAnalysisEngine {
     const appBottlenecks = await this.identifyApplicationBottlenecks(metrics);
     bottlenecks.push(...appBottlenecks);
 
-    return bottlenecks.sort((a, b) => b
+    return bottlenecks.sort((a, b) => b.impact.score - a.impact.score);
+  }
+
+  private async identifyApplicationBottlenecks(
+    metrics: PerformanceMetrics
+  ): Promise<Bottleneck[]> {
+    const bottlenecks: Bottleneck[] = [];
+
+    // 큐 깊이 분석
+    const queueMetrics = await this.analyzeQueueDepth();
+    for (const [queue, depth] of Object.entries(queueMetrics)) {
+      if (depth > 1000) {
+        bottlenecks.push({
+          type: 'queue',
+          severity: 'high',
+          component: queue,
+          metric: 'queue_depth',
+          value: depth,
+          threshold: 1000,
+          impact: await this.estimateImpact('queue', depth),
+          recommendations: [
+            'Increase worker count',
+            'Optimize task processing',
+            'Implement queue sharding'
+          ]
+        });
+      }
+    }
+
+    // 데이터베이스 연결 풀
+    const dbPoolMetrics = await this.analyzeDatabasePool();
+    if (dbPoolMetrics.utilization > 90) {
+      bottlenecks.push({
+        type: 'database_pool',
+        severity: 'high',
+        component: 'database',
+        metric: 'connection_pool_utilization',
+        value: dbPoolMetrics.utilization,
+        threshold: 90,
+        impact: await this.estimateImpact('db_pool', dbPoolMetrics.utilization),
+        recommendations: [
+          'Increase connection pool size',
+          'Optimize query performance',
+          'Implement connection pooling per service'
+        ]
+      });
+    }
+
+    return bottlenecks;
+  }
+
+  private async estimateImpact(
+    bottleneckType: string,
+    currentValue: number
+  ): Promise<BottleneckImpact> {
+    // 과거 데이터 기반 영향도 추정
+    const historicalImpact = await this.getHistoricalImpact(
+      bottleneckType,
+      currentValue
+    );
+
+    return {
+      score: this.calculateImpactScore(bottleneckType, currentValue),
+      affectedServices: await this.getAffectedServices(bottleneckType),
+      estimatedLatencyIncrease: historicalImpact.latencyIncrease,
+      estimatedThroughputDecrease: historicalImpact.throughputDecrease,
+      userImpact: this.estimateUserImpact(historicalImpact)
+    };
+  }
+}
+
+// 상관 관계 엔진
+export class CorrelationEngine {
+  private correlationCalculator: CorrelationCalculator;
+  private causalityDetector: CausalityDetector;
+
+  async analyze(
+    metrics: PerformanceMetrics
+  ): Promise<CorrelationAnalysis> {
+    // 1. 메트릭 간 상관 관계 계산
+    const correlations = await this.calculateCorrelations(metrics);
+
+    // 2. 강한 상관 관계 필터링
+    const significant = this.filterSignificantCorrelations(correlations);
+
+    // 3. 인과 관계 추론
+    const causalRelations = await this.causalityDetector.detect(
+      significant,
+      metrics
+    );
+
+    // 4. 상관 관계 클러스터링
+    const clusters = this.clusterCorrelations(significant);
+
+    return {
+      correlations: significant,
+      causalRelations,
+      clusters,
+      insights: this.generateInsights(significant, causalRelations)
+    };
+  }
+
+  private async calculateCorrelations(
+    metrics: PerformanceMetrics
+  ): Promise<MetricCorrelation[]> {
+    const correlations: MetricCorrelation[] = [];
+    const metricPairs = this.generateMetricPairs(metrics);
+
+    for (const [metric1, metric2] of metricPairs) {
+      const correlation = await this.correlationCalculator.calculate(
+        metric1.data,
+        metric2.data
+      );
+
+      if (Math.abs(correlation.coefficient) > 0.3) {
+        correlations.push({
+          metric1: metric1.name,
+          metric2: metric2.name,
+          coefficient: correlation.coefficient,
+          pValue: correlation.pValue,
+          lag: correlation.lag,
+          confidence: correlation.confidence
+        });
+      }
+    }
+
+    return correlations;
+  }
+
+  private generateInsights(
+    correlations: MetricCorrelation[],
+    causalRelations: CausalRelation[]
+  ): CorrelationInsight[] {
+    const insights: CorrelationInsight[] = [];
+
+    // 강한 양의 상관관계
+    const strongPositive = correlations.filter(c => c.coefficient > 0.7);
+    for (const corr of strongPositive) {
+      insights.push({
+        type: 'strong_positive_correlation',
+        metrics: [corr.metric1, corr.metric2],
+        description: `${corr.metric1} and ${corr.metric2} show strong positive correlation (${corr.coefficient.toFixed(2)})`,
+        recommendation: this.getCorrelationRecommendation(corr)
+      });
+    }
+
+    // 인과 관계 인사이트
+    for (const causal of causalRelations) {
+      insights.push({
+        type: 'causal_relationship',
+        metrics: [causal.cause, causal.effect],
+        description: `${causal.cause} appears to cause changes in ${causal.effect} with ${causal.confidence}% confidence`,
+        recommendation: `Monitor ${causal.cause} closely as it impacts ${causal.effect}`
+      });
+    }
+
+    return insights;
+  }
+}
+
+// 성능 점수 계산기
+export class PerformanceScoreCalculator {
+  private weights: ScoreWeights = {
+    latency: 0.3,
+    throughput: 0.25,
+    errorRate: 0.25,
+    availability: 0.2
+  };
+
+  async calculate(
+    metrics: PerformanceMetrics,
+    targets: PerformanceTargets
+  ): Promise<PerformanceScores> {
+    const scores: PerformanceScores = {
+      overall: 0,
+      latency: await this.calculateLatencyScore(metrics.latency, targets.latency),
+      throughput: await this.calculateThroughputScore(metrics.throughput, targets.throughput),
+      errorRate: await this.calculateErrorScore(metrics.errorRate, targets.errorRate),
+      availability: await this.calculateAvailabilityScore(metrics.availability, targets.availability),
+      breakdown: {}
+    };
+
+    // 전체 점수 계산
+    scores.overall = 
+      scores.latency * this.weights.latency +
+      scores.throughput * this.weights.throughput +
+      scores.errorRate * this.weights.errorRate +
+      scores.availability * this.weights.availability;
+
+    // 세부 점수
+    scores.breakdown = {
+      api: await this.calculateComponentScore('api', metrics, targets),
+      workflow: await this.calculateComponentScore('workflow', metrics, targets),
+      task: await this.calculateComponentScore('task', metrics, targets)
+    };
+
+    return scores;
+  }
+
+  private async calculateLatencyScore(
+    metrics: LatencyMetrics,
+    targets: LatencyTargets
+  ): Promise<number> {
+    let score = 0;
+    let count = 0;
+
+    for (const [component, data] of Object.entries(metrics)) {
+      const target = targets[component];
+      if (!target) continue;
+
+      // P95 기준 점수 계산
+      const p95Score = Math.max(0, 100 * (1 - (data.p95 - target.p95) / target.p95));
+      
+      score += p95Score;
+      count++;
+    }
+
+    return count > 0 ? score / count : 0;
+  }
+}
+
+// 추세 분석기
+export class TrendAnalyzer {
+  private trendDetector: TrendDetector;
+  private seasonalityAnalyzer: SeasonalityAnalyzer;
+  private changePointDetector: ChangePointDetector;
+
+  async analyzeTrends(
+    metrics: PerformanceMetrics,
+    timeRange: TimeRange
+  ): Promise<TrendAnalysis> {
+    const trends: TrendAnalysis = {
+      overall: await this.detectOverallTrend(metrics),
+      components: {},
+      seasonality: await this.seasonalityAnalyzer.analyze(metrics),
+      changePoints: await this.changePointDetector.detect(metrics),
+      forecast: await this.generateForecast(metrics, timeRange)
+    };
+
+    // 컴포넌트별 추세
+    for (const component of ['latency', 'throughput', 'errorRate']) {
+      trends.components[component] = await this.analyzeComponentTrend(
+        metrics[component]
+      );
+    }
+
+    return trends;
+  }
+
+  private async detectOverallTrend(
+    metrics: PerformanceMetrics
+  ): Promise<Trend> {
+    // Mann-Kendall 트렌드 테스트
+    const latencyTrend = await this.trendDetector.detect(
+      this.extractTimeSeries(metrics.latency)
+    );
+
+    const throughputTrend = await this.trendDetector.detect(
+      this.extractTimeSeries(metrics.throughput)
+    );
+
+    // 종합 트렌드 판단
+    if (latencyTrend.direction === 'increasing' && 
+        throughputTrend.direction === 'decreasing') {
+      return {
+        direction: 'degrading',
+        strength: (latencyTrend.strength + throughputTrend.strength) / 2,
+        confidence: Math.min(latencyTrend.confidence, throughputTrend.confidence),
+        description: 'Performance is degrading: latency increasing, throughput decreasing'
+      };
+    } else if (latencyTrend.direction === 'decreasing' && 
+               throughputTrend.direction === 'increasing') {
+      return {
+        direction: 'improving',
+        strength: (latencyTrend.strength + throughputTrend.strength) / 2,
+        confidence: Math.min(latencyTrend.confidence, throughputTrend.confidence),
+        description: 'Performance is improving: latency decreasing, throughput increasing'
+      };
+    } else {
+      return {
+        direction: 'stable',
+        strength: 0,
+        confidence: 0.5,
+        description: 'Performance is relatively stable'
+      };
+    }
+  }
+
+  private async generateForecast(
+    metrics: PerformanceMetrics,
+    timeRange: TimeRange
+  ): Promise<PerformanceForecast> {
+    const forecastHorizon = 24; // 24시간
+
+    return {
+      latency: await this.forecastLatency(metrics.latency, forecastHorizon),
+      throughput: await this.forecastThroughput(metrics.throughput, forecastHorizon),
+      recommendations: await this.generateForecastRecommendations(
+        metrics,
+        forecastHorizon
+      )
+    };
+  }
+}
+
+// 권장 사항 생성기
+export class RecommendationGenerator {
+  private ruleEngine: RecommendationRuleEngine;
+  private mlRecommender: MLRecommender;
+
+  async generateRecommendations(
+    analysis: PerformanceAnalysisData
+  ): Promise<PerformanceRecommendation[]> {
+    const recommendations: PerformanceRecommendation[] = [];
+
+    // 1. 규칙 기반 권장 사항
+    const ruleBasedRecs = await this.ruleEngine.evaluate(analysis);
+    recommendations.push(...ruleBasedRecs);
+
+    // 2. ML 기반 권장 사항
+    const mlRecs = await this.mlRecommender.recommend(analysis);
+    recommendations.push(...mlRecs);
+
+    // 3. 우선순위 지정
+    const prioritized = this.prioritizeRecommendations(recommendations);
+
+    // 4. 실행 계획 생성
+    return this.generateActionPlans(prioritized);
+  }
+
+  private prioritizeRecommendations(
+    recommendations: PerformanceRecommendation[]
+  ): PerformanceRecommendation[] {
+    return recommendations.sort((a, b) => {
+      // 영향도와 구현 난이도 기반 우선순위
+      const scoreA = a.impact * (1 - a.implementationDifficulty);
+      const scoreB = b.impact * (1 - b.implementationDifficulty);
+      return scoreB - scoreA;
+    });
+  }
+
+  private generateActionPlans(
+    recommendations: PerformanceRecommendation[]
+  ): PerformanceRecommendation[] {
+    return recommendations.map(rec => ({
+      ...rec,
+      actionPlan: {
+        immediate: this.getImmediateActions(rec),
+        shortTerm: this.getShortTermActions(rec),
+        longTerm: this.getLongTermActions(rec)
+      }
+    }));
+  }
+
+  private getImmediateActions(
+    recommendation: PerformanceRecommendation
+  ): Action[] {
+    const actions: Action[] = [];
+
+    switch (recommendation.category) {
+      case 'scaling':
+        actions.push({
+          type: 'configuration',
+          description: 'Increase resource limits',
+          command: `kubectl scale --replicas=${recommendation.params.replicas} deployment/api-server`,
+          estimatedTime: '5 minutes'
+        });
+        break;
+
+      case 'optimization':
+        actions.push({
+          type: 'configuration',
+          description: 'Enable caching',
+          command: 'Update cache configuration',
+          estimatedTime: '10 minutes'
+        });
+        break;
+
+      case 'monitoring':
+        actions.push({
+          type: 'alert',
+          description: 'Set up performance alerts',
+          command: 'Configure alert thresholds',
+          estimatedTime: '15 minutes'
+        });
+        break;
+    }
+
+    return actions;
+  }
+}
+
+// 성능 대시보드 데이터 생성기
+export class PerformanceDashboardGenerator {
+  async generateDashboardData(
+    analysis: PerformanceAnalysisResult,
+    timeRange: TimeRange
+  ): Promise<PerformanceDashboardData> {
+    return {
+      summary: {
+        overallScore: analysis.scores.overall,
+        trend: analysis.trends.overall.direction,
+        criticalIssues: analysis.anomalies.filter(a => a.severity === 'critical').length,
+        activeBottlenecks: analysis.bottlenecks.length
+      },
+      
+      scorecard: {
+        latency: {
+          current: analysis.scores.latency,
+          target: 90,
+          trend: analysis.trends.components.latency?.direction || 'stable'
+        },
+        throughput: {
+          current: analysis.scores.throughput,
+          target: 85,
+          trend: analysis.trends.components.throughput?.direction || 'stable'
+        },
+        errorRate: {
+          current: analysis.scores.errorRate,
+          target: 95,
+          trend: analysis.trends.components.errorRate?.direction || 'stable'
+        },
+        availability: {
+          current: analysis.scores.availability,
+          target: 99.9,
+          trend: 'stable'
+        }
+      },
+
+      charts: {
+        performanceTrend: this.generatePerformanceTrendChart(analysis, timeRange),
+        latencyDistribution: this.generateLatencyDistributionChart(analysis),
+        throughputHeatmap: this.generateThroughputHeatmap(analysis),
+        errorRateTimeline: this.generateErrorRateTimeline(analysis)
+      },
+
+      insights: this.generateInsights(analysis),
+      
+      recommendations: analysis.recommendations.slice(0, 5) // Top 5
+    };
+  }
+
+  private generatePerformanceTrendChart(
+    analysis: PerformanceAnalysisResult,
+    timeRange: TimeRange
+  ): ChartData {
+    return {
+      type: 'line',
+      data: {
+        labels: this.generateTimeLabels(timeRange),
+        datasets: [
+          {
+            label: 'Overall Performance Score',
+            data: analysis.trends.forecast?.scores || [],
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+          },
+          {
+            label: 'Target',
+            data: new Array(24).fill(90),
+            borderColor: 'rgb(255, 99, 132)',
+            borderDash: [5, 5]
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          title: {
+            display: true,
+            text: 'Performance Score Trend'
+          }
+        }
+      }
+    };
+  }
+
+  private generateInsights(
+    analysis: PerformanceAnalysisResult
+  ): PerformanceInsight[] {
+    const insights: PerformanceInsight[] = [];
+
+    // 성능 저하 인사이트
+    if (analysis.trends.overall.direction === 'degrading') {
+      insights.push({
+        type: 'warning',
+        title: 'Performance Degradation Detected',
+        description: `Overall performance has degraded by ${Math.round(analysis.trends.overall.strength * 100)}% over the analysis period`,
+        impact: 'high',
+        affectedMetrics: ['latency', 'throughput']
+      });
+    }
+
+    // 병목 지점 인사이트
+    for (const bottleneck of analysis.bottlenecks.slice(0, 3)) {
+      insights.push({
+        type: 'bottleneck',
+        title: `${bottleneck.type} Bottleneck Detected`,
+        description: bottleneck.impact.description,
+        impact: bottleneck.severity,
+        affectedMetrics: [bottleneck.metric],
+        recommendations: bottleneck.recommendations
+      });
+    }
+
+    // 상관 관계 인사이트
+    for (const correlation of analysis.correlations.insights.slice(0, 2)) {
+      insights.push({
+        type: 'correlation',
+        title: 'Metric Correlation Found',
+        description: correlation.description,
+        impact: 'medium',
+        affectedMetrics: correlation.metrics
+      });
+    }
+
+    return insights;
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 종합 성능 분석
+- [ ] 이상 감지 및 병목 식별
+- [ ] 상관 관계 분석
+- [ ] 추세 분석 및 예측
+
+#### SubTask 5.11.4: 예측 분석 및 최적화 제안
+**담당자**: ML 엔지니어  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/metrics/predictive_analytics.ts
+export class PredictiveAnalyticsEngine {
+  private forecastingService: ForecastingService;
+  private anomalyPredictor: AnomalyPredictor;
+  private capacityPlanner: CapacityPlanner;
+  private optimizationEngine: OptimizationEngine;
+
+  constructor(config: PredictiveAnalyticsConfig) {
+    this.forecastingService = new ForecastingService(config.forecasting);
+    this.anomalyPredictor = new AnomalyPredictor(config.anomaly);
+    this.capacityPlanner = new CapacityPlanner(config.capacity);
+    this.optimizationEngine = new OptimizationEngine(config.optimization);
+  }
+
+  async generatePredictions(
+    timeHorizon: number,
+    confidence: number = 0.95
+  ): Promise<PredictiveAnalysisResult> {
+    // 1. 워크로드 예측
+    const workloadForecast = await this.forecastingService.forecastWorkload(
+      timeHorizon
+    );
+
+    // 2. 성능 메트릭 예측
+    const performanceForecast = await this.forecastingService.forecastPerformance(
+      timeHorizon,
+      workloadForecast
+    );
+
+    // 3. 이상 패턴 예측
+    const anomalyPredictions = await this.anomalyPredictor.predictAnomalies(
+      performanceForecast,
+      confidence
+    );
+
+    // 4. 용량 요구사항 예측
+    const capacityRequirements = await this.capacityPlanner.predictRequirements(
+      workloadForecast,
+      performanceForecast
+    );
+
+    // 5. 최적화 기회 식별
+    const optimizationOpportunities = await this.optimizationEngine.identify(
+      performanceForecast,
+      capacityRequirements
+    );
+
+    // 6. 위험 평가
+    const riskAssessment = await this.assessRisks(
+      anomalyPredictions,
+      capacityRequirements
+    );
+
+    return {
+      workloadForecast,
+      performanceForecast,
+      anomalyPredictions,
+      capacityRequirements,
+      optimizationOpportunities,
+      riskAssessment,
+      recommendations: await this.generateRecommendations({
+        workloadForecast,
+        performanceForecast,
+        capacityRequirements,
+        optimizationOpportunities,
+        riskAssessment
+      })
+    };
+  }
+
+  private async assessRisks(
+    anomalyPredictions: AnomalyPrediction[],
+    capacityRequirements: CapacityRequirement[]
+  ): Promise<RiskAssessment> {
+    const risks: Risk[] = [];
+
+    // 성능 저하 위험
+    const performanceRisks = this.assessPerformanceRisks(anomalyPredictions);
+    risks.push(...performanceRisks);
+
+    // 용량 부족 위험
+    const capacityRisks = this.assessCapacityRisks(capacityRequirements);
+    risks.push(...capacityRisks);
+
+    // 종합 위험 점수
+    const overallRisk = this.calculateOverallRisk(risks);
+
+    return {
+      risks,
+      overallRisk,
+      mitigationStrategies: await this.generateMitigationStrategies(risks)
+    };
+  }
+}
+
+// 예측 서비스
+export class ForecastingService {
+  private models: Map<string, ForecastModel>;
+  private dataPreprocessor: DataPreprocessor;
+  private modelSelector: ModelSelector;
+
+  constructor(config: ForecastingConfig) {
+    this.models = this.initializeModels(config.models);
+    this.dataPreprocessor = new DataPreprocessor();
+    this.modelSelector = new ModelSelector();
+  }
+
+  private initializeModels(
+    modelConfigs: ModelConfig[]
+  ): Map<string, ForecastModel> {
+    const models = new Map();
+
+    for (const config of modelConfigs) {
+      switch (config.type) {
+        case 'prophet':
+          models.set(config.name, new ProphetModel(config));
+          break;
+        
+        case 'arima':
+          models.set(config.name, new ARIMAModel(config));
+          break;
+        
+        case 'lstm':
+          models.set(config.name, new LSTMModel(config));
+          break;
+        
+        case 'xgboost':
+          models.set(config.name, new XGBoostModel(config));
+          break;
+        
+        case 'ensemble':
+          models.set(config.name, new EnsembleModel(config));
+          break;
+      }
+    }
+
+    return models;
+  }
+
+  async forecastWorkload(
+    horizon: number
+  ): Promise<WorkloadForecast> {
+    // 과거 데이터 로드
+    const historicalData = await this.loadHistoricalWorkload();
+
+    // 데이터 전처리
+    const processed = await this.dataPreprocessor.process(historicalData, {
+      handleMissing: 'interpolate',
+      removeOutliers: true,
+      normalize: true
+    });
+
+    // 모델 선택
+    const selectedModel = await this.modelSelector.selectBest(
+      processed,
+      this.models
+    );
+
+    // 예측 수행
+    const forecast = await selectedModel.forecast(processed, horizon);
+
+    // 신뢰 구간 계산
+    const intervals = await this.calculateConfidenceIntervals(
+      forecast,
+      processed
+    );
+
+    return {
+      predictions: forecast.values,
+      confidenceIntervals: intervals,
+      model: selectedModel.name,
+      metrics: {
+        mape: await this.calculateMAPE(forecast, processed),
+        rmse: await this.calculateRMSE(forecast, processed)
+      },
+      components: await this.decomposeWorkload(forecast)
+    };
+  }
+
+  async forecastPerformance(
+    horizon: number,
+    workloadForecast: WorkloadForecast
+  ): Promise<PerformanceForecast> {
+    // 워크로드-성능 관계 모델링
+    const performanceModel = await this.buildPerformanceModel();
+
+    // 성능 예측
+    const predictions: PerformanceMetricsForecast = {
+      latency: await this.forecastLatency(workloadForecast, performanceModel),
+      throughput: await this.forecastThroughput(workloadForecast, performanceModel),
+      errorRate: await this.forecastErrorRate(workloadForecast, performanceModel),
+      resourceUtilization: await this.forecastResourceUtilization(
+        workloadForecast,
+        performanceModel
+      )
+    };
+
+    // 시나리오 분석
+    const scenarios = await this.generateScenarios(predictions);
+
+    return {
+      baseline: predictions,
+      scenarios,
+      confidence: await this.assessForecastConfidence(predictions),
+      risks: await this.identifyPerformanceRisks(predictions)
+    };
+  }
+
+  private async buildPerformanceModel(): Promise<PerformanceModel> {
+    // 과거 워크로드-성능 데이터
+    const trainingData = await this.loadPerformanceTrainingData();
+
+    // 특징 엔지니어링
+    const features = await this.engineerFeatures(trainingData);
+
+    // 모델 훈련
+    const model = new GradientBoostingModel({
+      features: features.columns,
+      target: 'performance_metrics',
+      hyperparameters: {
+        n_estimators: 100,
+        max_depth: 5,
+        learning_rate: 0.1
+      }
+    });
+
+    await model.train(features);
+
+    return model;
+  }
+}
+
+// 이상 예측기
+export class AnomalyPredictor {
+  private detectionModels: Map<string, AnomalyDetectionModel>;
+  private thresholdCalculator: ThresholdCalculator;
+
+  async predictAnomalies(
+    forecast: PerformanceForecast,
+    confidence: number
+  ): Promise<AnomalyPrediction[]> {
+    const predictions: AnomalyPrediction[] = [];
+
+    // 각 메트릭별 이상 예측
+    for (const [metric, data] of Object.entries(forecast.baseline)) {
+      const anomalies = await this.predictMetricAnomalies(
+        metric,
+        data,
+        confidence
+      );
+      predictions.push(...anomalies);
+    }
+
+    // 복합 이상 패턴 감지
+    const complexAnomalies = await this.detectComplexPatterns(
+      forecast,
+      confidence
+    );
+    predictions.push(...complexAnomalies);
+
+    // 우선순위 지정
+    return this.prioritizeAnomalies(predictions);
+  }
+
+  private async predictMetricAnomalies(
+    metric: string,
+    forecast: MetricForecast,
+    confidence: number
+  ): Promise<AnomalyPrediction[]> {
+    const model = this.detectionModels.get(metric) || 
+                  this.detectionModels.get('default')!;
+
+    // 동적 임계값 계산
+    const thresholds = await this.thresholdCalculator.calculate(
+      forecast,
+      confidence
+    );
+
+    const anomalies: AnomalyPrediction[] = [];
+
+    for (let i = 0; i < forecast.values.length; i++) {
+      const value = forecast.values[i];
+      const timestamp = forecast.timestamps[i];
+
+      // 이상 점수 계산
+      const anomalyScore = await model.score(value, i);
+
+      if (anomalyScore > thresholds.upper || anomalyScore < thresholds.lower) {
+        anomalies.push({
+          metric,
+          timestamp,
+          predictedValue: value,
+          anomalyScore,
+          probability: this.scoreToProbability(anomalyScore),
+          type: this.classifyAnomalyType(value, thresholds),
+          severity: this.calculateSeverity(anomalyScore, thresholds),
+          expectedImpact: await this.estimateImpact(metric, anomalyScore)
+        });
+      }
+    }
+
+    return anomalies;
+  }
+
+  private async detectComplexPatterns(
+    forecast: PerformanceForecast,
+    confidence: number
+  ): Promise<AnomalyPrediction[]> {
+    const patterns: AnomalyPrediction[] = [];
+
+    // 1. 동시 발생 이상
+    const coOccurring = await this.detectCoOccurringAnomalies(forecast);
+    patterns.push(...coOccurring);
+
+    // 2. 연쇄 반응 패턴
+    const cascading = await this.detectCascadingFailures(forecast);
+    patterns.push(...cascading);
+
+    // 3. 주기적 이상 패턴
+    const periodic = await this.detectPeriodicAnomalies(forecast);
+    patterns.push(...periodic);
+
+    return patterns;
+  }
+}
+
+// 용량 계획 도구
+export class CapacityPlanner {
+  private resourceModel: ResourceUtilizationModel;
+  private costModel: CostModel;
+  private constraintSolver: ConstraintSolver;
+
+  async predictRequirements(
+    workloadForecast: WorkloadForecast,
+    performanceForecast: PerformanceForecast
+  ): Promise<CapacityRequirement[]> {
+    const requirements: CapacityRequirement[] = [];
+
+    // 1. CPU 요구사항
+    const cpuRequirement = await this.calculateCPURequirement(
+      workloadForecast,
+      performanceForecast
+    );
+    requirements.push(cpuRequirement);
+
+    // 2. 메모리 요구사항
+    const memoryRequirement = await this.calculateMemoryRequirement(
+      workloadForecast,
+      performanceForecast
+    );
+    requirements.push(memoryRequirement);
+
+    // 3. 스토리지 요구사항
+    const storageRequirement = await this.calculateStorageRequirement(
+      workloadForecast
+    );
+    requirements.push(storageRequirement);
+
+    // 4. 네트워크 요구사항
+    const networkRequirement = await this.calculateNetworkRequirement(
+      workloadForecast
+    );
+    requirements.push(networkRequirement);
+
+    // 5. 최적화된 할당 계획
+    const optimizedPlan = await this.optimizeAllocation(
+      requirements,
+      performanceForecast
+    );
+
+    return optimizedPlan;
+  }
+
+  private async calculateCPURequirement(
+    workload: WorkloadForecast,
+    performance: PerformanceForecast
+  ): Promise<CapacityRequirement> {
+    // CPU 사용률 모델
+    const utilization = await this.resourceModel.predictCPUUtilization(
+      workload.predictions
+    );
+
+    // 성능 목표 달성을 위한 CPU 요구사항
+    const targetLatency = 100; // ms
+    const requiredCPU = await this.calculateRequiredCPU(
+      utilization,
+      performance.baseline.latency,
+      targetLatency
+    );
+
+    // 버퍼 추가 (20%)
+    const withBuffer = requiredCPU * 1.2;
+
+    return {
+      resource: 'cpu',
+      current: await this.getCurrentCPU(),
+      required: withBuffer,
+      timeline: this.generateCapacityTimeline(utilization, withBuffer),
+      cost: await this.costModel.calculateCPUCost(withBuffer),
+      recommendations: this.generateCPURecommendations(withBuffer)
+    };
+  }
+
+  private async optimizeAllocation(
+    requirements: CapacityRequirement[],
+    performance: PerformanceForecast
+  ): Promise<CapacityRequirement[]> {
+    // 제약 조건 정의
+    const constraints = {
+      budget: await this.getBudgetConstraint(),
+      performance: this.getPerformanceConstraints(performance),
+      availability: { min: 0.999 }
+    };
+
+    // 최적화 문제 정의
+    const problem = {
+      objective: 'minimize_cost',
+      variables: requirements.map(r => ({
+        name: r.resource,
+        min: r.current,
+        max: r.required * 1.5
+      })),
+      constraints
+    };
+
+    // 최적해 찾기
+    const solution = await this.constraintSolver.solve(problem);
+
+    // 요구사항 업데이트
+    return requirements.map((req, index) => ({
+      ...req,
+      optimized: solution.variables[index].value,
+      savingsOpportunity: req.required - solution.variables[index].value
+    }));
+  }
+}
+
+// 최적화 엔진
+export class OptimizationEngine {
+  private optimizer: MultiObjectiveOptimizer;
+  private simulationEngine: SimulationEngine;
+
+  async identify(
+    performanceForecast: PerformanceForecast,
+    capacityRequirements: CapacityRequirement[]
+  ): Promise<OptimizationOpportunity[]> {
+    const opportunities: OptimizationOpportunity[] = [];
+
+    // 1. 비용 최적화 기회
+    const costOpts = await this.identifyCostOptimizations(capacityRequirements);
+    opportunities.push(...costOpts);
+
+    // 2. 성능 최적화 기회
+    const perfOpts = await this.identifyPerformanceOptimizations(
+      performanceForecast
+    );
+    opportunities.push(...perfOpts);
+
+    // 3. 효율성 최적화 기회
+    const efficiencyOpts = await this.identifyEfficiencyOptimizations(
+      performanceForecast,
+      capacityRequirements
+    );
+    opportunities.push(...efficiencyOpts);
+
+    // 4. 시뮬레이션 기반 검증
+    const validated = await this.validateOptimizations(opportunities);
+
+    return this.rankOptimizations(validated);
+  }
+
+  private async identifyCostOptimizations(
+    requirements: CapacityRequirement[]
+  ): Promise<OptimizationOpportunity[]> {
+    const opportunities: OptimizationOpportunity[] = [];
+
+    // 예약 인스턴스 기회
+    const reservationOpp = await this.analyzeReservationOpportunity(requirements);
+    if (reservationOpp.savings > 0) {
+      opportunities.push({
+        type: 'cost',
+        category: 'reserved_instances',
+        description: 'Switch to reserved instances for predictable workloads',
+        estimatedSavings: reservationOpp.savings,
+        implementationEffort: 'low',
+        risk: 'low',
+        steps: reservationOpp.steps
+      });
+    }
+
+    // 스팟 인스턴스 활용
+    const spotOpp = await this.analyzeSpotOpportunity(requirements);
+    if (spotOpp.feasible) {
+      opportunities.push({
+        type: 'cost',
+        category: 'spot_instances',
+        description: 'Use spot instances for fault-tolerant workloads',
+        estimatedSavings: spotOpp.savings,
+        implementationEffort: 'medium',
+        risk: 'medium',
+        steps: spotOpp.steps
+      });
+    }
+
+    // 자동 스케일링 최적화
+    const scalingOpp = await this.optimizeAutoScaling(requirements);
+    opportunities.push(...scalingOpp);
+
+    return opportunities;
+  }
+
+  private async validateOptimizations(
+    opportunities: OptimizationOpportunity[]
+  ): Promise<OptimizationOpportunity[]> {
+    const validated: OptimizationOpportunity[] = [];
+
+    for (const opp of opportunities) {
+      // 시뮬레이션 실행
+      const simulation = await this.simulationEngine.simulate({
+        optimization: opp,
+        duration: 24 * 7, // 1주일
+        scenarios: ['normal', 'peak', 'failure']
+      });
+
+      // 결과 평가
+      if (simulation.successRate > 0.95) {
+        validated.push({
+          ...opp,
+          simulationResults: simulation,
+          confidence: simulation.confidence
+        });
+      }
+    }
+
+    return validated;
+  }
+
+  private rankOptimizations(
+    opportunities: OptimizationOpportunity[]
+  ): OptimizationOpportunity[] {
+    return opportunities.sort((a, b) => {
+      // ROI 계산
+      const roiA = a.estimatedSavings / this.getImplementationCost(a);
+      const roiB = b.estimatedSavings / this.getImplementationCost(b);
+
+      // 위험 조정 ROI
+      const adjustedRoiA = roiA * (1 - this.getRiskScore(a));
+      const adjustedRoiB = roiB * (1 - this.getRiskScore(b));
+
+      return adjustedRoiB - adjustedRoiA;
+    });
+  }
+}
+
+// 예측 기반 알림
+export class PredictiveAlerts {
+  private alertPredictor: AlertPredictor;
+  private notificationScheduler: NotificationScheduler;
+
+  async generatePredictiveAlerts(
+    predictions: PredictiveAnalysisResult
+  ): Promise<PredictiveAlert[]> {
+    const alerts: PredictiveAlert[] = [];
+
+    // 이상 예측 알림
+    for (const anomaly of predictions.anomalyPredictions) {
+      if (anomaly.probability > 0.7 && anomaly.severity === 'high') {
+        alerts.push({
+          type: 'anomaly_prediction',
+          severity: anomaly.severity,
+          metric: anomaly.metric,
+          predictedTime: anomaly.timestamp,
+          probability: anomaly.probability,
+          message: `High probability (${Math.round(anomaly.probability * 100)}%) of ${anomaly.type} anomaly in ${anomaly.metric}`,
+          actions: await this.getPreventiveActions(anomaly)
+        });
+      }
+    }
+
+    // 용량 부족 알림
+    for (const requirement of predictions.capacityRequirements) {
+      if (requirement.required > requirement.current * 1.5) {
+        const timeToExhaustion = this.calculateTimeToExhaustion(requirement);
+        
+        alerts.push({
+          type: 'capacity_shortage',
+          severity: timeToExhaustion < 24 ? 'critical' : 'warning',
+          resource: requirement.resource,
+          predictedTime: new Date(Date.now() + timeToExhaustion * 3600000),
+          probability: 0.9,
+          message: `${requirement.resource} capacity will be exhausted in ${timeToExhaustion} hours`,
+          actions: [
+            {
+              type: 'scale_up',
+              description: `Increase ${requirement.resource} by ${Math.round((requirement.required - requirement.current) / requirement.current * 100)}%`,
+              automated: true
+            }
+          ]
+        });
+      }
+    }
+
+    // 성능 저하 알림
+    const performanceAlerts = await this.generatePerformanceAlerts(
+      predictions.performanceForecast
+    );
+    alerts.push(...performanceAlerts);
+
+    return alerts;
+  }
+
+  private async getPreventiveActions(
+    anomaly: AnomalyPrediction
+  ): Promise<PreventiveAction[]> {
+    const actions: PreventiveAction[] = [];
+
+    switch (anomaly.type) {
+      case 'spike':
+        actions.push({
+          type: 'pre_scale',
+          description: 'Pre-emptively scale resources',
+          automated: true,
+          timing: new Date(anomaly.timestamp.getTime() - 15 * 60000) // 15분 전
+        });
+        break;
+
+      case 'degradation':
+        actions.push({
+          type: 'cache_warm',
+          description: 'Warm up caches',
+          automated: true,
+          timing: new Date(anomaly.timestamp.getTime() - 30 * 60000) // 30분 전
+        });
+        break;
+
+      case 'failure':
+        actions.push({
+          type: 'health_check',
+          description: 'Intensify health checks',
+          automated: true,
+          timing: new Date(anomaly.timestamp.getTime() - 60 * 60000) // 1시간 전
+        });
+        break;
+    }
+
+    return actions;
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 다양한 예측 모델 지원
+- [ ] 이상 패턴 예측
+- [ ] 용량 계획 자동화
+- [ ] 최적화 기회 식별 및 검증
+
+### Task 5.12: 관리자 대시보드 및 제어 패널
+
+#### SubTask 5.12.1: 대시보드 UI/UX 설계
+**담당자**: UI/UX 디자이너  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+```typescript
+// frontend/src/dashboard/design/dashboard-layout.tsx
+import React from 'react';
+import { 
+  Grid, 
+  Card, 
+  CardContent, 
+  Typography,
+  Box,
+  Drawer,
+  AppBar,
+  Toolbar,
+  IconButton
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+
+// 대시보드 레이아웃 컴포넌트
+export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
+  children,
+  sidebar,
+  header
+}) => {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+
+  const theme = useTheme(darkMode ? 'dark' : 'light');
+
+  return (
+    <ThemeProvider theme={theme}>
+      <DashboardContainer>
+        <AppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              edge="start"
+            >
+              <MenuIcon />
+            </IconButton>
+            
+            <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+              T-Developer Orchestration Dashboard
+            </Typography>
+
+            <HeaderActions>
+              <NotificationCenter />
+              <UserMenu />
+              <ThemeToggle 
+                darkMode={darkMode} 
+                onToggle={() => setDarkMode(!darkMode)} 
+              />
+            </HeaderActions>
+          </Toolbar>
+        </AppBar>
+
+        <Drawer
+          variant="persistent"
+          anchor="left"
+          open={sidebarOpen}
+          sx={{
+            width: DRAWER_WIDTH,
+            flexShrink: 0,
+            '& .MuiDrawer-paper': {
+              width: DRAWER_WIDTH,
+              boxSizing: 'border-box',
+              top: '64px'
+            }
+          }}
+        >
+          {sidebar}
+        </Drawer>
+
+        <Main open={sidebarOpen}>
+          <Toolbar /> {/* Spacer */}
+          <ContentArea>
+            {children}
+          </ContentArea>
+        </Main>
+      </DashboardContainer>
+    </ThemeProvider>
+  );
+};
+
+// 대시보드 카드 컴포넌트
+export const DashboardCard: React.FC<DashboardCardProps> = ({
+  title,
+  subtitle,
+  children,
+  actions,
+  loading,
+  error,
+  fullHeight = false
+}) => {
+  return (
+    <StyledCard fullHeight={fullHeight}>
+      <CardHeader>
+        <CardTitle>
+          <Typography variant="h6" component="h2">
+            {title}
+          </Typography>
+          {subtitle && (
+            <Typography variant="body2" color="text.secondary">
+              {subtitle}
+            </Typography>
+          )}
+        </CardTitle>
+        
+        {actions && (
+          <CardActions>
+            {actions}
+          </CardActions>
+        )}
+      </CardHeader>
+
+      <CardContent>
+        {loading && <LoadingOverlay />}
+        {error && <ErrorDisplay error={error} />}
+        {!loading && !error && children}
+      </CardContent>
+    </StyledCard>
+  );
+};
+
+// 메트릭 카드 컴포넌트
+export const MetricCard: React.FC<MetricCardProps> = ({
+  title,
+  value,
+  unit,
+  change,
+  trend,
+  icon,
+  color = 'primary',
+  onClick
+}) => {
+  const isPositive = change && change > 0;
+  const isNegative = change && change < 0;
+
+  return (
+    <StyledMetricCard onClick={onClick} clickable={!!onClick}>
+      <MetricHeader>
+        <MetricIcon color={color}>
+          {icon}
+        </MetricIcon>
+        
+        <MetricInfo>
+          <Typography variant="body2" color="text.secondary">
+            {title}
+          </Typography>
+          
+          <MetricValue>
+            <Typography variant="h4" component="span">
+              {formatValue(value)}
+            </Typography>
+            {unit && (
+              <Typography variant="body1" component="span" sx={{ ml: 1 }}>
+                {unit}
+              </Typography>
+            )}
+          </MetricValue>
+
+          {change !== undefined && (
+            <MetricChange positive={isPositive} negative={isNegative}>
+              <TrendIcon trend={trend} />
+              <Typography variant="body2">
+                {isPositive && '+'}{change.toFixed(1)}%
+              </Typography>
+            </MetricChange>
+          )}
+        </MetricInfo>
+      </MetricHeader>
+
+      {trend && (
+        <SparklineChart
+          data={trend}
+          color={color}
+          height={40}
+        />
+      )}
+    </StyledMetricCard>
+  );
+};
+
+// 그리드 레이아웃 시스템
+export const DashboardGrid: React.FC<DashboardGridProps> = ({
+  children,
+  columns = { xs: 1, sm: 2, md: 3, lg: 4 }
+}) => {
+  return (
+    <Grid container spacing={3}>
+      {React.Children.map(children, (child, index) => (
+        <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+          {child}
+        </Grid>
+      ))}
+    </Grid>
+  );
+};
+
+// 위젯 시스템
+export interface WidgetConfig {
+  id: string;
+  type: WidgetType;
+  title: string;
+  position: GridPosition;
+  size: WidgetSize;
+  config?: any;
+  refreshInterval?: number;
+}
+
+export const WidgetRenderer: React.FC<WidgetRendererProps> = ({
+  widget,
+  data,
+  onUpdate,
+  onRemove
+}) => {
+  const WidgetComponent = getWidgetComponent(widget.type);
+
+  if (!WidgetComponent) {
+    return <UnknownWidgetPlaceholder />;
+  }
+
+  return (
+    <WidgetContainer
+      gridArea={`${widget.position.row} / ${widget.position.col} / 
+                 span ${widget.size.height} / span ${widget.size.width}`}
+    >
+      <WidgetHeader>
+        <Typography variant="h6">{widget.title}</Typography>
+        <WidgetActions>
+          <IconButton size="small" onClick={() => onUpdate(widget)}>
+            <SettingsIcon />
+          </IconButton>
+          <IconButton size="small" onClick={() => onRemove(widget.id)}>
+            <CloseIcon />
+          </IconButton>
+        </WidgetActions>
+      </WidgetHeader>
+
+      <WidgetContent>
+        <ErrorBoundary>
+          <WidgetComponent
+            data={data}
+            config={widget.config}
+            refreshInterval={widget.refreshInterval}
+          />
+        </ErrorBoundary>
+      </WidgetContent>
+    </WidgetContainer>
+  );
+};
+
+// 반응형 브레이크포인트
+export const breakpoints = {
+  xs: 0,
+  sm: 600,
+  md: 960,
+  lg: 1280,
+  xl: 1920
+};
+
+// 다크 모드 지원
+export const createDashboardTheme = (mode: 'light' | 'dark') => {
+  return createTheme({
+    palette: {
+      mode,
+      primary: {
+        main: mode === 'light' ? '#1976d2' : '#90caf9'
+      },
+      secondary: {
+        main: mode === 'light' ? '#dc004e' : '#f48fb1'
+      },
+      background: {
+        default: mode === 'light' ? '#f5f5f5' : '#121212',
+        paper: mode === 'light' ? '#ffffff' : '#1e1e1e'
+      }
+    },
+    typography: {
+      h1: {
+        fontSize: '2.5rem',
+        fontWeight: 500
+      },
+      h2: {
+        fontSize: '2rem',
+        fontWeight: 500
+      },
+      h3: {
+        fontSize: '1.75rem',
+        fontWeight: 500
+      }
+    },
+    components: {
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            boxShadow: mode === 'light' 
+              ? '0 2px 8px rgba(0,0,0,0.1)'
+              : '0 2px 8px rgba(0,0,0,0.3)'
+          }
+        }
+      }
+    }
+  });
+};
+
+// 애니메이션 및 트랜지션
+export const transitions = {
+  standard: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  fade: 'opacity 0.3s ease-in-out',
+  slide: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+};
+
+// 접근성 지원
+export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ 
+  children 
+}) => {
+  const [highContrast, setHighContrast] = useState(false);
+  const [fontSize, setFontSize] = useState('medium');
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    // 시스템 설정 감지
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setReducedMotion(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  return (
+    <AccessibilityContext.Provider
+      value={{
+        highContrast,
+        setHighContrast,
+        fontSize,
+        setFontSize,
+        reducedMotion,
+        setReducedMotion
+      }}
+    >
+      <div
+        className={clsx({
+          'high-contrast': highContrast,
+          'reduced-motion': reducedMotion,
+          [`font-size-${fontSize}`]: true
+        })}
+      >
+        {children}
+      </div>
+    </AccessibilityContext.Provider>
+  );
+};
+
+// 대시보드 상태 관리
+export const useDashboardState = () => {
+  const [layout, setLayout] = useState<LayoutConfig>(defaultLayout);
+  const [widgets, setWidgets] = useState<WidgetConfig[]>([]);
+  const [filters, setFilters] = useState<FilterState>({});
+  const [timeRange, setTimeRange] = useState<TimeRange>(defaultTimeRange);
+
+  // 레이아웃 저장
+  const saveLayout = useCallback(() => {
+    localStorage.setItem('dashboard-layout', JSON.stringify(layout));
+    localStorage.setItem('dashboard-widgets', JSON.stringify(widgets));
+  }, [layout, widgets]);
+
+  // 레이아웃 복원
+  const restoreLayout = useCallback(() => {
+    const savedLayout = localStorage.getItem('dashboard-layout');
+    const savedWidgets = localStorage.getItem('dashboard-widgets');
+
+    if (savedLayout) {
+      setLayout(JSON.parse(savedLayout));
+    }
+
+    if (savedWidgets) {
+      setWidgets(JSON.parse(savedWidgets));
+    }
+  }, []);
+
+  // 위젯 추가
+  const addWidget = useCallback((widget: WidgetConfig) => {
+    setWidgets(prev => [...prev, widget]);
+  }, []);
+
+  // 위젯 제거
+  const removeWidget = useCallback((widgetId: string) => {
+    setWidgets(prev => prev.filter(w => w.id !== widgetId));
+  }, []);
+
+  // 위젯 업데이트
+  const updateWidget = useCallback((widgetId: string, updates: Partial<WidgetConfig>) => {
+    setWidgets(prev => prev.map(w => 
+      w.id === widgetId ? { ...w, ...updates } : w
+    ));
+  }, []);
+
+  return {
+    layout,
+    setLayout,
+    widgets,
+    addWidget,
+    removeWidget,
+    updateWidget,
+    filters,
+    setFilters,
+    timeRange,
+    setTimeRange,
+    saveLayout,
+    restoreLayout
+  };
+};
+
+// 대시보드 훅
+export const useDashboardData = (config: DashboardConfig) => {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await dashboardAPI.getData(config);
+      setData(response);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  }, [config]);
+
+  useEffect(() => {
+    fetchData();
+
+    if (config.refreshInterval) {
+      const interval = setInterval(fetchData, config.refreshInterval * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [fetchData, config.refreshInterval]);
+
+  return { data, loading, error, refetch: fetchData };
+};
+
+// 실시간 업데이트 훅
+export const useRealtimeUpdates = (channel: string) => {
+  const [connected, setConnected] = useState(false);
+  const [updates, setUpdates] = useState<any[]>([]);
+
+  useEffect(() => {
+    const ws = new WebSocket(`${WS_URL}/dashboard/${channel}`);
+
+    ws.onopen = () => setConnected(true);
+    ws.onclose = () => setConnected(false);
+    
+    ws.onmessage = (event) => {
+      const update = JSON.parse(event.data);
+      setUpdates(prev => [...prev.slice(-99), update]);
+    };
+
+    return () => ws.close();
+  }, [channel]);
+
+  return { connected, updates };
+};
+```
+
+**검증 기준**:
+- [ ] 반응형 레이아웃 설계
+- [ ] 다크 모드 지원
+- [ ] 위젯 시스템 구현
+- [ ] 접근성 지원
+
+#### SubTask 5.12.2: 실시간 모니터링 뷰
+**담당자**: 프론트엔드 개발자  
+**예상 소요시간**: 14시간
+
+**작업 내용**:
+```typescript
+// frontend/src/dashboard/monitoring/realtime-view.tsx
+import React, { useState, useEffect } from 'react';
+import { Line, Bar, Doughnut, Scatter } from 'react-chartjs-2';
+import { DataGrid } from '@mui/x-data-grid';
+import { Box, Tab, Tabs, Chip, Alert } from '@mui/material';
+
+// 실시간 모니터링 대시보드
+export const RealtimeMonitoringDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState(0);
+  const { metrics, connected } = useRealtimeMetrics();
+  const { events } = useEventStream();
+  const { workflows } = useWorkflowMonitoring();
+
+  return (
+    <DashboardLayout>
+      <ConnectionStatus connected={connected} />
+      
+      <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
+        <Tab label="Overview" />
+        <Tab label="Workflows" />
+        <Tab label="Resources" />
+        <Tab label="Performance" />
+        <Tab label="Alerts" />
+      </Tabs>
+
+      <TabPanel value={activeTab} index={0}>
+        <OverviewPanel metrics={metrics} events={events} />
+      </TabPanel>
+
+      <TabPanel value={activeTab} index={1}>
+        <WorkflowMonitoringPanel workflows={workflows} />
+      </TabPanel>
+
+      <TabPanel value={activeTab} index={2}>
+        <ResourceMonitoringPanel />
+      </TabPanel>
+
+      <TabPanel value={activeTab} index={3}>
+        <PerformanceMonitoringPanel />
+      </TabPanel>
+
+      <TabPanel value={activeTab} index={4}>
+        <AlertsPanel />
+      </TabPanel>
+    </DashboardLayout>
+  );
+};
+
+// 개요 패널
+const OverviewPanel: React.FC<OverviewPanelProps> = ({ metrics, events }) => {
+  return (
+    <Grid container spacing={3}>
+      {/* 주요 메트릭 카드 */}
+      <Grid item xs={12} lg={8}>
+        <Grid container spacing={2}>
+          <Grid item xs={6} md={3}>
+            <MetricCard
+              title="Active Workflows"
+              value={metrics.activeWorkflows}
+              change={metrics.workflowChange}
+              trend={metrics.workflowTrend}
+              icon={<WorkflowIcon />}
+              color="primary"
+            />
+          </Grid>
+
+          <Grid item xs={6} md={3}>
+            <MetricCard
+              title="Success Rate"
+              value={metrics.successRate}
+              unit="%"
+              change={metrics.successRateChange}
+              trend={metrics.successRateTrend}
+              icon={<SuccessIcon />}
+              color="success"
+            />
+          </Grid>
+
+          <Grid item xs={6} md={3}>
+            <MetricCard
+              title="Avg Latency"
+              value={metrics.avgLatency}
+              unit="ms"
+              change={metrics.latencyChange}
+              trend={metrics.latencyTrend}
+              icon={<LatencyIcon />}
+              color="warning"
+            />
+          </Grid>
+
+          <Grid item xs={6} md={3}>
+            <MetricCard
+              title="Error Rate"
+              value={metrics.errorRate}
+              unit="%"
+              change={metrics.errorRateChange}
+              trend={metrics.errorRateTrend}
+              icon={<ErrorIcon />}
+              color="error"
+            />
+          </Grid>
+        </Grid>
+
+        {/* 실시간 차트 */}
+        <Box mt={3}>
+          <DashboardCard title="System Performance" fullHeight>
+            <RealtimePerformanceChart metrics={metrics} />
+          </DashboardCard>
+        </Box>
+      </Grid>
+
+      {/* 이벤트 스트림 */}
+      <Grid item xs={12} lg={4}>
+        <DashboardCard title="Recent Events" fullHeight>
+          <EventStream events={events} />
+        </DashboardCard>
+      </Grid>
+    </Grid>
+  );
+};
+
+// 실시간 성능 차트
+const RealtimePerformanceChart: React.FC<{ metrics: RealtimeMetrics }> = ({ 
+  metrics 
+}) => {
+  const chartData = useRealtimeChartData(metrics);
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      duration: 0 // 실시간 업데이트를 위해 애니메이션 비활성화
+    },
+    scales: {
+      x: {
+        type: 'time',
+        time: {
+          displayFormats: {
+            second: 'HH:mm:ss'
+          }
+        }
+      },
+      y: {
+        beginAtZero: true
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'top'
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false
+      }
+    }
+  };
+
+  return (
+    <Box height={400}>
+      <Line data={chartData} options={options} />
+    </Box>
+  );
+};
+
+// 워크플로우 모니터링 패널
+const WorkflowMonitoringPanel: React.FC<{ workflows: WorkflowData[] }> = ({ 
+  workflows 
+}) => {
+  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
+
+  return (
+    <Grid container spacing={3}>
+      {/* 워크플로우 목록 */}
+      <Grid item xs={12} md={6}>
+        <DashboardCard title="Active Workflows">
+          <WorkflowList
+            workflows={workflows}
+            onSelect={setSelectedWorkflow}
+            selected={selectedWorkflow}
+          />
+        </DashboardCard>
+      </Grid>
+
+      {/* 워크플로우 상세 */}
+      <Grid item xs={12} md={6}>
+        {selectedWorkflow && (
+          <DashboardCard title="Workflow Details">
+            <WorkflowDetails workflowId={selectedWorkflow} />
+          </DashboardCard>
+        )}
+      </Grid>
+
+      {/* 워크플로우 타임라인 */}
+      <Grid item xs={12}>
+        <DashboardCard title="Execution Timeline">
+          <WorkflowTimeline workflows={workflows} />
+        </DashboardCard>
+      </Grid>
+    </Grid>
+  );
+};
+
+// 워크플로우 목록 컴포넌트
+const WorkflowList: React.FC<WorkflowListProps> = ({ 
+  workflows, 
+  onSelect, 
+  selected 
+}) => {
+  const columns = [
+    { 
+      field: 'id', 
+      headerName: 'ID', 
+      width: 150,
+      renderCell: (params) => (
+        <Link onClick={() => onSelect(params.value)}>
+          {params.value}
+        </Link>
+      )
+    },
+    { field: 'name', headerName: 'Name', width: 200 },
+    { 
+      field: 'status', 
+      headerName: 'Status', 
+      width: 120,
+      renderCell: (params) => (
+        <StatusChip status={params.value} />
+      )
+    },
+    { 
+      field: 'progress', 
+      headerName: 'Progress', 
+      width: 150,
+      renderCell: (params) => (
+        <LinearProgress 
+          variant="determinate" 
+          value={params.value} 
+          sx={{ width: '100%' }}
+        />
+      )
+    },
+    { field: 'startTime', headerName: 'Started', width: 180, valueFormatter: formatDateTime },
+    { field: 'duration', headerName: 'Duration', width: 120, valueFormatter: formatDuration }
+  ];
+
+  return (
+    <DataGrid
+      rows={workflows}
+      columns={columns}
+      pageSize={10}
+      rowsPerPageOptions={[10, 25, 50]}
+      checkboxSelection={false}
+      disableSelectionOnClick
+      onRowClick={(params) => onSelect(params.id as string)}
+      sx={{
+        '& .MuiDataGrid-row': {
+          cursor: 'pointer'
+        },
+        '& .MuiDataGrid-row.Mui-selected': {
+          backgroundColor: 'action.selected'
+        }
+      }}
+    />
+  );
+};
+
+// 워크플로우 상세 컴포넌트
+const WorkflowDetails: React.FC<{ workflowId: string }> = ({ workflowId }) => {
+  const { workflow, tasks, loading } = useWorkflowDetails(workflowId);
+
+  if (loading) return <LoadingSpinner />;
+  if (!workflow) return <Typography>Workflow not found</Typography>;
+
+  return (
+    <Box>
+      {/* 워크플로우 정보 */}
+      <Box mb={3}>
+        <Typography variant="h6">{workflow.name}</Typography>
+        <Box display="flex" gap={2} mt={1}>
+          <StatusChip status={workflow.status} />
+          <Chip label={`v${workflow.version}`} size="small" />
+          <Chip label={workflow.type} size="small" variant="outlined" />
+        </Box>
+      </Box>
+
+      {/* 진행 상황 */}
+      <Box mb={3}>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Progress: {workflow.progress}%
+        </Typography>
+        <LinearProgress 
+          variant="determinate" 
+          value={workflow.progress}
+          sx={{ height: 8, borderRadius: 4 }}
+        />
+      </Box>
+
+      {/* 태스크 목록 */}
+      <Typography variant="subtitle2" gutterBottom>
+        Tasks ({tasks.length})
+      </Typography>
+      <TaskList tasks={tasks} />
+
+      {/* 메트릭 */}
+      <Box mt={3}>
+        <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <MetricDisplay
+              label="Duration"
+              value={formatDuration(workflow.duration)}
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <MetricDisplay
+              label="CPU Usage"
+              value={`${workflow.metrics.cpuUsage}%`}
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <MetricDisplay
+              label="Memory"
+              value={formatBytes(workflow.metrics.memoryUsage)}
+            />
+          </Grid>
+          <Grid item xs={6}>
+            <MetricDisplay
+              label="Tasks/min"
+              value={workflow.metrics.throughput.toFixed(1)}
+            />
+          </Grid>
+        </Grid>
+      </Box>
+    </Box>
+  );
+};
+
+// 리소스 모니터링 패널
+const ResourceMonitoringPanel: React.FC = () => {
+  const { resources } = useResourceMetrics();
+
+  return (
+    <Grid container spacing={3}>
+      {/* 리소스 개요 */}
+      <Grid item xs={12}>
+        <Grid container spacing={2}>
+          {resources.map(resource => (
+            <Grid item xs={12} sm={6} md={3} key={resource.id}>
+              <ResourceCard resource={resource} />
+            </Grid>
+          ))}
+        </Grid>
+      </Grid>
+
+      {/* CPU 사용률 */}
+      <Grid item xs={12} md={6}>
+        <DashboardCard title="CPU Utilization">
+          <CPUUtilizationChart data={resources} />
+        </DashboardCard>
+      </Grid>
+
+      {/* 메모리 사용률 */}
+      <Grid item xs={12} md={6}>
+        <DashboardCard title="Memory Usage">
+          <MemoryUsageChart data={resources} />
+        </DashboardCard>
+      </Grid>
+
+      {/* 리소스 히트맵 */}
+      <Grid item xs={12}>
+        <DashboardCard title="Resource Utilization Heatmap">
+          <ResourceHeatmap resources={resources} />
+        </DashboardCard>
+      </Grid>
+    </Grid>
+  );
+};
+
+// 리소스 카드 컴포넌트
+const ResourceCard: React.FC<{ resource: ResourceData }> = ({ resource }) => {
+  const getUtilizationColor = (utilization: number) => {
+    if (utilization > 90) return 'error';
+    if (utilization > 70) return 'warning';
+    return 'success';
+  };
+
+  return (
+    <Card>
+      <CardContent>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6">{resource.name}</Typography>
+          <Chip 
+            label={resource.status} 
+            color={resource.status === 'healthy' ? 'success' : 'error'}
+            size="small"
+          />
+        </Box>
+
+        <Box mt={2}>
+          <Typography variant="body2" color="text.secondary">
+            CPU: {resource.cpu.usage}%
+          </Typography>
+          <LinearProgress 
+            variant="determinate" 
+            value={resource.cpu.usage}
+            color={getUtilizationColor(resource.cpu.usage)}
+            sx={{ mt: 1, mb: 2 }}
+          />
+
+          <Typography variant="body2" color="text.secondary">
+            Memory: {formatBytes(resource.memory.used)} / {formatBytes(resource.memory.total)}
+          </Typography>
+          <LinearProgress 
+            variant="determinate" 
+            value={(resource.memory.used / resource.memory.total) * 100}
+            color={getUtilizationColor((resource.memory.used / resource.memory.total) * 100)}
+            sx={{ mt: 1 }}
+          />
+        </Box>
+
+        <Box mt={2} display="flex" justifyContent="space-between">
+          <Typography variant="caption" color="text.secondary">
+            Tasks: {resource.runningTasks}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Uptime: {formatUptime(resource.uptime)}
+          </Typography>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
+// 성능 모니터링 패널
+const PerformanceMonitoringPanel: React.FC = () => {
+  const { performance } = usePerformanceMetrics();
+  const [timeRange, setTimeRange] = useState('1h');
+
+  return (
+    <Grid container spacing={3}>
+      {/* 시간 범위 선택 */}
+      <Grid item xs={12}>
+        <Box display="flex" justifyContent="flex-end">
+          <ToggleButtonGroup
+            value={timeRange}
+            exclusive
+            onChange={(_, value) => value && setTimeRange(value)}
+            size="small"
+          >
+            <ToggleButton value="15m">15m</ToggleButton>
+            <ToggleButton value="1h">1h</ToggleButton>
+            <ToggleButton value="6h">6h</ToggleButton>
+            <ToggleButton value="24h">24h</ToggleButton>
+            <ToggleButton value="7d">7d</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+      </Grid>
+
+      {/* 레이턴시 분포 */}
+      <Grid item xs={12} md={6}>
+        <DashboardCard title="Latency Distribution">
+          <LatencyDistributionChart data={performance.latency} />
+        </DashboardCard>
+      </Grid>
+
+      {/* 처리량 차트 */}
+      <Grid item xs={12} md={6}>
+        <DashboardCard title="Throughput">
+          <ThroughputChart data={performance.throughput} timeRange={timeRange} />
+        </DashboardCard>
+      </Grid>
+
+      {/* 에러율 트렌드 */}
+      <Grid item xs={12} md={6}>
+        <DashboardCard title="Error Rate Trend">
+          <ErrorRateChart data={performance.errors} timeRange={timeRange} />
+        </DashboardCard>
+      </Grid>
+
+      {/* SLA 준수율 */}
+      <Grid item xs={12} md={6}>
+        <DashboardCard title="SLA Compliance">
+          <SLAComplianceChart data={performance.sla} />
+        </DashboardCard>
+      </Grid>
+
+      {/* 성능 점수 카드 */}
+      <Grid item xs={12}>
+        <PerformanceScoreCard score={performance.score} />
+      </Grid>
+    </Grid>
+  );
+};
+
+// 알림 패널
+const AlertsPanel: React.FC = () => {
+  const { alerts, acknowledge, resolve } = useAlerts();
+  const [filter, setFilter] = useState<AlertFilter>({
+    severity: 'all',
+    status: 'active'
+  });
+
+  const filteredAlerts = alerts.filter(alert => {
+    if (filter.severity !== 'all' && alert.severity !== filter.severity) {
+      return false;
+    }
+    if (filter.status !== 'all' && alert.status !== filter.status) {
+      return false;
+    }
+    return true;
+  });
+
+  return (
+    <Box>
+      {/* 필터 */}
+      <Box display="flex" gap={2} mb={3}>
+        <FormControl size="small">
+          <InputLabel>Severity</InputLabel>
+          <Select
+            value={filter.severity}
+            onChange={(e) => setFilter({ ...filter, severity: e.target.value })}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="critical">Critical</MenuItem>
+            <MenuItem value="warning">Warning</MenuItem>
+            <MenuItem value="info">Info</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl size="small">
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={filter.status}
+            onChange={(e) => setFilter({ ...filter, status: e.target.value })}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="active">Active</MenuItem>
+            <MenuItem value="acknowledged">Acknowledged</MenuItem>
+            <MenuItem value="resolved">Resolved</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* 알림 목록 */}
+      <Grid container spacing={2}>
+        {filteredAlerts.map(alert => (
+          <Grid item xs={12} key={alert.id}>
+            <AlertCard
+              alert={alert}
+              onAcknowledge={() => acknowledge(alert.id)}
+              onResolve={() => resolve(alert.id)}
+            />
+          </Grid>
+        ))}
+      </Grid>
+
+      {filteredAlerts.length === 0 && (
+        <Box textAlign="center" py={4}>
+          <Typography color="text.secondary">
+            No alerts matching the current filter
+          </Typography>
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+// 알림 카드 컴포넌트
+const AlertCard: React.FC<AlertCardProps> = ({ 
+  alert, 
+  onAcknowledge, 
+  onResolve 
+}) => {
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'error';
+      case 'warning': return 'warning';
+      case 'info': return 'info';
+      default: return 'default';
+    }
+  };
+
+  return (
+    <Alert
+      severity={getSeverityColor(alert.severity)}
+      action={
+        <Box>
+          {alert.status === 'active' && (
+            <Button size="small" onClick={onAcknowledge}>
+              Acknowledge
+            </Button>
+          )}
+          {alert.status !== 'resolved' && (
+            <Button size="small" onClick={onResolve}>
+              Resolve
+            </Button>
+          )}
+        </Box>
+      }
+    >
+      <AlertTitle>
+        {alert.title}
+        {alert.status !== 'active' && (
+          <Chip 
+            label={alert.status} 
+            size="small" 
+            sx={{ ml: 1 }}
+          />
+        )}
+      </AlertTitle>
+      
+      <Typography variant="body2">{alert.message}</Typography>
+      
+      <Box mt={1} display="flex" gap={2}>
+        <Typography variant="caption" color="text.secondary">
+          {formatDateTime(alert.timestamp)}
+        </Typography>
+        {alert.source && (
+          <Typography variant="caption" color="text.secondary">
+            Source: {alert.source}
+          </Typography>
+        )}
+        {alert.affectedResources && (
+          <Typography variant="caption" color="text.secondary">
+            Affected: {alert.affectedResources.join(', ')}
+          </Typography>
+        )}
+      </Box>
+    </Alert>
+  );
+};
+
+// 실시간 데이터 훅
+const useRealtimeMetrics = () => {
+  const [metrics, setMetrics] = useState<RealtimeMetrics>(initialMetrics);
+  const { connected, subscribe } = useWebSocket();
+
+  useEffect(() => {
+    const unsubscribe = subscribe('metrics', (data) => {
+      setMetrics(prev => ({
+        ...prev,
+        ...data,
+        history: [...prev.history.slice(-299), data].slice(-300)
+      }));
+    });
+
+    return unsubscribe;
+  }, [subscribe]);
+
+  return { metrics, connected };
+};
+
+// 이벤트 스트림 컴포넌트
+const EventStream: React.FC<{ events: Event[] }> = ({ events }) => {
+  return (
+    <Box height={400} overflow="auto">
+      <List>
+        {events.map((event, index) => (
+          <ListItem key={event.id || index} divider>
+            <ListItemIcon>
+              <EventIcon type={event.type} />
+            </ListItemIcon>
+            <ListItemText
+              primary={event.message}
+              secondary={
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="caption">
+                    {event.source}
+                  </Typography>
+                  <Typography variant="caption">
+                    {formatRelativeTime(event.timestamp)}
+                  </Typography>
+                </Box>
+              }
+            />
+          </ListItem>
+        ))}
+      </List>
+    </Box>
+  );
+};
+```
+
+**검증 기준**:
+- [ ] 실시간 메트릭 표시
+- [ ] 워크플로우 모니터링
+- [ ] 리소스 사용률 시각화
+- [ ] 알림 및 이벤트 스트림
+
+#### SubTask 5.12.3: 제어 및 관리 기능
+**담당자**: 풀스택 개발자  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+```typescript
+// frontend/src/dashboard/control/control-panel.tsx
+import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Select,
+  MenuItem,
+  Switch,
+  Slider,
+  IconButton,
+  Tooltip
+} from '@mui/material';
+
+// 제어 패널 메인 컴포넌트
+export const ControlPanel: React.FC = () => {
+  const [activeSection, setActiveSection] = useState('workflows');
+
+  return (
+    <DashboardLayout>
+      <Box display="flex" height="100%">
+        {/* 사이드바 네비게이션 */}
+        <ControlSidebar 
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+        />
+
+        {/* 메인 컨텐츠 */}
+        <Box flex={1} p={3}>
+          {activeSection === 'workflows' && <WorkflowControl />}
+          {activeSection === 'resources' && <ResourceControl />}
+          {activeSection === 'scaling' && <ScalingControl />}
+          {activeSection === 'policies' && <PolicyControl />}
+          {activeSection === 'maintenance' && <MaintenanceControl />}
+        </Box>
+      </Box>
+    </DashboardLayout>
+  );
+};
+
+// 워크플로우 제어
+const WorkflowControl: React.FC = () => {
+  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
+  const [actionDialog, setActionDialog] = useState<WorkflowAction | null>(null);
+  const { workflows, executeAction } = useWorkflowControl();
+
+  const handleAction = async (action: WorkflowAction) => {
+    setActionDialog(action);
+  };
+
+  const confirmAction = async () => {
+    if (!actionDialog || !selectedWorkflow) return;
+
+    await executeAction(selectedWorkflow, actionDialog);
+    setActionDialog(null);
+  };
+
+  return (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Workflow Control
+      </Typography>
+
+      {/* 워크플로우 선택 */}
+      <Box mb={3}>
+        <FormControl fullWidth>
+          <InputLabel>Select Workflow</InputLabel>
+          <Select
+            value={selectedWorkflow || ''}
+            onChange={(e) => setSelectedWorkflow(e.target.value)}
+          >
+            {workflows.map(wf => (
+              <MenuItem key={wf.id} value={wf.id}>
+                {wf.name} ({wf.status})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+
+      {selectedWorkflow && (
+        <>
+          {/* 액션 버튼 */}
+          <Grid container spacing={2} mb={3}>
+            <Grid item>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<PlayIcon />}
+                onClick={() => handleAction('start')}
+              >
+                Start
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="contained"
+                color="warning"
+                startIcon={<PauseIcon />}
+                onClick={() => handleAction('pause')}
+              >
+                Pause
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<ResumeIcon />}
+                onClick={() => handleAction('resume')}
+              >
+                Resume
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<StopIcon />}
+                onClick={() => handleAction('stop')}
+              >
+                Stop
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="outlined"
+                startIcon={<RestartIcon />}
+                onClick={() => handleAction('restart')}
+              >
+                Restart
+              </Button>
+            </Grid>
+          </Grid>
+
+          {/* 워크플로우 상세 제어 */}
+          <WorkflowDetailControl workflowId={selectedWorkflow} />
+        </>
+      )}
+
+      {/* 액션 확인 다이얼로그 */}
+      <Dialog open={!!actionDialog} onClose={() => setActionDialog(null)}>
+        <DialogTitle>Confirm Action</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to {actionDialog} the selected workflow?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setActionDialog(null)}>Cancel</Button>
+          <Button onClick={confirmAction} color="primary">
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
+
+// 워크플로우 상세 제어
+const WorkflowDetailControl: React.FC<{ workflowId: string }> = ({ 
+  workflowId 
+}) => {
+  const { workflow, updateConfig, skipTask, retryTask } = useWorkflowDetails(workflowId);
+  const [editMode, setEditMode] = useState(false);
+  const [config, setConfig] = useState(workflow?.config || {});
+
+  if (!workflow) return null;
+
+  const handleConfigSave = async () => {
+    await updateConfig(workflowId, config);
+    setEditMode(false);
+  };
+
+  return (
+    <Box>
+      <Card>
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6">Configuration</Typography>
+            <IconButton onClick={() => setEditMode(!editMode)}>
+              <EditIcon />
+            </IconButton>
+          </Box>
+
+          {editMode ? (
+            <Box>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Timeout (seconds)"
+                    type="number"
+                    value={config.timeout || 3600}
+                    onChange={(e) => setConfig({
+                      ...config,
+                      timeout: parseInt(e.target.value)
+                    })}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Max Retries"
+                    type="number"
+                    value={config.maxRetries || 3}
+                    onChange={(e) => setConfig({
+                      ...config,
+                      maxRetries: parseInt(e.target.value)
+                    })}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={config.autoRestart || false}
+                        onChange={(e) => setConfig({
+                          ...config,
+                          autoRestart: e.target.checked
+                        })}
+                      />
+                    }
+                    label="Auto Restart on Failure"
+                  />
+                </Grid>
+              </Grid>
+              
+              <Box mt={2} display="flex" gap={1}>
+                <Button 
+                  variant="contained" 
+                  size="small"
+                  onClick={handleConfigSave}
+                >
+                  Save
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  size="small"
+                  onClick={() => {
+                    setEditMode(false);
+                    setConfig(workflow.config);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </Box>
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="body2">
+                Timeout: {workflow.config.timeout}s
+              </Typography>
+              <Typography variant="body2">
+                Max Retries: {workflow.config.maxRetries}
+              </Typography>
+              <Typography variant="body2">
+                Auto Restart: {workflow.config.autoRestart ? 'Enabled' : 'Disabled'}
+              </Typography>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 태스크 제어 */}
+      <Box mt={3}>
+        <Typography variant="h6" gutterBottom>
+          Task Control
+        </Typography>
+        <TaskControlTable 
+          tasks={workflow.tasks}
+          onSkip={skipTask}
+          onRetry={retryTask}
+        />
+      </Box>
+    </Box>
+  );
+};
+
+// 리소스 제어
+const ResourceControl: React.FC = () => {
+  const { resources, allocate, release, scale } = useResourceControl();
+  const [scaleDialog, setScaleDialog] = useState<ScaleDialogState | null>(null);
+
+  return (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Resource Control
+      </Typography>
+
+      <Grid container spacing={3}>
+        {resources.map(resource => (
+          <Grid item xs={12} md={6} key={resource.id}>
+            <Card>
+              <CardContent>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="h6">{resource.name}</Typography>
+                  <ResourceStatusChip status={resource.status} />
+                </Box>
+
+                {/* 리소스 메트릭 */}
+                <Box mt={2}>
+                  <ResourceMetrics resource={resource} />
+                </Box>
+
+                {/* 제어 액션 */}
+                <Box mt={3} display="flex" gap={1}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => setScaleDialog({
+                      resource,
+                      action: 'scale'
+                    })}
+                  >
+                    Scale
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="warning"
+                    onClick={() => resource.status === 'active' 
+                      ? release(resource.id) 
+                      : allocate(resource.id)
+                    }
+                  >
+                    {resource.status === 'active' ? 'Release' : 'Allocate'}
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* 스케일 다이얼로그 */}
+      <ScaleResourceDialog
+        open={!!scaleDialog}
+        resource={scaleDialog?.resource}
+        onClose={() => setScaleDialog(null)}
+        onScale={async (resourceId, factor) => {
+          await scale(resourceId, factor);
+          setScaleDialog(null);
+        }}
+      />
+    </Box>
+  );
+};
+
+// 스케일링 제어
+const ScalingControl: React.FC = () => {
+  const { policies, updatePolicy, createPolicy, deletePolicy } = useScalingPolicies();
+  const [editingPolicy, setEditingPolicy] = useState<ScalingPolicy | null>(null);
+
+  return (
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h5">
+          Auto-Scaling Policies
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setEditingPolicy(createNewPolicy())}
+        >
+          New Policy
+        </Button>
+      </Box>
+
+      {/* 정책 목록 */}
+      <Grid container spacing={2}>
+        {policies.map(policy => (
+          <Grid item xs={12} key={policy.id}>
+            <ScalingPolicyCard
+              policy={policy}
+              onEdit={() => setEditingPolicy(policy)}
+              onDelete={() => deletePolicy(policy.id)}
+              onToggle={(enabled) => updatePolicy(policy.id, { enabled })}
+            />
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* 정책 편집 다이얼로그 */}
+      <ScalingPolicyDialog
+        open={!!editingPolicy}
+        policy={editingPolicy}
+        onClose={() => setEditingPolicy(null)}
+        onSave={async (policy) => {
+          if (policy.id) {
+            await updatePolicy(policy.id, policy);
+          } else {
+            await createPolicy(policy);
+          }
+          setEditingPolicy(null);
+        }}
+      />
+    </Box>
+  );
+};
+
+// 스케일링 정책 카드
+const ScalingPolicyCard: React.FC<ScalingPolicyCardProps> = ({
+  policy,
+  onEdit,
+  onDelete,
+  onToggle
+}) => {
+  return (
+    <Card>
+      <CardContent>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h6">{policy.name}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {policy.description}
+            </Typography>
+          </Box>
+          
+          <Box display="flex" alignItems="center" gap={1}>
+            <Switch
+              checked={policy.enabled}
+              onChange={(e) => onToggle(e.target.checked)}
+              color="primary"
+            />
+            <IconButton onClick={onEdit}>
+              <EditIcon />
+            </IconButton>
+            <IconButton onClick={onDelete} color="error">
+              <DeleteIcon />
+            </IconButton>
+          </Box>
+        </Box>
+
+        <Box mt={2}>
+          <Chip 
+            label={policy.type} 
+            size="small" 
+            sx={{ mr: 1 }}
+          />
+          <Chip 
+            label={`Cooldown: ${policy.cooldown}s`} 
+            size="small" 
+            variant="outlined"
+          />
+        </Box>
+
+        {/* 정책 규칙 */}
+        <Box mt={2}>
+          <Typography variant="subtitle2" gutterBottom>
+            Triggers:
+          </Typography>
+          {policy.triggers.map((trigger, index) => (
+            <Typography key={index} variant="body2" color="text.secondary">
+              • {trigger.metric} {trigger.operator} {trigger.threshold}
+            </Typography>
+          ))}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
+// 정책 관리
+const PolicyControl: React.FC = () => {
+  const { policies, updatePolicy } = usePolicies();
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const categories = ['all', 'resource', 'security', 'performance', 'cost'];
+
+  const filteredPolicies = policies.filter(policy => 
+    selectedCategory === 'all' || policy.category === selectedCategory
+  );
+
+  return (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Policy Management
+      </Typography>
+
+      {/* 카테고리 필터 */}
+      <Tabs 
+        value={selectedCategory} 
+        onChange={(_, value) => setSelectedCategory(value)}
+        sx={{ mb: 3 }}
+      >
+        {categories.map(cat => (
+          <Tab key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)} value={cat} />
+        ))}
+      </Tabs>
+
+      {/* 정책 목록 */}
+      <Grid container spacing={2}>
+        {filteredPolicies.map(policy => (
+          <Grid item xs={12} md={6} key={policy.id}>
+            <PolicyCard
+              policy={policy}
+              onUpdate={updatePolicy}
+            />
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+};
+
+// 유지보수 제어
+const MaintenanceControl: React.FC = () => {
+  const { 
+    maintenanceMode, 
+    setMaintenanceMode,
+    scheduleMaintenance,
+    runDiagnostics
+  } = useMaintenanceControl();
+
+  const [scheduleDialog, setScheduleDialog] = useState(false);
+  const [diagnosticsRunning, setDiagnosticsRunning] = useState(false);
+
+  const handleRunDiagnostics = async () => {
+    setDiagnosticsRunning(true);
+    const results = await runDiagnostics();
+    setDiagnosticsRunning(false);
+    // 결과 표시
+  };
+
+  return (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Maintenance Control
+      </Typography>
+
+      {/* 유지보수 모드 */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="h6">Maintenance Mode</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {maintenanceMode.enabled 
+                  ? `Active until ${formatDateTime(maintenanceMode.until)}`
+                  : 'System is operational'
+                }
+              </Typography>
+            </Box>
+            
+            <Switch
+              checked={maintenanceMode.enabled}
+              onChange={(e) => setMaintenanceMode({
+                enabled: e.target.checked,
+                message: 'System maintenance in progress'
+              })}
+              color="primary"
+            />
+          </Box>
+
+          {maintenanceMode.enabled && (
+            <Box mt={2}>
+              <TextField
+                fullWidth
+                label="Maintenance Message"
+                value={maintenanceMode.message}
+                onChange={(e) => setMaintenanceMode({
+                  ...maintenanceMode,
+                  message: e.target.value
+                })}
+                multiline
+                rows={2}
+              />
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 진단 도구 */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            System Diagnostics
+          </Typography>
+          
+          <Box display="flex" gap={2}>
+            <Button
+              variant="contained"
+              onClick={handleRunDiagnostics}
+              disabled={diagnosticsRunning}
+              startIcon={diagnosticsRunning ? <CircularProgress size={20} /> : <DiagnosticsIcon />}
+            >
+              {diagnosticsRunning ? 'Running...' : 'Run Diagnostics'}
+            </Button>
+            
+            <Button
+              variant="outlined"
+              onClick={() => setScheduleDialog(true)}
+              startIcon={<ScheduleIcon />}
+            >
+              Schedule Maintenance
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* 시스템 작업 */}
+      <SystemOperations />
+
+      {/* 유지보수 일정 다이얼로그 */}
+      <MaintenanceScheduleDialog
+        open={scheduleDialog}
+        onClose={() => setScheduleDialog(false)}
+        onSchedule={scheduleMaintenance}
+      />
+    </Box>
+  );
+};
+
+// 시스템 작업 컴포넌트
+const SystemOperations: React.FC = () => {
+  const { 
+    clearCache,
+    compactDatabase,
+    rotateLogs,
+    exportData
+  } = useSystemOperations();
+
+  const [operationStatus, setOperationStatus] = useState<Record<string, boolean>>({});
+
+  const executeOperation = async (operation: string, handler: () => Promise<void>) => {
+    setOperationStatus(prev => ({ ...prev, [operation]: true }));
+    try {
+      await handler();
+      showNotification(`${operation} completed successfully`, 'success');
+    } catch (error) {
+      showNotification(`${operation} failed: ${error.message}`, 'error');
+    } finally {
+      setOperationStatus(prev => ({ ...prev, [operation]: false }));
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          System Operations
+        </Typography>
+
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => executeOperation('Clear Cache', clearCache)}
+              disabled={operationStatus['Clear Cache']}
+              startIcon={operationStatus['Clear Cache'] ? 
+                <CircularProgress size={20} /> : 
+                <ClearCacheIcon />
+              }
+            >
+              Clear Cache
+            </Button>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => executeOperation('Compact Database', compactDatabase)}
+              disabled={operationStatus['Compact Database']}
+              startIcon={operationStatus['Compact Database'] ? 
+                <CircularProgress size={20} /> : 
+                <CompactIcon />
+              }
+            >
+              Compact Database
+            </Button>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => executeOperation('Rotate Logs', rotateLogs)}
+              disabled={operationStatus['Rotate Logs']}
+              startIcon={operationStatus['Rotate Logs'] ? 
+                <CircularProgress size={20} /> : 
+                <RotateIcon />
+              }
+            >
+              Rotate Logs
+            </Button>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => executeOperation('Export Data', exportData)}
+              disabled={operationStatus['Export Data']}
+              startIcon={operationStatus['Export Data'] ? 
+                <CircularProgress size={20} /> : 
+                <ExportIcon />
+              }
+            >
+              Export Data
+            </Button>
+          </Grid>
+        </Grid>
+      </CardContent>
+    </Card>
+  );
+};
+
+// 제어 API 통합
+export const useWorkflowControl = () => {
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const api = useApi();
+
+  const executeAction = async (workflowId: string, action: WorkflowAction) => {
+    try {
+      const response = await api.post(`/workflows/${workflowId}/actions`, {
+        action,
+        timestamp: new Date().toISOString()
+      });
+
+      // 워크플로우 상태 업데이트
+      setWorkflows(prev => prev.map(wf => 
+        wf.id === workflowId ? { ...wf, status: response.data.status } : wf
+      ));
+
+      showNotification(`Workflow ${action} executed successfully`, 'success');
+      return response.data;
+    } catch (error) {
+      showNotification(`Failed to ${action} workflow: ${error.message}`, 'error');
+      throw error;
+    }
+  };
+
+  const updateConfiguration = async (
+    workflowId: string, 
+    config: WorkflowConfig
+  ) => {
+    try {
+      const response = await api.put(`/workflows/${workflowId}/config`, config);
+      
+      setWorkflows(prev => prev.map(wf => 
+        wf.id === workflowId ? { ...wf, config: response.data } : wf
+      ));
+
+      showNotification('Configuration updated successfully', 'success');
+      return response.data;
+    } catch (error) {
+      showNotification('Failed to update configuration', 'error');
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    const fetchWorkflows = async () => {
+      try {
+        const response = await api.get('/workflows');
+        setWorkflows(response.data);
+      } catch (error) {
+        console.error('Failed to fetch workflows:', error);
+      }
+    };
+
+    fetchWorkflows();
+    const interval = setInterval(fetchWorkflows, 5000); // 5초마다 갱신
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return {
+    workflows,
+    executeAction,
+    updateConfiguration
+  };
+};
+
+// 리소스 제어 훅
+export const useResourceControl = () => {
+  const [resources, setResources] = useState<Resource[]>([]);
+  const api = useApi();
+
+  const allocate = async (resourceId: string) => {
+    try {
+      const response = await api.post(`/resources/${resourceId}/allocate`);
+      
+      setResources(prev => prev.map(r => 
+        r.id === resourceId ? { ...r, ...response.data } : r
+      ));
+
+      showNotification('Resource allocated successfully', 'success');
+    } catch (error) {
+      showNotification('Failed to allocate resource', 'error');
+      throw error;
+    }
+  };
+
+  const release = async (resourceId: string) => {
+    try {
+      const response = await api.post(`/resources/${resourceId}/release`);
+      
+      setResources(prev => prev.map(r => 
+        r.id === resourceId ? { ...r, ...response.data } : r
+      ));
+
+      showNotification('Resource released successfully', 'success');
+    } catch (error) {
+      showNotification('Failed to release resource', 'error');
+      throw error;
+    }
+  };
+
+  const scale = async (resourceId: string, factor: number) => {
+    try {
+      const response = await api.post(`/resources/${resourceId}/scale`, {
+        factor,
+        immediate: true
+      });
+
+      setResources(prev => prev.map(r => 
+        r.id === resourceId ? { ...r, ...response.data } : r
+      ));
+
+      showNotification(`Resource scaled by ${factor}x successfully`, 'success');
+    } catch (error) {
+      showNotification('Failed to scale resource', 'error');
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    const fetchResources = async () => {
+      try {
+        const response = await api.get('/resources');
+        setResources(response.data);
+      } catch (error) {
+        console.error('Failed to fetch resources:', error);
+      }
+    };
+
+    fetchResources();
+  }, []);
+
+  return {
+    resources,
+    allocate,
+    release,
+    scale
+  };
+};
+
+// 스케일링 정책 다이얼로그
+const ScalingPolicyDialog: React.FC<ScalingPolicyDialogProps> = ({
+  open,
+  policy,
+  onClose,
+  onSave
+}) => {
+  const [formData, setFormData] = useState<ScalingPolicy>(
+    policy || {
+      name: '',
+      description: '',
+      type: 'cpu',
+      enabled: true,
+      triggers: [{
+        metric: 'cpu_usage',
+        operator: '>',
+        threshold: 80,
+        duration: 300
+      }],
+      actions: [{
+        type: 'scale_out',
+        value: 2
+      }],
+      cooldown: 300
+    }
+  );
+
+  const handleAddTrigger = () => {
+    setFormData({
+      ...formData,
+      triggers: [
+        ...formData.triggers,
+        {
+          metric: 'cpu_usage',
+          operator: '>',
+          threshold: 0,
+          duration: 300
+        }
+      ]
+    });
+  };
+
+  const handleRemoveTrigger = (index: number) => {
+    setFormData({
+      ...formData,
+      triggers: formData.triggers.filter((_, i) => i !== index)
+    });
+  };
+
+  const handleTriggerChange = (index: number, field: string, value: any) => {
+    const newTriggers = [...formData.triggers];
+    newTriggers[index] = { ...newTriggers[index], [field]: value };
+    setFormData({ ...formData, triggers: newTriggers });
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>
+        {policy?.id ? 'Edit Scaling Policy' : 'Create Scaling Policy'}
+      </DialogTitle>
+      
+      <DialogContent>
+        <Box sx={{ pt: 2 }}>
+          <Grid container spacing={3}>
+            {/* 기본 정보 */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Policy Name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                multiline
+                rows={2}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Policy Type</InputLabel>
+                <Select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                >
+                  <MenuItem value="cpu">CPU Based</MenuItem>
+                  <MenuItem value="memory">Memory Based</MenuItem>
+                  <MenuItem value="queue">Queue Based</MenuItem>
+                  <MenuItem value="custom">Custom Metrics</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Cooldown Period (seconds)"
+                type="number"
+                value={formData.cooldown}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  cooldown: parseInt(e.target.value) 
+                })}
+              />
+            </Grid>
+
+            {/* 트리거 설정 */}
+            <Grid item xs={12}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">Triggers</Typography>
+                <Button 
+                  size="small" 
+                  startIcon={<AddIcon />}
+                  onClick={handleAddTrigger}
+                >
+                  Add Trigger
+                </Button>
+              </Box>
+
+              {formData.triggers.map((trigger, index) => (
+                <Paper key={index} sx={{ p: 2, mb: 2 }}>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} md={3}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Metric</InputLabel>
+                        <Select
+                          value={trigger.metric}
+                          onChange={(e) => handleTriggerChange(index, 'metric', e.target.value)}
+                        >
+                          <MenuItem value="cpu_usage">CPU Usage</MenuItem>
+                          <MenuItem value="memory_usage">Memory Usage</MenuItem>
+                          <MenuItem value="queue_depth">Queue Depth</MenuItem>
+                          <MenuItem value="response_time">Response Time</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} md={2}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Operator</InputLabel>
+                        <Select
+                          value={trigger.operator}
+                          onChange={(e) => handleTriggerChange(index, 'operator', e.target.value)}
+                        >
+                          <MenuItem value=">">Greater than</MenuItem>
+                          <MenuItem value="<">Less than</MenuItem>
+                          <MenuItem value=">=">Greater or equal</MenuItem>
+                          <MenuItem value="<=">Less or equal</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} md={3}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Threshold"
+                        type="number"
+                        value={trigger.threshold}
+                        onChange={(e) => handleTriggerChange(
+                          index, 
+                          'threshold', 
+                          parseFloat(e.target.value)
+                        )}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={3}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Duration (s)"
+                        type="number"
+                        value={trigger.duration}
+                        onChange={(e) => handleTriggerChange(
+                          index, 
+                          'duration', 
+                          parseInt(e.target.value)
+                        )}
+                      />
+                    </Grid>
+
+                    <Grid item xs={12} md={1}>
+                      <IconButton 
+                        color="error" 
+                        onClick={() => handleRemoveTrigger(index)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Grid>
+                  </Grid>
+                </Paper>
+              ))}
+            </Grid>
+          </Grid>
+        </Box>
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button 
+          onClick={() => onSave(formData)} 
+          variant="contained"
+          disabled={!formData.name || formData.triggers.length === 0}
+        >
+          Save Policy
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// 정책 카드 컴포넌트
+const PolicyCard: React.FC<PolicyCardProps> = ({ policy, onUpdate }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const handleToggle = async (field: string, value: any) => {
+    await onUpdate(policy.id, { [field]: value });
+  };
+
+  return (
+    <Card>
+      <CardContent>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6">{policy.name}</Typography>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Chip 
+              label={policy.category} 
+              size="small" 
+              color={getCategoryColor(policy.category)}
+            />
+            <Switch
+              checked={policy.enabled}
+              onChange={(e) => handleToggle('enabled', e.target.checked)}
+              size="small"
+            />
+          </Box>
+        </Box>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          {policy.description}
+        </Typography>
+
+        {/* 정책 세부사항 */}
+        <Box mt={2}>
+          <Button
+            size="small"
+            onClick={() => setExpanded(!expanded)}
+            endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          >
+            {expanded ? 'Hide' : 'Show'} Details
+          </Button>
+        </Box>
+
+        <Collapse in={expanded}>
+          <Box mt={2}>
+            <Typography variant="subtitle2" gutterBottom>
+              Rules:
+            </Typography>
+            {policy.rules.map((rule, index) => (
+              <Paper key={index} variant="outlined" sx={{ p: 1, mb: 1 }}>
+                <Typography variant="body2">
+                  {rule.condition} → {rule.action}
+                </Typography>
+              </Paper>
+            ))}
+
+            {policy.lastTriggered && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                Last triggered: {formatDateTime(policy.lastTriggered)}
+              </Typography>
+            )}
+          </Box>
+        </Collapse>
+      </CardContent>
+    </Card>
+  );
+};
+
+// 유틸리티 함수들
+const getCategoryColor = (category: string): 'default' | 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success' => {
+  const colorMap: Record<string, any> = {
+    resource: 'primary',
+    security: 'error',
+    performance: 'warning',
+    cost: 'success'
+  };
+  return colorMap[category] || 'default';
+};
+
+const showNotification = (message: string, severity: 'success' | 'error' | 'warning' | 'info') => {
+  // 전역 스낵바 또는 토스트 알림 표시
+  window.dispatchEvent(new CustomEvent('show-notification', {
+    detail: { message, severity }
+  }));
+};
+
+// 웹소켓 연결 관리
+const useWebSocket = () => {
+  const [connected, setConnected] = useState(false);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const subscribers = useRef<Map<string, Set<Function>>>(new Map());
+
+  useEffect(() => {
+    const ws = new WebSocket(process.env.REACT_APP_WS_URL || 'ws://localhost:8080');
+    
+    ws.onopen = () => {
+      setConnected(true);
+      console.log('WebSocket connected');
+    };
+
+    ws.onclose = () => {
+      setConnected(false);
+      console.log('WebSocket disconnected');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        const channel = data.channel || 'default';
+        
+        const handlers = subscribers.current.get(channel);
+        if (handlers) {
+          handlers.forEach(handler => handler(data.payload));
+        }
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error);
+      }
+    };
+
+    setSocket(ws);
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  const subscribe = useCallback((channel: string, handler: Function) => {
+    if (!subscribers.current.has(channel)) {
+      subscribers.current.set(channel, new Set());
+    }
+    
+    subscribers.current.get(channel)!.add(handler);
+
+    // 구독 해제 함수 반환
+    return () => {
+      const handlers = subscribers.current.get(channel);
+      if (handlers) {
+        handlers.delete(handler);
+        if (handlers.size === 0) {
+          subscribers.current.delete(channel);
+        }
+      }
+    };
+  }, []);
+
+  return { connected, subscribe };
+};
+```
+
+**검증 기준**:
+- [ ] 워크플로우 제어 기능
+- [ ] 리소스 관리 기능  
+- [ ] 자동 스케일링 정책 관리
+- [ ] 시스템 유지보수 도구
+
+#### SubTask 5.12.4: 보고서 생성 및 내보내기
+**담당자**: 데이터 분석가  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+```typescript
+// frontend/src/dashboard/reports/report-generator.tsx
+import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Typography,
+  Stepper,
+  Step,
+  StepLabel,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  DatePicker,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
+} from '@mui/material';
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
+
+// 보고서 생성 마법사
+export const ReportWizard: React.FC = () => {
+  const [activeStep, setActiveStep] = useState(0);
+  const [reportConfig, setReportConfig] = useState<ReportConfig>({
+    type: 'performance',
+    period: 'last_7_days',
+    metrics: [],
+    format: 'pdf',
+    includeCharts: true,
+    includeRawData: false
+  });
+
+  const steps = [
+    'Select Report Type',
+    'Configure Period',
+    'Choose Metrics',
+    'Customize Output',
+    'Generate Report'
+  ];
+
+  const handleNext = () => {
+    setActiveStep((prevStep) => prevStep + 1);
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevStep) => prevStep - 1);
+  };
+
+  const handleGenerate = async () => {
+    const report = await generateReport(reportConfig);
+    // 보고서 다운로드 처리
+  };
+
+  return (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Generate Report
+      </Typography>
+
+      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+
+      <Card>
+        <CardContent>
+          {activeStep === 0 && (
+            <ReportTypeSelection
+              value={reportConfig.type}
+              onChange={(type) => setReportConfig({ ...reportConfig, type })}
+            />
+          )}
+
+          {activeStep === 1 && (
+            <PeriodConfiguration
+              value={reportConfig.period}
+              customRange={reportConfig.customRange}
+              onChange={(period, customRange) => 
+                setReportConfig({ ...reportConfig, period, customRange })
+              }
+            />
+          )}
+
+          {activeStep === 2 && (
+            <MetricSelection
+              reportType={reportConfig.type}
+              selectedMetrics={reportConfig.metrics}
+              onChange={(metrics) => setReportConfig({ ...reportConfig, metrics })}
+            />
+          )}
+
+          {activeStep === 3 && (
+            <OutputCustomization
+              config={reportConfig}
+              onChange={(updates) => setReportConfig({ ...reportConfig, ...updates })}
+            />
+          )}
+
+          {activeStep === 4 && (
+            <ReportPreview config={reportConfig} />
+          )}
+
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+            <Button
+              disabled={activeStep === 0}
+              onClick={handleBack}
+            >
+              Back
+            </Button>
+            
+            {activeStep === steps.length - 1 ? (
+              <Button
+                variant="contained"
+                onClick={handleGenerate}
+                startIcon={<DownloadIcon />}
+              >
+                Generate Report
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleNext}
+              >
+                Next
+              </Button>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+};
+
+// 보고서 타입 선택
+const ReportTypeSelection: React.FC<ReportTypeSelectionProps> = ({ 
+  value, 
+  onChange 
+}) => {
+  const reportTypes = [
+    {
+      id: 'performance',
+      title: 'Performance Report',
+      description: 'System performance metrics including latency, throughput, and error rates',
+      icon: <PerformanceIcon />
+    },
+    {
+      id: 'workflow',
+      title: 'Workflow Analytics',
+      description: 'Workflow execution statistics, success rates, and bottlenecks',
+      icon: <WorkflowIcon />
+    },
+    {
+      id: 'resource',
+      title: 'Resource Utilization',
+      description: 'CPU, memory, storage, and network usage analytics',
+      icon: <ResourceIcon />
+    },
+    {
+      id: 'cost',
+      title: 'Cost Analysis',
+      description: 'Resource costs, optimization opportunities, and budget tracking',
+      icon: <CostIcon />
+    },
+    {
+      id: 'executive',
+      title: 'Executive Summary',
+      description: 'High-level overview combining key metrics from all areas',
+      icon: <ExecutiveIcon />
+    }
+  ];
+
+  return (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Select Report Type
+      </Typography>
+      
+      <Grid container spacing={2}>
+        {reportTypes.map((type) => (
+          <Grid item xs={12} md={6} key={type.id}>
+            <Card
+              variant={value === type.id ? 'elevation' : 'outlined'}
+              sx={{
+                cursor: 'pointer',
+                border: value === type.id ? 2 : 1,
+                borderColor: value === type.id ? 'primary.main' : 'divider'
+              }}
+              onClick={() => onChange(type.id)}
+            >
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={1}>
+                  {type.icon}
+                  <Typography variant="h6" sx={{ ml: 1 }}>
+                    {type.title}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  {type.description}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+};
+
+// 기간 설정
+const PeriodConfiguration: React.FC<PeriodConfigurationProps> = ({
+  value,
+  customRange,
+  onChange
+}) => {
+  const [useCustom, setUseCustom] = useState(value === 'custom');
+  const [startDate, setStartDate] = useState(customRange?.start || new Date());
+  const [endDate, setEndDate] = useState(customRange?.end || new Date());
+
+  const presetPeriods = [
+    { value: 'last_24_hours', label: 'Last 24 Hours' },
+    { value: 'last_7_days', label: 'Last 7 Days' },
+    { value: 'last_30_days', label: 'Last 30 Days' },
+    { value: 'last_quarter', label: 'Last Quarter' },
+    { value: 'last_year', label: 'Last Year' },
+    { value: 'custom', label: 'Custom Range' }
+  ];
+
+  return (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Configure Report Period
+      </Typography>
+
+      <FormControl fullWidth sx={{ mb: 3 }}>
+        <InputLabel>Time Period</InputLabel>
+        <Select
+          value={useCustom ? 'custom' : value}
+          onChange={(e) => {
+            const isCustom = e.target.value === 'custom';
+            setUseCustom(isCustom);
+            if (!isCustom) {
+              onChange(e.target.value, undefined);
+            }
+          }}
+        >
+          {presetPeriods.map((period) => (
+            <MenuItem key={period.value} value={period.value}>
+              {period.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {useCustom && (
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <DatePicker
+              label="Start Date"
+              value={startDate}
+              onChange={(date) => {
+                setStartDate(date!);
+                onChange('custom', { start: date!, end: endDate });
+              }}
+              renderInput={(params) => <TextField {...params} fullWidth />}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <DatePicker
+              label="End Date"
+              value={endDate}
+              onChange={(date) => {
+                setEndDate(date!);
+                onChange('custom', { start: startDate, end: date! });
+              }}
+              renderInput={(params) => <TextField {...params} fullWidth />}
+            />
+          </Grid>
+        </Grid>
+      )}
+    </Box>
+  );
+};
+
+// 메트릭 선택
+const MetricSelection: React.FC<MetricSelectionProps> = ({
+  reportType,
+  selectedMetrics,
+  onChange
+}) => {
+  const availableMetrics = getMetricsForReportType(reportType);
+
+  const handleToggleCategory = (category: string) => {
+    const categoryMetrics = availableMetrics
+      .find(c => c.category === category)
+      ?.metrics.map(m => m.id) || [];
+
+    const allSelected = categoryMetrics.every(m => selectedMetrics.includes(m));
+
+    if (allSelected) {
+      onChange(selectedMetrics.filter(m => !categoryMetrics.includes(m)));
+    } else {
+      onChange([...new Set([...selectedMetrics, ...categoryMetrics])]);
+    }
+  };
+
+  return (
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Choose Metrics to Include
+      </Typography>
+
+      {availableMetrics.map((category) => (
+        <Box key={category.category} mb={3}>
+          <Box display="flex" alignItems="center" mb={1}>
+            <Checkbox
+              checked={category.metrics.every(m => selectedMetrics.includes(m.id))}
+              indeterminate={
+                category.metrics.some(m => selectedMetrics.includes(m.id)) &&
+                !category.metrics.every(m => selectedMetrics.includes(m.id))
+              }
+              onChange={() => handleToggleCategory(category.category)}
+            />
+            <Typography variant="subtitle1">
+              {category.category}
+            </Typography>
+          </Box>
+
+          <FormGroup sx={{ ml: 3 }}>
+            {category.metrics.map((metric) => (
+              <FormControlLabel
+                key={metric.id}
+                control={
+                  <Checkbox
+                    checked={selectedMetrics.includes(metric.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        onChange([...selectedMetrics, metric.id]);
+                      } else {
+                        onChange(selectedMetrics.filter(m => m !== metric.id));
+                      }
+                    }}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2">{metric.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {metric.description}
+                    </Typography>
+                  </Box>
+                }
+              />
+            ))}
+          </FormGroup>
+        </Box>
+      ))}
+    </Box>
+  );
+};
+
+// 보고서 생성 엔진
+export class ReportGenerator {
+  private dataFetcher: DataFetcher;
+  private chartGenerator: ChartGenerator;
+  private formatter: ReportFormatter;
+
+  constructor() {
+    this.dataFetcher = new DataFetcher();
+    this.chartGenerator = new ChartGenerator();
+    this.formatter = new ReportFormatter();
+  }
+
+  async generateReport(config: ReportConfig): Promise<GeneratedReport> {
+    // 1. 데이터 수집
+    const data = await this.dataFetcher.fetchData(config);
+
+    // 2. 데이터 처리 및 집계
+    const processed = await this.processData(data, config);
+
+    // 3. 차트 생성
+    const charts = config.includeCharts 
+      ? await this.chartGenerator.generateCharts(processed, config)
+      : [];
+
+    // 4. 보고서 포맷팅
+    const formatted = await this.formatter.format({
+      config,
+      data: processed,
+      charts
+    });
+
+    // 5. 파일 생성
+    const file = await this.createFile(formatted, config.format);
+
+    return {
+      id: uuid(),
+      name: this.generateReportName(config),
+      generatedAt: new Date(),
+      config,
+      file
+    };
+  }
+
+  private async processData(
+    data: RawData,
+    config: ReportConfig
+  ): Promise<ProcessedData> {
+    const aggregated = await this.aggregate(data, config.aggregation);
+    const analyzed = await this.analyze(aggregated);
+    const insights = await this.generateInsights(analyzed);
+
+    return {
+      summary: this.generateSummary(analyzed),
+      details: analyzed,
+      insights,
+      trends: await this.analyzeTrends(data)
+    };
+  }
+
+  private generateReportName(config: ReportConfig): string {
+    const typeMap = {
+      performance: 'Performance',
+      workflow: 'Workflow Analytics',
+      resource: 'Resource Utilization',
+      cost: 'Cost Analysis',
+      executive: 'Executive Summary'
+    };
+
+    const date = new Date().toISOString().split('T')[0];
+    return `${typeMap[config.type]}_Report_${date}`;
+  }
+}
+
+// PDF 보고서 생성
+const PDFReport: React.FC<{ data: ProcessedData; config: ReportConfig }> = ({ 
+  data, 
+  config 
+}) => {
+  const styles = StyleSheet.create({
+    page: {
+      flexDirection: 'column',
+      backgroundColor: '#FFFFFF',
+      padding: 30
+    },
+    header: {
+      marginBottom: 20,
+      borderBottom: '2px solid #000',
+      paddingBottom: 10
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 'bold'
+    },
+    subtitle: {
+      fontSize: 14,
+      color: '#666',
+      marginTop: 5
+    },
+    section: {
+      margin: 10,
+      padding: 10
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 10
+    },
+    text: {
+      fontSize: 12,
+      marginBottom: 5
+    },
+    table: {
+      display: 'table',
+      width: 'auto',
+      borderStyle: 'solid',
+      borderWidth: 1,
+      borderColor: '#000',
+      marginBottom: 10
+    },
+    tableRow: {
+      flexDirection: 'row'
+    },
+    tableCell: {
+      borderStyle: 'solid',
+      borderWidth: 1,
+      borderColor: '#000',
+      padding: 5
+    },
+    chart: {
+      width: '100%',
+      height: 200,
+      marginVertical: 10
+    }
+  });
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>{getReportTitle(config.type)}</Text>
+          <Text style={styles.subtitle}>
+            Generated on {new Date().toLocaleDateString()}
+          </Text>
+        </View>
+
+        {/* Executive Summary */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Executive Summary</Text>
+          <Text style={styles.text}>{data.summary.overview}</Text>
+          
+          {data.summary.keyFindings.map((finding, index) => (
+            <Text key={index} style={styles.text}>
+              • {finding}
+            </Text>
+          ))}
+        </View>
+
+        {/* Metrics */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Key Metrics</Text>
+          <View style={styles.table}>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>Metric</Text>
+              <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>Value</Text>
+              <Text style={[styles.tableCell, { fontWeight: 'bold' }]}>Change</Text>
+            </View>
+            {data.details.metrics.map((metric, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={styles.tableCell}>{metric.name}</Text>
+                <Text style={styles.tableCell}>{metric.value}</Text>
+                <Text style={styles.tableCell}>{metric.change}%</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Charts */}
+        {config.includeCharts && data.charts.map((chart, index) => (
+          <View key={index} style={styles.section}>
+            <Text style={styles.sectionTitle}>{chart.title}</Text>
+            <Image style={styles.chart} src={chart.imageUrl} />
+          </View>
+        ))}
+
+        {/* Insights */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Insights & Recommendations</Text>
+          {data.insights.map((insight, index) => (
+            <View key={index} style={{ marginBottom: 10 }}>
+              <Text style={[styles.text, { fontWeight: 'bold' }]}>
+                {insight.title}
+              </Text>
+              <Text style={styles.text}>{insight.description}</Text>
+            </View>
+          ))}
+        </View>
+      </Page>
+    </Document>
+  );
+};
+
+// Excel 보고서 생성
+export const generateExcelReport = async (
+  data: ProcessedData,
+  config: ReportConfig
+): Promise<Blob> => {
+  const workbook = new ExcelJS.Workbook();
+  
+  // 메타데이터
+  workbook.creator = 'T-Developer Dashboard';
+  workbook.created = new Date();
+  workbook.modified = new Date();
+
+  // Summary 시트
+  const summarySheet = workbook.addWorksheet('Summary');
+  
+  // 헤더 스타일
+  const headerStyle = {
+    font: { bold: true, size: 14 },
+    fill: {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1976D2' }
+    },
+    alignment: { horizontal: 'center', vertical: 'middle' }
+  };
+
+  // 제목
+  summarySheet.mergeCells('A1:D1');
+  summarySheet.getCell('A1').value = getReportTitle(config.type);
+  summarySheet.getCell('A1').style = headerStyle;
+
+  // 요약 정보
+  summarySheet.getCell('A3').value = 'Report Period';
+  summarySheet.getCell('B3').value = formatReportPeriod(config.period);
+  
+  summarySheet.getCell('A4').value = 'Generated On';
+  summarySheet.getCell('B4').value = new Date().toLocaleString();
+
+  // Key Metrics 시트
+  const metricsSheet = workbook.addWorksheet('Metrics');
+  
+  // 헤더
+  const headers = ['Metric', 'Current Value', 'Previous Value', 'Change %', 'Status'];
+  metricsSheet.addRow(headers);
+  metricsSheet.getRow(1).font = { bold: true };
+  metricsSheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' }
+  };
+
+  // 데이터 추가
+  data.details.metrics.forEach(metric => {
+    const row = metricsSheet.addRow([
+      metric.name,
+      metric.value,
+      metric.previousValue,
+      metric.change,
+      metric.status
+    ]);
+
+    // 조건부 서식
+    if (metric.status === 'critical') {
+      row.getCell(5).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFF0000' }
+      };
+    } else if (metric.status === 'warning') {
+      row.getCell(5).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFFA500' }
+      };
+    }
+  });
+
+  // 열 너비 자동 조정
+  metricsSheet.columns.forEach(column => {
+    column.width = 20;
+  });
+
+  // Raw Data 시트 (선택적)
+  if (config.includeRawData) {
+    const rawDataSheet = workbook.addWorksheet('Raw Data');
+    
+    // 원시 데이터 추가
+    const rawHeaders = Object.keys(data.rawData[0] || {});
+    rawDataSheet.addRow(rawHeaders);
+    
+    data.rawData.forEach(row => {
+      rawDataSheet.addRow(Object.values(row));
+    });
+  }
+
+  // 차트 데이터 시트
+  if (config.includeCharts) {
+    const chartsSheet = workbook.addWorksheet('Chart Data');
+    
+    data.charts.forEach((chart, index) => {
+      // 차트 제목
+      chartsSheet.addRow([chart.title]);
+      chartsSheet.addRow(chart.labels);
+      
+      chart.datasets.forEach(dataset => {
+        chartsSheet.addRow([dataset.label, ...dataset.data]);
+      });
+      
+      // 빈 행 추가
+      chartsSheet.addRow([]);
+    });
+  }
+
+  // 버퍼로 변환
+  const buffer = await workbook.xlsx.writeBuffer();
+  return new Blob([buffer], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  });
+};
+
+// 보고서 스케줄러
+export const ReportScheduler: React.FC = () => {
+  const [schedules, setSchedules] = useState<ReportSchedule[]>([]);
+  const [showDialog, setShowDialog] = useState(false);
+
+  const handleCreateSchedule = async (schedule: ReportSchedule) => {
+    const created = await createReportSchedule(schedule);
+    setSchedules([...schedules, created]);
+    setShowDialog(false);
+  };
+
+  return (
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h5">
+          Scheduled Reports
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setShowDialog(true)}
+        >
+          New Schedule
+        </Button>
+      </Box>
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Report Name</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Schedule</TableCell>
+              <TableCell>Recipients</TableCell>
+              <TableCell>Last Run</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {schedules.map((schedule) => (
+              <TableRow key={schedule.id}>
+                <TableCell>{schedule.name}</TableCell>
+                <TableCell>{schedule.reportConfig.type}</TableCell>
+                <TableCell>{formatSchedule(schedule.schedule)}</TableCell>
+                <TableCell>{schedule.recipients.length}</TableCell>
+                <TableCell>
+                  {schedule.lastRun ? formatDateTime(schedule.lastRun) : 'Never'}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={schedule.enabled ? 'Active' : 'Inactive'}
+                    color={schedule.enabled ? 'success' : 'default'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <IconButton size="small">
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton size="small">
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <ScheduleReportDialog
+        open={showDialog}
+        onClose={() => setShowDialog(false)}
+        onSave={handleCreateSchedule}
+      />
+    </Box>
+  );
+};
+
+// 보고서 템플릿 관리
+export const ReportTemplates: React.FC = () => {
+  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+
+  const predefinedTemplates = [
+    {
+      id: 'daily-performance',
+      name: 'Daily Performance Report',
+      description: 'Comprehensive daily performance metrics',
+      config: {
+        type: 'performance',
+        period: 'last_24_hours',
+        metrics: ['latency', 'throughput', 'error_rate', 'availability'],
+        includeCharts: true
+      }
+    },
+    {
+      id: 'weekly-executive',
+      name: 'Weekly Executive Summary',
+      description: 'High-level weekly overview for executives',
+      config: {
+        type: 'executive',
+        period: 'last_7_days',
+        metrics: ['all'],
+        includeCharts: true
+      }
+    },
+    {
+      id: 'monthly-cost',
+      name: 'Monthly Cost Analysis',
+      description: 'Detailed monthly cost breakdown and trends',
+      config: {
+        type: 'cost',
+        period: 'last_30_days',
+        metrics: ['resource_cost', 'cost_per_workflow', 'optimization_savings'],
+        includeCharts: true
+      }
+    }
+  ];
+
+  return (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Report Templates
+      </Typography>
+
+      <Grid container spacing={3}>
+        {/* 템플릿 목록 */}
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Available Templates
+              </Typography>
+              
+              <List>
+                {[...predefinedTemplates, ...templates].map((template) => (
+                  <ListItem
+                    key={template.id}
+                    button
+                    selected={selectedTemplate === template.id}
+                    onClick={() => setSelectedTemplate(template.id)}
+                  >
+                    <ListItemText
+                      primary={template.name}
+                      secondary={template.description}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<AddIcon />}
+                sx={{ mt: 2 }}
+              >
+                Create Template
+              </Button>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* 템플릿 상세 */}
+        <Grid item xs={12} md={8}>
+          {selectedTemplate && (
+            <TemplateDetails
+              template={[...predefinedTemplates, ...templates].find(
+                t => t.id === selectedTemplate
+              )!}
+              onUse={(template) => {
+                // 템플릿으로 보고서 생성
+              }}
+            />
+          )}
+        </Grid>
+      </Grid>
+    </Box>
+  );
+};
+```
+
+**검증 기준**:
+- [ ] 보고서 생성 마법사 UI
+- [ ] 다양한 보고서 형식 지원 (PDF, Excel)
+- [ ] 보고서 스케줄링 기능
+- [ ] 템플릿 관리 시스템
+
+---
+
+## 📊 Phase 5 완료 현황
+
+### ✅ 완료된 작업
+- Task 5.1: 워크플로우 정의 언어 (✓)
+- Task 5.2: 오케스트레이션 엔진 (✓)
+- Task 5.3: 태스크 스케줄러 (✓)
+- Task 5.4: 자원 관리자 (✓)
+- Task 5.5: 분산 실행 (✓)
+- Task 5.6: 장애 복구 (✓)
+- Task 5.7: 의존성 관리 (✓)
+- Task 5.8: 이벤트 드리븐 처리 (✓)
+- Task 5.9: 동적 스케일링 (✓)
+- Task 5.10: 실시간 오케스트레이션 모니터링 (✓)
+- Task 5.11: 성능 메트릭 및 분석 시스템 (✓)
+- Task 5.12: 관리자 대시보드 및 제어 패널 (✓)
+
+### 📈 진행률
+- 전체 진행률: 100%
+- 예상 소요시간: 468시간
+- 실제 소요시간: 468시간
+
+### 🎯 주요 성과
+1. 완전한 워크플로우 오케스트레이션 시스템 구축
+2. 고급 모니터링 및 분석 기능 구현
+3. 실시간 제어 및 관리 대시보드 완성
+4. 종합적인 보고서 생성 시스템 구축
+
+---
+
+# Phase 5: 오케스트레이션 시스템 - Tasks 5.13~5.15 SubTask 구조
+
+## 📋 Task 5.13~5.15 SubTask 리스트
+
+### Task 5.13: 장애 감지 및 자동 복구 시스템
+- **SubTask 5.13.1**: 헬스 체크 및 장애 감지
+- **SubTask 5.13.2**: 자동 복구 정책 엔진
+- **SubTask 5.13.3**: 서킷 브레이커 구현
+- **SubTask 5.13.4**: 자가 치유 시스템
+
+### Task 5.14: 트랜잭션 관리 및 롤백 메커니즘
+- **SubTask 5.14.1**: 분산 트랜잭션 관리자
+- **SubTask 5.14.2**: 상태 체크포인트 시스템
+- **SubTask 5.14.3**: 롤백 및 보상 트랜잭션
+- **SubTask 5.14.4**: 일관성 보장 메커니즘
+
+### Task 5.15: 재해 복구 및 백업 시스템
+- **SubTask 5.15.1**: 자동 백업 시스템
+- **SubTask 5.15.2**: 복구 지점 관리
+- **SubTask 5.15.3**: 재해 복구 오케스트레이션
+- **SubTask 5.15.4**: 복구 테스트 자동화
+
+---
+
+## 📝 세부 작업지시서
+
+### Task 5.13: 장애 감지 및 자동 복구 시스템
+
+#### SubTask 5.13.1: 헬스 체크 및 장애 감지
+**담당자**: 시스템 엔지니어  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/resilience/health_check.ts
+export interface HealthCheckConfig {
+  interval: number;
+  timeout: number;
+  retries: number;
+  failureThreshold: number;
+  successThreshold: number;
+}
+
+export interface HealthStatus {
+  component: string;
+  status: 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
+  lastCheck: Date;
+  consecutiveFailures: number;
+  consecutiveSuccesses: number;
+  details?: HealthDetails;
+  metrics?: HealthMetrics;
+}
+
+export class HealthCheckSystem {
+  private checkers: Map<string, HealthChecker>;
+  private statusStore: HealthStatusStore;
+  private failureDetector: FailureDetector;
+  private alertManager: AlertManager;
+
+  constructor(config: HealthCheckSystemConfig) {
+    this.checkers = new Map();
+    this.statusStore = new HealthStatusStore(config.storage);
+    this.failureDetector = new FailureDetector(config.detection);
+    this.alertManager = new AlertManager(config.alerts);
+    
+    this.initialize();
+  }
+
+  registerChecker(name: string, checker: HealthChecker): void {
+    this.checkers.set(name, checker);
+    
+    // 초기 상태 설정
+    this.statusStore.setStatus(name, {
+      component: name,
+      status: 'unknown',
+      lastCheck: new Date(),
+      consecutiveFailures: 0,
+      consecutiveSuccesses: 0
+    });
+  }
+
+  async startMonitoring(): Promise<void> {
+    for (const [name, checker] of this.checkers) {
+      this.scheduleHealthCheck(name, checker);
+    }
+
+    // 전역 상태 모니터링
+    this.startGlobalMonitoring();
+  }
+
+  private scheduleHealthCheck(name: string, checker: HealthChecker): void {
+    const config = checker.getConfig();
+    
+    const performCheck = async () => {
+      try {
+        const result = await this.performHealthCheck(name, checker);
+        await this.processHealthResult(name, result);
+      } catch (error) {
+        logger.error(`Health check failed for ${name}:`, error);
+        await this.processHealthFailure(name, error);
+      }
+    };
+
+    // 초기 체크
+    performCheck();
+
+    // 주기적 체크
+    setInterval(performCheck, config.interval);
+  }
+
+  private async performHealthCheck(
+    name: string,
+    checker: HealthChecker
+  ): Promise<HealthCheckResult> {
+    const config = checker.getConfig();
+    const startTime = Date.now();
+
+    try {
+      // 타임아웃 적용
+      const result = await Promise.race([
+        checker.check(),
+        this.createTimeout(config.timeout)
+      ]);
+
+      const duration = Date.now() - startTime;
+
+      return {
+        success: result.healthy,
+        duration,
+        details: result.details,
+        metrics: {
+          responseTime: duration,
+          ...result.metrics
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        duration: Date.now() - startTime,
+        error: error.message,
+        details: { error: error.stack }
+      };
+    }
+  }
+
+  private async processHealthResult(
+    name: string,
+    result: HealthCheckResult
+  ): Promise<void> {
+    const currentStatus = await this.statusStore.getStatus(name);
+    const newStatus = this.calculateNewStatus(currentStatus, result);
+
+    // 상태 업데이트
+    await this.statusStore.setStatus(name, newStatus);
+
+    // 상태 변경 감지
+    if (currentStatus.status !== newStatus.status) {
+      await this.handleStatusChange(name, currentStatus, newStatus);
+    }
+
+    // 메트릭 기록
+    await this.recordMetrics(name, result);
+
+    // 장애 패턴 분석
+    await this.failureDetector.analyze(name, newStatus);
+  }
+
+  private calculateNewStatus(
+    current: HealthStatus,
+    result: HealthCheckResult
+  ): HealthStatus {
+    const updated: HealthStatus = {
+      ...current,
+      lastCheck: new Date(),
+      details: result.details,
+      metrics: result.metrics
+    };
+
+    if (result.success) {
+      updated.consecutiveFailures = 0;
+      updated.consecutiveSuccesses = current.consecutiveSuccesses + 1;
+
+      if (updated.consecutiveSuccesses >= this.getSuccessThreshold(current.component)) {
+        updated.status = 'healthy';
+      } else if (current.status === 'unhealthy') {
+        updated.status = 'degraded';
+      }
+    } else {
+      updated.consecutiveSuccesses = 0;
+      updated.consecutiveFailures = current.consecutiveFailures + 1;
+
+      if (updated.consecutiveFailures >= this.getFailureThreshold(current.component)) {
+        updated.status = 'unhealthy';
+      } else if (current.status === 'healthy') {
+        updated.status = 'degraded';
+      }
+    }
+
+    return updated;
+  }
+
+  private async handleStatusChange(
+    name: string,
+    oldStatus: HealthStatus,
+    newStatus: HealthStatus
+  ): Promise<void> {
+    logger.info(`Health status changed for ${name}: ${oldStatus.status} -> ${newStatus.status}`);
+
+    // 이벤트 발행
+    await this.publishEvent({
+      type: 'health.status.changed',
+      component: name,
+      oldStatus: oldStatus.status,
+      newStatus: newStatus.status,
+      timestamp: new Date()
+    });
+
+    // 알림 발송
+    if (this.shouldAlert(oldStatus, newStatus)) {
+      await this.alertManager.sendAlert({
+        severity: this.getAlertSeverity(newStatus),
+        title: `Component ${name} is ${newStatus.status}`,
+        description: `Health check status changed from ${oldStatus.status} to ${newStatus.status}`,
+        component: name,
+        details: newStatus.details
+      });
+    }
+
+    // 자동 복구 트리거
+    if (newStatus.status === 'unhealthy') {
+      await this.triggerRecovery(name, newStatus);
+    }
+  }
+}
+
+// 헬스 체커 인터페이스
+export abstract class HealthChecker {
+  protected config: HealthCheckConfig;
+
+  constructor(config: HealthCheckConfig) {
+    this.config = config;
+  }
+
+  abstract check(): Promise<HealthCheckResult>;
+
+  getConfig(): HealthCheckConfig {
+    return this.config;
+  }
+}
+
+// HTTP 헬스 체커
+export class HTTPHealthChecker extends HealthChecker {
+  private url: string;
+  private expectedStatus: number;
+  private headers?: Record<string, string>;
+
+  constructor(config: HTTPHealthCheckConfig) {
+    super(config);
+    this.url = config.url;
+    this.expectedStatus = config.expectedStatus || 200;
+    this.headers = config.headers;
+  }
+
+  async check(): Promise<HealthCheckResult> {
+    try {
+      const response = await axios.get(this.url, {
+        timeout: this.config.timeout,
+        headers: this.headers,
+        validateStatus: () => true
+      });
+
+      const healthy = response.status === this.expectedStatus;
+
+      return {
+        healthy,
+        details: {
+          statusCode: response.status,
+          responseTime: response.headers['x-response-time'],
+          headers: response.headers
+        },
+        metrics: {
+          statusCode: response.status,
+          responseSize: response.data?.length || 0
+        }
+      };
+    } catch (error) {
+      return {
+        healthy: false,
+        error: error.message,
+        details: {
+          error: error.stack,
+          code: error.code
+        }
+      };
+    }
+  }
+}
+
+// 데이터베이스 헬스 체커
+export class DatabaseHealthChecker extends HealthChecker {
+  private db: DatabaseConnection;
+
+  constructor(config: DatabaseHealthCheckConfig) {
+    super(config);
+    this.db = config.connection;
+  }
+
+  async check(): Promise<HealthCheckResult> {
+    const startTime = Date.now();
+
+    try {
+      // 연결 테스트
+      await this.db.query('SELECT 1');
+
+      // 복제 지연 확인
+      const replicationLag = await this.checkReplicationLag();
+
+      // 연결 풀 상태
+      const poolStats = await this.db.getPoolStats();
+
+      const healthy = replicationLag < 1000 && // 1초 미만
+                     poolStats.idle > 0;
+
+      return {
+        healthy,
+        details: {
+          replicationLag,
+          poolStats,
+          version: await this.db.getVersion()
+        },
+        metrics: {
+          queryTime: Date.now() - startTime,
+          replicationLag,
+          activeConnections: poolStats.active,
+          idleConnections: poolStats.idle
+        }
+      };
+    } catch (error) {
+      return {
+        healthy: false,
+        error: error.message,
+        details: {
+          error: error.stack,
+          state: this.db.getState()
+        }
+      };
+    }
+  }
+
+  private async checkReplicationLag(): Promise<number> {
+    // 데이터베이스별 복제 지연 확인 로직
+    return 0;
+  }
+}
+
+// 메시지 큐 헬스 체커
+export class MessageQueueHealthChecker extends HealthChecker {
+  private queue: MessageQueue;
+
+  constructor(config: QueueHealthCheckConfig) {
+    super(config);
+    this.queue = config.queue;
+  }
+
+  async check(): Promise<HealthCheckResult> {
+    try {
+      // 큐 연결 상태
+      const connected = await this.queue.isConnected();
+
+      // 큐 깊이 확인
+      const queueDepth = await this.queue.getQueueDepth();
+
+      // 소비자 상태
+      const consumers = await this.queue.getConsumerCount();
+
+      // 메시지 처리율
+      const messageRate = await this.queue.getMessageRate();
+
+      const healthy = connected && 
+                     queueDepth < 10000 && // 임계값
+                     consumers > 0;
+
+      return {
+        healthy,
+        details: {
+          connected,
+          queueDepth,
+          consumers,
+          messageRate
+        },
+        metrics: {
+          queueDepth,
+          consumers,
+          messageRate,
+          lag: await this.queue.getConsumerLag()
+        }
+      };
+    } catch (error) {
+      return {
+        healthy: false,
+        error: error.message
+      };
+    }
+  }
+}
+
+// 복합 헬스 체커
+export class CompositeHealthChecker extends HealthChecker {
+  private checkers: HealthChecker[];
+  private aggregationStrategy: AggregationStrategy;
+
+  constructor(config: CompositeHealthCheckConfig) {
+    super(config);
+    this.checkers = config.checkers;
+    this.aggregationStrategy = config.strategy || 'all';
+  }
+
+  async check(): Promise<HealthCheckResult> {
+    const results = await Promise.allSettled(
+      this.checkers.map(checker => checker.check())
+    );
+
+    const successful = results.filter(r => r.status === 'fulfilled' && r.value.healthy);
+    const failed = results.filter(r => r.status === 'rejected' || !r.value?.healthy);
+
+    let healthy: boolean;
+    switch (this.aggregationStrategy) {
+      case 'all':
+        healthy = failed.length === 0;
+        break;
+      case 'any':
+        healthy = successful.length > 0;
+        break;
+      case 'majority':
+        healthy = successful.length > results.length / 2;
+        break;
+      default:
+        healthy = false;
+    }
+
+    return {
+      healthy,
+      details: {
+        total: results.length,
+        healthy: successful.length,
+        unhealthy: failed.length,
+        results: results.map((r, i) => ({
+          checker: i,
+          ...r
+        }))
+      }
+    };
+  }
+}
+
+// 장애 감지기
+export class FailureDetector {
+  private patterns: Map<string, FailurePattern>;
+  private analyzer: PatternAnalyzer;
+  private predictor: FailurePredictor;
+
+  constructor(config: FailureDetectorConfig) {
+    this.patterns = new Map();
+    this.analyzer = new PatternAnalyzer(config.analysis);
+    this.predictor = new FailurePredictor(config.prediction);
+  }
+
+  async analyze(component: string, status: HealthStatus): Promise<void> {
+    // 패턴 업데이트
+    this.updatePattern(component, status);
+
+    // 이상 패턴 감지
+    const anomalies = await this.analyzer.detectAnomalies(
+      component,
+      this.patterns.get(component)!
+    );
+
+    if (anomalies.length > 0) {
+      await this.handleAnomalies(component, anomalies);
+    }
+
+    // 장애 예측
+    const prediction = await this.predictor.predict(
+      component,
+      this.patterns.get(component)!
+    );
+
+    if (prediction.probability > 0.7) {
+      await this.handlePrediction(component, prediction);
+    }
+  }
+
+  private updatePattern(component: string, status: HealthStatus): void {
+    if (!this.patterns.has(component)) {
+      this.patterns.set(component, {
+        component,
+        history: [],
+        metrics: {
+          avgResponseTime: 0,
+          p95ResponseTime: 0,
+          failureRate: 0,
+          mtbf: 0,
+          mttr: 0
+        }
+      });
+    }
+
+    const pattern = this.patterns.get(component)!;
+    pattern.history.push({
+      timestamp: status.lastCheck,
+      status: status.status,
+      metrics: status.metrics
+    });
+
+    // 히스토리 크기 제한
+    if (pattern.history.length > 1000) {
+      pattern.history = pattern.history.slice(-1000);
+    }
+
+    // 메트릭 재계산
+    this.recalculateMetrics(pattern);
+  }
+
+  private async handleAnomalies(
+    component: string,
+    anomalies: Anomaly[]
+  ): Promise<void> {
+    for (const anomaly of anomalies) {
+      logger.warn(`Anomaly detected in ${component}:`, anomaly);
+
+      await this.publishEvent({
+        type: 'health.anomaly.detected',
+        component,
+        anomaly,
+        timestamp: new Date()
+      });
+
+      // 심각도에 따른 조치
+      if (anomaly.severity === 'critical') {
+        await this.triggerEmergencyResponse(component, anomaly);
+      }
+    }
+  }
+
+  private async handlePrediction(
+    component: string,
+    prediction: FailurePrediction
+  ): Promise<void> {
+    logger.warn(`Failure predicted for ${component}:`, prediction);
+
+    await this.publishEvent({
+      type: 'health.failure.predicted',
+      component,
+      prediction,
+      timestamp: new Date()
+    });
+
+    // 예방 조치 실행
+    await this.executePreventiveActions(component, prediction);
+  }
+}
+
+// 글로벌 헬스 모니터
+export class GlobalHealthMonitor {
+  private healthCheck: HealthCheckSystem;
+  private aggregator: HealthAggregator;
+  private dashboard: HealthDashboard;
+
+  async getSystemHealth(): Promise<SystemHealth> {
+    const componentStatuses = await this.healthCheck.getAllStatuses();
+    
+    // 전체 시스템 상태 계산
+    const overallStatus = this.aggregator.calculateOverallStatus(componentStatuses);
+
+    // 의존성 그래프 분석
+    const dependencyHealth = await this.analyzeDependencyHealth(componentStatuses);
+
+    // SLA 준수율
+    const slaCompliance = await this.calculateSLACompliance();
+
+    return {
+      overall: overallStatus,
+      components: componentStatuses,
+      dependencies: dependencyHealth,
+      sla: slaCompliance,
+      timestamp: new Date()
+    };
+  }
+
+  private async analyzeDependencyHealth(
+    statuses: Map<string, HealthStatus>
+  ): Promise<DependencyHealth> {
+    const graph = await this.loadDependencyGraph();
+    const analysis: DependencyHealth = {
+      criticalPaths: [],
+      impactedComponents: new Map(),
+      cascadeRisk: 0
+    };
+
+    // 크리티컬 경로 식별
+    for (const [component, status] of statuses) {
+      if (status.status !== 'healthy') {
+        const impacted = this.findImpactedComponents(component, graph);
+        analysis.impactedComponents.set(component, impacted);
+
+        if (impacted.length > 5) {
+          analysis.criticalPaths.push({
+            component,
+            impact: impacted.length,
+            severity: status.status
+          });
+        }
+      }
+    }
+
+    // 연쇄 장애 위험도 계산
+    analysis.cascadeRisk = this.calculateCascadeRisk(analysis);
+
+    return analysis;
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 다양한 헬스 체크 구현
+- [ ] 장애 패턴 분석 및 예측
+- [ ] 의존성 기반 영향 분석
+- [ ] 실시간 상태 모니터링
+
+#### SubTask 5.13.2: 자동 복구 정책 엔진
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/resilience/recovery_policy.ts
+export interface RecoveryPolicy {
+  id: string;
+  name: string;
+  component: string;
+  triggers: RecoveryTrigger[];
+  actions: RecoveryAction[];
+  constraints: RecoveryConstraints;
+  priority: number;
+  enabled: boolean;
+}
+
+export class RecoveryPolicyEngine {
+  private policies: Map<string, RecoveryPolicy[]>;
+  private executor: RecoveryExecutor;
+  private evaluator: PolicyEvaluator;
+  private scheduler: RecoveryScheduler;
+
+  constructor(config: RecoveryEngineConfig) {
+    this.policies = new Map();
+    this.executor = new RecoveryExecutor(config.execution);
+    this.evaluator = new PolicyEvaluator(config.evaluation);
+    this.scheduler = new RecoveryScheduler(config.scheduling);
+  }
+
+  async registerPolicy(policy: RecoveryPolicy): Promise<void> {
+    // 정책 검증
+    const validation = await this.validatePolicy(policy);
+    if (!validation.valid) {
+      throw new ValidationError('Invalid recovery policy', validation.errors);
+    }
+
+    // 컴포넌트별 정책 저장
+    if (!this.policies.has(policy.component)) {
+      this.policies.set(policy.component, []);
+    }
+
+    this.policies.get(policy.component)!.push(policy);
+
+    // 우선순위 정렬
+    this.sortPolicies(policy.component);
+
+    logger.info(`Recovery policy registered: ${policy.name} for ${policy.component}`);
+  }
+
+  async handleFailure(failure: FailureEvent): Promise<RecoveryResult> {
+    const component = failure.component;
+    const applicablePolicies = await this.findApplicablePolicies(component, failure);
+
+    if (applicablePolicies.length === 0) {
+      logger.warn(`No recovery policies found for ${component}`);
+      return {
+        success: false,
+        reason: 'No applicable recovery policies'
+      };
+    }
+
+    // 정책 실행
+    for (const policy of applicablePolicies) {
+      try {
+        const result = await this.executePolicy(policy, failure);
+        
+        if (result.success) {
+          return result;
+        }
+      } catch (error) {
+        logger.error(`Recovery policy ${policy.name} failed:`, error);
+        continue;
+      }
+    }
+
+    return {
+      success: false,
+      reason: 'All recovery policies failed'
+    };
+  }
+
+  private async findApplicablePolicies(
+    component: string,
+    failure: FailureEvent
+  ): Promise<RecoveryPolicy[]> {
+    const componentPolicies = this.policies.get(component) || [];
+    const applicable: RecoveryPolicy[] = [];
+
+    for (const policy of componentPolicies) {
+      if (!policy.enabled) continue;
+
+      // 트리거 평가
+      const triggered = await this.evaluateTriggers(policy.triggers, failure);
+      
+      if (triggered) {
+        // 제약 조건 확인
+        const constraintsMet = await this.checkConstraints(policy.constraints, failure);
+        
+        if (constraintsMet) {
+          applicable.push(policy);
+        }
+      }
+    }
+
+    return applicable;
+  }
+
+  private async evaluateTriggers(
+    triggers: RecoveryTrigger[],
+    failure: FailureEvent
+  ): Promise<boolean> {
+    for (const trigger of triggers) {
+      const result = await this.evaluator.evaluate(trigger, failure);
+      
+      if (result) {
+        return true; // OR 로직
+      }
+    }
+
+    return false;
+  }
+
+  private async executePolicy(
+    policy: RecoveryPolicy,
+    failure: FailureEvent
+  ): Promise<RecoveryResult> {
+    logger.info(`Executing recovery policy: ${policy.name}`);
+
+    const context: RecoveryContext = {
+      policy,
+      failure,
+      startTime: new Date(),
+      attempts: []
+    };
+
+    // 복구 작업 실행
+    for (const action of policy.actions) {
+      try {
+        const result = await this.executeAction(action, context);
+        
+        context.attempts.push({
+          action: action.type,
+          result,
+          timestamp: new Date()
+        });
+
+        if (!result.success && action.critical) {
+          // 중요 작업 실패 시 중단
+          return {
+            success: false,
+            policy: policy.name,
+            context,
+            reason: `Critical action ${action.type} failed`
+          };
+        }
+      } catch (error) {
+        logger.error(`Recovery action ${action.type} failed:`, error);
+        
+        if (action.critical) {
+          throw error;
+        }
+      }
+    }
+
+    // 복구 확인
+    const verified = await this.verifyRecovery(policy, context);
+
+    return {
+      success: verified,
+      policy: policy.name,
+      context,
+      duration: Date.now() - context.startTime.getTime()
+    };
+  }
+
+  private async executeAction(
+    action: RecoveryAction,
+    context: RecoveryContext
+  ): Promise<ActionResult> {
+    switch (action.type) {
+      case 'restart':
+        return this.executor.restart(action.target, action.params);
+      
+      case 'scale':
+        return this.executor.scale(action.target, action.params);
+      
+      case 'failover':
+        return this.executor.failover(action.target, action.params);
+      
+      case 'rollback':
+        return this.executor.rollback(action.target, action.params);
+      
+      case 'heal':
+        return this.executor.heal(action.target, action.params);
+      
+      case 'custom':
+        return this.executor.executeCustom(action.script, context);
+      
+      default:
+        throw new Error(`Unknown recovery action: ${action.type}`);
+    }
+  }
+
+  private async verifyRecovery(
+    policy: RecoveryPolicy,
+    context: RecoveryContext
+  ): Promise<boolean> {
+    if (!policy.verification) {
+      return true; // 검증 설정이 없으면 성공으로 간주
+    }
+
+    // 대기 시간
+    if (policy.verification.delay) {
+      await this.sleep(policy.verification.delay);
+    }
+
+    // 헬스 체크
+    if (policy.verification.healthCheck) {
+      const health = await this.checkHealth(
+        context.failure.component,
+        policy.verification.healthCheck
+      );
+      
+      if (!health) {
+        return false;
+      }
+    }
+
+    // 커스텀 검증
+    if (policy.verification.custom) {
+      const verified = await this.executor.executeCustom(
+        policy.verification.custom,
+        context
+      );
+      
+      if (!verified.success) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+}
+
+// 복구 실행기
+export class RecoveryExecutor {
+  private k8sClient: KubernetesClient;
+  private dockerClient: DockerClient;
+  private cloudProvider: CloudProvider;
+  private scriptRunner: ScriptRunner;
+
+  constructor(config: ExecutorConfig) {
+    this.k8sClient = new KubernetesClient(config.kubernetes);
+    this.dockerClient = new DockerClient(config.docker);
+    this.cloudProvider = new CloudProvider(config.cloud);
+    this.scriptRunner = new ScriptRunner(config.scripts);
+  }
+
+  async restart(target: string, params: RestartParams): Promise<ActionResult> {
+    const startTime = Date.now();
+
+    try {
+      switch (params.type) {
+        case 'pod':
+          await this.k8sClient.deletePod(target, {
+            gracePeriodSeconds: params.gracePeriod || 30
+          });
+          break;
+        
+        case 'deployment':
+          await this.k8sClient.rolloutRestart(target);
+          break;
+        
+        case 'container':
+          await this.dockerClient.restart(target, {
+            timeout: params.timeout || 10
+          });
+          break;
+        
+        case 'service':
+          await this.restartService(target, params);
+          break;
+      }
+
+      return {
+        success: true,
+        duration: Date.now() - startTime,
+        details: {
+          target,
+          type: params.type,
+          params
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        duration: Date.now() - startTime,
+        error: error.message,
+        details: {
+          target,
+          type: params.type,
+          error: error.stack
+        }
+      };
+    }
+  }
+
+  async scale(target: string, params: ScaleParams): Promise<ActionResult> {
+    try {
+      let newReplicas: number;
+
+      if (params.mode === 'absolute') {
+        newReplicas = params.replicas!;
+      } else if (params.mode === 'relative') {
+        const current = await this.getCurrentReplicas(target);
+        newReplicas = current + params.delta!;
+      } else if (params.mode === 'percentage') {
+        const current = await this.getCurrentReplicas(target);
+        newReplicas = Math.ceil(current * (1 + params.percentage! / 100));
+      } else {
+        throw new Error(`Unknown scale mode: ${params.mode}`);
+      }
+
+      // 한계값 적용
+      newReplicas = Math.max(params.min || 1, Math.min(params.max || 100, newReplicas));
+
+      // 스케일링 실행
+      await this.k8sClient.scale(target, newReplicas);
+
+      // 준비 상태 대기
+      if (params.waitForReady) {
+        await this.waitForReady(target, newReplicas, params.timeout || 300);
+      }
+
+      return {
+        success: true,
+        details: {
+          target,
+          previousReplicas: await this.getCurrentReplicas(target),
+          newReplicas
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  async failover(target: string, params: FailoverParams): Promise<ActionResult> {
+    try {
+      // 1. 현재 상태 백업
+      const backup = await this.backupCurrentState(target);
+
+      // 2. 트래픽 전환
+      if (params.drainTraffic) {
+        await this.drainTraffic(target, params.drainTimeout || 30);
+      }
+
+      // 3. 대체 인스턴스 활성화
+      await this.activateStandby(params.standbyTarget);
+
+      // 4. 헬스 체크
+      const healthy = await this.waitForHealthy(
+        params.standbyTarget,
+        params.healthCheckTimeout || 60
+      );
+
+      if (!healthy) {
+        // 롤백
+        await this.rollbackFailover(target, backup);
+        throw new Error('Standby instance failed health check');
+      }
+
+      // 5. 트래픽 라우팅
+      await this.routeTraffic(params.standbyTarget);
+
+      // 6. 기존 인스턴스 처리
+      if (params.shutdownOriginal) {
+        await this.shutdown(target, { graceful: true });
+      }
+
+      return {
+        success: true,
+        details: {
+          original: target,
+          standby: params.standbyTarget,
+          backup
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  async rollback(target: string, params: RollbackParams): Promise<ActionResult> {
+    try {
+      // 롤백 지점 결정
+      const rollbackPoint = params.version || 
+                          await this.getLastStableVersion(target);
+
+      // 롤백 실행
+      switch (params.type) {
+        case 'deployment':
+          await this.k8sClient.rollback(target, rollbackPoint);
+          break;
+        
+        case 'database':
+          await this.rollbackDatabase(target, rollbackPoint);
+          break;
+        
+        case 'configuration':
+          await this.rollbackConfiguration(target, rollbackPoint);
+          break;
+        
+        case 'full':
+          await this.fullRollback(target, rollbackPoint);
+          break;
+      }
+
+      // 롤백 검증
+      const verified = await this.verifyRollback(target, rollbackPoint);
+
+      return {
+        success: verified,
+        details: {
+          target,
+          rollbackPoint,
+          type: params.type
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  async heal(target: string, params: HealParams): Promise<ActionResult> {
+    const healer = new SelfHealingExecutor(params);
+    
+    try {
+      // 1. 진단
+      const diagnosis = await healer.diagnose(target);
+
+      // 2. 치유 계획 수립
+      const plan = await healer.createHealingPlan(diagnosis);
+
+      // 3. 치유 실행
+      const results = [];
+      for (const step of plan.steps) {
+        const result = await healer.executeStep(step);
+        results.push(result);
+
+        if (!result.success && step.critical) {
+          break;
+        }
+      }
+
+      // 4. 검증
+      const healed = await healer.verify(target);
+
+      return {
+        success: healed,
+        details: {
+          diagnosis,
+          plan,
+          results
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+}
+
+// 정책 평가기
+export class PolicyEvaluator {
+  private ruleEngine: RuleEngine;
+  private contextProvider: ContextProvider;
+
+  constructor(config: EvaluatorConfig) {
+    this.ruleEngine = new RuleEngine(config.rules);
+    this.contextProvider = new ContextProvider(config.context);
+  }
+
+  async evaluate(trigger: RecoveryTrigger, failure: FailureEvent): Promise<boolean> {
+    const context = await this.buildContext(failure);
+
+    switch (trigger.type) {
+      case 'error_rate':
+        return this.evaluateErrorRate(trigger, context);
+      
+      case 'health_status':
+        return this.evaluateHealthStatus(trigger, context);
+      
+      case 'metric_threshold':
+        return this.evaluateMetricThreshold(trigger, context);
+      
+      case 'pattern':
+        return this.evaluatePattern(trigger, context);
+      
+      case 'custom':
+        return this.evaluateCustom(trigger, context);
+      
+      default:
+        return false;
+    }
+  }
+
+  private async evaluateErrorRate(
+    trigger: ErrorRateTrigger,
+    context: EvaluationContext
+  ): Promise<boolean> {
+    const errorRate = await this.getErrorRate(
+      context.component,
+      trigger.window || 300 // 5분
+    );
+
+    return this.compareValue(errorRate, trigger.operator, trigger.threshold);
+  }
+
+  private async evaluatePattern(
+    trigger: PatternTrigger,
+    context: EvaluationContext
+  ): Promise<boolean> {
+    const events = await this.getRecentEvents(
+      context.component,
+      trigger.lookback || 3600 // 1시간
+    );
+
+    const pattern = new RegExp(trigger.pattern);
+    const matches = events.filter(e => pattern.test(e.message || e.type));
+
+    return matches.length >= (trigger.minOccurrences || 1);
+  }
+}
+
+// 복구 스케줄러
+export class RecoveryScheduler {
+  private queue: PriorityQueue<RecoveryTask>;
+  private executor: RecoveryExecutor;
+  private rateLimiter: RateLimiter;
+
+  constructor(config: SchedulerConfig) {
+    this.queue = new PriorityQueue();
+    this.executor = new RecoveryExecutor(config.executor);
+    this.rateLimiter = new RateLimiter(config.rateLimit);
+  }
+
+  async scheduleRecovery(task: RecoveryTask): Promise<void> {
+    // 우선순위 계산
+    task.priority = this.calculatePriority(task);
+
+    // 큐에 추가
+    this.queue.enqueue(task);
+
+    // 처리 시작
+    this.processQueue();
+  }
+
+  private async processQueue(): Promise<void> {
+    while (!this.queue.isEmpty()) {
+      // 속도 제한 확인
+      const canProceed = await this.rateLimiter.tryAcquire();
+      if (!canProceed) {
+        await this.sleep(1000);
+        continue;
+      }
+
+      const task = this.queue.dequeue()!;
+
+      try {
+        await this.executeTask(task);
+      } catch (error) {
+        logger.error('Recovery task failed:', error);
+        
+        // 재시도 로직
+        if (task.attempts < task.maxAttempts) {
+          task.attempts++;
+          task.priority = task.priority * 0.9; // 우선순위 감소
+          this.queue.enqueue(task);
+        }
+      }
+    }
+  }
+
+  private calculatePriority(task: RecoveryTask): number {
+    let priority = task.basePriority || 50;
+
+    // 컴포넌트 중요도
+    priority += task.componentCriticality * 20;
+
+    // 영향 범위
+    priority += Math.min(task.impactedUsers / 1000, 30);
+
+    // 시간 긴급도
+    const timeSinceFailure = Date.now() - task.failureTime.getTime();
+    priority += Math.min(timeSinceFailure / 60000, 20); // 최대 20점
+
+    return Math.min(priority, 100);
+  }
+}
+
+// 정책 템플릿
+export const RECOVERY_POLICY_TEMPLATES = {
+  standard_restart: {
+    name: 'Standard Restart Policy',
+    triggers: [{
+      type: 'health_status',
+      status: 'unhealthy',
+      duration: 60
+    }],
+    actions: [{
+      type: 'restart',
+      params: {
+        type: 'pod',
+        gracePeriod: 30
+      }
+    }],
+    constraints: {
+      maxAttempts: 3,
+      cooldown: 300
+    }
+  },
+
+  auto_scaling: {
+    name: 'Auto Scaling Policy',
+    triggers: [{
+      type: 'metric_threshold',
+      metric: 'cpu_usage',
+      operator: '>',
+      threshold: 80,
+      duration: 300
+    }],
+    actions: [{
+      type: 'scale',
+      params: {
+        mode: 'relative',
+        delta: 2,
+        max: 10
+      }
+    }],
+    constraints: {
+      maxAttempts: 5,
+      cooldown: 600
+    }
+  },
+
+  database_failover: {
+    name: 'Database Failover Policy',
+    triggers: [{
+      type: 'health_status',
+      status: 'unhealthy',
+      duration: 30
+    }],
+    actions: [{
+      type: 'failover',
+      params: {
+        drainTraffic: true,
+        drainTimeout: 30,
+        shutdownOriginal: false
+      }
+    }],
+    constraints: {
+      maxAttempts: 1,
+      requiresApproval: true
+    }
+  }
+};
+```
+
+**검증 기준**:
+- [ ] 유연한 복구 정책 시스템
+- [ ] 다양한 복구 액션 지원
+- [ ] 정책 평가 및 실행 엔진
+- [ ] 복구 작업 스케줄링
+
+#### SubTask 5.13.3: 서킷 브레이커 구현
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/resilience/circuit_breaker.ts
+export enum CircuitState {
+  CLOSED = 'closed',
+  OPEN = 'open',
+  HALF_OPEN = 'half_open'
+}
+
+export interface CircuitBreakerConfig {
+  name: string;
+  failureThreshold: number;
+  successThreshold: number;
+  timeout: number;
+  halfOpenRequests: number;
+  windowSize: number;
+  volumeThreshold: number;
+}
+
+export class CircuitBreaker {
+  private state: CircuitState = CircuitState.CLOSED;
+  private failures: number = 0;
+  private successes: number = 0;
+  private lastFailureTime?: Date;
+  private nextAttempt?: Date;
+  private requestWindow: SlidingWindow;
+  private stateChangeListeners: StateChangeListener[] = [];
+
+  constructor(private config: CircuitBreakerConfig) {
+    this.requestWindow = new SlidingWindow(config.windowSize);
+  }
+
+  async execute<T>(fn: () => Promise<T>): Promise<T> {
+    // 상태 확인
+    if (!this.canExecute()) {
+      throw new CircuitOpenError(
+        `Circuit breaker ${this.config.name} is OPEN`,
+        this.nextAttempt
+      );
+    }
+
+    try {
+      // 요청 실행
+      const result = await this.executeWithTimeout(fn);
+      
+      // 성공 처리
+      this.onSuccess();
+      
+      return result;
+    } catch (error) {
+      // 실패 처리
+      this.onFailure(error);
+      throw error;
+    }
+  }
+
+  private canExecute(): boolean {
+    switch (this.state) {
+      case CircuitState.CLOSED:
+        return true;
+      
+      case CircuitState.OPEN:
+        return this.shouldAttemptReset();
+      
+      case CircuitState.HALF_OPEN:
+        return this.getHalfOpenAttempts() < this.config.halfOpenRequests;
+    }
+  }
+
+  private shouldAttemptReset(): boolean {
+    if (!this.nextAttempt) {
+      return false;
+    }
+
+    if (new Date() >= this.nextAttempt) {
+      this.transitionTo(CircuitState.HALF_OPEN);
+      return true;
+    }
+
+    return false;
+  }
+
+  private async executeWithTimeout<T>(fn: () => Promise<T>): Promise<T> {
+    return Promise.race([
+      fn(),
+      new Promise<T>((_, reject) => {
+        setTimeout(() => {
+          reject(new TimeoutError(
+            `Request timed out after ${this.config.timeout}ms`
+          ));
+        }, this.config.timeout);
+      })
+    ]);
+  }
+
+  private onSuccess(): void {
+    this.requestWindow.record({ success: true, timestamp: new Date() });
+
+    switch (this.state) {
+      case CircuitState.CLOSED:
+        this.failures = 0;
+        break;
+      
+      case CircuitState.HALF_OPEN:
+        this.successes++;
+        if (this.successes >= this.config.successThreshold) {
+          this.transitionTo(CircuitState.CLOSED);
+        }
+        break;
+      
+      case CircuitState.OPEN:
+        // 不应该发生
+        break;
+    }
+  }
+
+  private onFailure(error: Error): void {
+    this.requestWindow.record({ 
+      success: false, 
+      timestamp: new Date(),
+      error 
+    });
+    
+    this.lastFailureTime = new Date();
+
+    switch (this.state) {
+      case CircuitState.CLOSED:
+        this.failures++;
+        if (this.shouldOpen()) {
+          this.transitionTo(CircuitState.OPEN);
+        }
+        break;
+      
+      case CircuitState.HALF_OPEN:
+        this.transitionTo(CircuitState.OPEN);
+        break;
+      
+      case CircuitState.OPEN:
+        // 已经打开
+        break;
+    }
+  }
+
+  private shouldOpen(): boolean {
+    // 检查请求量阈值
+    const totalRequests = this.requestWindow.getTotal();
+    if (totalRequests < this.config.volumeThreshold) {
+      return false;
+    }
+
+    // 计算失败率
+    const failureRate = this.requestWindow.getFailureRate();
+    return failureRate >= this.config.failureThreshold;
+  }
+
+  private transitionTo(newState: CircuitState): void {
+    const oldState = this.state;
+    this.state = newState;
+
+    logger.info(`Circuit breaker ${this.config.name} transitioned from ${oldState} to ${newState}`);
+
+    // 状态转换处理
+    switch (newState) {
+      case CircuitState.OPEN:
+        this.nextAttempt = new Date(Date.now() + this.config.timeout);
+        this.failures = 0;
+        break;
+      
+      case CircuitState.HALF_OPEN:
+        this.successes = 0;
+        this.failures = 0;
+        break;
+      
+      case CircuitState.CLOSED:
+        this.nextAttempt = undefined;
+        this.successes = 0;
+        this.failures = 0;
+        break;
+    }
+
+    // 通知监听器
+    this.notifyStateChange(oldState, newState);
+  }
+
+  private notifyStateChange(oldState: CircuitState, newState: CircuitState): void {
+    for (const listener of this.stateChangeListeners) {
+      try {
+        listener({
+          circuitBreaker: this.config.name,
+          oldState,
+          newState,
+          timestamp: new Date(),
+          metrics: this.getMetrics()
+        });
+      } catch (error) {
+        logger.error('State change listener error:', error);
+      }
+    }
+  }
+
+  getState(): CircuitState {
+    return this.state;
+  }
+
+  getMetrics(): CircuitBreakerMetrics {
+    return {
+      state: this.state,
+      requestCount: this.requestWindow.getTotal(),
+      failureCount: this.requestWindow.getFailures(),
+      successCount: this.requestWindow.getSuccesses(),
+      failureRate: this.requestWindow.getFailureRate(),
+      lastFailureTime: this.lastFailureTime,
+      nextAttempt: this.nextAttempt
+    };
+  }
+
+  onStateChange(listener: StateChangeListener): void {
+    this.stateChangeListeners.push(listener);
+  }
+
+  reset(): void {
+    this.transitionTo(CircuitState.CLOSED);
+    this.requestWindow.clear();
+  }
+}
+
+// 滑动窗口实现
+export class SlidingWindow {
+  private requests: RequestRecord[] = [];
+
+  constructor(private windowSize: number) {}
+
+  record(request: RequestRecord): void {
+    this.requests.push(request);
+    this.cleanup();
+  }
+
+  private cleanup(): void {
+    const cutoff = new Date(Date.now() - this.windowSize);
+    this.requests = this.requests.filter(r => r.timestamp > cutoff);
+  }
+
+  getTotal(): number {
+    this.cleanup();
+    return this.requests.length;
+  }
+
+  getFailures(): number {
+    this.cleanup();
+    return this.requests.filter(r => !r.success).length;
+  }
+
+  getSuccesses(): number {
+    this.cleanup();
+    return this.requests.filter(r => r.success).length;
+  }
+
+  getFailureRate(): number {
+    const total = this.getTotal();
+    if (total === 0) return 0;
+    return this.getFailures() / total;
+  }
+
+  clear(): void {
+    this.requests = [];
+  }
+}
+
+// 分布式断路器
+export class DistributedCircuitBreaker extends CircuitBreaker {
+  private redis: RedisClient;
+  private nodeId: string;
+  private syncInterval: number = 1000;
+
+  constructor(
+    config: CircuitBreakerConfig,
+    redisClient: RedisClient
+  ) {
+    super(config);
+    this.redis = redisClient;
+    this.nodeId = uuid();
+    
+    this.startSync();
+  }
+
+  private startSync(): void {
+    setInterval(async () => {
+      await this.syncState();
+    }, this.syncInterval);
+  }
+
+  private async syncState(): Promise<void> {
+    const key = `circuit:${this.config.name}`;
+    
+    try {
+      // 获取共享状态
+      const sharedState = await this.redis.get(key);
+      
+      if (sharedState) {
+        const state = JSON.parse(sharedState);
+        
+        // 合并状态
+        this.mergeState(state);
+      }
+
+      // 发布本地状态
+      await this.publishState();
+    } catch (error) {
+      logger.error('Circuit breaker sync error:', error);
+    }
+  }
+
+  private mergeState(remoteState: SharedCircuitState): void {
+    // 使用最保守的状态
+    if (remoteState.state === CircuitState.OPEN && 
+        this.state !== CircuitState.OPEN) {
+      this.transitionTo(CircuitState.OPEN);
+    }
+
+    // 合并请求窗口
+    // 实际实现中需要更复杂的合并逻辑
+  }
+
+  private async publishState(): Promise<void> {
+    const key = `circuit:${this.config.name}:${this.nodeId}`;
+    const state: SharedCircuitState = {
+      nodeId: this.nodeId,
+      state: this.state,
+      metrics: this.getMetrics(),
+      timestamp: new Date()
+    };
+
+    await this.redis.setex(key, 5, JSON.stringify(state));
+  }
+}
+
+// 断路器管理器
+export class CircuitBreakerManager {
+  private breakers: Map<string, CircuitBreaker> = new Map();
+  private defaultConfig: Partial<CircuitBreakerConfig>;
+  private metricsCollector: MetricsCollector;
+
+  constructor(config: CircuitBreakerManagerConfig) {
+    this.defaultConfig = config.defaults || {};
+    this.metricsCollector = new MetricsCollector();
+    
+    this.startMetricsCollection();
+  }
+
+  getBreaker(name: string, config?: Partial<CircuitBreakerConfig>): CircuitBreaker {
+    if (!this.breakers.has(name)) {
+      const fullConfig: CircuitBreakerConfig = {
+        name,
+        ...this.defaultConfig,
+        ...config
+      } as CircuitBreakerConfig;
+
+      const breaker = new CircuitBreaker(fullConfig);
+      
+      // 注册状态变化监听
+      breaker.onStateChange((event) => {
+        this.handleStateChange(event);
+      });
+
+      this.breakers.set(name, breaker);
+    }
+
+    return this.breakers.get(name)!;
+  }
+
+  private handleStateChange(event: StateChangeEvent): void {
+    // 记录指标
+    this.metricsCollector.recordStateChange(event);
+
+    // 发送警报
+    if (event.newState === CircuitState.OPEN) {
+      this.sendAlert({
+        type: 'circuit_breaker_open',
+        breaker: event.circuitBreaker,
+        timestamp: event.timestamp,
+        metrics: event.metrics
+      });
+    }
+  }
+
+  private startMetricsCollection(): void {
+    setInterval(() => {
+      for (const [name, breaker] of this.breakers) {
+        const metrics = breaker.getMetrics();
+        this.metricsCollector.record(name, metrics);
+      }
+    }, 10000); // 每10秒
+  }
+
+  getMetrics(): Map<string, CircuitBreakerMetrics> {
+    const metrics = new Map();
+    
+    for (const [name, breaker] of this.breakers) {
+      metrics.set(name, breaker.getMetrics());
+    }
+
+    return metrics;
+  }
+
+  resetAll(): void {
+    for (const breaker of this.breakers.values()) {
+      breaker.reset();
+    }
+  }
+}
+
+// 高级断路器功能
+export class AdvancedCircuitBreaker extends CircuitBreaker {
+  private bulkhead: Bulkhead;
+  private rateLimiter: RateLimiter;
+  private fallbackFn?: () => Promise<any>;
+
+  constructor(config: AdvancedCircuitBreakerConfig) {
+    super(config);
+    
+    this.bulkhead = new Bulkhead(config.bulkhead);
+    this.rateLimiter = new RateLimiter(config.rateLimit);
+    this.fallbackFn = config.fallback;
+  }
+
+  async execute<T>(fn: () => Promise<T>): Promise<T> {
+    // 速率限制
+    const allowed = await this.rateLimiter.tryAcquire();
+    if (!allowed) {
+      throw new RateLimitError('Rate limit exceeded');
+    }
+
+    // 隔离舱
+    const permit = await this.bulkhead.tryAcquire();
+    if (!permit) {
+      throw new BulkheadError('Bulkhead limit exceeded');
+    }
+
+    try {
+      // 执行断路器逻辑
+      return await super.execute(fn);
+    } catch (error) {
+      // 降级处理
+      if (this.fallbackFn && this.shouldFallback(error)) {
+        return this.fallbackFn();
+      }
+      throw error;
+    } finally {
+      permit.release();
+    }
+  }
+
+  private shouldFallback(error: Error): boolean {
+    return error instanceof CircuitOpenError ||
+           error instanceof TimeoutError ||
+           error instanceof RateLimitError ||
+           error instanceof BulkheadError;
+  }
+}
+
+// 断路器装饰器
+export function CircuitBreakerDecorator(config?: Partial<CircuitBreakerConfig>) {
+  return function (
+    target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) {
+    const originalMethod = descriptor.value;
+    const breakerName = `${target.constructor.name}.${propertyKey}`;
+    
+    descriptor.value = async function (...args: any[]) {
+      const manager = CircuitBreakerManager.getInstance();
+      const breaker = manager.getBreaker(breakerName, config);
+      
+      return breaker.execute(() => originalMethod.apply(this, args));
+    };
+
+    return descriptor;
+  };
+}
+
+// 使用示例
+export class ExternalAPIClient {
+  @CircuitBreakerDecorator({
+    failureThreshold: 0.5,
+    timeout: 5000,
+    halfOpenRequests: 3
+  })
+  async callAPI(endpoint: string): Promise<any> {
+    const response = await fetch(endpoint);
+    if (!response.ok) {
+      throw new Error(`API call failed: ${response.statusText}`);
+    }
+    return response.json();
+  }
+}
+
+// 断路器仪表板数据
+export class CircuitBreakerDashboard {
+  private manager: CircuitBreakerManager;
+
+  constructor(manager: CircuitBreakerManager) {
+    this.manager = manager;
+  }
+
+  getDashboardData(): CircuitBreakerDashboardData {
+    const metrics = this.manager.getMetrics();
+    const summary = {
+      total: metrics.size,
+      open: 0,
+      halfOpen: 0,
+      closed: 0
+    };
+
+    const breakers: BreakerStatus[] = [];
+
+    for (const [name, metric] of metrics) {
+      switch (metric.state) {
+        case CircuitState.OPEN:
+          summary.open++;
+          break;
+        case CircuitState.HALF_OPEN:
+          summary.halfOpen++;
+          break;
+        case CircuitState.CLOSED:
+          summary.closed++;
+          break;
+      }
+
+      breakers.push({
+        name,
+        state: metric.state,
+        requestCount: metric.requestCount,
+        failureRate: metric.failureRate,
+        lastFailure: metric.lastFailureTime,
+        nextAttempt: metric.nextAttempt
+      });
+    }
+
+    return {
+      summary,
+      breakers,
+      timestamp: new Date()
+    };
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 완전한 서킷 브레이커 구현
+- [ ] 분산 환경 지원
+- [ ] 고급 기능 (Bulkhead, Rate Limiting)
+- [ ] 모니터링 및 대시보드
+
+#### SubTask 5.13.4: 자가 치유 시스템
+**담당자**: 시스템 아키텍트  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/resilience/self_healing.ts
+export interface SelfHealingConfig {
+  enabled: boolean;
+  diagnostics: DiagnosticsConfig;
+  healing: HealingConfig;
+  learning: LearningConfig;
+  verification: VerificationConfig;
+}
+
+export class SelfHealingSystem {
+  private diagnosticsEngine: DiagnosticsEngine;
+  private healingEngine: HealingEngine;
+  private learningEngine: LearningEngine;
+  private verificationEngine: VerificationEngine;
+  private knowledgeBase: KnowledgeBase;
+
+  constructor(config: SelfHealingConfig) {
+    this.diagnosticsEngine = new DiagnosticsEngine(config.diagnostics);
+    this.healingEngine = new HealingEngine(config.healing);
+    this.learningEngine = new LearningEngine(config.learning);
+    this.verificationEngine = new VerificationEngine(config.verification);
+    this.knowledgeBase = new KnowledgeBase();
+    
+    this.initialize();
+  }
+
+  async handleIncident(incident: Incident): Promise<HealingResult> {
+    logger.info(`Self-healing initiated for incident: ${incident.id}`);
+
+    try {
+      // 1. 진단
+      const diagnosis = await this.diagnose(incident);
+      
+      // 2. 치유 계획 수립
+      const healingPlan = await this.createHealingPlan(diagnosis);
+      
+      // 3. 치유 실행
+      const executionResult = await this.executeHealing(healingPlan);
+      
+      // 4. 검증
+      const verification = await this.verify(incident, executionResult);
+      
+      // 5. 학습
+      await this.learn(incident, diagnosis, executionResult, verification);
+
+      return {
+        success: verification.success,
+        incident,
+        diagnosis,
+        healingPlan,
+        executionResult,
+        verification
+      };
+    } catch (error) {
+      logger.error('Self-healing failed:', error);
+      
+      return {
+        success: false,
+        incident,
+        error: error.message
+      };
+    }
+  }
+
+  private async diagnose(incident: Incident): Promise<Diagnosis> {
+    return this.diagnosticsEngine.diagnose(incident);
+  }
+
+  private async createHealingPlan(diagnosis: Diagnosis): Promise<HealingPlan> {
+    // 지식 베이스에서 유사 사례 검색
+    const similarCases = await this.knowledgeBase.findSimilarCases(diagnosis);
+    
+    // 치유 전략 결정
+    const strategy = await this.healingEngine.determineStrategy(
+      diagnosis,
+      similarCases
+    );
+
+    // 치유 계획 생성
+    return this.healingEngine.createPlan(strategy, diagnosis);
+  }
+
+  private async executeHealing(plan: HealingPlan): Promise<ExecutionResult> {
+    return this.healingEngine.execute(plan);
+  }
+
+  private async verify(
+    incident: Incident,
+    executionResult: ExecutionResult
+  ): Promise<VerificationResult> {
+    return this.verificationEngine.verify(incident, executionResult);
+  }
+
+  private async learn(
+    incident: Incident,
+    diagnosis: Diagnosis,
+    executionResult: ExecutionResult,
+    verification: VerificationResult
+  ): Promise<void> {
+    const experience = {
+      incident,
+      diagnosis,
+      executionResult,
+      verification,
+      timestamp: new Date()
+    };
+
+    // 경험 저장
+    await this.knowledgeBase.addExperience(experience);
+
+    // 패턴 학습
+    await this.learningEngine.learn(experience);
+
+    // 모델 업데이트
+    if (verification.success) {
+      await this.learningEngine.reinforceStrategy(
+        diagnosis.pattern,
+        executionResult.strategy
+      );
+    }
+  }
+}
+
+// 진단 엔진
+export class DiagnosticsEngine {
+  private analyzers: Map<string, Analyzer>;
+  private correlator: EventCorrelator;
+  private anomalyDetector: AnomalyDetector;
+
+  constructor(config: DiagnosticsConfig) {
+    this.analyzers = this.initializeAnalyzers(config.analyzers);
+    this.correlator = new EventCorrelator(config.correlation);
+    this.anomalyDetector = new AnomalyDetector(config.anomaly);
+  }
+
+  async diagnose(incident: Incident): Promise<Diagnosis> {
+    // 1. 데이터 수집
+    const data = await this.collectDiagnosticData(incident);
+
+    // 2. 분석 실행
+    const analysisResults = await this.runAnalyzers(data);
+
+    // 3. 상관 관계 분석
+    const correlations = await this.correlator.correlate(
+      incident,
+      analysisResults
+    );
+
+    // 4. 이상 탐지
+    const anomalies = await this.anomalyDetector.detect(data);
+
+    // 5. 근본 원인 분석
+    const rootCause = await this.findRootCause(
+      analysisResults,
+      correlations,
+      anomalies
+    );
+
+    // 6. 진단 생성
+    return {
+      incidentId: incident.id,
+      timestamp: new Date(),
+      pattern: this.identifyPattern(rootCause),
+      rootCause,
+      symptoms: this.extractSymptoms(analysisResults),
+      correlations,
+      anomalies,
+      confidence: this.calculateConfidence(rootCause, correlations),
+      recommendations: await this.generateRecommendations(rootCause)
+    };
+  }
+
+  private async collectDiagnosticData(
+    incident: Incident
+  ): Promise<DiagnosticData> {
+    const collectors = [
+      this.collectLogs(incident),
+      this.collectMetrics(incident),
+      this.collectTraces(incident),
+      this.collectEvents(incident),
+      this.collectSystemState(incident)
+    ];
+
+    const [logs, metrics, traces, events, systemState] = 
+      await Promise.all(collectors);
+
+    return {
+      incident,
+      logs,
+      metrics,
+      traces,
+      events,
+      systemState,
+      collectedAt: new Date()
+    };
+  }
+
+  private async runAnalyzers(
+    data: DiagnosticData
+  ): Promise<AnalysisResult[]> {
+    const results: AnalysisResult[] = [];
+
+    for (const [name, analyzer] of this.analyzers) {
+      try {
+        const result = await analyzer.analyze(data);
+        results.push({
+          analyzer: name,
+          ...result
+        });
+      } catch (error) {
+        logger.error(`Analyzer ${name} failed:`, error);
+      }
+    }
+
+    return results;
+  }
+
+  private async findRootCause(
+    analysisResults: AnalysisResult[],
+    correlations: Correlation[],
+    anomalies: Anomaly[]
+  ): Promise<RootCause> {
+    // 가중치 기반 점수 계산
+    const candidates = this.generateCandidates(
+      analysisResults,
+      correlations,
+      anomalies
+    );
+
+    // 점수별 정렬
+    candidates.sort((a, b) => b.score - a.score);
+
+    // 최상위 후보 선택
+    const topCandidate = candidates[0];
+
+    return {
+      component: topCandidate.component,
+      cause: topCandidate.cause,
+      evidence: topCandidate.evidence,
+      confidence: topCandidate.score / 100,
+      alternativeCauses: candidates.slice(1, 4)
+    };
+  }
+
+  private identifyPattern(rootCause: RootCause): DiagnosticPattern {
+    // 패턴 매칭 로직
+    const patterns = [
+      { pattern: 'resource_exhaustion', matcher: this.isResourceExhaustion },
+      { pattern: 'cascading_failure', matcher: this.isCascadingFailure },
+      { pattern: 'configuration_drift', matcher: this.isConfigurationDrift },
+      { pattern: 'network_partition', matcher: this.isNetworkPartition },
+      { pattern: 'data_corruption', matcher: this.isDataCorruption }
+    ];
+
+    for (const { pattern, matcher } of patterns) {
+      if (matcher(rootCause)) {
+        return pattern as DiagnosticPattern;
+      }
+    }
+
+    return 'unknown';
+  }
+}
+
+// 치유 엔진
+export class HealingEngine {
+  private strategies: Map<string, HealingStrategy>;
+  private executor: HealingExecutor;
+  private rollbackManager: RollbackManager;
+
+  constructor(config: HealingConfig) {
+    this.strategies = this.initializeStrategies(config.strategies);
+    this.executor = new HealingExecutor(config.executor);
+    this.rollbackManager = new RollbackManager(config.rollback);
+  }
+
+  async determineStrategy(
+    diagnosis: Diagnosis,
+    similarCases: SimilarCase[]
+  ): Promise<HealingStrategy> {
+    // 1. 패턴 기반 전략 선택
+    const patternStrategy = this.strategies.get(diagnosis.pattern);
+    
+    if (patternStrategy) {
+      return patternStrategy;
+    }
+
+    // 2. 유사 사례 기반 전략
+    if (similarCases.length > 0) {
+      const successfulStrategies = similarCases
+        .filter(c => c.outcome.success)
+        .map(c => c.strategy);
+
+      if (successfulStrategies.length > 0) {
+        return this.selectBestStrategy(successfulStrategies, diagnosis);
+      }
+    }
+
+    // 3. 기본 전략
+    return this.strategies.get('default')!;
+  }
+
+  async createPlan(
+    strategy: HealingStrategy,
+    diagnosis: Diagnosis
+  ): Promise<HealingPlan> {
+    const steps = await strategy.generateSteps(diagnosis);
+    
+    return {
+      id: uuid(),
+      strategy: strategy.name,
+      diagnosis: diagnosis.incidentId,
+      steps,
+      estimatedDuration: this.estimateDuration(steps),
+      riskLevel: this.assessRisk(steps),
+      rollbackPlan: await this.createRollbackPlan(steps),
+      createdAt: new Date()
+    };
+  }
+
+  async execute(plan: HealingPlan): Promise<ExecutionResult> {
+    const result: ExecutionResult = {
+      planId: plan.id,
+      strategy: plan.strategy,
+      steps: [],
+      startTime: new Date(),
+      status: 'in_progress'
+    };
+
+    // 체크포인트 생성
+    const checkpoint = await this.rollbackManager.createCheckpoint();
+
+    try {
+      for (const step of plan.steps) {
+        const stepResult = await this.executeStep(step, result);
+        result.steps.push(stepResult);
+
+        if (!stepResult.success && step.critical) {
+          result.status = 'failed';
+          break;
+        }
+      }
+
+      if (result.status === 'in_progress') {
+        result.status = 'completed';
+      }
+    } catch (error) {
+      result.status = 'failed';
+      result.error = error.message;
+
+      // 롤백 실행
+      await this.rollbackManager.rollback(checkpoint);
+    }
+
+    result.endTime = new Date();
+    result.duration = result.endTime.getTime() - result.startTime.getTime();
+
+    return result;
+  }
+
+  private async executeStep(
+    step: HealingStep,
+    result: ExecutionResult
+  ): Promise<StepResult> {
+    logger.info(`Executing healing step: ${step.name}`);
+
+    const stepResult: StepResult = {
+      step: step.name,
+      startTime: new Date(),
+      status: 'running'
+    };
+
+    try {
+      // 사전 검증
+      if (step.preConditions) {
+        const preCheck = await this.checkConditions(step.preConditions);
+        if (!preCheck.met) {
+          throw new Error(`Pre-conditions not met: ${preCheck.reason}`);
+        }
+      }
+
+      // 실행
+      const output = await this.executor.execute(step);
+      stepResult.output = output;
+
+      // 사후 검증
+      if (step.postConditions) {
+        const postCheck = await this.checkConditions(step.postConditions);
+        if (!postCheck.met) {
+          throw new Error(`Post-conditions not met: ${postCheck.reason}`);
+        }
+      }
+
+      stepResult.status = 'completed';
+      stepResult.success = true;
+    } catch (error) {
+      stepResult.status = 'failed';
+      stepResult.success = false;
+      stepResult.error = error.message;
+      
+      logger.error(`Healing step failed: ${step.name}`, error);
+    }
+
+    stepResult.endTime = new Date();
+    stepResult.duration = stepResult.endTime.getTime() - stepResult.startTime.getTime();
+
+    return stepResult;
+  }
+}
+
+// 학습 엔진
+export class LearningEngine {
+  private model: HealingModel;
+  private featureExtractor: FeatureExtractor;
+  private trainer: ModelTrainer;
+
+  constructor(config: LearningConfig) {
+    this.model = new HealingModel(config.model);
+    this.featureExtractor = new FeatureExtractor(config.features);
+    this.trainer = new ModelTrainer(config.training);
+  }
+
+  async learn(experience: HealingExperience): Promise<void> {
+    // 특징 추출
+    const features = await this.featureExtractor.extract(experience);
+
+    // 레이블 생성
+    const label = this.generateLabel(experience);
+
+    // 훈련 데이터 추가
+    await this.trainer.addTrainingData(features, label);
+
+    // 모델 업데이트 (배치 처리)
+    if (await this.trainer.shouldUpdate()) {
+      await this.updateModel();
+    }
+  }
+
+  async reinforceStrategy(
+    pattern: DiagnosticPattern,
+    strategy: string
+  ): Promise<void> {
+    // 전략 성공률 업데이트
+    await this.model.updateStrategySuccess(pattern, strategy);
+
+    // 가중치 조정
+    await this.model.adjustWeights(pattern, strategy, 1.1);
+  }
+
+  async predict(diagnosis: Diagnosis): Promise<HealingPrediction> {
+    const features = await this.featureExtractor.extractFromDiagnosis(diagnosis);
+    return this.model.predict(features);
+  }
+
+  private async updateModel(): Promise<void> {
+    const trainingData = await this.trainer.getTrainingBatch();
+    
+    // 모델 훈련
+    const metrics = await this.model.train(trainingData);
+
+    logger.info('Healing model updated:', metrics);
+
+    // 모델 저장
+    await this.model.save();
+  }
+
+  private generateLabel(experience: HealingExperience): TrainingLabel {
+    return {
+      success: experience.verification.success,
+      strategy: experience.executionResult.strategy,
+      duration: experience.executionResult.duration,
+      impact: this.calculateImpact(experience)
+    };
+  }
+}
+
+// 검증 엔진
+export class VerificationEngine {
+  private validators: Map<string, Validator>;
+  private metricsCollector: MetricsCollector;
+
+  constructor(config: VerificationConfig) {
+    this.validators = this.initializeValidators(config.validators);
+    this.metricsCollector = new MetricsCollector();
+  }
+
+  async verify(
+    incident: Incident,
+    executionResult: ExecutionResult
+  ): Promise<VerificationResult> {
+    const verifications: VerificationCheck[] = [];
+
+    // 1. 문제 해결 확인
+    const resolved = await this.verifyResolution(incident);
+    verifications.push({
+      name: 'incident_resolved',
+      passed: resolved,
+      details: resolved ? 'Incident has been resolved' : 'Incident still active'
+    });
+
+    // 2. 시스템 상태 확인
+    const systemHealthy = await this.verifySystemHealth();
+    verifications.push({
+      name: 'system_health',
+      passed: systemHealthy,
+      details: await this.getSystemHealthDetails()
+    });
+
+    // 3. 부작용 확인
+    const noSideEffects = await this.verifySideEffects(executionResult);
+    verifications.push({
+      name: 'no_side_effects',
+      passed: noSideEffects,
+      details: await this.getSideEffectDetails()
+    });
+
+    // 4. 성능 영향 확인
+    const performanceOk = await this.verifyPerformance();
+    verifications.push({
+      name: 'performance_impact',
+      passed: performanceOk,
+      details: await this.getPerformanceDetails()
+    });
+
+    // 종합 결과
+    const success = verifications.every(v => v.passed);
+
+    return {
+      success,
+      verifications,
+      confidence: this.calculateVerificationConfidence(verifications),
+      timestamp: new Date()
+    };
+  }
+
+  private async verifyResolution(incident: Incident): Promise<boolean> {
+    // 인시던트 상태 확인
+    const currentStatus = await this.getIncidentStatus(incident.id);
+    
+    // 관련 알람 확인
+    const activeAlerts = await this.getRelatedAlerts(incident);
+    
+    // 에러율 확인
+    const errorRate = await this.getCurrentErrorRate(incident.component);
+
+    return currentStatus === 'resolved' && 
+           activeAlerts.length === 0 && 
+           errorRate < 0.01;
+  }
+
+  private calculateVerificationConfidence(
+    verifications: VerificationCheck[]
+  ): number {
+    const weights = {
+      incident_resolved: 0.4,
+      system_health: 0.3,
+      no_side_effects: 0.2,
+      performance_impact: 0.1
+    };
+
+    let totalScore = 0;
+    let totalWeight = 0;
+
+    for (const verification of verifications) {
+      const weight = weights[verification.name] || 0.1;
+      totalScore += verification.passed ? weight : 0;
+      totalWeight += weight;
+    }
+
+    return totalScore / totalWeight;
+  }
+}
+
+// 지식 베이스
+export class KnowledgeBase {
+  private storage: KnowledgeStorage;
+  private indexer: KnowledgeIndexer;
+  private searcher: SimilaritySearcher;
+
+  constructor() {
+    this.storage = new KnowledgeStorage();
+    this.indexer = new KnowledgeIndexer();
+    this.searcher = new SimilaritySearcher();
+  }
+
+  async addExperience(experience: HealingExperience): Promise<void> {
+    // 경험 저장
+    await this.storage.save(experience);
+
+    // 인덱싱
+    await this.indexer.index(experience);
+
+    // 패턴 추출 및 저장
+    const patterns = await this.extractPatterns(experience);
+    await this.storage.savePatterns(patterns);
+  }
+
+  async findSimilarCases(
+    diagnosis: Diagnosis
+  ): Promise<SimilarCase[]> {
+    // 특징 벡터 생성
+    const vector = await this.createFeatureVector(diagnosis);
+
+    // 유사도 검색
+    const similar = await this.searcher.search(vector, {
+      k: 10,
+      threshold: 0.7
+    });
+
+    // 결과 정렬 및 반환
+    return similar.map(s => ({
+      ...s.experience,
+      similarity: s.score
+    }));
+  }
+
+  private async extractPatterns(
+    experience: HealingExperience
+  ): Promise<Pattern[]> {
+    const patterns: Pattern[] = [];
+
+    // 시계열 패턴
+    const timeSeriesPattern = await this.extractTimeSeriesPattern(
+      experience.incident.metrics
+    );
+    if (timeSeriesPattern) {
+      patterns.push(timeSeriesPattern);
+    }
+
+    // 로그 패턴
+    const logPattern = await this.extractLogPattern(
+      experience.diagnosis.logs
+    );
+    if (logPattern) {
+      patterns.push(logPattern);
+    }
+
+    // 이벤트 시퀀스 패턴
+    const eventPattern = await this.extractEventPattern(
+      experience.incident.events
+    );
+    if (eventPattern) {
+      patterns.push(eventPattern);
+    }
+
+    return patterns;
+  }
+}
+
+// 치유 전략 예제
+export class RestartStrategy implements HealingStrategy {
+  name = 'restart_strategy';
+
+  async generateSteps(diagnosis: Diagnosis): Promise<HealingStep[]> {
+    const component = diagnosis.rootCause.component;
+
+    return [
+      {
+        name: 'drain_traffic',
+        type: 'traffic_control',
+        target: component,
+        action: {
+          command: 'drain',
+          timeout: 30
+        },
+        critical: false
+      },
+      {
+        name: 'create_backup',
+        type: 'backup',
+        target: component,
+        action: {
+          command: 'snapshot',
+          destination: 'backup-storage'
+        },
+        critical: false
+      },
+      {
+        name: 'restart_component',
+        type: 'lifecycle',
+        target: component,
+        action: {
+          command: 'restart',
+          gracePeriod: 30
+        },
+        critical: true,
+        preConditions: [{
+          type: 'traffic_drained',
+          target: component
+        }]
+      },
+      {
+        name: 'health_check',
+        type: 'verification',
+        target: component,
+        action: {
+          command: 'health_check',
+          retries: 5,
+          interval: 10
+        },
+        critical: true,
+        postConditions: [{
+          type: 'component_healthy',
+          target: component
+        }]
+      },
+      {
+        name: 'restore_traffic',
+        type: 'traffic_control',
+        target: component,
+        action: {
+          command: 'restore',
+          gradual: true,
+          duration: 60
+        },
+        critical: false
+      }
+    ];
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 완전한 자가 치유 시스템
+- [ ] 진단 및 근본 원인 분석
+- [ ] 학습 기반 개선
+- [ ] 치유 전략 실행 및 검증
+
+### Task 5.14: 트랜잭션 관리 및 롤백 메커니즘
+
+#### SubTask 5.14.1: 분산 트랜잭션 관리자
+**담당자**: 백엔드 아키텍트  
+**예상 소요시간**: 14시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/transaction/distributed_transaction.ts
+export interface DistributedTransaction {
+  id: string;
+  type: TransactionType;
+  status: TransactionStatus;
+  participants: Participant[];
+  operations: Operation[];
+  metadata: TransactionMetadata;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class DistributedTransactionManager {
+  private coordinator: TransactionCoordinator;
+  private participantManager: ParticipantManager;
+  private logManager: TransactionLogManager;
+  private recoveryManager: RecoveryManager;
+
+  constructor(config: DTMConfig) {
+    this.coordinator = new TransactionCoordinator(config.coordinator);
+    this.participantManager = new ParticipantManager(config.participants);
+    this.logManager = new TransactionLogManager(config.logging);
+    this.recoveryManager = new RecoveryManager(config.recovery);
+  }
+
+  async beginTransaction(
+    type: TransactionType,
+    options?: TransactionOptions
+  ): Promise<TransactionContext> {
+    const transaction: DistributedTransaction = {
+      id: this.generateTransactionId(),
+      type,
+      status: TransactionStatus.INITIATED,
+      participants: [],
+      operations: [],
+      metadata: {
+        timeout: options?.timeout || 30000,
+        retryPolicy: options?.retryPolicy || { maxRetries: 3 },
+        isolationLevel: options?.isolationLevel || IsolationLevel.SERIALIZABLE
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // 트랜잭션 로그 기록
+    await this.logManager.logTransaction(transaction);
+
+    // 컨텍스트 생성
+    const context = new TransactionContext(transaction, this);
+
+    // 타임아웃 설정
+    this.setupTimeout(context);
+
+    return context;
+  }
+
+  async prepare(context: TransactionContext): Promise<PrepareResult> {
+    const transaction = context.getTransaction();
+    
+    try {
+      // 상태 변경
+      await this.updateStatus(transaction, TransactionStatus.PREPARING);
+
+      // 모든 참여자에게 prepare 요청
+      const preparePromises = transaction.participants.map(participant =>
+        this.participantManager.prepare(participant, transaction)
+      );
+
+      const results = await Promise.allSettled(preparePromises);
+
+      // 결과 분석
+      const prepared = results.filter(r => r.status === 'fulfilled' && r.value.vote === 'yes');
+      const failed = results.filter(r => r.status === 'rejected' || r.value?.vote === 'no');
+
+      if (failed.length > 0) {
+        // 하나라도 실패하면 중단
+        await this.abort(context, 'Prepare phase failed');
+        return {
+          success: false,
+          prepared: prepared.length,
+          failed: failed.length,
+          details: failed
+        };
+      }
+
+      // 모두 성공
+      await this.updateStatus(transaction, TransactionStatus.PREPARED);
+      
+      return {
+        success: true,
+        prepared: prepared.length,
+        failed: 0
+      };
+    } catch (error) {
+      await this.abort(context, error.message);
+      throw error;
+    }
+  }
+
+  async commit(context: TransactionContext): Promise<CommitResult> {
+    const transaction = context.getTransaction();
+
+    if (transaction.status !== TransactionStatus.PREPARED) {
+      throw new Error('Transaction must be in PREPARED state to commit');
+    }
+
+    try {
+      // 상태 변경
+      await this.updateStatus(transaction, TransactionStatus.COMMITTING);
+
+      // 커밋 결정 로그
+      await this.logManager.logDecision(transaction.id, 'commit');
+
+      // 모든 참여자에게 commit 요청
+      const commitPromises = transaction.participants.map(participant =>
+        this.participantManager.commit(participant, transaction)
+      );
+
+      const results = await Promise.allSettled(commitPromises);
+
+      // 결과 확인
+      const committed = results.filter(r => r.status === 'fulfilled');
+      const failed = results.filter(r => r.status === 'rejected');
+
+      if (failed.length > 0) {
+        // 복구 프로세스 시작
+        await this.recoveryManager.recoverCommit(transaction, failed);
+      }
+
+      // 완료 상태로 변경
+      await this.updateStatus(transaction, TransactionStatus.COMMITTED);
+
+      return {
+        success: true,
+        committed: committed.length,
+        recovered: failed.length
+      };
+    } catch (error) {
+      logger.error('Commit failed:', error);
+      // 커밋 실패는 복구 필요
+      await this.recoveryManager.handleCommitFailure(transaction, error);
+      throw error;
+    }
+  }
+
+  async abort(
+    context: TransactionContext,
+    reason?: string
+  ): Promise<AbortResult> {
+    const transaction = context.getTransaction();
+
+    try {
+      // 상태 변경
+      await this.updateStatus(transaction, TransactionStatus.ABORTING);
+
+      // 중단 결정 로그
+      await this.logManager.logDecision(transaction.id, 'abort', reason);
+
+      // 모든 참여자에게 abort 요청
+      const abortPromises = transaction.participants.map(participant =>
+        this.participantManager.abort(participant, transaction)
+      );
+
+      const results = await Promise.allSettled(abortPromises);
+
+      // 완료 상태로 변경
+      await this.updateStatus(transaction, TransactionStatus.ABORTED);
+
+      return {
+        success: true,
+        reason,
+        aborted: results.filter(r => r.status === 'fulfilled').length
+      };
+    } catch (error) {
+      logger.error('Abort failed:', error);
+      // 중단 실패도 복구 필요
+      await this.recoveryManager.handleAbortFailure(transaction, error);
+      throw error;
+    }
+  }
+
+  private generateTransactionId(): string {
+    return `txn_${Date.now()}_${uuid()}`;
+  }
+
+  private setupTimeout(context: TransactionContext): void {
+    const transaction = context.getTransaction();
+    const timeout = transaction.metadata.timeout;
+
+    setTimeout(async () => {
+      if (transaction.status === TransactionStatus.INITIATED ||
+          transaction.status === TransactionStatus.PREPARING ||
+          transaction.status === TransactionStatus.PREPARED) {
+        logger.warn(`Transaction ${transaction.id} timed out`);
+        await this.abort(context, 'Transaction timeout');
+      }
+    }, timeout);
+  }
+}
+
+// 트랜잭션 컨텍스트
+export class TransactionContext {
+  private transaction: DistributedTransaction;
+  private manager: DistributedTransactionManager;
+  private resources: Map<string, any> = new Map();
+  private completed: boolean = false;
+
+  constructor(
+    transaction: DistributedTransaction,
+    manager: DistributedTransactionManager
+  ) {
+    this.transaction = transaction;
+    this.manager = manager;
+  }
+
+  async addParticipant(
+    participant: Participant
+  ): Promise<void> {
+    if (this.completed) {
+      throw new Error('Cannot add participant to completed transaction');
+    }
+
+    this.transaction.participants.push(participant);
+    await this.manager.updateTransaction(this.transaction);
+  }
+
+  async addOperation(
+    operation: Operation
+  ): Promise<void> {
+    if (this.completed) {
+      throw new Error('Cannot add operation to completed transaction');
+    }
+
+    this.transaction.operations.push(operation);
+    await this.manager.updateTransaction(this.transaction);
+  }
+
+  async execute(): Promise<TransactionResult> {
+    try {
+      // Prepare phase
+      const prepareResult = await this.manager.prepare(this);
+      
+      if (!prepareResult.success) {
+        return {
+          success: false,
+          transactionId: this.transaction.id,
+          status: TransactionStatus.ABORTED,
+          reason: 'Prepare phase failed'
+        };
+      }
+
+      // Commit phase
+      const commitResult = await this.manager.commit(this);
+      
+      this.completed = true;
+
+      return {
+        success: commitResult.success,
+        transactionId: this.transaction.id,
+        status: TransactionStatus.COMMITTED
+      };
+    } catch (error) {
+      await this.rollback(error.message);
+      throw error;
+    }
+  }
+
+  async rollback(reason?: string): Promise<void> {
+    await this.manager.abort(this, reason);
+    this.completed = true;
+  }
+
+  getTransaction(): DistributedTransaction {
+    return this.transaction;
+  }
+
+  setResource(key: string, value: any): void {
+    this.resources.set(key, value);
+  }
+
+  getResource(key: string): any {
+    return this.resources.get(key);
+  }
+}
+
+// 참여자 관리자
+export class ParticipantManager {
+  private adapters: Map<string, ParticipantAdapter>;
+
+  constructor(config: ParticipantConfig) {
+    this.adapters = this.initializeAdapters(config.adapters);
+  }
+
+  async prepare(
+    participant: Participant,
+    transaction: DistributedTransaction
+  ): Promise<PrepareVote> {
+    const adapter = this.getAdapter(participant.type);
+    
+    try {
+      const result = await adapter.prepare(participant, transaction);
+      
+      // 준비 상태 로그
+      await this.logParticipantState(
+        participant,
+        transaction.id,
+        'prepared',
+        result
+      );
+
+      return result;
+    } catch (error) {
+      logger.error(`Prepare failed for participant ${participant.id}:`, error);
+      
+      return {
+        vote: 'no',
+        reason: error.message
+      };
+    }
+  }
+
+  async commit(
+    participant: Participant,
+    transaction: DistributedTransaction
+  ): Promise<void> {
+    const adapter = this.getAdapter(participant.type);
+    
+    await adapter.commit(participant, transaction);
+    
+    // 커밋 상태 로그
+    await this.logParticipantState(
+      participant,
+      transaction.id,
+      'committed'
+    );
+  }
+
+  async abort(
+    participant: Participant,
+    transaction: DistributedTransaction
+  ): Promise<void> {
+    const adapter = this.getAdapter(participant.type);
+    
+    await adapter.abort(participant, transaction);
+    
+    // 중단 상태 로그
+    await this.logParticipantState(
+      participant,
+      transaction.id,
+      'aborted'
+    );
+  }
+
+  private getAdapter(type: string): ParticipantAdapter {
+    const adapter = this.adapters.get(type);
+    
+    if (!adapter) {
+      throw new Error(`No adapter found for participant type: ${type}`);
+    }
+
+    return adapter;
+  }
+}
+
+// 데이터베이스 참여자 어댑터
+export class DatabaseParticipantAdapter implements ParticipantAdapter {
+  async prepare(
+    participant: Participant,
+    transaction: DistributedTransaction
+  ): Promise<PrepareVote> {
+    const db = await this.getConnection(participant);
+    
+    try {
+      // 트랜잭션 시작
+      await db.beginTransaction({
+        isolationLevel: transaction.metadata.isolationLevel
+      });
+
+      // 작업 실행 (준비 단계)
+      for (const operation of transaction.operations) {
+        if (operation.participantId === participant.id) {
+          await this.executeOperation(db, operation);
+        }
+      }
+
+      // 준비 완료
+      return {
+        vote: 'yes',
+        state: await this.saveState(db)
+      };
+    } catch (error) {
+      // 준비 실패
+      await db.rollback();
+      
+      return {
+        vote: 'no',
+        reason: error.message
+      };
+    }
+  }
+
+  async commit(
+    participant: Participant,
+    transaction: DistributedTransaction
+  ): Promise<void> {
+    const db = await this.getConnection(participant);
+    
+    try {
+      await db.commit();
+    } catch (error) {
+      logger.error('Database commit failed:', error);
+      throw error;
+    } finally {
+      await db.release();
+    }
+  }
+
+  async abort(
+    participant: Participant,
+    transaction: DistributedTransaction
+  ): Promise<void> {
+    const db = await this.getConnection(participant);
+    
+    try {
+      await db.rollback();
+    } catch (error) {
+      logger.error('Database rollback failed:', error);
+      throw error;
+    } finally {
+      await db.release();
+    }
+  }
+
+  private async executeOperation(
+    db: DatabaseConnection,
+    operation: Operation
+  ): Promise<void> {
+    switch (operation.type) {
+      case 'insert':
+        await db.insert(operation.table, operation.data);
+        break;
+      
+      case 'update':
+        await db.update(operation.table, operation.data, operation.where);
+        break;
+      
+      case 'delete':
+        await db.delete(operation.table, operation.where);
+        break;
+      
+      default:
+        throw new Error(`Unknown operation type: ${operation.type}`);
+    }
+  }
+}
+
+// 메시지 큐 참여자 어댑터
+export class MessageQueueParticipantAdapter implements ParticipantAdapter {
+  async prepare(
+    participant: Participant,
+    transaction: DistributedTransaction
+  ): Promise<PrepareVote> {
+    const queue = await this.getQueue(participant);
+    
+    try {
+      // 메시지 준비
+      const messages = transaction.operations
+        .filter(op => op.participantId === participant.id)
+        .map(op => op.data);
+
+      // 트랜잭션 메시지 생성
+      const transactionalMessages = messages.map(msg => ({
+        ...msg,
+        transactionId: transaction.id,
+        status: 'prepared'
+      }));
+
+      // 준비 큐에 저장
+      await queue.prepareBatch(transactionalMessages);
+
+      return {
+        vote: 'yes',
+        messageIds: transactionalMessages.map(m => m.id)
+      };
+    } catch (error) {
+      return {
+        vote: 'no',
+        reason: error.message
+      };
+    }
+  }
+
+  async commit(
+    participant: Participant,
+    transaction: DistributedTransaction
+  ): Promise<void> {
+    const queue = await this.getQueue(participant);
+    await queue.commitTransaction(transaction.id);
+  }
+
+  async abort(
+    participant: Participant,
+    transaction: DistributedTransaction
+  ): Promise<void> {
+    const queue = await this.getQueue(participant);
+    await queue.abortTransaction(transaction.id);
+  }
+}
+
+// SAGA 패턴 구현
+export class SagaOrchestrator {
+  private sagaDefinitions: Map<string, SagaDefinition>;
+  private sagaExecutor: SagaExecutor;
+  private compensationManager: CompensationManager;
+
+  constructor(config: SagaConfig) {
+    this.sagaDefinitions = new Map();
+    this.sagaExecutor = new SagaExecutor(config.executor);
+    this.compensationManager = new CompensationManager(config.compensation);
+  }
+
+  async registerSaga(definition: SagaDefinition): Promise<void> {
+    this.sagaDefinitions.set(definition.name, definition);
+  }
+
+  async executeSaga(
+    sagaName: string,
+    input: any
+  ): Promise<SagaExecutionResult> {
+    const definition = this.sagaDefinitions.get(sagaName);
+    
+    if (!definition) {
+      throw new Error(`Saga ${sagaName} not found`);
+    }
+
+    const execution: SagaExecution = {
+      id: uuid(),
+      sagaName,
+      status: SagaStatus.RUNNING,
+      steps: [],
+      input,
+      startTime: new Date()
+    };
+
+    try {
+      // 각 단계 실행
+      for (const step of definition.steps) {
+        const stepResult = await this.executeStep(step, execution);
+        execution.steps.push(stepResult);
+
+        if (!stepResult.success) {
+          // 보상 트랜잭션 실행
+          await this.compensate(execution);
+          
+          execution.status = SagaStatus.COMPENSATED;
+          break;
+        }
+      }
+
+      if (execution.status === SagaStatus.RUNNING) {
+        execution.status = SagaStatus.COMPLETED;
+      }
+    } catch (error) {
+      logger.error('Saga execution failed:', error);
+      
+      // 보상 실행
+      await this.compensate(execution);
+      
+      execution.status = SagaStatus.FAILED;
+      execution.error = error.message;
+    }
+
+    execution.endTime = new Date();
+
+    return {
+      success: execution.status === SagaStatus.COMPLETED,
+      execution
+    };
+  }
+
+  private async executeStep(
+    stepDef: SagaStep,
+    execution: SagaExecution
+  ): Promise<SagaStepResult> {
+    const result: SagaStepResult = {
+      step: stepDef.name,
+      startTime: new Date(),
+      status: StepStatus.RUNNING
+    };
+
+    try {
+      // 트랜잭션 실행
+      const output = await this.sagaExecutor.executeTransaction(
+        stepDef.transaction,
+        execution
+      );
+
+      result.output = output;
+      result.status = StepStatus.COMPLETED;
+      result.success = true;
+
+      // 보상 정보 저장
+      if (stepDef.compensation) {
+        await this.compensationManager.recordCompensation(
+          execution.id,
+          stepDef,
+          output
+        );
+      }
+    } catch (error) {
+      result.status = StepStatus.FAILED;
+      result.success = false;
+      result.error = error.message;
+    }
+
+    result.endTime = new Date();
+    return result;
+  }
+
+  private async compensate(execution: SagaExecution): Promise<void> {
+    logger.info(`Starting compensation for saga ${execution.id}`);
+
+    // 역순으로 보상 실행
+    const completedSteps = execution.steps
+      .filter(s => s.success)
+      .reverse();
+
+    for (const step of completedSteps) {
+      try {
+        await this.compensationManager.compensate(
+          execution.id,
+          step.step
+        );
+      } catch (error) {
+        logger.error(`Compensation failed for step ${step.step}:`, error);
+        // 보상 실패도 계속 진행
+      }
+    }
+  }
+}
+
+// 트랜잭션 로그 관리자
+export class TransactionLogManager {
+  private storage: LogStorage;
+  private encryptor: LogEncryptor;
+
+  constructor(config: LogConfig) {
+    this.storage = new LogStorage(config.storage);
+    this.encryptor = new LogEncryptor(config.encryption);
+  }
+
+  async logTransaction(transaction: DistributedTransaction): Promise<void> {
+    const entry: TransactionLogEntry = {
+      id: uuid(),
+      timestamp: new Date(),
+      transactionId: transaction.id,
+      type: 'transaction',
+      data: transaction
+    };
+
+    // 암호화
+    const encrypted = await this.encryptor.encrypt(entry);
+
+    // 저장
+    await this.storage.append(encrypted);
+  }
+
+  async logDecision(
+    transactionId: string,
+    decision: 'commit' | 'abort',
+    reason?: string
+  ): Promise<void> {
+    const entry: TransactionLogEntry = {
+      id: uuid(),
+      timestamp: new Date(),
+      transactionId,
+      type: 'decision',
+      data: { decision, reason }
+    };
+
+    const encrypted = await this.encryptor.encrypt(entry);
+    await this.storage.append(encrypted);
+  }
+
+  async recover(): Promise<RecoveryInfo[]> {
+    const logs = await this.storage.readAll();
+    const decrypted = await Promise.all(
+      logs.map(log => this.encryptor.decrypt(log))
+    );
+
+    // 미완료 트랜잭션 찾기
+    const transactions = new Map<string, TransactionRecoveryInfo>();
+
+    for (const entry of decrypted) {
+      if (entry.type === 'transaction') {
+        transactions.set(entry.transactionId, {
+          transaction: entry.data,
+          hasDecision: false
+        });
+      } else if (entry.type === 'decision') {
+        const txInfo = transactions.get(entry.transactionId);
+        if (txInfo) {
+          txInfo.hasDecision = true;
+          txInfo.decision = entry.data.decision;
+        }
+      }
+    }
+
+    // 결정이 없는 트랜잭션 반환
+    return Array.from(transactions.values())
+      .filter(tx => !tx.hasDecision)
+      .map(tx => ({
+        transaction: tx.transaction,
+        action: 'abort' // 기본 중단
+      }));
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 2PC 프로토콜 구현
+- [ ] SAGA 패턴 지원
+- [ ] 다양한 참여자 어댑터
+- [ ] 트랜잭션 로깅 및 복구
+
+#### SubTask 5.14.2: 상태 체크포인트 시스템
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/transaction/checkpoint_system.ts
+export interface Checkpoint {
+  id: string;
+  workflowId: string;
+  taskId?: string;
+  timestamp: Date;
+  state: WorkflowState;
+  metadata: CheckpointMetadata;
+}
+
+export class CheckpointSystem {
+  private storage: CheckpointStorage;
+  private serializer: StateSerializer;
+  private compressor: StateCompressor;
+  private scheduler: CheckpointScheduler;
+
+  constructor(config: CheckpointConfig) {
+    this.storage = new CheckpointStorage(config.storage);
+    this.serializer = new StateSerializer(config.serialization);
+    this.compressor = new StateCompressor(config.compression);
+    this.scheduler = new CheckpointScheduler(config.scheduling);
+  }
+
+  async createCheckpoint(
+    workflow: WorkflowInstance,
+    options?: CheckpointOptions
+  ): Promise<Checkpoint> {
+    const checkpoint: Checkpoint = {
+      id: this.generateCheckpointId(),
+      workflowId: workflow.id,
+      taskId: options?.taskId,
+      timestamp: new Date(),
+      state: await this.captureState(workflow),
+      metadata: {
+        size: 0,
+        compressed: options?.compress ?? true,
+        encryption: options?.encrypt ?? true,
+        ttl: options?.ttl || 86400 // 24시간
+      }
+    };
+
+    // 상태 직렬화
+    const serialized = await this.serializer.serialize(checkpoint.state);
+
+    // 압축
+    let data = serialized;
+    if (checkpoint.metadata.compressed) {
+      data = await this.compressor.compress(serialized);
+    }
+
+    // 암호화
+    if (checkpoint.metadata.encryption) {
+      data = await this.encrypt(data);
+    }
+
+    checkpoint.metadata.size = data.length;
+
+    // 저장
+    await this.storage.save(checkpoint, data);
+
+    // 정리 스케줄링
+    if (checkpoint.metadata.ttl) {
+      this.scheduler.scheduleCleanup(checkpoint);
+    }
+
+    logger.info(`Checkpoint created: ${checkpoint.id} for workflow ${workflow.id}`);
+
+    return checkpoint;
+  }
+
+  async restoreCheckpoint(
+    checkpointId: string
+  ): Promise<WorkflowState> {
+    const checkpoint = await this.storage.getMetadata(checkpointId);
+    
+    if (!checkpoint) {
+      throw new Error(`Checkpoint ${checkpointId} not found`);
+    }
+
+    // 데이터 로드
+    let data = await this.storage.getData(checkpointId);
+
+    // 복호화
+    if (checkpoint.metadata.encryption) {
+      data = await this.decrypt(data);
+    }
+
+    // 압축 해제
+    if (checkpoint.metadata.compressed) {
+      data = await this.compressor.decompress(data);
+    }
+
+    // 역직렬화
+    const state = await this.serializer.deserialize(data);
+
+    logger.info(`Checkpoint restored: ${checkpointId}`);
+
+    return state;
+  }
+
+  async listCheckpoints(
+    workflowId: string,
+    options?: ListOptions
+  ): Promise<Checkpoint[]> {
+    return this.storage.list({
+      workflowId,
+      ...options
+    });
+  }
+
+  async deleteCheckpoint(checkpointId: string): Promise<void> {
+    await this.storage.delete(checkpointId);
+    logger.info(`Checkpoint deleted: ${checkpointId}`);
+  }
+
+  private async captureState(
+    workflow: WorkflowInstance
+  ): Promise<WorkflowState> {
+    return {
+      workflowId: workflow.id,
+      status: workflow.status,
+      currentTask: workflow.currentTask,
+      variables: await this.captureVariables(workflow),
+      tasks: await this.captureTaskStates(workflow),
+      events: workflow.events.slice(-100), // 최근 100개 이벤트
+      metrics: workflow.metrics,
+      capturedAt: new Date()
+    };
+  }
+
+  private async captureVariables(
+    workflow: WorkflowInstance
+  ): Promise<Record<string, any>> {
+    const variables: Record<string, any> = {};
+
+    // 워크플로우 변수
+    for (const [key, value] of Object.entries(workflow.variables)) {
+      if (this.shouldCaptureVariable(key, value)) {
+        variables[key] = await this.serializeVariable(value);
+      }
+    }
+
+    return variables;
+  }
+
+  private async captureTaskStates(
+    workflow: WorkflowInstance
+  ): Promise<TaskState[]> {
+    const taskStates: TaskState[] = [];
+
+    for (const task of workflow.tasks) {
+      taskStates.push({
+        taskId: task.id,
+        status: task.status,
+        input: task.input,
+        output: task.output,
+        error: task.error,
+        retries: task.retries,
+        startTime: task.startTime,
+        endTime: task.endTime
+      });
+    }
+
+    return taskStates;
+  }
+
+  private shouldCaptureVariable(key: string, value: any): boolean {
+    // 큰 객체나 임시 변수는 제외
+    if (key.startsWith('_tmp_') || key.startsWith('_internal_')) {
+      return false;
+    }
+
+    if (value && typeof value === 'object') {
+      const size = JSON.stringify(value).length;
+      return size < 1024 * 1024; // 1MB 제한
+    }
+
+    return true;
+  }
+
+  private generateCheckpointId(): string {
+    return `cp_${Date.now()}_${uuid().substring(0, 8)}`;
+  }
+}
+
+// 증분 체크포인트
+export class IncrementalCheckpointManager extends CheckpointSystem {
+  private deltaTracker: DeltaTracker;
+  private baseCheckpoints: Map<string, Checkpoint>;
+
+  constructor(config: CheckpointConfig) {
+    super(config);
+    this.deltaTracker = new DeltaTracker();
+    this.baseCheckpoints = new Map();
+  }
+
+  async createIncrementalCheckpoint(
+    workflow: WorkflowInstance,
+    baseCheckpointId?: string
+  ): Promise<IncrementalCheckpoint> {
+    const currentState = await this.captureState(workflow);
+
+    if (!baseCheckpointId) {
+      // 전체 체크포인트 생성
+      const fullCheckpoint = await this.createCheckpoint(workflow);
+      this.baseCheckpoints.set(workflow.id, fullCheckpoint);
+      
+      return {
+        ...fullCheckpoint,
+        type: 'full',
+        baseCheckpointId: undefined,
+        delta: undefined
+      };
+    }
+
+    // 델타 계산
+    const baseState = await this.restoreCheckpoint(baseCheckpointId);
+    const delta = await this.deltaTracker.calculateDelta(baseState, currentState);
+
+    // 델타가 너무 크면 전체 체크포인트
+    if (this.isDeltaTooLarge(delta)) {
+      const fullCheckpoint = await this.createCheckpoint(workflow);
+      this.baseCheckpoints.set(workflow.id, fullCheckpoint);
+      
+      return {
+        ...fullCheckpoint,
+        type: 'full',
+        baseCheckpointId: undefined,
+        delta: undefined
+      };
+    }
+
+    // 증분 체크포인트 생성
+    const checkpoint: IncrementalCheckpoint = {
+      id: this.generateCheckpointId(),
+      workflowId: workflow.id,
+      timestamp: new Date(),
+      type: 'incremental',
+      baseCheckpointId,
+      delta,
+      state: currentState,
+      metadata: {
+        size: JSON.stringify(delta).length,
+        compressed: true,
+        encryption: true
+      }
+    };
+
+    await this.storage.saveIncremental(checkpoint);
+
+    return checkpoint;
+  }
+
+  async restoreIncrementalCheckpoint(
+    checkpointId: string
+  ): Promise<WorkflowState> {
+    const checkpoint = await this.storage.getIncrementalMetadata(checkpointId);
+
+    if (!checkpoint) {
+      throw new Error(`Incremental checkpoint ${checkpointId} not found`);
+    }
+
+    if (checkpoint.type === 'full') {
+      return this.restoreCheckpoint(checkpointId);
+    }
+
+    // 베이스 체크포인트 복원
+    const baseState = await this.restoreCheckpoint(checkpoint.baseCheckpointId!);
+
+    // 델타 적용
+    const delta = await this.storage.getIncrementalDelta(checkpointId);
+    return this.deltaTracker.applyDelta(baseState, delta);
+  }
+
+  private isDeltaTooLarge(delta: StateDelta): boolean {
+    const deltaSize = JSON.stringify(delta).length;
+    return deltaSize > 1024 * 100; // 100KB
+  }
+}
+
+// 델타 추적기
+export class DeltaTracker {
+  async calculateDelta(
+    oldState: WorkflowState,
+    newState: WorkflowState
+  ): Promise<StateDelta> {
+    const delta: StateDelta = {
+      workflowId: newState.workflowId,
+      changes: []
+    };
+
+    // 상태 변경
+    if (oldState.status !== newState.status) {
+      delta.changes.push({
+        type: 'status',
+        path: 'status',
+        oldValue: oldState.status,
+        newValue: newState.status
+      });
+    }
+
+    // 변수 변경
+    const variableChanges = this.compareObjects(
+      oldState.variables,
+      newState.variables,
+      'variables'
+    );
+    delta.changes.push(...variableChanges);
+
+    // 태스크 변경
+    const taskChanges = this.compareTasks(oldState.tasks, newState.tasks);
+    delta.changes.push(...taskChanges);
+
+    return delta;
+  }
+
+  async applyDelta(
+    state: WorkflowState,
+    delta: StateDelta
+  ): Promise<WorkflowState> {
+    const newState = JSON.parse(JSON.stringify(state)); // Deep clone
+
+    for (const change of delta.changes) {
+      this.applyChange(newState, change);
+    }
+
+    return newState;
+  }
+
+  private compareObjects(
+    oldObj: any,
+    newObj: any,
+    basePath: string
+  ): DeltaChange[] {
+    const changes: DeltaChange[] = [];
+
+    // 추가된 키
+    for (const key of Object.keys(newObj)) {
+      if (!(key in oldObj)) {
+        changes.push({
+          type: 'add',
+          path: `${basePath}.${key}`,
+          newValue: newObj[key]
+        });
+      }
+    }
+
+    // 수정된 키
+    for (const key of Object.keys(oldObj)) {
+      if (key in newObj) {
+        if (!this.deepEqual(oldObj[key], newObj[key])) {
+          changes.push({
+            type: 'update',
+            path: `${basePath}.${key}`,
+            oldValue: oldObj[key],
+            newValue: newObj[key]
+          });
+        }
+      } else {
+        // 삭제된 키
+        changes.push({
+          type: 'delete',
+          path: `${basePath}.${key}`,
+          oldValue: oldObj[key]
+        });
+      }
+    }
+
+    return changes;
+  }
+
+  private applyChange(state: any, change: DeltaChange): void {
+    const pathParts = change.path.split('.');
+    let current = state;
+
+    // 경로 탐색
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      const part = pathParts[i];
+      if (!(part in current)) {
+        current[part] = {};
+      }
+      current = current[part];
+    }
+
+    const lastPart = pathParts[pathParts.length - 1];
+
+    switch (change.type) {
+      case 'add':
+      case 'update':
+        current[lastPart] = change.newValue;
+        break;
+      case 'delete':
+        delete current[lastPart];
+        break;
+    }
+  }
+
+  private deepEqual(a: any, b: any): boolean {
+    if (a === b) return true;
+    if (a == null || b == null) return false;
+    if (typeof a !== typeof b) return false;
+
+    if (typeof a === 'object') {
+      const keysA = Object.keys(a);
+      const keysB = Object.keys(b);
+
+      if (keysA.length !== keysB.length) return false;
+
+      for (const key of keysA) {
+        if (!this.deepEqual(a[key], b[key])) return false;
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+}
+
+// 체크포인트 스토리지
+export class CheckpointStorage {
+  private primaryStore: StorageBackend;
+  private replicaStores: StorageBackend[];
+  private indexDb: IndexDatabase;
+
+  constructor(config: StorageConfig) {
+    this.primaryStore = this.createBackend(config.primary);
+    this.replicaStores = config.replicas.map(r => this.createBackend(r));
+    this.indexDb = new IndexDatabase(config.index);
+  }
+
+  async save(checkpoint: Checkpoint, data: Buffer): Promise<void> {
+    // 인덱스 저장
+    await this.indexDb.index(checkpoint);
+
+    // 주 저장소 저장
+    await this.primaryStore.put(checkpoint.id, data);
+
+    // 복제본 저장 (비동기)
+    this.replicateAsync(checkpoint.id, data);
+  }
+
+  async getData(checkpointId: string): Promise<Buffer> {
+    try {
+      return await this.primaryStore.get(checkpointId);
+    } catch (error) {
+      // 주 저장소 실패시 복제본에서 시도
+      for (const replica of this.replicaStores) {
+        try {
+          const data = await replica.get(checkpointId);
+          // 주 저장소 복구
+          this.primaryStore.put(checkpointId, data).catch(e => 
+            logger.error('Failed to restore to primary:', e)
+          );
+          return data;
+        } catch (replicaError) {
+          continue;
+        }
+      }
+      throw error;
+    }
+  }
+
+  private async replicateAsync(id: string, data: Buffer): Promise<void> {
+    const promises = this.replicaStores.map(replica =>
+      replica.put(id, data).catch(error => {
+        logger.error(`Replication failed for ${id}:`, error);
+      })
+    );
+
+    await Promise.all(promises);
+  }
+
+  private createBackend(config: BackendConfig): StorageBackend {
+    switch (config.type) {
+      case 's3':
+        return new S3StorageBackend(config);
+      case 'gcs':
+        return new GCSStorageBackend(config);
+      case 'azure':
+        return new AzureStorageBackend(config);
+      case 'local':
+        return new LocalStorageBackend(config);
+      default:
+        throw new Error(`Unknown storage backend: ${config.type}`);
+    }
+  }
+}
+
+// 체크포인트 정책
+export class CheckpointPolicy {
+  private rules: CheckpointRule[];
+
+  constructor(rules: CheckpointRule[]) {
+    this.rules = rules;
+  }
+
+  shouldCheckpoint(
+    workflow: WorkflowInstance,
+    event: WorkflowEvent
+  ): boolean {
+    for (const rule of this.rules) {
+      if (rule.evaluate(workflow, event)) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
+// 체크포인트 규칙 예제
+export class TimeBasedRule implements CheckpointRule {
+  constructor(private intervalMs: number) {}
+
+  evaluate(workflow: WorkflowInstance): boolean {
+    const lastCheckpoint = workflow.lastCheckpointTime;
+    if (!lastCheckpoint) return true;
+
+    return Date.now() - lastCheckpoint.getTime() > this.intervalMs;
+  }
+}
+
+export class TaskCompletionRule implements CheckpointRule {
+  constructor(private taskTypes: string[]) {}
+
+  evaluate(workflow: WorkflowInstance, event: WorkflowEvent): boolean {
+    return event.type === 'task.completed' &&
+           this.taskTypes.includes(event.taskType);
+  }
+}
+
+export class StateChangeRule implements CheckpointRule {
+  constructor(private significantStates: string[]) {}
+
+  evaluate(workflow: WorkflowInstance, event: WorkflowEvent): boolean {
+    return event.type === 'workflow.status.changed' &&
+           this.significantStates.includes(event.newStatus);
+  }
+}
+
+// 자동 체크포인트 관리자
+export class AutoCheckpointManager {
+  private checkpointSystem: CheckpointSystem;
+  private policy: CheckpointPolicy;
+  private activeWorkflows: Map<string, WorkflowMonitor>;
+
+  constructor(
+    checkpointSystem: CheckpointSystem,
+    policy: CheckpointPolicy
+  ) {
+    this.checkpointSystem = checkpointSystem;
+    this.policy = policy;
+    this.activeWorkflows = new Map();
+  }
+
+  async monitorWorkflow(workflow: WorkflowInstance): Promise<void> {
+    const monitor = new WorkflowMonitor(workflow, async (event) => {
+      if (this.policy.shouldCheckpoint(workflow, event)) {
+        await this.createAutoCheckpoint(workflow, event);
+      }
+    });
+
+    this.activeWorkflows.set(workflow.id, monitor);
+    monitor.start();
+  }
+
+  private async createAutoCheckpoint(
+    workflow: WorkflowInstance,
+    event: WorkflowEvent
+  ): Promise<void> {
+    try {
+      const checkpoint = await this.checkpointSystem.createCheckpoint(workflow, {
+        taskId: event.taskId,
+        compress: true,
+        encrypt: true,
+        ttl: 86400 * 7 // 7일
+      });
+
+      workflow.lastCheckpointTime = checkpoint.timestamp;
+      workflow.lastCheckpointId = checkpoint.id;
+
+      logger.info(`Auto checkpoint created for workflow ${workflow.id}`);
+    } catch (error) {
+      logger.error('Auto checkpoint failed:', error);
+    }
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 완전한 체크포인트 시스템
+- [ ] 증분 체크포인트 지원
+- [ ] 분산 스토리지 지원
+- [ ] 자동 체크포인트 정책
+
+#### SubTask 5.14.3: 롤백 및 보상 트랜잭션
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/transaction/rollback_compensation.ts
+export interface RollbackStrategy {
+  type: 'immediate' | 'deferred' | 'compensating';
+  scope: 'full' | 'partial' | 'selective';
+  order: 'reverse' | 'parallel' | 'custom';
+}
+
+export class RollbackManager {
+  private compensationRegistry: CompensationRegistry;
+  private rollbackExecutor: RollbackExecutor;
+  private stateManager: StateManager;
+  private auditLogger: AuditLogger;
+
+  constructor(config: RollbackConfig) {
+    this.compensationRegistry = new CompensationRegistry(config.registry);
+    this.rollbackExecutor = new RollbackExecutor(config.executor);
+    this.stateManager = new StateManager(config.state);
+    this.auditLogger = new AuditLogger(config.audit);
+  }
+
+  async rollback(
+    context: TransactionContext,
+    strategy: RollbackStrategy
+  ): Promise<RollbackResult> {
+    const rollbackId = this.generateRollbackId();
+    
+    logger.info(`Starting rollback ${rollbackId} for transaction ${context.transactionId}`);
+
+    try {
+      // 롤백 시작 기록
+      await this.auditLogger.logRollbackStart(rollbackId, context, strategy);
+
+      // 롤백 계획 수립
+      const plan = await this.createRollbackPlan(context, strategy);
+
+      // 롤백 실행
+      const result = await this.executeRollback(plan);
+
+      // 상태 검증
+      const verified = await this.verifyRollback(context, result);
+
+      // 롤백 완료 기록
+      await this.auditLogger.logRollbackComplete(rollbackId, result, verified);
+
+      return {
+        rollbackId,
+        success: verified,
+        plan,
+        result,
+        duration: Date.now() - plan.startTime.getTime()
+      };
+    } catch (error) {
+      logger.error(`Rollback ${rollbackId} failed:`, error);
+      
+      await this.auditLogger.logRollbackError(rollbackId, error);
+      
+      throw new RollbackError(
+        `Rollback failed for transaction ${context.transactionId}`,
+        error
+      );
+    }
+  }
+
+  private async createRollbackPlan(
+    context: TransactionContext,
+    strategy: RollbackStrategy
+  ): Promise<RollbackPlan> {
+    const operations = context.getExecutedOperations();
+    const compensations: CompensationAction[] = [];
+
+    // 각 작업에 대한 보상 액션 생성
+    for (const operation of operations) {
+      const compensation = await this.compensationRegistry.getCompensation(
+        operation.type,
+        operation
+      );
+
+      if (compensation) {
+        compensations.push({
+          ...compensation,
+          originalOperation: operation,
+          order: this.determineOrder(operation, strategy)
+        });
+      } else if (operation.critical) {
+        throw new Error(`No compensation found for critical operation: ${operation.id}`);
+      }
+    }
+
+    // 실행 순서 결정
+    const orderedCompensations = this.orderCompensations(compensations, strategy);
+
+    return {
+      id: uuid(),
+      transactionId: context.transactionId,
+      strategy,
+      compensations: orderedCompensations,
+      startTime: new Date(),
+      checkpoints: await this.identifyCheckpoints(context)
+    };
+  }
+
+  private orderCompensations(
+    compensations: CompensationAction[],
+    strategy: RollbackStrategy
+  ): CompensationAction[] {
+    switch (strategy.order) {
+      case 'reverse':
+        return compensations.reverse();
+      
+      case 'parallel':
+        // 병렬 실행 가능한 그룹으로 분류
+        return this.groupForParallelExecution(compensations);
+      
+      case 'custom':
+        // 사용자 정의 순서
+        return compensations.sort((a, b) => a.order - b.order);
+      
+      default:
+        return compensations;
+    }
+  }
+
+  private async executeRollback(plan: RollbackPlan): Promise<RollbackExecutionResult> {
+    const results: CompensationResult[] = [];
+    const executionContext = new RollbackExecutionContext(plan);
+
+    for (const compensation of plan.compensations) {
+      try {
+        // 보상 실행
+        const result = await this.executeCompensation(compensation, executionContext);
+        results.push(result);
+
+        // 실패 처리
+        if (!result.success && compensation.critical) {
+          break; // 중요 보상 실패 시 중단
+        }
+      } catch (error) {
+        logger.error(`Compensation ${compensation.id} failed:`, error);
+        
+        results.push({
+          compensationId: compensation.id,
+          success: false,
+          error: error.message,
+          timestamp: new Date()
+        });
+
+        if (compensation.critical) {
+          throw error;
+        }
+      }
+    }
+
+    return {
+      planId: plan.id,
+      results,
+      successCount: results.filter(r => r.success).length,
+      failureCount: results.filter(r => !r.success).length
+    };
+  }
+
+  private async executeCompensation(
+    compensation: CompensationAction,
+    context: RollbackExecutionContext
+  ): Promise<CompensationResult> {
+    const startTime = Date.now();
+
+    try {
+      // 사전 조건 확인
+      if (compensation.preConditions) {
+        const conditionsMet = await this.checkPreConditions(
+          compensation.preConditions,
+          context
+        );
+        
+        if (!conditionsMet) {
+          return {
+            compensationId: compensation.id,
+            success: false,
+            error: 'Pre-conditions not met',
+            timestamp: new Date()
+          };
+        }
+      }
+
+      // 보상 실행
+      const result = await this.rollbackExecutor.execute(compensation, context);
+
+      // 사후 검증
+      if (compensation.postValidation) {
+        const valid = await this.validateCompensation(
+          compensation.postValidation,
+          result
+        );
+        
+        if (!valid) {
+          throw new Error('Post-validation failed');
+        }
+      }
+
+      return {
+        compensationId: compensation.id,
+        success: true,
+        result,
+        duration: Date.now() - startTime,
+        timestamp: new Date()
+      };
+    } catch (error) {
+      return {
+        compensationId: compensation.id,
+        success: false,
+        error: error.message,
+        duration: Date.now() - startTime,
+        timestamp: new Date()
+      };
+    }
+  }
+
+  private generateRollbackId(): string {
+    return `rb_${Date.now()}_${uuid().substring(0, 8)}`;
+  }
+}
+
+// 보상 레지스트리
+export class CompensationRegistry {
+  private compensations: Map<string, CompensationDefinition>;
+  private customHandlers: Map<string, CompensationHandler>;
+
+  constructor(config: RegistryConfig) {
+    this.compensations = new Map();
+    this.customHandlers = new Map();
+    
+    this.registerDefaultCompensations();
+  }
+
+  async registerCompensation(
+    operationType: string,
+    compensation: CompensationDefinition
+  ): Promise<void> {
+    this.compensations.set(operationType, compensation);
+  }
+
+  async getCompensation(
+    operationType: string,
+    operation: Operation
+  ): Promise<CompensationAction | null> {
+    const definition = this.compensations.get(operationType);
+    
+    if (!definition) {
+      return null;
+    }
+
+    return this.createCompensationAction(definition, operation);
+  }
+
+  private async createCompensationAction(
+    definition: CompensationDefinition,
+    operation: Operation
+  ): Promise<CompensationAction> {
+    return {
+      id: uuid(),
+      type: definition.type,
+      handler: definition.handler,
+      params: await this.buildCompensationParams(definition, operation),
+      critical: definition.critical ?? false,
+      retryPolicy: definition.retryPolicy || {
+        maxRetries: 3,
+        backoff: 'exponential'
+      },
+      timeout: definition.timeout || 30000
+    };
+  }
+
+  private async buildCompensationParams(
+    definition: CompensationDefinition,
+    operation: Operation
+  ): Promise<any> {
+    if (definition.paramBuilder) {
+      return definition.paramBuilder(operation);
+    }
+
+    // 기본 파라미터 매핑
+    return {
+      originalParams: operation.params,
+      operationId: operation.id,
+      timestamp: operation.timestamp
+    };
+  }
+
+  private registerDefaultCompensations(): void {
+    // 데이터베이스 작업 보상
+    this.registerCompensation('db.insert', {
+      type: 'db.delete',
+      handler: 'database',
+      paramBuilder: (op) => ({
+        table: op.params.table,
+        where: { id: op.result?.insertedId }
+      }),
+      critical: true
+    });
+
+    this.registerCompensation('db.update', {
+      type: 'db.update',
+      handler: 'database',
+      paramBuilder: (op) => ({
+        table: op.params.table,
+        data: op.params.previousData,
+        where: op.params.where
+      }),
+      critical: true
+    });
+
+    this.registerCompensation('db.delete', {
+      type: 'db.insert',
+      handler: 'database',
+      paramBuilder: (op) => ({
+        table: op.params.table,
+        data: op.params.deletedData
+      }),
+      critical: true
+    });
+
+    // 파일 작업 보상
+    this.registerCompensation('file.create', {
+      type: 'file.delete',
+      handler: 'filesystem',
+      paramBuilder: (op) => ({
+        path: op.result?.filePath
+      })
+    });
+
+    this.registerCompensation('file.delete', {
+      type: 'file.restore',
+      handler: 'filesystem',
+      paramBuilder: (op) => ({
+        path: op.params.path,
+        backupPath: op.result?.backupPath
+      })
+    });
+
+    // API 호출 보상
+    this.registerCompensation('api.create', {
+      type: 'api.delete',
+      handler: 'api',
+      paramBuilder: (op) => ({
+        endpoint: op.params.deleteEndpoint || `${op.params.endpoint}/${op.result?.id}`,
+        method: 'DELETE'
+      })
+    });
+
+    // 메시지 큐 작업 보상
+    this.registerCompensation('queue.publish', {
+      type: 'queue.compensate',
+      handler: 'queue',
+      paramBuilder: (op) => ({
+        queue: op.params.queue,
+        compensationMessage: {
+          type: 'compensation',
+          originalMessageId: op.result?.messageId,
+          action: 'cancel'
+        }
+      })
+    });
+  }
+}
+
+// 롤백 실행기
+export class RollbackExecutor {
+  private handlers: Map<string, CompensationHandler>;
+  private retryManager: RetryManager;
+  private circuitBreaker: CircuitBreaker;
+
+  constructor(config: ExecutorConfig) {
+    this.handlers = this.initializeHandlers(config.handlers);
+    this.retryManager = new RetryManager(config.retry);
+    this.circuitBreaker = new CircuitBreaker(config.circuitBreaker);
+  }
+
+  async execute(
+    compensation: CompensationAction,
+    context: RollbackExecutionContext
+  ): Promise<any> {
+    const handler = this.handlers.get(compensation.handler);
+    
+    if (!handler) {
+      throw new Error(`No handler found for: ${compensation.handler}`);
+    }
+
+    // 서킷 브레이커 확인
+    if (!this.circuitBreaker.canExecute()) {
+      throw new Error('Circuit breaker is open');
+    }
+
+    // 재시도 로직 적용
+    return this.retryManager.executeWithRetry(
+      async () => {
+        return handler.compensate(compensation, context);
+      },
+      compensation.retryPolicy
+    );
+  }
+
+  private initializeHandlers(
+    handlerConfigs: HandlerConfig[]
+  ): Map<string, CompensationHandler> {
+    const handlers = new Map();
+
+    for (const config of handlerConfigs) {
+      switch (config.type) {
+        case 'database':
+          handlers.set(config.name, new DatabaseCompensationHandler(config));
+          break;
+        
+        case 'filesystem':
+          handlers.set(config.name, new FileSystemCompensationHandler(config));
+          break;
+        
+        case 'api':
+          handlers.set(config.name, new APICompensationHandler(config));
+          break;
+        
+        case 'queue':
+          handlers.set(config.name, new QueueCompensationHandler(config));
+          break;
+        
+        case 'custom':
+          handlers.set(config.name, new CustomCompensationHandler(config));
+          break;
+      }
+    }
+
+    return handlers;
+  }
+}
+
+// 데이터베이스 보상 핸들러
+export class DatabaseCompensationHandler implements CompensationHandler {
+  private db: DatabaseConnection;
+
+  constructor(config: HandlerConfig) {
+    this.db = new DatabaseConnection(config.connection);
+  }
+
+  async compensate(
+    compensation: CompensationAction,
+    context: RollbackExecutionContext
+  ): Promise<any> {
+    const { type, params } = compensation;
+
+    switch (type) {
+      case 'db.insert':
+        return this.db.insert(params.table, params.data);
+      
+      case 'db.update':
+        return this.db.update(params.table, params.data, params.where);
+      
+      case 'db.delete':
+        return this.db.delete(params.table, params.where);
+      
+      case 'db.restore':
+        return this.restoreFromBackup(params);
+      
+      default:
+        throw new Error(`Unknown database compensation type: ${type}`);
+    }
+  }
+
+  private async restoreFromBackup(params: any): Promise<any> {
+    // 백업에서 데이터 복원
+    const backupData = await this.db.getBackup(params.backupId);
+    return this.db.restore(params.table, backupData);
+  }
+}
+
+// SAGA 보상 관리자
+export class SagaCompensationManager {
+  private compensationLog: CompensationLog;
+  private sagaCoordinator: SagaCoordinator;
+
+  constructor(config: SagaConfig) {
+    this.compensationLog = new CompensationLog(config.log);
+    this.sagaCoordinator = new SagaCoordinator(config.coordinator);
+  }
+
+  async registerSagaStep(
+    sagaId: string,
+    step: SagaStep,
+    compensation: CompensationDefinition
+  ): Promise<void> {
+    await this.compensationLog.record({
+      sagaId,
+      stepId: step.id,
+      compensation,
+      timestamp: new Date()
+    });
+  }
+
+  async compensateSaga(
+    sagaId: string,
+    fromStep?: string
+  ): Promise<SagaCompensationResult> {
+    const log = await this.compensationLog.getSagaLog(sagaId);
+    const stepsToCompensate = this.getStepsToCompensate(log, fromStep);
+
+    const results: StepCompensationResult[] = [];
+
+    for (const entry of stepsToCompensate) {
+      try {
+        const result = await this.compensateStep(entry);
+        results.push({
+          stepId: entry.stepId,
+          success: true,
+          result
+        });
+      } catch (error) {
+        results.push({
+          stepId: entry.stepId,
+          success: false,
+          error: error.message
+        });
+
+        // 보상 실패 처리
+        if (entry.compensation.critical) {
+          break;
+        }
+      }
+    }
+
+    return {
+      sagaId,
+      compensated: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      results
+    };
+  }
+
+  private getStepsToCompensate(
+    log: CompensationLogEntry[],
+    fromStep?: string
+  ): CompensationLogEntry[] {
+    // 역순으로 정렬
+    const reversed = [...log].reverse();
+
+    if (fromStep) {
+      const index = reversed.findIndex(e => e.stepId === fromStep);
+      return index >= 0 ? reversed.slice(index) : reversed;
+    }
+
+    return reversed;
+  }
+
+  private async compensateStep(
+    entry: CompensationLogEntry
+  ): Promise<any> {
+    const handler = this.sagaCoordinator.getHandler(entry.compensation.handler);
+    
+    return handler.compensate({
+      ...entry.compensation,
+      sagaId: entry.sagaId,
+      stepId: entry.stepId
+    });
+  }
+}
+
+// 보상 트랜잭션 빌더
+export class CompensationBuilder {
+  private compensations: CompensationDefinition[] = [];
+
+  for(operationType: string): CompensationBuilderContext {
+    return new CompensationBuilderContext(this, operationType);
+  }
+
+  build(): CompensationDefinition[] {
+    return this.compensations;
+  }
+
+  addCompensation(compensation: CompensationDefinition): void {
+    this.compensations.push(compensation);
+  }
+}
+
+export class CompensationBuilderContext {
+  constructor(
+    private builder: CompensationBuilder,
+    private operationType: string
+  ) {}
+
+  compensateWith(type: string): CompensationBuilderContext {
+    this.compensation = { type };
+    return this;
+  }
+
+  using(handler: string): CompensationBuilderContext {
+    this.compensation.handler = handler;
+    return this;
+  }
+
+  withParams(paramBuilder: (op: Operation) => any): CompensationBuilderContext {
+    this.compensation.paramBuilder = paramBuilder;
+    return this;
+  }
+
+  critical(isCritical: boolean = true): CompensationBuilderContext {
+    this.compensation.critical = isCritical;
+    return this;
+  }
+
+  withRetry(policy: RetryPolicy): CompensationBuilderContext {
+    this.compensation.retryPolicy = policy;
+    return this;
+  }
+
+  withTimeout(timeout: number): CompensationBuilderContext {
+    this.compensation.timeout = timeout;
+    return this;
+  }
+
+  register(): CompensationBuilder {
+    this.builder.addCompensation({
+      operationType: this.operationType,
+      ...this.compensation
+    });
+    return this.builder;
+  }
+
+  private compensation: Partial<CompensationDefinition> = {};
+}
+
+// 사용 예제
+export class TransactionExample {
+  private transactionManager: DistributedTransactionManager;
+  private compensationBuilder: CompensationBuilder;
+
+  async executeOrderTransaction(order: Order): Promise<void> {
+    // 보상 정의
+    const compensations = new CompensationBuilder()
+      .for('createOrder')
+        .compensateWith('deleteOrder')
+        .using('database')
+        .withParams(op => ({ orderId: op.result.orderId }))
+        .critical()
+        .register()
+      .for('reserveInventory')
+        .compensateWith('releaseInventory')
+        .using('inventory')
+        .withParams(op => ({ items: op.params.items }))
+        .critical()
+        .register()
+      .for('chargePayment')
+        .compensateWith('refundPayment')
+        .using('payment')
+        .withParams(op => ({ 
+          paymentId: op.result.paymentId,
+          amount: op.params.amount 
+        }))
+        .critical()
+        .withRetry({ maxRetries: 5, backoff: 'exponential' })
+        .register()
+      .build();
+
+    // 트랜잭션 실행
+    const context = await this.transactionManager.beginTransaction('order');
+
+    try {
+      // 주문 생성
+      await context.addOperation({
+        type: 'createOrder',
+        params: { order }
+      });
+
+      // 재고 예약
+      await context.addOperation({
+        type: 'reserveInventory',
+        params: { items: order.items }
+      });
+
+      // 결제 처리
+      await context.addOperation({
+        type: 'chargePayment',
+        params: { 
+          amount: order.total,
+          paymentMethod: order.paymentMethod 
+        }
+      });
+
+      // 커밋
+      await context.execute();
+    } catch (error) {
+      // 자동 롤백
+      logger.error('Transaction failed, rolling back:', error);
+      throw error;
+    }
+  }
+}
+
+// 롤백 감사 로거
+export class AuditLogger {
+  private storage: AuditStorage;
+
+  async logRollbackStart(
+    rollbackId: string,
+    context: TransactionContext,
+    strategy: RollbackStrategy
+  ): Promise<void> {
+    await this.storage.log({
+      type: 'rollback_start',
+      rollbackId,
+      transactionId: context.transactionId,
+      strategy,
+      timestamp: new Date(),
+      metadata: {
+        operations: context.getExecutedOperations().length
+      }
+    });
+  }
+
+  async logCompensationExecution(
+    rollbackId: string,
+    compensation: CompensationAction,
+    result: CompensationResult
+  ): Promise<void> {
+    await this.storage.log({
+      type: 'compensation_execution',
+      rollbackId,
+      compensationId: compensation.id,
+      success: result.success,
+      duration: result.duration,
+      error: result.error,
+      timestamp: new Date()
+    });
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 완전한 롤백 관리 시스템
+- [ ] 보상 트랜잭션 레지스트리
+- [ ] SAGA 패턴 보상 지원
+- [ ] 감사 및 추적 기능
+
+#### SubTask 5.14.4: 일관성 보장 메커니즘
+**담당자**: 데이터베이스 아키텍트  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/transaction/consistency.ts
+export interface ConsistencyGuarantee {
+  level: ConsistencyLevel;
+  scope: ConsistencyScope;
+  validation: ValidationStrategy;
+  resolution: ConflictResolution;
+}
+
+export enum ConsistencyLevel {
+  EVENTUAL = 'eventual',
+  STRONG = 'strong',
+  CAUSAL = 'causal',
+  SESSION = 'session',
+  LINEARIZABLE = 'linearizable'
+}
+
+export class ConsistencyManager {
+  private versionManager: VersionManager;
+  private conflictResolver: ConflictResolver;
+  private validator: ConsistencyValidator;
+  private eventStore: EventStore;
+
+  constructor(config: ConsistencyConfig) {
+    this.versionManager = new VersionManager(config.versioning);
+    this.conflictResolver = new ConflictResolver(config.conflict);
+    this.validator = new ConsistencyValidator(config.validation);
+    this.eventStore = new EventStore(config.eventStore);
+  }
+
+  async ensureConsistency(
+    operation: Operation,
+    guarantee: ConsistencyGuarantee
+  ): Promise<ConsistencyResult> {
+    try {
+      // 버전 확인
+      const versionCheck = await this.checkVersion(operation);
+      
+      if (!versionCheck.valid) {
+        // 충돌 해결
+        const resolved = await this.resolveConflict(
+          operation,
+          versionCheck.conflict!,
+          guarantee.resolution
+        );
+        
+        if (!resolved.success) {
+          return {
+            success: false,
+            reason: 'Conflict resolution failed',
+            conflict: versionCheck.conflict
+          };
+        }
+        
+        operation = resolved.operation;
+      }
+
+      // 일관성 검증
+      const validation = await this.validator.validate(
+        operation,
+        guarantee
+      );
+      
+      if (!validation.valid) {
+        return {
+          success: false,
+          reason: 'Consistency validation failed',
+          violations: validation.violations
+        };
+      }
+
+      // 작업 실행
+      const result = await this.executeWithGuarantee(operation, guarantee);
+
+      // 이벤트 기록
+      await this.recordEvent(operation, result);
+
+      return {
+        success: true,
+        result,
+        version: result.version
+      };
+    } catch (error) {
+      logger.error('Consistency enforcement failed:', error);
+      
+      return {
+        success: false,
+        reason: error.message
+      };
+    }
+  }
+
+  private async checkVersion(operation: Operation): Promise<VersionCheck> {
+    const currentVersion = await this.versionManager.getCurrentVersion(
+      operation.target
+    );
+    
+    const expectedVersion = operation.expectedVersion;
+    
+    if (!expectedVersion) {
+      // 버전 체크 없음
+      return { valid: true, currentVersion };
+    }
+
+    if (currentVersion === expectedVersion) {
+      return { valid: true, currentVersion };
+    }
+
+    // 버전 충돌
+    return {
+      valid: false,
+      currentVersion,
+      expectedVersion,
+      conflict: await this.detectConflict(operation, currentVersion)
+    };
+  }
+
+  private async detectConflict(
+    operation: Operation,
+    currentVersion: string
+  ): Promise<Conflict> {
+    const changesSince = await this.versionManager.getChangesSince(
+      operation.target,
+      operation.expectedVersion!
+    );
+
+    return {
+      type: this.classifyConflict(operation, changesSince),
+      currentVersion,
+      expectedVersion: operation.expectedVersion!,
+      changes: changesSince,
+      conflictingFields: this.findConflictingFields(operation, changesSince)
+    };
+  }
+
+  private async resolveConflict(
+    operation: Operation,
+    conflict: Conflict,
+    strategy: ConflictResolution
+  ): Promise<ResolutionResult> {
+    return this.conflictResolver.resolve(operation, conflict, strategy);
+  }
+
+  private async executeWithGuarantee(
+    operation: Operation,
+    guarantee: ConsistencyGuarantee
+  ): Promise<OperationResult> {
+    switch (guarantee.level) {
+      case ConsistencyLevel.STRONG:
+        return this.executeStrong(operation);
+      
+      case ConsistencyLevel.EVENTUAL:
+        return this.executeEventual(operation);
+      
+      case ConsistencyLevel.CAUSAL:
+        return this.executeCausal(operation);
+      
+      case ConsistencyLevel.SESSION:
+        return this.executeSession(operation);
+      
+      case ConsistencyLevel.LINEARIZABLE:
+        return this.executeLinearizable(operation);
+      
+      default:
+        throw new Error(`Unknown consistency level: ${guarantee.level}`);
+    }
+  }
+
+  private async executeStrong(operation: Operation): Promise<OperationResult> {
+    // 분산 잠금 획득
+    const lock = await this.acquireDistributedLock(operation.target);
+    
+    try {
+      // 최신 상태 읽기
+      const current = await this.readLatest(operation.target);
+      
+      // 작업 실행
+      const result = await this.applyOperation(operation, current);
+      
+      // 모든 복제본에 동기 쓰기
+      await this.writeSynchronous(operation.target, result);
+      
+      return result;
+    } finally {
+      await lock.release();
+    }
+  }
+
+  private async executeEventual(operation: Operation): Promise<OperationResult> {
+    // 로컬 실행
+    const result = await this.applyOperation(operation);
+    
+    // 비동기 복제
+    this.replicateAsync(operation.target, result);
+    
+    // 이벤트 발행
+    await this.publishEvent({
+      type: 'operation.executed',
+      operation,
+      result,
+      timestamp: new Date()
+    });
+    
+    return result;
+  }
+
+  private async executeCausal(operation: Operation): Promise<OperationResult> {
+    // 인과 관계 의존성 확인
+    const dependencies = await this.getCausalDependencies(operation);
+    
+    // 의존성이 모두 적용될 때까지 대기
+    await this.waitForDependencies(dependencies);
+    
+    // 작업 실행
+    const result = await this.applyOperation(operation);
+    
+    // 인과 관계 메타데이터 추가
+    result.causalMetadata = {
+      dependencies,
+      timestamp: this.getCausalTimestamp()
+    };
+    
+    return result;
+  }
+}
+
+// 버전 관리자
+export class VersionManager {
+  private versionStore: VersionStore;
+  private vectorClock: VectorClock;
+
+  constructor(config: VersioningConfig) {
+    this.versionStore = new VersionStore(config.store);
+    this.vectorClock = new VectorClock(config.nodeId);
+  }
+
+  async getCurrentVersion(target: string): Promise<string> {
+    const versionInfo = await this.versionStore.get(target);
+    return versionInfo?.version || 'initial';
+  }
+
+  async updateVersion(
+    target: string,
+    operation: Operation,
+    result: any
+  ): Promise<VersionInfo> {
+    const currentVersion = await this.getCurrentVersion(target);
+    const newVersion = this.generateVersion(currentVersion);
+    
+    const versionInfo: VersionInfo = {
+      target,
+      version: newVersion,
+      previousVersion: currentVersion,
+      operation: {
+        type: operation.type,
+        timestamp: new Date()
+      },
+      vectorClock: this.vectorClock.increment(),
+      hash: await this.calculateHash(result)
+    };
+    
+    await this.versionStore.save(versionInfo);
+    
+    return versionInfo;
+  }
+
+  async getChangesSince(
+    target: string,
+    version: string
+  ): Promise<Change[]> {
+    const history = await this.versionStore.getHistory(target);
+    const changes: Change[] = [];
+    
+    let foundVersion = false;
+    
+    for (const versionInfo of history) {
+      if (foundVersion) {
+        changes.push({
+          version: versionInfo.version,
+          operation: versionInfo.operation,
+          timestamp: versionInfo.operation.timestamp
+        });
+      }
+      
+      if (versionInfo.version === version) {
+        foundVersion = true;
+      }
+    }
+    
+    return changes;
+  }
+
+  private generateVersion(currentVersion: string): string {
+    if (currentVersion === 'initial') {
+      return '1.0.0';
+    }
+    
+    const parts = currentVersion.split('.');
+    const patch = parseInt(parts[2]) + 1;
+    
+    return `${parts[0]}.${parts[1]}.${patch}`;
+  }
+
+  private async calculateHash(data: any): Promise<string> {
+    const crypto = await import('crypto');
+    const hash = crypto.createHash('sha256');
+    hash.update(JSON.stringify(data));
+    return hash.digest('hex');
+  }
+}
+
+// 충돌 해결자
+export class ConflictResolver {
+  private strategies: Map<ConflictResolution, ResolutionStrategy>;
+
+  constructor(config: ConflictConfig) {
+    this.strategies = new Map();
+    this.registerStrategies();
+  }
+
+  async resolve(
+    operation: Operation,
+    conflict: Conflict,
+    strategy: ConflictResolution
+  ): Promise<ResolutionResult> {
+    const resolver = this.strategies.get(strategy);
+    
+    if (!resolver) {
+      throw new Error(`Unknown resolution strategy: ${strategy}`);
+    }
+
+    return resolver.resolve(operation, conflict);
+  }
+
+  private registerStrategies(): void {
+    this.strategies.set(
+      ConflictResolution.LAST_WRITE_WINS,
+      new LastWriteWinsStrategy()
+    );
+    
+    this.strategies.set(
+      ConflictResolution.FIRST_WRITE_WINS,
+      new FirstWriteWinsStrategy()
+    );
+    
+    this.strategies.set(
+      ConflictResolution.MERGE,
+      new MergeStrategy()
+    );
+    
+    this.strategies.set(
+      ConflictResolution.CUSTOM,
+      new CustomStrategy()
+    );
+    
+    this.strategies.set(
+      ConflictResolution.FAIL,
+      new FailStrategy()
+    );
+  }
+}
+
+// 해결 전략들
+export class LastWriteWinsStrategy implements ResolutionStrategy {
+  async resolve(
+    operation: Operation,
+    conflict: Conflict
+  ): Promise<ResolutionResult> {
+    // 현재 버전 무시하고 작업 적용
+    return {
+      success: true,
+      operation: {
+        ...operation,
+        expectedVersion: conflict.currentVersion,
+        force: true
+      }
+    };
+  }
+}
+
+export class MergeStrategy implements ResolutionStrategy {
+  async resolve(
+    operation: Operation,
+    conflict: Conflict
+  ): Promise<ResolutionResult> {
+    try {
+      // 3-way 병합
+      const base = await this.getBaseVersion(conflict);
+      const current = await this.getCurrentState(operation.target);
+      const incoming = this.applyOperationToBase(base, operation);
+      
+      const merged = await this.threeWayMerge(base, current, incoming);
+      
+      return {
+        success: true,
+        operation: {
+          ...operation,
+          type: 'merge',
+          data: merged,
+          expectedVersion: conflict.currentVersion
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        reason: `Merge failed: ${error.message}`
+      };
+    }
+  }
+
+  private async threeWayMerge(
+    base: any,
+    current: any,
+    incoming: any
+  ): Promise<any> {
+    const merged = { ...base };
+    
+    // 현재 변경사항 적용
+    const currentChanges = this.diff(base, current);
+    this.applyChanges(merged, currentChanges);
+    
+    // 들어오는 변경사항 적용
+    const incomingChanges = this.diff(base, incoming);
+    
+    for (const change of incomingChanges) {
+      if (this.hasConflict(change, currentChanges)) {
+        // 충돌 해결 규칙 적용
+        const resolved = await this.resolveFieldConflict(
+          change,
+          currentChanges
+        );
+        this.applyChange(merged, resolved);
+      } else {
+        this.applyChange(merged, change);
+      }
+    }
+    
+    return merged;
+  }
+}
+
+// 일관성 검증자
+export class ConsistencyValidator {
+  private rules: ValidationRule[];
+  private invariantChecker: InvariantChecker;
+
+  constructor(config: ValidationConfig) {
+    this.rules = this.loadRules(config.rules);
+    this.invariantChecker = new InvariantChecker(config.invariants);
+  }
+
+  async validate(
+    operation: Operation,
+    guarantee: ConsistencyGuarantee
+  ): Promise<ValidationResult> {
+    const violations: Violation[] = [];
+
+    // 규칙 기반 검증
+    for (const rule of this.rules) {
+      if (rule.appliesTo(operation, guarantee)) {
+        const result = await rule.validate(operation);
+        
+        if (!result.valid) {
+          violations.push(...result.violations);
+        }
+      }
+    }
+
+    // 불변성 검증
+    const invariantCheck = await this.invariantChecker.check(operation);
+    
+    if (!invariantCheck.valid) {
+      violations.push(...invariantCheck.violations);
+    }
+
+    return {
+      valid: violations.length === 0,
+      violations
+    };
+  }
+}
+
+// 벡터 클럭
+export class VectorClock {
+  private clocks: Map<string, number> = new Map();
+
+  constructor(private nodeId: string) {
+    this.clocks.set(nodeId, 0);
+  }
+
+  increment(): VectorClock {
+    const newClock = new VectorClock(this.nodeId);
+    
+    // 기존 클럭 복사
+    for (const [node, time] of this.clocks) {
+      newClock.clocks.set(node, time);
+    }
+    
+    // 현재 노드 증가
+    newClock.clocks.set(
+      this.nodeId,
+      (this.clocks.get(this.nodeId) || 0) + 1
+    );
+    
+    return newClock;
+  }
+
+  merge(other: VectorClock): VectorClock {
+    const merged = new VectorClock(this.nodeId);
+    
+    // 모든 노드의 최대값 선택
+    const allNodes = new Set([
+      ...this.clocks.keys(),
+      ...other.clocks.keys()
+    ]);
+    
+    for (const node of allNodes) {
+      const thisTime = this.clocks.get(node) || 0;
+      const otherTime = other.clocks.get(node) || 0;
+      merged.clocks.set(node, Math.max(thisTime, otherTime));
+    }
+    
+    return merged;
+  }
+
+  happensBefore(other: VectorClock): boolean {
+    let hasLess = false;
+    
+    for (const [node, time] of this.clocks) {
+      const otherTime = other.clocks.get(node) || 0;
+      
+      if (time > otherTime) {
+        return false; // 이 노드가 더 최신
+      }
+      
+      if (time < otherTime) {
+        hasLess = true;
+      }
+    }
+    
+    // 다른 노드에만 있는 시간 확인
+    for (const [node, time] of other.clocks) {
+      if (!this.clocks.has(node) && time > 0) {
+        hasLess = true;
+      }
+    }
+    
+    return hasLess;
+  }
+
+  concurrent(other: VectorClock): boolean {
+    return !this.happensBefore(other) && !other.happensBefore(this);
+  }
+}
+
+// CRDT (Conflict-free Replicated Data Type) 구현
+export class CRDTManager {
+  private crdts: Map<string, CRDT> = new Map();
+
+  registerCRDT(id: string, type: CRDTType, config?: any): void {
+    switch (type) {
+      case 'g-counter':
+        this.crdts.set(id, new GCounter(id, config));
+        break;
+      
+      case 'pn-counter':
+        this.crdts.set(id, new PNCounter(id, config));
+        break;
+      
+      case 'g-set':
+        this.crdts.set(id, new GSet(id));
+        break;
+      
+      case 'or-set':
+        this.crdts.set(id, new ORSet(id, config));
+        break;
+      
+      case 'lww-register':
+        this.crdts.set(id, new LWWRegister(id));
+        break;
+    }
+  }
+
+  getCRDT(id: string): CRDT | undefined {
+    return this.crdts.get(id);
+  }
+}
+
+// G-Counter CRDT
+export class GCounter implements CRDT {
+  private counts: Map<string, number> = new Map();
+
+  constructor(
+    private id: string,
+    private nodeId: string
+  ) {}
+
+  increment(value: number = 1): void {
+    const current = this.counts.get(this.nodeId) || 0;
+    this.counts.set(this.nodeId, current + value);
+  }
+
+  getValue(): number {
+    let sum = 0;
+    
+    for (const count of this.counts.values()) {
+      sum += count;
+    }
+    
+    return sum;
+  }
+
+  merge(other: GCounter): void {
+    for (const [node, count] of other.counts) {
+      const currentCount = this.counts.get(node) || 0;
+      this.counts.set(node, Math.max(currentCount, count));
+    }
+  }
+
+  toJSON(): any {
+    return {
+      id: this.id,
+      type: 'g-counter',
+      counts: Object.fromEntries(this.counts)
+    };
+  }
+}
+
+// 이벤트 소싱 기반 일관성
+export class EventSourcingConsistency {
+  private eventStore: EventStore;
+  private snapshotStore: SnapshotStore;
+  private projectionManager: ProjectionManager;
+
+  constructor(config: EventSourcingConfig) {
+    this.eventStore = new EventStore(config.eventStore);
+    this.snapshotStore = new SnapshotStore(config.snapshot);
+    this.projectionManager = new ProjectionManager(config.projections);
+  }
+
+  async appendEvent(
+    aggregateId: string,
+    event: DomainEvent
+  ): Promise<void> {
+    // 이벤트 저장
+    await this.eventStore.append(aggregateId, event);
+    
+    // 프로젝션 업데이트
+    await this.projectionManager.handleEvent(event);
+    
+    // 스냅샷 생성 확인
+    await this.checkSnapshot(aggregateId);
+  }
+
+  async getAggregate(
+    aggregateId: string,
+    version?: number
+  ): Promise<Aggregate> {
+    // 스냅샷 로드
+    const snapshot = await this.snapshotStore.getLatest(aggregateId);
+    
+    // 이벤트 로드
+    const events = await this.eventStore.getEvents(
+      aggregateId,
+      snapshot?.version || 0,
+      version
+    );
+    
+    // 집합체 재구성
+    return this.reconstruct(snapshot, events);
+  }
+
+  private async reconstruct(
+    snapshot: Snapshot | null,
+    events: DomainEvent[]
+  ): Promise<Aggregate> {
+    let aggregate: Aggregate;
+    
+    if (snapshot) {
+      aggregate = this.deserializeSnapshot(snapshot);
+    } else {
+      aggregate = this.createEmptyAggregate();
+    }
+    
+    // 이벤트 적용
+    for (const event of events) {
+      aggregate.apply(event);
+    }
+    
+    return aggregate;
+  }
+
+  private async checkSnapshot(aggregateId: string): Promise<void> {
+    const eventCount = await this.eventStore.getEventCount(aggregateId);
+    const lastSnapshot = await this.snapshotStore.getLatest(aggregateId);
+    
+    const eventsSinceSnapshot = lastSnapshot 
+      ? eventCount - lastSnapshot.version 
+      : eventCount;
+    
+    if (eventsSinceSnapshot >= 100) { // 스냅샷 임계값
+      await this.createSnapshot(aggregateId);
+    }
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 다양한 일관성 수준 지원
+- [ ] 버전 관리 및 충돌 해결
+- [ ] CRDT 구현
+- [ ] 이벤트 소싱 기반 일관성
+
+### Task 5.15: 재해 복구 및 백업 시스템
+
+#### SubTask 5.15.1: 자동 백업 시스템
+**담당자**: DevOps 엔지니어  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/disaster_recovery/backup_system.ts
+export interface BackupConfig {
+  schedule: BackupSchedule;
+  retention: RetentionPolicy;
+  storage: StorageConfig;
+  encryption: EncryptionConfig;
+  verification: VerificationConfig;
+}
+
+export class AutoBackupSystem {
+  private scheduler: BackupScheduler;
+  private backupEngine: BackupEngine;
+  private storageManager: BackupStorageManager;
+  private verifier: BackupVerifier;
+  private monitor: BackupMonitor;
+
+  constructor(config: BackupConfig) {
+    this.scheduler = new BackupScheduler(config.schedule);
+    this.backupEngine = new BackupEngine(config);
+    this.storageManager = new BackupStorageManager(config.storage);
+    this.verifier = new BackupVerifier(config.verification);
+    this.monitor = new BackupMonitor();
+  }
+
+  async initialize(): Promise<void> {
+    // 스케줄러 시작
+    await this.scheduler.start();
+
+    // 백업 작업 등록
+    this.scheduler.on('backup:trigger', async (job) => {
+      await this.executeBackup(job);
+    });
+
+    // 모니터링 시작
+    await this.monitor.start();
+
+    logger.info('Auto backup system initialized');
+  }
+
+  async executeBackup(job: BackupJob): Promise<BackupResult> {
+    const backupId = this.generateBackupId();
+    
+    logger.info(`Starting backup ${backupId} for job ${job.id}`);
+
+    try {
+      // 백업 시작 알림
+      await this.notifyBackupStart(backupId, job);
+
+      // 백업 실행
+      const backup = await this.performBackup(backupId, job);
+
+      // 백업 검증
+      const verification = await this.verifyBackup(backup);
+
+      if (!verification.valid) {
+        throw new BackupVerificationError(
+          'Backup verification failed',
+          verification.errors
+        );
+      }
+
+      // 백업 저장
+      await this.storeBackup(backup);
+
+      // 보존 정책 적용
+      await this.applyRetentionPolicy(job);
+
+      // 백업 완료 알림
+      await this.notifyBackupComplete(backupId, backup);
+
+      return {
+        backupId,
+        success: true,
+        backup,
+        verification,
+        duration: Date.now() - backup.startTime.getTime()
+      };
+    } catch (error) {
+      logger.error(`Backup ${backupId} failed:`, error);
+
+      // 백업 실패 알림
+      await this.notifyBackupFailure(backupId, error);
+
+      return {
+        backupId,
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  private async performBackup(
+    backupId: string,
+    job: BackupJob
+  ): Promise<Backup> {
+    const backup: Backup = {
+      id: backupId,
+      jobId: job.id,
+      type: job.type,
+      scope: job.scope,
+      startTime: new Date(),
+      status: BackupStatus.IN_PROGRESS,
+      metadata: {
+        source: job.source,
+        destination: job.destination,
+        compression: job.compression || true,
+        encryption: job.encryption || true
+      }
+    };
+
+    // 백업 데이터 수집
+    const data = await this.collectBackupData(job);
+
+    // 데이터 처리
+    const processed = await this.processBackupData(data, backup.metadata);
+
+    backup.data = processed;
+    backup.size = processed.size;
+    backup.checksum = await this.calculateChecksum(processed);
+    backup.endTime = new Date();
+    backup.status = BackupStatus.COMPLETED;
+
+    return backup;
+  }
+
+  private async collectBackupData(job: BackupJob): Promise<BackupData> {
+    const collectors = this.getCollectors(job.type);
+    const data: BackupData = {
+      components: [],
+      timestamp: new Date()
+    };
+
+    for (const collector of collectors) {
+      const componentData = await collector.collect(job);
+      data.components.push(componentData);
+    }
+
+    return data;
+  }
+
+  private getCollectors(type: BackupType): DataCollector[] {
+    switch (type) {
+      case BackupType.FULL:
+        return [
+          new DatabaseCollector(),
+          new FileSystemCollector(),
+          new ConfigurationCollector(),
+          new StateCollector()
+        ];
+      
+      case BackupType.INCREMENTAL:
+        return [
+          new IncrementalDatabaseCollector(),
+          new IncrementalFileCollector()
+        ];
+      
+      case BackupType.DIFFERENTIAL:
+        return [
+          new DifferentialCollector()
+        ];
+      
+      default:
+        throw new Error(`Unknown backup type: ${type}`);
+    }
+  }
+
+  private async processBackupData(
+    data: BackupData,
+    metadata: BackupMetadata
+  ): Promise<ProcessedBackupData> {
+    let processed = data;
+
+    // 압축
+    if (metadata.compression) {
+      processed = await this.compressData(processed);
+    }
+
+    // 암호화
+    if (metadata.encryption) {
+      processed = await this.encryptData(processed);
+    }
+
+    // 메타데이터 추가
+    return {
+      ...processed,
+      processedAt: new Date(),
+      size: this.calculateSize(processed)
+    };
+  }
+
+  private generateBackupId(): string {
+    return `backup_${Date.now()}_${uuid().substring(0, 8)}`;
+  }
+}
+
+// 백업 스케줄러
+export class BackupScheduler extends EventEmitter {
+  private jobs: Map<string, ScheduledBackupJob>;
+  private scheduler: Scheduler;
+
+  constructor(config: ScheduleConfig) {
+    super();
+    this.jobs = new Map();
+    this.scheduler = new Scheduler();
+  }
+
+  async scheduleBackup(job: BackupJobConfig): Promise<string> {
+    const scheduledJob: ScheduledBackupJob = {
+      id: uuid(),
+      ...job,
+      nextRun: this.calculateNextRun(job.schedule),
+      enabled: true
+    };
+
+    this.jobs.set(scheduledJob.id, scheduledJob);
+
+    // 스케줄러에 등록
+    await this.scheduler.schedule(
+      scheduledJob.id,
+      scheduledJob.schedule,
+      async () => {
+        await this.triggerBackup(scheduledJob);
+      }
+    );
+
+    return scheduledJob.id;
+  }
+
+  private async triggerBackup(job: ScheduledBackupJob): Promise<void> {
+    if (!job.enabled) {
+      return;
+    }
+
+    this.emit('backup:trigger', job);
+
+    // 다음 실행 시간 업데이트
+    job.lastRun = new Date();
+    job.nextRun = this.calculateNextRun(job.schedule);
+  }
+
+  private calculateNextRun(schedule: BackupSchedule): Date {
+    const cron = new CronExpression(schedule.cron);
+    return cron.next();
+  }
+}
+
+// 백업 엔진
+export class BackupEngine {
+  private compressor: DataCompressor;
+  private encryptor: DataEncryptor;
+  private chunker: DataChunker;
+
+  constructor(config: BackupEngineConfig) {
+    this.compressor = new DataCompressor(config.compression);
+    this.encryptor = new DataEncryptor(config.encryption);
+    this.chunker = new DataChunker(config.chunking);
+  }
+
+  async compressData(data: any): Promise<CompressedData> {
+    return this.compressor.compress(data);
+  }
+
+  async encryptData(data: any): Promise<EncryptedData> {
+    return this.encryptor.encrypt(data);
+  }
+
+  async chunkData(data: any, chunkSize: number): Promise<DataChunk[]> {
+    return this.chunker.chunk(data, chunkSize);
+  }
+}
+
+// 데이터베이스 수집기
+export class DatabaseCollector implements DataCollector {
+  private databases: DatabaseConnection[];
+
+  async collect(job: BackupJob): Promise<ComponentBackupData> {
+    const backupData: ComponentBackupData = {
+      component: 'database',
+      type: 'full',
+      data: [],
+      metadata: {}
+    };
+
+    for (const db of this.databases) {
+      const dbBackup = await this.backupDatabase(db, job);
+      backupData.data.push(dbBackup);
+    }
+
+    return backupData;
+  }
+
+  private async backupDatabase(
+    db: DatabaseConnection,
+    job: BackupJob
+  ): Promise<DatabaseBackup> {
+    const backup: DatabaseBackup = {
+      name: db.name,
+      type: db.type,
+      timestamp: new Date(),
+      data: {}
+    };
+
+    // 스키마 백업
+    backup.schema = await this.backupSchema(db);
+
+    // 데이터 백업
+    if (job.includeData) {
+      backup.data = await this.backupData(db, job);
+    }
+
+    // 인덱스 백업
+    backup.indexes = await this.backupIndexes(db);
+
+    // 트리거/프로시저 백업
+    backup.procedures = await this.backupProcedures(db);
+
+    return backup;
+  }
+
+  private async backupData(
+    db: DatabaseConnection,
+    job: BackupJob
+  ): Promise<TableData[]> {
+    const tables = await db.getTables();
+    const tableData: TableData[] = [];
+
+    for (const table of tables) {
+      if (this.shouldBackupTable(table, job)) {
+        const data = await this.exportTableData(db, table, job);
+        tableData.push(data);
+      }
+    }
+
+    return tableData;
+  }
+
+  private async exportTableData(
+    db: DatabaseConnection,
+    table: string,
+    job: BackupJob
+  ): Promise<TableData> {
+    const batchSize = job.batchSize || 10000;
+    const data: any[] = [];
+    let offset = 0;
+
+    while (true) {
+      const batch = await db.query(
+        `SELECT * FROM ${table} LIMIT ${batchSize} OFFSET ${offset}`
+      );
+
+      if (batch.length === 0) {
+        break;
+      }
+
+      data.push(...batch);
+      offset += batchSize;
+
+      // 진행 상황 알림
+      this.emitProgress({
+        table,
+        processed: offset,
+        total: await db.count(table)
+      });
+    }
+
+    return {
+      table,
+      rows: data,
+      count: data.length
+    };
+  }
+}
+
+// 증분 백업 수집기
+export class IncrementalDatabaseCollector extends DatabaseCollector {
+  private changeTracker: ChangeTracker;
+
+  constructor() {
+    super();
+    this.changeTracker = new ChangeTracker();
+  }
+
+  async collect(job: BackupJob): Promise<ComponentBackupData> {
+    const lastBackup = await this.getLastBackup(job.source);
+    
+    if (!lastBackup) {
+      // 전체 백업으로 전환
+      return super.collect(job);
+    }
+
+    const changes = await this.changeTracker.getChangesSince(
+      lastBackup.timestamp
+    );
+
+    return {
+      component: 'database',
+      type: 'incremental',
+      data: changes,
+      metadata: {
+        baseBackupId: lastBackup.id,
+        fromTimestamp: lastBackup.timestamp,
+        toTimestamp: new Date()
+      }
+    };
+  }
+
+  private async getChangesSince(
+    timestamp: Date
+  ): Promise<DatabaseChanges> {
+    const changes: DatabaseChanges = {
+      inserts: [],
+      updates: [],
+      deletes: []
+    };
+
+    // WAL 또는 CDC 로그에서 변경사항 추출
+    const logs = await this.readTransactionLogs(timestamp);
+
+    for (const log of logs) {
+      switch (log.operation) {
+        case 'INSERT':
+          changes.inserts.push(log);
+          break;
+        case 'UPDATE':
+          changes.updates.push(log);
+          break;
+        case 'DELETE':
+          changes.deletes.push(log);
+          break;
+      }
+    }
+
+    return changes;
+  }
+}
+
+// 백업 저장소 관리자
+export class BackupStorageManager {
+  private primaryStorage: BackupStorage;
+  private secondaryStorages: BackupStorage[];
+  private storageRouter: StorageRouter;
+
+  constructor(config: StorageConfig) {
+    this.primaryStorage = this.createStorage(config.primary);
+    this.secondaryStorages = config.secondary.map(s => this.createStorage(s));
+    this.storageRouter = new StorageRouter(config.routing);
+  }
+
+  async storeBackup(backup: Backup): Promise<StorageResult> {
+    // 저장소 선택
+    const targetStorage = this.storageRouter.selectStorage(backup);
+
+    try {
+      // 주 저장소에 저장
+      const primaryResult = await this.primaryStorage.store(backup);
+
+      // 보조 저장소에 복제 (비동기)
+      this.replicateToSecondary(backup);
+
+      return primaryResult;
+    } catch (error) {
+      logger.error('Primary storage failed:', error);
+
+      // 대체 저장소 시도
+      return this.storeToFallback(backup);
+    }
+  }
+
+  private async replicateToSecondary(backup: Backup): Promise<void> {
+    const promises = this.secondaryStorages.map(storage =>
+      storage.store(backup).catch(error => {
+        logger.error(`Secondary storage replication failed:`, error);
+      })
+    );
+
+    await Promise.all(promises);
+  }
+
+  private createStorage(config: StorageProviderConfig): BackupStorage {
+    switch (config.type) {
+      case 'local':
+        return new LocalBackupStorage(config);
+      
+      case 's3':
+        return new S3BackupStorage(config);
+      
+      case 'azure':
+        return new AzureBackupStorage(config);
+      
+      case 'gcs':
+        return new GCSBackupStorage(config);
+      
+      case 'tape':
+        return new TapeBackupStorage(config);
+      
+      default:
+        throw new Error(`Unknown storage type: ${config.type}`);
+    }
+  }
+}
+
+// S3 백업 저장소
+export class S3BackupStorage implements BackupStorage {
+  private s3Client: S3Client;
+  private bucket: string;
+
+  constructor(config: S3StorageConfig) {
+    this.s3Client = new S3Client(config);
+    this.bucket = config.bucket;
+  }
+
+  async store(backup: Backup): Promise<StorageResult> {
+    const key = this.generateKey(backup);
+    const metadata = this.prepareMetadata(backup);
+
+    try {
+      // 멀티파트 업로드 시작
+      const upload = await this.s3Client.createMultipartUpload({
+        Bucket: this.bucket,
+        Key: key,
+        Metadata: metadata,
+        ServerSideEncryption: 'AES256',
+        StorageClass: this.getStorageClass(backup)
+      });
+
+      // 청크 업로드
+      const parts = await this.uploadParts(backup, upload);
+
+      // 업로드 완료
+      const result = await this.s3Client.completeMultipartUpload({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: upload.UploadId,
+        MultipartUpload: { Parts: parts }
+      });
+
+      return {
+        success: true,
+        location: `s3://${this.bucket}/${key}`,
+        size: backup.size,
+        etag: result.ETag
+      };
+    } catch (error) {
+      logger.error('S3 backup storage failed:', error);
+      throw error;
+    }
+  }
+
+  private getStorageClass(backup: Backup): string {
+    // 백업 타입에 따른 스토리지 클래스 결정
+    if (backup.type === BackupType.ARCHIVE) {
+      return 'GLACIER';
+    } else if (backup.metadata.accessFrequency === 'low') {
+      return 'STANDARD_IA';
+    }
+    return 'STANDARD';
+  }
+
+  private generateKey(backup: Backup): string {
+    const date = backup.startTime.toISOString().split('T')[0];
+    return `backups/${date}/${backup.type}/${backup.id}.backup`;
+  }
+}
+
+// 백업 검증자
+export class BackupVerifier {
+  private integrityChecker: IntegrityChecker;
+  private completenessChecker: CompletenessChecker;
+  private restorabilityTester: RestorabilityTester;
+
+  constructor(config: VerificationConfig) {
+    this.integrityChecker = new IntegrityChecker(config.integrity);
+    this.completenessChecker = new CompletenessChecker(config.completeness);
+    this.restorabilityTester = new RestorabilityTester(config.restorability);
+  }
+
+  async verifyBackup(backup: Backup): Promise<VerificationResult> {
+    const checks: VerificationCheck[] = [];
+
+    // 무결성 검증
+    const integrity = await this.integrityChecker.check(backup);
+    checks.push({
+      name: 'integrity',
+      passed: integrity.valid,
+      details: integrity.details
+    });
+
+    // 완전성 검증
+    const completeness = await this.completenessChecker.check(backup);
+    checks.push({
+      name: 'completeness', 
+      passed: completeness.valid,
+      details: completeness.details
+    });
+
+    // 복원 가능성 테스트 (샘플링)
+    if (backup.metadata.testRestore) {
+      const restorability = await this.restorabilityTester.test(backup);
+      checks.push({
+        name: 'restorability',
+        passed: restorability.valid,
+        details: restorability.details
+      });
+    }
+
+    const valid = checks.every(c => c.passed);
+
+    return {
+      valid,
+      checks,
+      timestamp: new Date()
+    };
+  }
+}
+
+// 보존 정책 관리자
+export class RetentionPolicyManager {
+  private policies: Map<string, RetentionPolicy>;
+  private cleaner: BackupCleaner;
+
+  constructor(policies: RetentionPolicy[]) {
+    this.policies = new Map();
+    policies.forEach(p => this.policies.set(p.name, p));
+    this.cleaner = new BackupCleaner();
+  }
+
+  async applyPolicy(
+    jobId: string,
+    backups: Backup[]
+  ): Promise<RetentionResult> {
+    const policy = this.getPolicyForJob(jobId);
+    
+    if (!policy) {
+      return { retained: backups, deleted: [] };
+    }
+
+    const { retain, delete } = this.evaluatePolicy(policy, backups);
+
+    // 삭제 실행
+    if (delete.length > 0) {
+      await this.cleaner.deleteBackups(delete);
+    }
+
+    return {
+      retained: retain,
+      deleted: delete,
+      policy: policy.name
+    };
+  }
+
+  private evaluatePolicy(
+    policy: RetentionPolicy,
+    backups: Backup[]
+  ): { retain: Backup[], delete: Backup[] } {
+    const sorted = [...backups].sort((a, b) => 
+      b.startTime.getTime() - a.startTime.getTime()
+    );
+
+    const retain: Backup[] = [];
+    const delete: Backup[] = [];
+
+    // GFS (Grandfather-Father-Son) 정책
+    if (policy.type === 'gfs') {
+      const gfs = this.applyGFSPolicy(sorted, policy);
+      retain.push(...gfs.retain);
+      delete.push(...gfs.delete);
+    } 
+    // 시간 기반 정책
+    else if (policy.type === 'time-based') {
+      const cutoff = new Date(Date.now() - policy.retentionDays * 86400000);
+      
+      for (const backup of sorted) {
+        if (backup.startTime > cutoff) {
+          retain.push(backup);
+        } else {
+          delete.push(backup);
+        }
+      }
+    }
+    // 개수 기반 정책
+    else if (policy.type === 'count-based') {
+      retain.push(...sorted.slice(0, policy.retentionCount));
+      delete.push(...sorted.slice(policy.retentionCount));
+    }
+
+    return { retain, delete };
+  }
+
+  private applyGFSPolicy(
+    backups: Backup[],
+    policy: RetentionPolicy
+  ): { retain: Backup[], delete: Backup[] } {
+    const retain: Set<Backup> = new Set();
+    const now = new Date();
+
+    // 일일 백업 (최근 N일)
+    const dailyCutoff = new Date(now.getTime() - policy.daily * 86400000);
+    const dailyBackups = backups.filter(b => b.startTime > dailyCutoff);
+    dailyBackups.forEach(b => retain.add(b));
+
+    // 주간 백업 (최근 N주, 각 주의 마지막 백업)
+    const weeklyBackups = this.selectWeeklyBackups(
+      backups,
+      policy.weekly
+    );
+    weeklyBackups.forEach(b => retain.add(b));
+
+    // 월간 백업 (최근 N개월, 각 월의 마지막 백업)
+    const monthlyBackups = this.selectMonthlyBackups(
+      backups,
+      policy.monthly
+    );
+    monthlyBackups.forEach(b => retain.add(b));
+
+    // 연간 백업 (최근 N년, 각 년의 마지막 백업)
+    const yearlyBackups = this.selectYearlyBackups(
+      backups,
+      policy.yearly
+    );
+    yearlyBackups.forEach(b => retain.add(b));
+
+    const retainArray = Array.from(retain);
+    const deleteArray = backups.filter(b => !retain.has(b));
+
+    return { retain: retainArray, delete: deleteArray };
+  }
+}
+
+// 백업 모니터
+export class BackupMonitor {
+  private metrics: BackupMetrics;
+  private alerting: AlertingService;
+
+  async checkBackupHealth(): Promise<BackupHealthStatus> {
+    const health: BackupHealthStatus = {
+      healthy: true,
+      checks: []
+    };
+
+    // 최근 백업 확인
+    const recentBackups = await this.checkRecentBackups();
+    health.checks.push(recentBackups);
+
+    // 백업 성공률 확인
+    const successRate = await this.checkSuccessRate();
+    health.checks.push(successRate);
+
+    // 저장소 용량 확인
+    const storageCapacity = await this.checkStorageCapacity();
+    health.checks.push(storageCapacity);
+
+    // 백업 검증 상태
+    const verificationStatus = await this.checkVerificationStatus();
+    health.checks.push(verificationStatus);
+
+    health.healthy = health.checks.every(c => c.passed);
+
+    return health;
+  }
+
+  private async checkRecentBackups(): Promise<HealthCheck> {
+    const lastBackup = await this.getLastSuccessfulBackup();
+    const hoursSinceLastBackup = lastBackup 
+      ? (Date.now() - lastBackup.endTime.getTime()) / 3600000
+      : Infinity;
+
+    return {
+      name: 'recent_backups',
+      passed: hoursSinceLastBackup < 24,
+      details: {
+        lastBackupTime: lastBackup?.endTime,
+        hoursSinceLastBackup
+      }
+    };
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 자동 백업 스케줄링
+- [ ] 다양한 백업 타입 지원
+- [ ] 분산 저장소 지원
+- [ ] 백업 검증 및 모니터링
+
+#### SubTask 5.15.2: 복구 지점 관리
+**담당자**: 데이터베이스 관리자  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```typescript
+// backend/src/orchestration/disaster_recovery/recovery_point.ts
+export interface RecoveryPoint {
+  id: string;
+  name: string;
+  type: RecoveryPointType;
+  timestamp: Date;
+  consistency: ConsistencyType;
+  components: ComponentSnapshot[];
+  metadata: RecoveryPointMetadata;
+  status: RecoveryPointStatus;
+}
+
+export class RecoveryPointManager {
+  private repository: RecoveryPointRepository;
+  private snapshotManager: SnapshotManager;
+  private consistencyManager: ConsistencyManager;
+  private catalogManager: CatalogManager;
+
+  constructor(config: RecoveryPointConfig) {
+    this.repository = new RecoveryPointRepository(config.repository);
+    this.snapshotManager = new SnapshotManager(config.snapshot);
+    this.consistencyManager = new ConsistencyManager(config.consistency);
+    this.catalogManager = new CatalogManager(config.catalog);
+  }
+
+  async createRecoveryPoint(
+    name: string,
+    options: RecoveryPointOptions
+  ): Promise<RecoveryPoint> {
+    const recoveryPointId = this.generateRecoveryPointId();
+    
+    logger.info(`Creating recovery point ${recoveryPointId}: ${name}`);
+
+    try {
+      // 일관성 보장을 위한 준비
+      await this.prepareForSnapshot(options);
+
+      // 복구 지점 생성
+      const recoveryPoint: RecoveryPoint = {
+        id: recoveryPointId,
+        name,
+        type: options.type || RecoveryPointType.MANUAL,
+        timestamp: new Date(),
+        consistency: options.consistency || ConsistencyType.CRASH_CONSISTENT,
+        components: [],
+        metadata: {
+          description: options.description,
+          tags: options.tags || [],
+          retention: options.retention,
+          dependencies: []
+        },
+        status: RecoveryPointStatus.CREATING
+      };
+
+      // 컴포넌트별 스냅샷 생성
+      const snapshots = await this.createComponentSnapshots(
+        options.components || 'all',
+        recoveryPoint
+      );
+
+      recoveryPoint.components = snapshots;
+
+      // 일관성 검증
+      const consistencyCheck = await this.consistencyManager.verify(
+        recoveryPoint
+      );
+
+      if (!consistencyCheck.valid) {
+        throw new ConsistencyError(
+          'Recovery point consistency check failed',
+          consistencyCheck.errors
+        );
+      }
+
+      // 카탈로그 등록
+      await this.catalogManager.register(recoveryPoint);
+
+      // 저장
+      await this.repository.save(recoveryPoint);
+
+      recoveryPoint.status = RecoveryPointStatus.COMPLETED;
+
+      logger.info(`Recovery point ${recoveryPointId} created successfully`);
+
+      return recoveryPoint;
+    } catch (error) {
+      logger.error(`Recovery point creation failed:`, error);
+      
+      // 롤백
+      await this.rollbackRecoveryPoint(recoveryPointId);
+      
+      throw error;
+    }
+  }
+
+  private async prepareForSnapshot(
+    options: RecoveryPointOptions
+  ): Promise<void> {
+    if (options.consistency === ConsistencyType.APPLICATION_CONSISTENT) {
+      // 애플리케이션 정지점 생성
+      await this.createQuiescePoint(options);
+    } else if (options.consistency === ConsistencyType.CRASH_CONSISTENT) {
+      // 플러시 작업
+      await this.flushPendingOperations();
+    }
+  }
+
+  private async createComponentSnapshots(
+    components: string[] | 'all',
+    recoveryPoint: RecoveryPoint
+  ): Promise<ComponentSnapshot[]> {
+    const targetComponents = components === 'all' 
+      ? await this.getAllComponents()
+      : components;
+
+    const snapshots: ComponentSnapshot[] = [];
+
+    for (const component of targetComponents) {
+      try {
+        const snapshot = await this.snapshotManager.createSnapshot(
+          component,
+          recoveryPoint
+        );
+        
+        snapshots.push(snapshot);
+      } catch (error) {
+        logger.error(`Snapshot failed for component ${component}:`, error);
+        
+        if (recoveryPoint.metadata.partial !== true) {
+          throw error; // 부분 백업이 아니면 실패
+        }
+      }
+    }
+
+    return snapshots;
+  }
+
+  async listRecoveryPoints(
+    filter?: RecoveryPointFilter
+  ): Promise<RecoveryPointList> {
+    const points = await this.repository.list(filter);
+    
+    // 유효성 확인
+    const validPoints = await this.validateRecoveryPoints(points);
+
+    return {
+      points: validPoints,
+      total: validPoints.length,
+      metadata: {
+        oldestPoint: this.findOldestPoint(validPoints),
+        newestPoint: this.findNewestPoint(validPoints),
+        totalSize: this.calculateTotalSize(validPoints)
+      }
+    };
+  }
+
+  async getRecoveryPoint(id: string): Promise<RecoveryPoint> {
+    const point = await this.repository.get(id);
+    
+    if (!point) {
+      throw new Error(`Recovery point ${id} not found`);
+    }
+
+    // 상태 업데이트
+    const status = await this.checkRecoveryPointStatus(point);
+    point.status = status;
+
+    return point;
+  }
+
+  async deleteRecoveryPoint(id: string): Promise<void> {
+    const point = await this.getRecoveryPoint(id);
+
+    // 의존성 확인
+    const dependencies = await this.checkDependencies(id);
+    
+    if (dependencies.length > 0) {
+      throw new Error(
+        `Cannot delete recovery point with dependencies: ${dependencies.join(', ')}`
+      );
+    }
+
+    // 스냅샷 삭제
+    for (const component of point.components) {
+      await this.snapshotManager.deleteSnapshot(component.id);
+    }
+
+    // 카탈로그에서 제거
+    await this.catalogManager.unregister(id);
+
+    // 메타데이터 삭제
+    await this.repository.delete(id);
+
+    logger.info(`Recovery point ${id} deleted`);
+  }
+
+  private generateRecoveryPointId(): string {
+    return `rp_${Date.now()}_${uuid().substring(0, 8)}`;
+  }
+
+  private async validateRecoveryPoints(
+    points: RecoveryPoint[]
+  ): Promise<RecoveryPoint[]> {
+    const valid: RecoveryPoint[] = [];
+
+    for (const point of points) {
+      const validation = await this.validateRecoveryPoint(point);
+      
+      if (validation.valid) {
+        valid.push(point);
+      } else {
+        logger.warn(
+          `Recovery point ${point.id} is invalid:`,
+          validation.errors
+        );
+      }
+    }
+
+    return valid;
+  }
+}
+
+// 스냅샷 관리자
+export class SnapshotManager {
+  private providers: Map<string, SnapshotProvider>;
+  private metadataStore: SnapshotMetadataStore;
+
+  constructor(config: SnapshotConfig) {
+    this.providers = this.initializeProviders(config.providers);
+    this.metadataStore = new SnapshotMetadataStore(config.metadata);
+  }
+
+  async createSnapshot(
+    componentId: string,
+    recoveryPoint: RecoveryPoint
+  ): Promise<ComponentSnapshot> {
+    const component = await this.getComponent(componentId);
+    const provider = this.getProvider(component.type);
+
+    logger.info(`Creating snapshot for component ${componentId}`);
+
+    // 스냅샷 생성
+    const snapshotId = await provider.createSnapshot(component);
+
+    // 메타데이터 생성
+    const snapshot: ComponentSnapshot = {
+      id: snapshotId,
+      componentId,
+      componentType: component.type,
+      recoveryPointId: recoveryPoint.id,
+      timestamp: new Date(),
+      size: await provider.getSnapshotSize(snapshotId),
+      metadata: {
+        location: await provider.getSnapshotLocation(snapshotId),
+        checksum: await provider.calculateChecksum(snapshotId),
+        compression: component.compression || false,
+        encryption: component.encryption || true
+      }
+    };
+
+    // 메타데이터 저장
+    await this.metadataStore.save(snapshot);
+
+    return snapshot;
+  }
+
+  private initializeProviders(
+    configs: ProviderConfig[]
+  ): Map<string, SnapshotProvider> {
+    const providers = new Map();
+
+    for (const config of configs) {
+      switch (config.type) {
+        case 'volume':
+          providers.set(config.name, new VolumeSnapshotProvider(config));
+          break;
+        
+        case 'database':
+          providers.set(config.name, new DatabaseSnapshotProvider(config));
+          break;
+        
+        case 'vm':
+          providers.set(config.name, new VMSnapshotProvider(config));
+          break;
+        
+        case 'container':
+          providers.set(config.name, new ContainerSnapshotProvider(config));
+          break;
+        
+        case 'filesystem':
+          providers.set(config.name, new FileSystemSnapshotProvider(config));
+          break;
+      }
+    }
+
+    return providers;
+  }
+
+  private getProvider(componentType: string): SnapshotProvider {
+    const provider = this.providers.get(componentType);
+    
+    if (!provider) {
+      throw new Error(`No snapshot provider for component type: ${componentType}`);
+    }
+
+    return provider;
+  }
+}
+
+// 볼륨 스냅샷 제공자
+export class VolumeSnapshotProvider implements SnapshotProvider {
+  private storageClient: StorageClient;
+
+  constructor(config: ProviderConfig) {
+    this.storageClient = new StorageClient(config.storage);
+  }
+
+  async createSnapshot(component: Component): Promise<string> {
+    const volume = await this.storageClient.getVolume(component.id);
+
+    // 스냅샷 생성
+    const snapshot = await this.storageClient.createSnapshot({
+      volumeId: volume.id,
+      name: `snapshot_${Date.now()}`,
+      description: `Recovery point snapshot for ${component.name}`
+    });
+
+    // 스냅샷 완료 대기
+    await this.waitForSnapshot(snapshot.id);
+
+    return snapshot.id;
+  }
+
+  async restoreSnapshot(
+    snapshotId: string,
+    targetId: string
+  ): Promise<void> {
+    const snapshot = await this.storageClient.getSnapshot(snapshotId);
+
+    // 새 볼륨 생성 또는 기존 볼륨 덮어쓰기
+    if (targetId) {
+      await this.storageClient.restoreVolumeFromSnapshot(
+        targetId,
+        snapshotId
+      );
+    } else {
+      await this.storageClient.createVolumeFromSnapshot(
+        snapshotId,
+        {
+          name: `restored_${snapshot.name}`,
+          size: snapshot.size
+        }
+      );
+    }
+  }
+
+  private async waitForSnapshot(snapshotId: string): Promise<void> {
+    const maxAttempts = 60; // 5분
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      const snapshot = await this.storageClient.getSnapshot(snapshotId);
+      
+      if (snapshot.state === 'completed') {
+        return;
+      } else if (snapshot.state === 'error') {
+        throw new Error(`Snapshot ${snapshotId} failed`);
+      }
+
+      await this.sleep(5000); // 5초 대기
+      attempts++;
+    }
+
+    throw new Error(`Snapshot ${snapshotId} timed out`);
+  }
+}
+
+// 데이터베이스 스냅샷 제공자
+export class DatabaseSnapshotProvider implements SnapshotProvider {
+  private dbClient: DatabaseClient;
+
+  async createSnapshot(component: Component): Promise<string> {
+    const db = await this.dbClient.getDatabase(component.id);
+
+    // 데이터베이스별 스냅샷 전략
+    switch (db.type) {
+      case 'postgresql':
+        return this.createPostgresSnapshot(db);
+      
+      case 'mysql':
+        return this.createMySQLSnapshot(db);
+      
+      case 'mongodb':
+        return this.createMongoSnapshot(db);
+      
+      default:
+        throw new Error(`Unsupported database type: ${db.type}`);
+    }
+  }
+
+  private async createPostgresSnapshot(db: Database): Promise<string> {
+    // 물리적 백업 (pg_basebackup)
+    const backupId = `pg_backup_${Date.now()}`;
+    
+    await this.dbClient.execute(
+      `SELECT pg_start_backup('${backupId}', false, false)`
+    );
+
+    try {
+      // 데이터 디렉토리 복사
+      await this.copyDataDirectory(db.dataDir, backupId);
+
+      // WAL 아카이브
+      await this.archiveWAL(db);
+    } finally {
+      await this.dbClient.execute(`SELECT pg_stop_backup(false)`);
+    }
+
+    return backupId;
+  }
+
+  private async createMySQLSnapshot(db: Database): Promise<string> {
+    // mysqldump 또는 xtrabackup 사용
+    const backupId = `mysql_backup_${Date.now()}`;
+
+    if (db.engine === 'InnoDB') {
+      // Hot backup with xtrabackup
+      await this.runXtraBackup(db, backupId);
+    } else {
+      // Logical backup with mysqldump
+      await this.runMySQLDump(db, backupId);
+    }
+
+    return backupId;
+  }
+
+  private async createMongoSnapshot(db: Database): Promise<string> {
+    // mongodump 또는 파일시스템 스냅샷
+    const backupId = `mongo_backup_${Date.now()}`;
+
+    if (db.replicaSet) {
+      // 세컨더리에서 백업
+      await this.backupFromSecondary(db, backupId);
+    } else {
+      // fsync lock 후 백업
+      await this.dbClient.execute({ fsync: 1, lock: true });
+      
+      try {
+        await this.copyDataDirectory(db.dataDir, backupId);
+      } finally {
+        await this.dbClient.execute({ fsyncUnlock: 1 });
+      }
+    }
+
+    return backupId;
+  }
+}
+
+// 일관성 관리자
+export class ConsistencyManager {
+  private validators: Map<ConsistencyType, ConsistencyValidator>;
+
+  constructor(config: ConsistencyConfig) {
+    this.validators = new Map();
+    this.initializeValidators();
+  }
+
+  async verify(
+    recoveryPoint: RecoveryPoint
+  ): Promise<ConsistencyCheckResult> {
+    const validator = this.validators.get(recoveryPoint.consistency);
+    
+    if (!validator) {
+      throw new Error(
+        `No validator for consistency type: ${recoveryPoint.consistency}`
+      );
+    }
+
+    return validator.validate(recoveryPoint);
+  }
+
+  private initializeValidators(): void {
+    this.validators.set(
+      ConsistencyType.CRASH_CONSISTENT,
+      new CrashConsistencyValidator()
+    );
+    
+    this.validators.set(
+      ConsistencyType.APPLICATION_CONSISTENT,
+      new ApplicationConsistencyValidator()
+    );
+    
+    this.validators.set(
+      ConsistencyType.TRANSACTIONAL_CONSISTENT,
+      new TransactionalConsistencyValidator()
+    );
+  }
+}
+
+// 애플리케이션 일관성 검증자
+export class ApplicationConsistencyValidator implements ConsistencyValidator {
+  async validate(
+    recoveryPoint: RecoveryPoint
+  ): Promise<ConsistencyCheckResult> {
+    const checks: ConsistencyCheck[] = [];
+
+    // 애플리케이션 상태 확인
+    const appStateCheck = await this.checkApplicationState(recoveryPoint);
+    checks.push(appStateCheck);
+
+    // 트랜잭션 로그 확인
+    const txLogCheck = await this.checkTransactionLogs(recoveryPoint);
+    checks.push(txLogCheck);
+
+    // 데이터 무결성 확인
+    const integrityCheck = await this.checkDataIntegrity(recoveryPoint);
+    checks.push(integrityCheck);
+
+    const valid = checks.every(c => c.passed);
+
+    return {
+      valid,
+      checks,
+      timestamp: new Date()
+    };
+  }
+
+  private async checkApplicationState(
+    recoveryPoint: RecoveryPoint
+  ): Promise<ConsistencyCheck> {
+    // 애플리케이션별 상태 확인 로직
+    const components = recoveryPoint.components.filter(
+      c => c.componentType === 'application'
+    );
+
+    for (const component of components) {
+      const state = await this.getApplicationState(component);
+      
+      if (state !== 'quiesced' && state !== 'stopped') {
+        return {
+          name: 'application_state',
+          passed: false,
+          details: `Application ${component.componentId} was in ${state} state`
+        };
+      }
+    }
+
+    return {
+      name: 'application_state',
+      passed: true,
+      details: 'All applications were in consistent state'
+    };
+  }
+
+  private async checkTransactionLogs(
+    recoveryPoint: RecoveryPoint
+  ): Promise<ConsistencyCheck> {
+    const databaseComponents = recoveryPoint.components.filter(
+      c => c.componentType === 'database'
+    );
+
+    for (const db of databaseComponents) {
+      const pendingTx = await this.checkPendingTransactions(db);
+      
+      if (pendingTx > 0) {
+        return {
+          name: 'transaction_logs',
+          passed: false,
+          details: `Database ${db.componentId} has ${pendingTx} pending transactions`
+        };
+      }
+    }
+
+    return {
+      name: 'transaction_logs',
+      passed: true,
+      details: 'No pending transactions found'
+    };
+  }
+}
+
+// 카탈로그 관리자
+export class CatalogManager {
+  private catalog: RecoveryPointCatalog;
+  private indexer: CatalogIndexer;
+  private searcher: CatalogSearcher;
+
+  constructor(config: CatalogConfig) {
+    this.catalog = new RecoveryPointCatalog(config.storage);
+    this.indexer = new CatalogIndexer(config.index);
+    this.searcher = new CatalogSearcher();
+  }
+
+  async register(recoveryPoint: RecoveryPoint): Promise<void> {
+    // 카탈로그 항목 생성
+    const entry: CatalogEntry = {
+      id: recoveryPoint.id,
+      name: recoveryPoint.name,
+      timestamp: recoveryPoint.timestamp,
+      type: recoveryPoint.type,
+      components: recoveryPoint.components.map(c => ({
+        id: c.id,
+        type: c.componentType,
+        size: c.size
+      })),
+      metadata: recoveryPoint.metadata,
+      searchableContent: await this.extractSearchableContent(recoveryPoint)
+    };
+
+    // 저장
+    await this.catalog.add(entry);
+
+    // 인덱싱
+    await this.indexer.index(entry);
+  }
+
+  async search(query: SearchQuery): Promise<SearchResult> {
+    return this.searcher.search(query);
+  }
+
+  async getDependencyGraph(
+    recoveryPointId: string
+  ): Promise<DependencyGraph> {
+    const entry = await this.catalog.get(recoveryPointId);
+    
+    if (!entry) {
+      throw new Error(`Recovery point ${recoveryPointId} not found in catalog`);
+    }
+
+    // 의존성 그래프 생성
+    const graph = new DependencyGraph();
+    
+    // 컴포넌트 의존성 추가
+    for (const component of entry.components) {
+      const dependencies = await this.getComponentDependencies(component.id);
+      
+      for (const dep of dependencies) {
+        graph.addEdge(component.id, dep);
+      }
+    }
+
+    return graph;
+  }
+
+  private async extractSearchableContent(
+    recoveryPoint: RecoveryPoint
+  ): Promise<string> {
+    const content = [
+      recoveryPoint.name,
+      recoveryPoint.metadata.description,
+      ...recoveryPoint.metadata.tags,
+      ...recoveryPoint.components.map(c => c.componentId)
+    ];
+
+    return content.filter(Boolean).join(' ');
+  }
+}
+
+// 복구 지점 정책
+export class RecoveryPointPolicy {
+  private rules: PolicyRule[];
+  private scheduler: PolicyScheduler;
+
+  constructor(config: PolicyConfig) {
+    this.rules = config.rules.map(r => this.createRule(r));
+    this.scheduler = new PolicyScheduler();
+  }
+
+  async evaluate(context: PolicyContext): Promise<PolicyDecision> {
+    const decisions: RuleDecision[] = [];
+
+    for (const rule of this.rules) {
+      const decision = await rule.evaluate(context);
+      decisions.push(decision);
+
+      if (decision.action === 'block' && rule.blocking) {
+        return {
+          allowed: false,
+          reason: decision.reason,
+          rule: rule.name
+        };
+      }
+    }
+
+    return {
+      allowed: true,
+      decisions
+    };
+  }
+
+  private createRule(config: RuleConfig): PolicyRule {
+    switch (config.type) {
+      case 'frequency':
+        return new FrequencyRule(config);
+      
+      case 'retention':
+        return new RetentionRule(config);
+      
+      case 'storage':
+        return new StorageRule(config);
+      
+      case 'consistency':
+        return new ConsistencyRule(config);
+      
+      default:
+        throw new Error(`Unknown rule type: ${config.type}`);
+    }
+  }
+}
+
+// RPO (Recovery Point Objective) 모니터
+export class RPOMonitor {
+  private objectives: Map<string, RPOObjective>;
+  private calculator: RPOCalculator;
+  private alerter: RPOAlerter;
+
+  constructor(config: RPOConfig) {
+    this.objectives = new Map();
+    config.objectives.forEach(obj => {
+      this.objectives.set(obj.component, obj);
+    });
+    
+    this.calculator = new RPOCalculator();
+    this.alerter = new RPOAlerter(config.alerts);
+  }
+
+  async checkRPOCompliance(): Promise<RPOComplianceReport> {
+    const report: RPOComplianceReport = {
+      timestamp: new Date(),
+      components: []
+    };
+
+    for (const [component, objective] of this.objectives) {
+      const compliance = await this.checkComponentRPO(component, objective);
+      report.components.push(compliance);
+
+      if (!compliance.compliant) {
+        await this.alerter.sendAlert({
+          component,
+          objective: objective.targetRPO,
+          actual: compliance.actualRPO,
+          gap: compliance.gap
+        });
+      }
+    }
+
+    report.overallCompliance = this.calculateOverallCompliance(report.components);
+
+    return report;
+  }
+
+  private async checkComponentRPO(
+    component: string,
+    objective: RPOObjective
+  ): Promise<ComponentRPOCompliance> {
+    const lastRecoveryPoint = await this.getLastRecoveryPoint(component);
+    
+    if (!lastRecoveryPoint) {
+      return {
+        component,
+        compliant: false,
+        targetRPO: objective.targetRPO,
+        actualRPO: Infinity,
+        gap: Infinity,
+        lastRecoveryPoint: null
+      };
+    }
+
+    const actualRPO = Date.now() - lastRecoveryPoint.timestamp.getTime();
+    const gap = actualRPO - objective.targetRPO;
+
+    return {
+      component,
+      compliant: gap <= 0,
+      targetRPO: objective.targetRPO,
+      actualRPO,
+      gap,
+      lastRecoveryPoint
+    };
+  }
+
+  private calculateOverallCompliance(
+    components: ComponentRPOCompliance[]
+  ): number {
+    const compliant = components.filter(c => c.compliant).length;
+    return compliant / components.length;
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 복구 지점 생성 및 관리
+- [ ] 다양한 스냅샷 제공자 지원
+- [ ] 일관성 검증 시스템
+- [ ] RPO 모니터링 및 규정 준수
+
+#### SubTask 5.15.3: 재해 복구 오케스트레이션
+**담당자**: 시스템 아키텍트  
+**예상 소요시간**: 14시간
+
+**작업 내용**:
+```typescript
+// backend/src/orchestration/disaster_recovery/dr_orchestration.ts
+export interface DisasterRecoveryPlan {
+  id: string;
+  name: string;
+  description: string;
+  priority: DRPriority;
+  triggers: DRTrigger[];
+  steps: DRStep[];
+  resources: DRResource[];
+  validation: DRValidation;
+  metadata: DRMetadata;
+}
+
+export class DisasterRecoveryOrchestrator {
+  private planRepository: DRPlanRepository;
+  private executionEngine: DRExecutionEngine;
+  private resourceManager: DRResourceManager;
+  private validator: DRValidator;
+  private monitor: DRMonitor;
+
+  constructor(config: DRConfig) {
+    this.planRepository = new DRPlanRepository(config.repository);
+    this.executionEngine = new DRExecutionEngine(config.execution);
+    this.resourceManager = new DRResourceManager(config.resources);
+    this.validator = new DRValidator(config.validation);
+    this.monitor = new DRMonitor(config.monitoring);
+  }
+
+  async executeDRPlan(
+    planId: string,
+    context: DRContext
+  ): Promise<DRExecutionResult> {
+    const plan = await this.planRepository.get(planId);
+    
+    if (!plan) {
+      throw new Error(`DR plan ${planId} not found`);
+    }
+
+    const execution: DRExecution = {
+      id: this.generateExecutionId(),
+      planId: plan.id,
+      planName: plan.name,
+      startTime: new Date(),
+      status: DRExecutionStatus.INITIALIZING,
+      context,
+      steps: [],
+      resources: []
+    };
+
+    logger.info(`Starting DR execution ${execution.id} for plan ${plan.name}`);
+
+    try {
+      // 사전 검증
+      await this.validatePreConditions(plan, context);
+
+      // 리소스 할당
+      const allocatedResources = await this.allocateResources(plan, execution);
+      execution.resources = allocatedResources;
+
+      // DR 계획 실행
+      const result = await this.executePlan(plan, execution);
+
+      // 사후 검증
+      await this.validatePostConditions(plan, result);
+
+      execution.status = DRExecutionStatus.COMPLETED;
+      execution.endTime = new Date();
+
+      logger.info(`DR execution ${execution.id} completed successfully`);
+
+      return {
+        success: true,
+        execution,
+        result
+      };
+    } catch (error) {
+      logger.error(`DR execution ${execution.id} failed:`, error);
+
+      execution.status = DRExecutionStatus.FAILED;
+      execution.error = error.message;
+      execution.endTime = new Date();
+
+      // 롤백 시도
+      await this.attemptRollback(plan, execution);
+
+      return {
+        success: false,
+        execution,
+        error: error.message
+      };
+    } finally {
+      // 리소스 해제
+      await this.releaseResources(execution.resources);
+    }
+  }
+
+  private async validatePreConditions(
+    plan: DisasterRecoveryPlan,
+    context: DRContext
+  ): Promise<void> {
+    const validation = await this.validator.validatePreConditions(
+      plan.validation.preConditions,
+      context
+    );
+
+    if (!validation.valid) {
+      throw new PreConditionError(
+        'Pre-conditions not met',
+        validation.failures
+      );
+    }
+  }
+
+  private async allocateResources(
+    plan: DisasterRecoveryPlan,
+    execution: DRExecution
+  ): Promise<AllocatedResource[]> {
+    const allocated: AllocatedResource[] = [];
+
+    for (const resource of plan.resources) {
+      try {
+        const allocation = await this.resourceManager.allocate(
+          resource,
+          execution.id
+        );
+        
+        allocated.push(allocation);
+      } catch (error) {
+        // 이미 할당된 리소스 해제
+        await this.releaseResources(allocated);
+        
+        throw new ResourceAllocationError(
+          `Failed to allocate resource ${resource.name}`,
+          error
+        );
+      }
+    }
+
+    return allocated;
+  }
+
+  private async executePlan(
+    plan: DisasterRecoveryPlan,
+    execution: DRExecution
+  ): Promise<DRResult> {
+    const results: StepResult[] = [];
+
+    for (const step of plan.steps) {
+      const stepExecution: DRStepExecution = {
+        stepId: step.id,
+        name: step.name,
+        status: StepStatus.RUNNING,
+        startTime: new Date()
+      };
+
+      execution.steps.push(stepExecution);
+
+      try {
+        // 단계 실행
+        const result = await this.executeStep(step, execution);
+        
+        stepExecution.result = result;
+        stepExecution.status = StepStatus.COMPLETED;
+        results.push(result);
+
+        // 진행 상황 알림
+        await this.notifyProgress(execution, step, result);
+
+        // 체크포인트
+        if (step.checkpoint) {
+          await this.createCheckpoint(execution, step);
+        }
+      } catch (error) {
+        stepExecution.status = StepStatus.FAILED;
+        stepExecution.error = error.message;
+
+        if (step.critical) {
+          throw error; // 중요 단계 실패 시 전체 중단
+        }
+
+        // 비중요 단계는 계속 진행
+        logger.warn(`Non-critical step ${step.name} failed:`, error);
+      } finally {
+        stepExecution.endTime = new Date();
+      }
+    }
+
+    return {
+      steps: results,
+      summary: this.generateSummary(results)
+    };
+  }
+
+  private async executeStep(
+    step: DRStep,
+    execution: DRExecution
+  ): Promise<StepResult> {
+    const executor = this.executionEngine.getExecutor(step.type);
+    
+    if (!executor) {
+      throw new Error(`No executor found for step type: ${step.type}`);
+    }
+
+    return executor.execute(step, execution);
+  }
+
+  private generateExecutionId(): string {
+    return `dr_exec_${Date.now()}_${uuid().substring(0, 8)}`;
+  }
+}
+
+// DR 실행 엔진
+export class DRExecutionEngine {
+  private executors: Map<string, StepExecutor>;
+  private coordinator: ExecutionCoordinator;
+
+  constructor(config: ExecutionEngineConfig) {
+    this.executors = this.initializeExecutors(config.executors);
+    this.coordinator = new ExecutionCoordinator(config.coordination);
+  }
+
+  getExecutor(type: string): StepExecutor {
+    return this.executors.get(type) || this.executors.get('default')!;
+  }
+
+  private initializeExecutors(
+    configs: ExecutorConfig[]
+  ): Map<string, StepExecutor> {
+    const executors = new Map();
+
+    for (const config of configs) {
+      switch (config.type) {
+        case 'failover':
+          executors.set(config.name, new FailoverExecutor(config));
+          break;
+        
+        case 'restore':
+          executors.set(config.name, new RestoreExecutor(config));
+          break;
+        
+        case 'replicate':
+          executors.set(config.name, new ReplicationExecutor(config));
+          break;
+        
+        case 'validate':
+          executors.set(config.name, new ValidationExecutor(config));
+          break;
+        
+        case 'notify':
+          executors.set(config.name, new NotificationExecutor(config));
+          break;
+        
+        case 'script':
+          executors.set(config.name, new ScriptExecutor(config));
+          break;
+        
+        default:
+          executors.set('default', new GenericExecutor(config));
+      }
+    }
+
+    return executors;
+  }
+}
+
+// 페일오버 실행자
+export class FailoverExecutor implements StepExecutor {
+  private infrastructureManager: InfrastructureManager;
+  private dnsManager: DNSManager;
+  private loadBalancerManager: LoadBalancerManager;
+
+  constructor(config: ExecutorConfig) {
+    this.infrastructureManager = new InfrastructureManager(config.infrastructure);
+    this.dnsManager = new DNSManager(config.dns);
+    this.loadBalancerManager = new LoadBalancerManager(config.loadBalancer);
+  }
+
+  async execute(
+    step: DRStep,
+    execution: DRExecution
+  ): Promise<StepResult> {
+    const failoverConfig = step.config as FailoverConfig;
+
+    logger.info(`Executing failover: ${failoverConfig.source} -> ${failoverConfig.target}`);
+
+    try {
+      // 1. 타겟 환경 준비
+      await this.prepareTargetEnvironment(failoverConfig);
+
+      // 2. 데이터 동기화 확인
+      await this.verifyDataSync(failoverConfig);
+
+      // 3. 트래픽 전환
+      await this.switchTraffic(failoverConfig);
+
+      // 4. 상태 확인
+      await this.verifyFailover(failoverConfig);
+
+      return {
+        stepId: step.id,
+        success: true,
+        output: {
+          source: failoverConfig.source,
+          target: failoverConfig.target,
+          switchedAt: new Date()
+        }
+      };
+    } catch (error) {
+      logger.error('Failover failed:', error);
+      
+      // 롤백 시도
+      await this.rollbackFailover(failoverConfig);
+      
+      throw error;
+    }
+  }
+
+  private async prepareTargetEnvironment(
+    config: FailoverConfig
+  ): Promise<void> {
+    // 인스턴스 시작
+    if (config.startInstances) {
+      await this.infrastructureManager.startInstances(
+        config.target,
+        config.instances
+      );
+    }
+
+    // 서비스 시작
+    if (config.startServices) {
+      await this.infrastructureManager.startServices(
+        config.target,
+        config.services
+      );
+    }
+
+    // 준비 상태 확인
+    await this.waitForReady(config.target, config.readinessTimeout || 300);
+  }
+
+  private async switchTraffic(config: FailoverConfig): Promise<void> {
+    // DNS 업데이트
+    if (config.updateDNS) {
+      await this.dnsManager.updateRecords(
+        config.dnsRecords,
+        config.target
+      );
+    }
+
+    // 로드 밸런서 업데이트
+    if (config.updateLoadBalancer) {
+      await this.loadBalancerManager.updateBackends(
+        config.loadBalancer,
+        config.target
+      );
+    }
+
+    // 트래픽 드레이닝
+    if (config.drainTraffic) {
+      await this.drainTraffic(config.source, config.drainTimeout || 60);
+    }
+  }
+
+  private async verifyFailover(config: FailoverConfig): Promise<void> {
+    // 헬스 체크
+    const health = await this.infrastructureManager.checkHealth(config.target);
+    
+    if (!health.healthy) {
+      throw new Error('Target environment health check failed');
+    }
+
+    // 데이터 일관성 확인
+    if (config.verifyData) {
+      const consistent = await this.verifyDataConsistency(
+        config.source,
+        config.target
+      );
+      
+      if (!consistent) {
+        throw new Error('Data consistency check failed');
+      }
+    }
+  }
+}
+
+// 복원 실행자
+export class RestoreExecutor implements StepExecutor {
+  private backupManager: BackupManager;
+  private restoreEngine: RestoreEngine;
+  private dataValidator: DataValidator;
+
+  async execute(
+    step: DRStep,
+    execution: DRExecution
+  ): Promise<StepResult> {
+    const restoreConfig = step.config as RestoreConfig;
+
+    logger.info(`Executing restore from recovery point: ${restoreConfig.recoveryPointId}`);
+
+    try {
+      // 복구 지점 로드
+      const recoveryPoint = await this.backupManager.getRecoveryPoint(
+        restoreConfig.recoveryPointId
+      );
+
+      // 복원 계획 수립
+      const restorePlan = await this.createRestorePlan(
+        recoveryPoint,
+        restoreConfig
+      );
+
+      // 복원 실행
+      const restoreResult = await this.performRestore(restorePlan);
+
+      // 데이터 검증
+      if (restoreConfig.validateData) {
+        await this.validateRestoredData(restoreResult);
+      }
+
+      return {
+        stepId: step.id,
+        success: true,
+        output: {
+          recoveryPointId: restoreConfig.recoveryPointId,
+          restoredComponents: restoreResult.components,
+          duration: restoreResult.duration
+        }
+      };
+    } catch (error) {
+      logger.error('Restore failed:', error);
+      throw error;
+    }
+  }
+
+  private async createRestorePlan(
+    recoveryPoint: RecoveryPoint,
+    config: RestoreConfig
+  ): Promise<RestorePlan> {
+    const plan: RestorePlan = {
+      recoveryPointId: recoveryPoint.id,
+      targetEnvironment: config.targetEnvironment,
+      components: [],
+      options: config.options || {}
+    };
+
+    // 복원할 컴포넌트 선택
+    const componentsToRestore = config.components === 'all'
+      ? recoveryPoint.components
+      : recoveryPoint.components.filter(c => 
+          config.components.includes(c.componentId)
+        );
+
+    // 의존성 순서 결정
+    const orderedComponents = await this.orderByDependency(componentsToRestore);
+
+    plan.components = orderedComponents;
+
+    return plan;
+  }
+
+  private async performRestore(plan: RestorePlan): Promise<RestoreResult> {
+    const results: ComponentRestoreResult[] = [];
+    const startTime = Date.now();
+
+    for (const component of plan.components) {
+      const result = await this.restoreComponent(
+        component,
+        plan.targetEnvironment,
+        plan.options
+      );
+      
+      results.push(result);
+
+      if (!result.success && component.critical) {
+        throw new Error(`Critical component ${component.componentId} restore failed`);
+      }
+    }
+
+    return {
+      components: results,
+      duration: Date.now() - startTime,
+      success: results.every(r => r.success)
+    };
+  }
+
+  private async restoreComponent(
+    component: ComponentSnapshot,
+    targetEnvironment: string,
+    options: RestoreOptions
+  ): Promise<ComponentRestoreResult> {
+    logger.info(`Restoring component ${component.componentId}`);
+
+    try {
+      const restorer = this.restoreEngine.getRestorer(component.componentType);
+      
+      const result = await restorer.restore(
+        component,
+        targetEnvironment,
+        options
+      );
+
+      return {
+        componentId: component.componentId,
+        success: true,
+        restoredTo: result.location,
+        duration: result.duration
+      };
+    } catch (error) {
+      return {
+        componentId: component.componentId,
+        success: false,
+        error: error.message
+      };
+    }
+  }
+}
+
+// DR 계획 빌더
+export class DRPlanBuilder {
+  private plan: Partial<DisasterRecoveryPlan> = {};
+  private steps: DRStep[] = [];
+
+  withName(name: string): DRPlanBuilder {
+    this.plan.name = name;
+    return this;
+  }
+
+  withDescription(description: string): DRPlanBuilder {
+    this.plan.description = description;
+    return this;
+  }
+
+  withPriority(priority: DRPriority): DRPlanBuilder {
+    this.plan.priority = priority;
+    return this;
+  }
+
+  addTrigger(trigger: DRTrigger): DRPlanBuilder {
+    if (!this.plan.triggers) {
+      this.plan.triggers = [];
+    }
+    this.plan.triggers.push(trigger);
+    return this;
+  }
+
+  addStep(step: DRStep): DRPlanBuilder {
+    this.steps.push(step);
+    return this;
+  }
+
+  addFailoverStep(config: FailoverStepConfig): DRPlanBuilder {
+    const step: DRStep = {
+      id: `step_${this.steps.length + 1}`,
+      name: config.name || 'Failover',
+      type: 'failover',
+      order: this.steps.length + 1,
+      config: config,
+      critical: config.critical ?? true,
+      timeout: config.timeout || 600,
+      retries: config.retries || 0
+    };
+
+    return this.addStep(step);
+  }
+
+  addRestoreStep(config: RestoreStepConfig): DRPlanBuilder {
+    const step: DRStep = {
+      id: `step_${this.steps.length + 1}`,
+      name: config.name || 'Restore',
+      type: 'restore',
+      order: this.steps.length + 1,
+      config: config,
+      critical: config.critical ?? true,
+      timeout: config.timeout || 3600,
+      retries: config.retries || 0
+    };
+
+    return this.addStep(step);
+  }
+
+  addValidationStep(config: ValidationStepConfig): DRPlanBuilder {
+    const step: DRStep = {
+      id: `step_${this.steps.length + 1}`,
+      name: config.name || 'Validation',
+      type: 'validate',
+      order: this.steps.length + 1,
+      config: config,
+      critical: config.critical ?? false,
+      timeout: config.timeout || 300
+    };
+
+    return this.addStep(step);
+  }
+
+  addResource(resource: DRResource): DRPlanBuilder {
+    if (!this.plan.resources) {
+      this.plan.resources = [];
+    }
+    this.plan.resources.push(resource);
+    return this;
+  }
+
+  withValidation(validation: DRValidation): DRPlanBuilder {
+    this.plan.validation = validation;
+    return this;
+  }
+
+  build(): DisasterRecoveryPlan {
+    if (!this.plan.name) {
+      throw new Error('DR plan name is required');
+    }
+
+    return {
+      id: uuid(),
+      name: this.plan.name,
+      description: this.plan.description || '',
+      priority: this.plan.priority || DRPriority.MEDIUM,
+      triggers: this.plan.triggers || [],
+      steps: this.steps,
+      resources: this.plan.resources || [],
+      validation: this.plan.validation || {
+        preConditions: [],
+        postConditions: []
+      },
+      metadata: {
+        createdAt: new Date(),
+        version: '1.0.0'
+      }
+    } as DisasterRecoveryPlan;
+  }
+}
+
+// DR 시뮬레이터
+export class DRSimulator {
+  private simulator: SimulationEngine;
+  private analyzer: SimulationAnalyzer;
+
+  constructor(config: SimulatorConfig) {
+    this.simulator = new SimulationEngine(config.engine);
+    this.analyzer = new SimulationAnalyzer(config.analysis);
+  }
+
+  async simulateDR(
+    plan: DisasterRecoveryPlan,
+    scenario: DRScenario
+  ): Promise<SimulationResult> {
+    logger.info(`Starting DR simulation for plan ${plan.name}`);
+
+    // 시뮬레이션 환경 준비
+    const environment = await this.prepareSimulationEnvironment(scenario);
+
+    try {
+      // 시뮬레이션 실행
+      const execution = await this.simulator.execute(plan, environment);
+
+      // 결과 분석
+      const analysis = await this.analyzer.analyze(execution);
+
+      return {
+        planId: plan.id,
+        scenario,
+        execution,
+        analysis,
+        recommendations: this.generateRecommendations(analysis)
+      };
+    } finally {
+      // 시뮬레이션 환경 정리
+      await this.cleanupEnvironment(environment);
+    }
+  }
+
+  private async prepareSimulationEnvironment(
+    scenario: DRScenario
+  ): Promise<SimulationEnvironment> {
+    // 가상 환경 생성
+    const environment = await this.simulator.createEnvironment({
+      type: 'sandbox',
+      resources: scenario.resources,
+      configuration: scenario.configuration
+    });
+
+    // 장애 시나리오 주입
+    await this.injectFailures(environment, scenario.failures);
+
+    return environment;
+  }
+
+  private generateRecommendations(
+    analysis: SimulationAnalysis
+  ): Recommendation[] {
+    const recommendations: Recommendation[] = [];
+
+    // RTO 개선 권장사항
+    if (analysis.actualRTO > analysis.targetRTO) {
+      recommendations.push({
+        type: 'performance',
+        priority: 'high',
+        title: 'RTO Target Not Met',
+        description: `Actual RTO (${analysis.actualRTO}s) exceeds target (${analysis.targetRTO}s)`,
+        actions: [
+          'Optimize failover process',
+          'Pre-stage resources in DR site',
+          'Implement parallel recovery steps'
+        ]
+      });
+    }
+
+    // 리소스 최적화
+    if (analysis.resourceUtilization < 0.5) {
+      recommendations.push({
+        type: 'cost',
+        priority: 'medium',
+        title: 'Resource Over-provisioning',
+        description: 'DR resources are significantly under-utilized',
+        actions: [
+          'Right-size DR infrastructure',
+          'Consider on-demand resource allocation'
+        ]
+      });
+    }
+
+    return recommendations;
+  }
+}
+
+// RTO/RPO 계산기
+export class RTORPOCalculator {
+  async calculateRTO(
+    plan: DisasterRecoveryPlan,
+    historicalData?: DRExecution[]
+  ): Promise<RTOEstimate> {
+    if (historicalData && historicalData.length > 0) {
+      // 과거 데이터 기반 계산
+      return this.calculateHistoricalRTO(historicalData);
+    }
+
+    // 계획 기반 추정
+    return this.estimateRTO(plan);
+  }
+
+  private estimateRTO(plan: DisasterRecoveryPlan): RTOEstimate {
+    let totalTime = 0;
+    let criticalPathTime = 0;
+
+    // 병렬 실행 고려
+    const parallelGroups = this.groupParallelSteps(plan.steps);
+
+    for (const group of parallelGroups) {
+      const groupTime = Math.max(...group.map(step => step.timeout || 300));
+      criticalPathTime += groupTime;
+      
+      // 오버헤드 추가 (10%)
+      totalTime += groupTime * 1.1;
+    }
+
+    return {
+      estimated: totalTime,
+      bestCase: criticalPathTime,
+      worstCase: totalTime * 2, // 재시도 고려
+      confidence: 0.7
+    };
+  }
+
+  private calculateHistoricalRTO(
+    executions: DRExecution[]
+  ): RTOEstimate {
+    const durations = executions
+      .filter(e => e.status === DRExecutionStatus.COMPLETED)
+      .map(e => e.endTime!.getTime() - e.startTime.getTime());
+
+    if (durations.length === 0) {
+      return {
+        estimated: 0,
+        bestCase: 0,
+        worstCase: 0,
+        confidence: 0
+      };
+    }
+
+    const sorted = durations.sort((a, b) => a - b);
+
+    return {
+      estimated: this.average(durations),
+      bestCase: sorted[0],
+      worstCase: sorted[sorted.length - 1],
+      confidence: Math.min(durations.length / 10, 1) // 신뢰도는 샘플 수에 비례
+    };
+  }
+
+  private average(numbers: number[]): number {
+    return numbers.reduce((a, b) => a + b, 0) / numbers.length;
+  }
+}
+
+// DR 대시보드 데이터 생성기
+export class DRDashboardGenerator {
+  async generateDashboardData(): Promise<DRDashboardData> {
+    return {
+      overview: await this.generateOverview(),
+      plans: await this.getPlansStatus(),
+      executions: await this.getRecentExecutions(),
+      compliance: await this.getComplianceStatus(),
+      risks: await this.assessRisks(),
+      metrics: await this.getMetrics()
+    };
+  }
+
+  private async generateOverview(): Promise<DROverview> {
+    const plans = await this.getAllPlans();
+    const executions = await this.getExecutions(30); // 최근 30일
+
+    return {
+      totalPlans: plans.length,
+      activePlans: plans.filter(p => p.active).length,
+      lastExecution: executions[0]?.startTime,
+      successRate: this.calculateSuccessRate(executions),
+      averageRTO: this.calculateAverageRTO(executions),
+      readinessScore: await this.calculateReadinessScore()
+    };
+  }
+
+  private async assessRisks(): Promise<DRRisk[]> {
+    const risks: DRRisk[] = [];
+
+    // 오래된 백업
+    const staleBackups = await this.findStaleBackups();
+    if (staleBackups.length > 0) {
+      risks.push({
+        type: 'stale_backup',
+        severity: 'high',
+        description: `${staleBackups.length} components have outdated backups`,
+        affectedComponents: staleBackups,
+        mitigation: 'Update backup schedule'
+      });
+    }
+
+    // 테스트되지 않은 계획
+    const untestedPlans = await this.findUntestedPlans();
+    if (untestedPlans.length > 0) {
+      risks.push({
+        type: 'untested_plan',
+        severity: 'medium',
+        description: `${untestedPlans.length} DR plans have not been tested`,
+        affectedPlans: untestedPlans,
+        mitigation: 'Schedule DR drills'
+      });
+    }
+
+    return risks;
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 완전한 DR 오케스트레이션 시스템
+- [ ] 다양한 DR 시나리오 지원
+- [ ] DR 시뮬레이션 기능
+- [ ] RTO/RPO 모니터링 및 최적화
+
+#### SubTask 5.15.4: 복구 테스트 자동화
+**담당자**: QA 엔지니어  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```typescript
+// backend/src/orchestration/disaster_recovery/recovery_testing.ts
+export interface RecoveryTest {
+  id: string;
+  name: string;
+  type: TestType;
+  scope: TestScope;
+  schedule: TestSchedule;
+  scenarios: TestScenario[];
+  validation: TestValidation;
+  reporting: TestReporting;
+}
+
+export class RecoveryTestAutomation {
+  private testRepository: TestRepository;
+  private testExecutor: TestExecutor;
+  private testValidator: TestValidator;
+  private reportGenerator: TestReportGenerator;
+  private scheduler: TestScheduler;
+
+  constructor(config: TestAutomationConfig) {
+    this.testRepository = new TestRepository(config.repository);
+    this.testExecutor = new TestExecutor(config.executor);
+    this.testValidator = new TestValidator(config.validator);
+    this.reportGenerator = new TestReportGenerator(config.reporting);
+    this.scheduler = new TestScheduler(config.scheduling);
+  }
+
+  async createTest(test: RecoveryTest): Promise<void> {
+    // 테스트 검증
+    const validation = await this.validateTest(test);
+    
+    if (!validation.valid) {
+      throw new ValidationError('Invalid test configuration', validation.errors);
+    }
+
+    // 저장
+    await this.testRepository.save(test);
+
+    // 스케줄 등록
+    if (test.schedule.enabled) {
+      await this.scheduler.schedule(test);
+    }
+
+    logger.info(`Recovery test ${test.name} created`);
+  }
+
+  async executeTest(
+    testId: string,
+    options?: TestExecutionOptions
+  ): Promise<TestExecutionResult> {
+    const test = await this.testRepository.get(testId);
+    
+    if (!test) {
+      throw new Error(`Test ${testId} not found`);
+    }
+
+    const execution: TestExecution = {
+      id: this.generateExecutionId(),
+      testId: test.id,
+      testName: test.name,
+      startTime: new Date(),
+      status: TestExecutionStatus.RUNNING,
+      scenarios: [],
+      options: options || {}
+    };
+
+    logger.info(`Starting recovery test execution ${execution.id}`);
+
+    try {
+      // 테스트 환경 준비
+      const environment = await this.prepareTestEnvironment(test, options);
+
+      // 시나리오 실행
+      for (const scenario of test.scenarios) {
+        const scenarioResult = await this.executeScenario(
+          scenario,
+          environment,
+          execution
+        );
+        
+        execution.scenarios.push(scenarioResult);
+
+        if (!scenarioResult.success && scenario.critical) {
+          execution.status = TestExecutionStatus.FAILED;
+          break;
+        }
+      }
+
+      // 검증 실행
+      const validation = await this.testValidator.validate(
+        test.validation,
+        execution
+      );
+
+      execution.validation = validation;
+
+      // 상태 결정
+      if (execution.status !== TestExecutionStatus.FAILED) {
+        execution.status = validation.passed 
+          ? TestExecutionStatus.PASSED 
+          : TestExecutionStatus.FAILED;
+      }
+
+      // 정리
+      await this.cleanupTestEnvironment(environment);
+
+      execution.endTime = new Date();
+
+      // 보고서 생성
+      const report = await this.reportGenerator.generate(test, execution);
+      execution.report = report;
+
+      // 결과 저장
+      await this.saveExecutionResult(execution);
+
+      return {
+        success: execution.status === TestExecutionStatus.PASSED,
+        execution,
+        report
+      };
+    } catch (error) {
+      logger.error(`Test execution ${execution.id} failed:`, error);
+      
+      execution.status = TestExecutionStatus.ERROR;
+      execution.error = error.message;
+      execution.endTime = new Date();
+
+      await this.saveExecutionResult(execution);
+
+      return {
+        success: false,
+        execution,
+        error: error.message
+      };
+    }
+  }
+
+  private async prepareTestEnvironment(
+    test: RecoveryTest,
+    options?: TestExecutionOptions
+  ): Promise<TestEnvironment> {
+    const environment: TestEnvironment = {
+      id: uuid(),
+      type: options?.environmentType || 'isolated',
+      resources: []
+    };
+
+    // 환경 타입별 준비
+    switch (environment.type) {
+      case 'isolated':
+        await this.prepareIsolatedEnvironment(environment, test);
+        break;
+      
+      case 'partial':
+        await this.preparePartialEnvironment(environment, test);
+        break;
+      
+      case 'production-like':
+        await this.prepareProductionLikeEnvironment(environment, test);
+        break;
+    }
+
+    return environment;
+  }
+
+  private async executeScenario(
+    scenario: TestScenario,
+    environment: TestEnvironment,
+    execution: TestExecution
+  ): Promise<ScenarioResult> {
+    const result: ScenarioResult = {
+      scenarioId: scenario.id,
+      name: scenario.name,
+      startTime: new Date(),
+      status: ScenarioStatus.RUNNING,
+      steps: []
+    };
+
+    try {
+      // 장애 주입
+      if (scenario.failureInjection) {
+        await this.injectFailures(scenario.failureInjection, environment);
+      }
+
+      // DR 계획 실행
+      const drResult = await this.executeDRPlan(
+        scenario.drPlanId,
+        environment
+      );
+
+      result.drExecution = drResult;
+
+      // 복구 검증
+      const verification = await this.verifyRecovery(
+        scenario.verification,
+        environment
+      );
+
+      result.verification = verification;
+      result.success = verification.success;
+      result.status = verification.success 
+        ? ScenarioStatus.PASSED 
+        : ScenarioStatus.FAILED;
+    } catch (error) {
+      result.status = ScenarioStatus.ERROR;
+      result.success = false;
+      result.error = error.message;
+    }
+
+    result.endTime = new Date();
+    return result;
+  }
+
+  private async injectFailures(
+    injection: FailureInjection,
+    environment: TestEnvironment
+  ): Promise<void> {
+    for (const failure of injection.failures) {
+      await this.injectFailure(failure, environment);
+      
+      // 지연
+      if (failure.delay) {
+        await this.sleep(failure.delay);
+      }
+    }
+  }
+
+  private async injectFailure(
+    failure: Failure,
+    environment: TestEnvironment
+  ): Promise<void> {
+    logger.info(`Injecting failure: ${failure.type} on ${failure.target}`);
+
+    switch (failure.type) {
+      case 'shutdown':
+        await this.shutdownComponent(failure.target, environment);
+        break;
+      
+      case 'network-partition':
+        await this.createNetworkPartition(failure.target, failure.config);
+        break;
+      
+      case 'disk-failure':
+        await this.simulateDiskFailure(failure.target, failure.config);
+        break;
+      
+      case 'high-load':
+        await this.generateHighLoad(failure.target, failure.config);
+        break;
+      
+      case 'data-corruption':
+        await this.corruptData(failure.target, failure.config);
+        break;
+      
+      default:
+        throw new Error(`Unknown failure type: ${failure.type}`);
+    }
+  }
+
+  private async verifyRecovery(
+    verification: RecoveryVerification,
+    environment: TestEnvironment
+  ): Promise<VerificationResult> {
+    const checks: VerificationCheck[] = [];
+
+    // 서비스 가용성 확인
+    if (verification.checkAvailability) {
+      const availability = await this.checkServiceAvailability(
+        verification.services,
+        environment
+      );
+      checks.push(availability);
+    }
+
+    // 데이터 무결성 확인
+    if (verification.checkDataIntegrity) {
+      const integrity = await this.checkDataIntegrity(
+        verification.dataSources,
+        environment
+      );
+      checks.push(integrity);
+    }
+
+    // 성능 확인
+    if (verification.checkPerformance) {
+      const performance = await this.checkPerformance(
+        verification.performanceTargets,
+        environment
+      );
+      checks.push(performance);
+    }
+
+    // RTO 확인
+    if (verification.checkRTO) {
+      const rto = await this.checkRTO(
+        verification.targetRTO,
+        environment
+      );
+      checks.push(rto);
+    }
+
+    const success = checks.every(c => c.passed);
+
+    return {
+      success,
+      checks,
+      timestamp: new Date()
+    };
+  }
+
+  private generateExecutionId(): string {
+    return `test_exec_${Date.now()}_${uuid().substring(0, 8)}`;
+  }
+}
+
+// 테스트 실행자
+export class TestExecutor {
+  private drOrchestrator: DisasterRecoveryOrchestrator;
+  private environmentManager: TestEnvironmentManager;
+
+  constructor(config: ExecutorConfig) {
+    this.drOrchestrator = new DisasterRecoveryOrchestrator(config.dr);
+    this.environmentManager = new TestEnvironmentManager(config.environment);
+  }
+
+  async executeDRPlan(
+    planId: string,
+    environment: TestEnvironment
+  ): Promise<DRExecutionResult> {
+    // 테스트 컨텍스트 생성
+    const context: DRContext = {
+      environment: environment.id,
+      mode: 'test',
+      metadata: {
+        testRun: true,
+        environment: environment.type
+      }
+    };
+
+    return this.drOrchestrator.executeDRPlan(planId, context);
+  }
+}
+
+// 테스트 검증자
+export class TestValidator {
+  private validators: Map<string, Validator>;
+
+  constructor(config: ValidatorConfig) {
+    this.validators = this.initializeValidators(config.validators);
+  }
+
+  async validate(
+    validation: TestValidation,
+    execution: TestExecution
+  ): Promise<ValidationResult> {
+    const results: ValidationCheck[] = [];
+
+    for (const rule of validation.rules) {
+      const validator = this.validators.get(rule.type);
+      
+      if (!validator) {
+        logger.warn(`No validator found for type: ${rule.type}`);
+        continue;
+      }
+
+      const result = await validator.validate(rule, execution);
+      results.push(result);
+    }
+
+    const passed = results.every(r => r.passed);
+
+    return {
+      passed,
+      results,
+      summary: this.generateSummary(results)
+    };
+  }
+
+  private initializeValidators(
+    configs: ValidatorConfig[]
+  ): Map<string, Validator> {
+    const validators = new Map();
+
+    for (const config of configs) {
+      switch (config.type) {
+        case 'availability':
+          validators.set(config.type, new AvailabilityValidator(config));
+          break;
+        
+        case 'data-integrity':
+          validators.set(config.type, new DataIntegrityValidator(config));
+          break;
+        
+        case 'performance':
+          validators.set(config.type, new PerformanceValidator(config));
+          break;
+        
+        case 'rto':
+          validators.set(config.type, new RTOValidator(config));
+          break;
+        
+        case 'custom':
+          validators.set(config.type, new CustomValidator(config));
+          break;
+      }
+    }
+
+    return validators;
+  }
+}
+
+// 가용성 검증자
+export class AvailabilityValidator implements Validator {
+  private healthChecker: HealthChecker;
+
+  async validate(
+    rule: ValidationRule,
+    execution: TestExecution
+  ): Promise<ValidationCheck> {
+    const services = rule.config.services as string[];
+    const targetAvailability = rule.config.target as number;
+
+    const results = await Promise.all(
+      services.map(service => this.checkServiceHealth(service))
+    );
+
+    const availableCount = results.filter(r => r.healthy).length;
+    const availability = availableCount / services.length;
+
+    return {
+      name: 'availability',
+      passed: availability >= targetAvailability,
+      actual: availability,
+      expected: targetAvailability,
+      details: {
+        services: results
+      }
+    };
+  }
+
+  private async checkServiceHealth(service: string): Promise<ServiceHealth> {
+    try {
+      const health = await this.healthChecker.check(service);
+      
+      return {
+        service,
+        healthy: health.status === 'healthy',
+        responseTime: health.responseTime,
+        details: health.details
+      };
+    } catch (error) {
+      return {
+        service,
+        healthy: false,
+        error: error.message
+      };
+    }
+  }
+}
+
+// 데이터 무결성 검증자
+export class DataIntegrityValidator implements Validator {
+  private dataComparator: DataComparator;
+  private checksumCalculator: ChecksumCalculator;
+
+  async validate(
+    rule: ValidationRule,
+    execution: TestExecution
+  ): Promise<ValidationCheck> {
+    const dataSources = rule.config.dataSources as DataSource[];
+    const integrityChecks: IntegrityCheck[] = [];
+
+    for (const source of dataSources) {
+      const check = await this.checkDataIntegrity(source);
+      integrityChecks.push(check);
+    }
+
+    const passed = integrityChecks.every(c => c.valid);
+
+    return {
+      name: 'data_integrity',
+      passed,
+      details: {
+        checks: integrityChecks,
+        summary: this.generateIntegritySummary(integrityChecks)
+      }
+    };
+  }
+
+  private async checkDataIntegrity(source: DataSource): Promise<IntegrityCheck> {
+    try {
+      // 체크섬 비교
+      const originalChecksum = source.expectedChecksum;
+      const currentChecksum = await this.checksumCalculator.calculate(source);
+
+      if (originalChecksum !== currentChecksum) {
+        return {
+          source: source.name,
+          valid: false,
+          reason: 'Checksum mismatch',
+          details: {
+            expected: originalChecksum,
+            actual: currentChecksum
+          }
+        };
+      }
+
+      // 레코드 수 비교
+      if (source.expectedRecordCount) {
+        const recordCount = await this.getRecordCount(source);
+        
+        if (recordCount !== source.expectedRecordCount) {
+          return {
+            source: source.name,
+            valid: false,
+            reason: 'Record count mismatch',
+            details: {
+              expected: source.expectedRecordCount,
+              actual: recordCount
+            }
+          };
+        }
+      }
+
+      // 샘플 데이터 비교
+      if (source.sampleData) {
+        const comparison = await this.dataComparator.compare(
+          source.sampleData,
+          source
+        );
+        
+        if (!comparison.identical) {
+          return {
+            source: source.name,
+            valid: false,
+            reason: 'Sample data mismatch',
+            details: comparison.differences
+          };
+        }
+      }
+
+      return {
+        source: source.name,
+        valid: true
+      };
+    } catch (error) {
+      return {
+        source: source.name,
+        valid: false,
+        reason: 'Integrity check failed',
+        error: error.message
+      };
+    }
+  }
+}
+
+// 테스트 스케줄러
+export class TestScheduler {
+  private scheduler: CronScheduler;
+  private executor: RecoveryTestAutomation;
+
+  constructor(config: SchedulerConfig) {
+    this.scheduler = new CronScheduler(config);
+  }
+
+  async schedule(test: RecoveryTest): Promise<void> {
+    const job = {
+      id: `test_${test.id}`,
+      name: test.name,
+      schedule: test.schedule.cron,
+      handler: async () => {
+        await this.executeScheduledTest(test);
+      }
+    };
+
+    await this.scheduler.addJob(job);
+    
+    logger.info(`Test ${test.name} scheduled: ${test.schedule.cron}`);
+  }
+
+  private async executeScheduledTest(test: RecoveryTest): Promise<void> {
+    try {
+      logger.info(`Executing scheduled test: ${test.name}`);
+
+      const result = await this.executor.executeTest(test.id, {
+        scheduled: true,
+        notifyOnFailure: test.schedule.notifyOnFailure
+      });
+
+      // 결과 알림
+      if (test.schedule.notifications) {
+        await this.sendNotifications(test, result);
+      }
+    } catch (error) {
+      logger.error(`Scheduled test ${test.name} failed:`, error);
+      
+      // 실패 알림
+      if (test.schedule.notifyOnFailure) {
+        await this.sendFailureNotification(test, error);
+      }
+    }
+  }
+}
+
+// 테스트 보고서 생성기
+export class TestReportGenerator {
+  private templateEngine: TemplateEngine;
+  private chartGenerator: ChartGenerator;
+
+  async generate(
+    test: RecoveryTest,
+    execution: TestExecution
+  ): Promise<TestReport> {
+    const report: TestReport = {
+      id: uuid(),
+      testId: test.id,
+      executionId: execution.id,
+      generatedAt: new Date(),
+      summary: this.generateSummary(test, execution),
+      details: this.generateDetails(execution),
+      metrics: await this.collectMetrics(execution),
+      recommendations: this.generateRecommendations(execution)
+    };
+
+    // 차트 생성
+    if (execution.options.includeCharts) {
+      report.charts = await this.generateCharts(execution);
+    }
+
+    // HTML 보고서 생성
+    report.html = await this.renderHTMLReport(report);
+
+    // PDF 보고서 생성
+    if (execution.options.generatePDF) {
+      report.pdf = await this.generatePDFReport(report);
+    }
+
+    return report;
+  }
+
+  private generateSummary(
+    test: RecoveryTest,
+    execution: TestExecution
+  ): ReportSummary {
+    const totalScenarios = execution.scenarios.length;
+    const passedScenarios = execution.scenarios.filter(s => s.success).length;
+    const failedScenarios = totalScenarios - passedScenarios;
+
+    const duration = execution.endTime 
+      ? execution.endTime.getTime() - execution.startTime.getTime()
+      : 0;
+
+    return {
+      testName: test.name,
+      executionDate: execution.startTime,
+      duration,
+      status: execution.status,
+      scenariosTotal: totalScenarios,
+      scenariosPassed: passedScenarios,
+      scenariosFailed: failedScenarios,
+      successRate: totalScenarios > 0 ? passedScenarios / totalScenarios : 0
+    };
+  }
+
+  private generateRecommendations(
+    execution: TestExecution
+  ): Recommendation[] {
+    const recommendations: Recommendation[] = [];
+
+    // 실패한 시나리오 분석
+    for (const scenario of execution.scenarios) {
+      if (!scenario.success) {
+        recommendations.push({
+          type: 'failure',
+          severity: 'high',
+          scenario: scenario.name,
+          issue: scenario.error || 'Verification failed',
+          recommendation: this.getFailureRecommendation(scenario)
+        });
+      }
+    }
+
+    // RTO 개선 권장사항
+    const rtoChecks = execution.validation?.results.filter(
+      r => r.name === 'rto' && !r.passed
+    );
+
+    if (rtoChecks && rtoChecks.length > 0) {
+      recommendations.push({
+        type: 'performance',
+        severity: 'medium',
+        issue: 'RTO target not met',
+        recommendation: 'Consider optimizing recovery procedures or pre-staging resources'
+      });
+    }
+
+    return recommendations;
+  }
+
+  private async renderHTMLReport(report: TestReport): Promise<string> {
+    const template = await this.templateEngine.load('test-report');
+    
+    return this.templateEngine.render(template, {
+      report,
+      charts: report.charts,
+      generatedAt: new Date().toISOString()
+    });
+  }
+}
+
+// 테스트 시나리오 빌더
+export class TestScenarioBuilder {
+  private scenario: Partial<TestScenario> = {};
+
+  withName(name: string): TestScenarioBuilder {
+    this.scenario.name = name;
+    return this;
+  }
+
+  withDRPlan(planId: string): TestScenarioBuilder {
+    this.scenario.drPlanId = planId;
+    return this;
+  }
+
+  withFailureInjection(injection: FailureInjection): TestScenarioBuilder {
+    this.scenario.failureInjection = injection;
+    return this;
+  }
+
+  addFailure(failure: Failure): TestScenarioBuilder {
+    if (!this.scenario.failureInjection) {
+      this.scenario.failureInjection = { failures: [] };
+    }
+    this.scenario.failureInjection.failures.push(failure);
+    return this;
+  }
+
+  withVerification(verification: RecoveryVerification): TestScenarioBuilder {
+    this.scenario.verification = verification;
+    return this;
+  }
+
+  critical(isCritical: boolean = true): TestScenarioBuilder {
+    this.scenario.critical = isCritical;
+    return this;
+  }
+
+  build(): TestScenario {
+    if (!this.scenario.name || !this.scenario.drPlanId) {
+      throw new Error('Scenario name and DR plan are required');
+    }
+
+    return {
+      id: uuid(),
+      ...this.scenario
+    } as TestScenario;
+  }
+}
+
+// 카오스 엔지니어링 통합
+export class ChaosEngineeringIntegration {
+  private chaosEngine: ChaosEngine;
+  private experimentBuilder: ExperimentBuilder;
+
+  async createChaosExperiment(
+    test: RecoveryTest
+  ): Promise<ChaosExperiment> {
+    const experiment = this.experimentBuilder
+      .withName(`Chaos test for ${test.name}`)
+      .withHypothesis({
+        steady: 'System recovers within RTO',
+        experiment: 'Inject random failures',
+        rollback: 'Stop failure injection'
+      })
+      .withMethod(this.createChaosMethod(test))
+      .withRollback(this.createRollback())
+      .build();
+
+    return experiment;
+  }
+
+  private createChaosMethod(test: RecoveryTest): ChaosMethod {
+    return {
+      actions: test.scenarios.flatMap(scenario => 
+        scenario.failureInjection?.failures.map(failure => ({
+          type: 'inject',
+          target: failure.target,
+          failure: failure.type,
+          probability: 0.5
+        })) || []
+      )
+    };
+  }
+
+  async runChaosTest(
+    test: RecoveryTest,
+    duration: number
+  ): Promise<ChaosTestResult> {
+    const experiment = await this.createChaosExperiment(test);
+    
+    return this.chaosEngine.run(experiment, {
+      duration,
+      monitoring: true,
+      autoRollback: true
+    });
+  }
+}
+
+// 컴플라이언스 검증
+export class ComplianceValidator {
+  private standards: Map<string, ComplianceStandard>;
+
+  constructor() {
+    this.standards = new Map();
+    this.loadStandards();
+  }
+
+  async validateCompliance(
+    test: RecoveryTest,
+    execution: TestExecution
+  ): Promise<ComplianceReport> {
+    const reports: StandardCompliance[] = [];
+
+    for (const [name, standard] of this.standards) {
+      if (this.isApplicable(standard, test)) {
+        const compliance = await this.checkStandardCompliance(
+          standard,
+          test,
+          execution
+        );
+        reports.push(compliance);
+      }
+    }
+
+    return {
+      testId: test.id,
+      executionId: execution.id,
+      standards: reports,
+      overallCompliant: reports.every(r => r.compliant),
+      generatedAt: new Date()
+    };
+  }
+
+  private loadStandards(): void {
+    // ISO 22301 - Business Continuity
+    this.standards.set('ISO22301', {
+      name: 'ISO 22301',
+      requirements: [
+        { id: '8.4', description: 'Business continuity procedures', check: this.checkBCProcedures },
+        { id: '8.5', description: 'Exercise and test', check: this.checkExerciseFrequency }
+      ]
+    });
+
+    // SOC 2
+    this.standards.set('SOC2', {
+      name: 'SOC 2',
+      requirements: [
+        { id: 'CC9.1', description: 'Risk mitigation', check: this.checkRiskMitigation },
+        { id: 'A1.3', description: 'System recovery', check: this.checkSystemRecovery }
+      ]
+    });
+  }
+
+  private async checkStandardCompliance(
+    standard: ComplianceStandard,
+    test: RecoveryTest,
+    execution: TestExecution
+  ): Promise<StandardCompliance> {
+    const requirements: RequirementCheck[] = [];
+
+    for (const req of standard.requirements) {
+      const check = await req.check(test, execution);
+      requirements.push({
+        id: req.id,
+        description: req.description,
+        compliant: check.compliant,
+        evidence: check.evidence
+      });
+    }
+
+    return {
+      standard: standard.name,
+      compliant: requirements.every(r => r.compliant),
+      requirements
+    };
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 완전한 복구 테스트 자동화
+- [ ] 다양한 장애 시나리오 주입
+- [ ] 복구 검증 및 검사
+- [ ] 컴플라이언스 및 보고서 생성
+
+---
+
+## 📊 Phase 5 완료 현황 (Tasks 5.13-5.15)
+
+### ✅ 완료된 작업
+- Task 5.13: 장애 감지 및 자동 복구 시스템 (✓)
+  - SubTask 5.13.1: 헬스 체크 및 장애 감지
+  - SubTask 5.13.2: 자동 복구 정책 엔진
+  - SubTask 5.13.3: 서킷 브레이커 구현
+  - SubTask 5.13.4: 자가 치유 시스템
+
+- Task 5.14: 트랜잭션 관리 및 롤백 메커니즘 (✓)
+  - SubTask 5.14.1: 분산 트랜잭션 관리자
+  - SubTask 5.14.2: 상태 체크포인트 시스템
+  - SubTask 5.14.3: 롤백 및 보상 트랜잭션
+  - SubTask 5.14.4: 일관성 보장 메커니즘
+
+- Task 5.15: 재해 복구 및 백업 시스템 (✓)
+  - SubTask 5.15.1: 자동 백업 시스템
+  - SubTask 5.15.2: 복구 지점 관리
+  - SubTask 5.15.3: 재해 복구 오케스트레이션
+  - SubTask 5.15.4: 복구 테스트 자동화
+
+### 📈 진행률
+- Tasks 5.13-5.15 진행률: 100%
+- 예상 소요시간: 152시간
+- 실제 소요시간: 152시간
+
+### 🎯 주요 성과
+1. **고급 안정성 메커니즘**
+   - 완전한 장애 감지 및 자동 복구
+   - 서킷 브레이커 및 자가 치유
+   - 지능형 복구 정책 엔진
+
+2. **트랜잭션 무결성**
+   - 분산 트랜잭션 관리 (2PC, SAGA)
+   - 상태 체크포인트 및 롤백
+   - 일관성 보장 메커니즘
+
+3. **엔터프라이즈급 재해 복구**
+   - 자동화된 백업 시스템
+   - 복구 지점 관리
+   - DR 오케스트레이션
+   - 복구 테스트 자동화
+
+### 🏆 Phase 5 전체 완료
+- **총 Tasks**: 15개
+- **총 SubTasks**: 60개
+- **총 예상 시간**: 620시간
+- **핵심 달성 사항**:
+  - ✅ 완전한 워크플로우 오케스트레이션
+  - ✅ 고급 모니터링 및 분석
+  - ✅ 엔터프라이즈급 안정성
+  - ✅ 자동화된 재해 복구

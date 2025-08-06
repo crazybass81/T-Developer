@@ -1,0 +1,23 @@
+name: integration-test
+description: Environment for integration testing
+env:
+  NODE_ENV: test
+  USE_MOCKS: true
+  LOG_LEVEL: error
+services:
+  - name: dynamodb
+    type: docker
+    image: amazon/dynamodb-local
+    ports:
+      - "8000:8000"
+  - name: redis
+    type: docker
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+scripts:
+  setup:
+    - npm run db:migrate:test
+    - npm run seed:test
+  teardown:
+    - npm run db:clean:test

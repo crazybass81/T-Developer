@@ -1,0 +1,10 @@
+# This directory will contain the 9 core agent implementations
+# - NL Input Agent
+# - UI Selection Agent  
+# - Parser Agent
+# - Component Decision Agent
+# - Match Rate Agent
+# - Search Agent
+# - Generation Agent
+# - Assembly Agent
+# - Download Agent
