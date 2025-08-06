@@ -9692,3 +9692,4035 @@ class ErrorRecoveryMiddleware:
 - 인증/인가 미들웨어
 
 ---
+## Phase 6: GraphQL API 구현 & WebSocket 통신 (Tasks 6.11-6.16) - SubTask 리스트 및 작업지시서
+
+### 📋 SubTask 전체 리스트
+
+#### Task 6.11: GraphQL 스키마 정의
+- **SubTask 6.11.1**: 타입 시스템 및 스칼라 정의
+- **SubTask 6.11.2**: 객체 타입 및 인터페이스 설계
+- **SubTask 6.11.3**: 쿼리 및 뮤테이션 스키마
+- **SubTask 6.11.4**: 스키마 유효성 검증 및 최적화
+
+#### Task 6.12: Resolver 구현
+- **SubTask 6.12.1**: 쿼리 리졸버 구현
+- **SubTask 6.12.2**: 뮤테이션 리졸버 구현
+- **SubTask 6.12.3**: 필드 리졸버 및 관계 처리
+- **SubTask 6.12.4**: DataLoader 및 배치 처리
+
+#### Task 6.13: Subscription 및 실시간 업데이트
+- **SubTask 6.13.1**: Subscription 스키마 정의
+- **SubTask 6.13.2**: PubSub 시스템 구현
+- **SubTask 6.13.3**: 실시간 이벤트 필터링
+- **SubTask 6.13.4**: 연결 관리 및 확장성
+
+#### Task 6.14: WebSocket 서버 구현
+- **SubTask 6.14.1**: WebSocket 서버 초기화
+- **SubTask 6.14.2**: 연결 핸들링 및 인증
+- **SubTask 6.14.3**: 메시지 프로토콜 정의
+- **SubTask 6.14.4**: 연결 풀 관리
+
+#### Task 6.15: 실시간 이벤트 스트리밍
+- **SubTask 6.15.1**: 이벤트 스트림 아키텍처
+- **SubTask 6.15.2**: 이벤트 발행 시스템
+- **SubTask 6.15.3**: 구독 관리 시스템
+- **SubTask 6.15.4**: 백프레셔 및 흐름 제어
+
+#### Task 6.16: 양방향 통신 프로토콜
+- **SubTask 6.16.1**: 메시지 포맷 정의
+- **SubTask 6.16.2**: RPC over WebSocket
+- **SubTask 6.16.3**: 상태 동기화 메커니즘
+- **SubTask 6.16.4**: 오류 처리 및 재연결 전략
+
+---
+
+## 📝 세부 작업지시서
+
+### Task 6.11: GraphQL 스키마 정의
+
+#### SubTask 6.11.1: 타입 시스템 및 스칼라 정의
+
+**담당자**: 백엔드 아키텍트  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```typescript
+// backend/src/graphql/schema/scalars.ts
+import { GraphQLScalarType, Kind } from 'graphql';
+
+// DateTime 스칼라 타입
+export const DateTimeScalar = new GraphQLScalarType({
+  name: 'DateTime',
+  description: 'Date and time in ISO 8601 format',
+  serialize(value: any): string {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    return value;
+  },
+  parseValue(value: any): Date {
+    return new Date(value);
+  },
+  parseLiteral(ast): Date | null {
+    if (ast.kind === Kind.STRING) {
+      return new Date(ast.value);
+    }
+    return null;
+  }
+});
+
+// JSON 스칼라 타입
+export const JSONScalar = new GraphQLScalarType({
+  name: 'JSON',
+  description: 'Arbitrary JSON object',
+  serialize(value: any): any {
+    return value;
+  },
+  parseValue(value: any): any {
+    return value;
+  },
+  parseLiteral(ast): any {
+    switch (ast.kind) {
+      case Kind.STRING:
+      case Kind.BOOLEAN:
+        return ast.value;
+      case Kind.INT:
+      case Kind.FLOAT:
+        return parseFloat(ast.value);
+      case Kind.OBJECT:
+        return parseObject(ast);
+      case Kind.LIST:
+        return ast.values.map(parseLiteral);
+      default:
+        return null;
+    }
+  }
+});
+
+// UUID 스칼라 타입
+export const UUIDScalar = new GraphQLScalarType({
+  name: 'UUID',
+  description: 'UUID v4',
+  serialize(value: any): string {
+    return value;
+  },
+  parseValue(value: any): string {
+    if (!isValidUUID(value)) {
+      throw new Error('Invalid UUID format');
+    }
+    return value;
+  },
+  parseLiteral(ast): string | null {
+    if (ast.kind === Kind.STRING && isValidUUID(ast.value)) {
+      return ast.value;
+    }
+    return null;
+  }
+});
+
+// 커스텀 스칼라: ComponentCode
+export const ComponentCodeScalar = new GraphQLScalarType({
+  name: 'ComponentCode',
+  description: 'React/Vue/Angular component code',
+  serialize(value: any): string {
+    return value;
+  },
+  parseValue(value: any): string {
+    // 코드 유효성 검증
+    validateComponentCode(value);
+    return value;
+  },
+  parseLiteral(ast): string | null {
+    if (ast.kind === Kind.STRING) {
+      validateComponentCode(ast.value);
+      return ast.value;
+    }
+    return null;
+  }
+});
+
+// 파일 업로드 스칼라
+export const UploadScalar = new GraphQLScalarType({
+  name: 'Upload',
+  description: 'File upload',
+  parseValue(value: any): any {
+    return value; // Apollo Server의 파일 업로드 처리
+  },
+  parseLiteral(ast): never {
+    throw new Error('Upload literal unsupported');
+  },
+  serialize(): never {
+    throw new Error('Upload serialization unsupported');
+  }
+});
+
+// 타입 정의 생성기
+export class TypeSystemBuilder {
+  private customScalars: Map<string, GraphQLScalarType> = new Map();
+  
+  constructor() {
+    this.registerDefaultScalars();
+  }
+  
+  private registerDefaultScalars(): void {
+    this.customScalars.set('DateTime', DateTimeScalar);
+    this.customScalars.set('JSON', JSONScalar);
+    this.customScalars.set('UUID', UUIDScalar);
+    this.customScalars.set('ComponentCode', ComponentCodeScalar);
+    this.customScalars.set('Upload', UploadScalar);
+  }
+  
+  generateScalarDefinitions(): string {
+    const scalars = Array.from(this.customScalars.keys());
+    return scalars.map(name => `scalar ${name}`).join('\n');
+  }
+  
+  getScalarResolvers(): Record<string, GraphQLScalarType> {
+    const resolvers: Record<string, GraphQLScalarType> = {};
+    
+    this.customScalars.forEach((scalar, name) => {
+      resolvers[name] = scalar;
+    });
+    
+    return resolvers;
+  }
+}
+
+// Enum 타입 정의
+export const EnumDefinitions = `
+  enum ProjectStatus {
+    DRAFT
+    ACTIVE
+    COMPLETED
+    ARCHIVED
+  }
+  
+  enum ComponentType {
+    FUNCTIONAL
+    CLASS
+    HOOKS
+    PROVIDER
+    LAYOUT
+  }
+  
+  enum AgentType {
+    REQUIREMENTS_ANALYZER
+    UI_GENERATOR
+    COMPONENT_DESIGNER
+    API_INTEGRATOR
+    STATE_MANAGER
+    ROUTE_CONFIGURATOR
+    STYLE_OPTIMIZER
+    TEST_GENERATOR
+    DEPLOYMENT_PREPARER
+  }
+  
+  enum SortOrder {
+    ASC
+    DESC
+  }
+  
+  enum FilterOperator {
+    EQ
+    NE
+    GT
+    GTE
+    LT
+    LTE
+    IN
+    NIN
+    CONTAINS
+    STARTS_WITH
+    ENDS_WITH
+  }
+`;
+
+// Input 타입 정의
+export const InputTypeDefinitions = `
+  input PaginationInput {
+    page: Int
+    limit: Int
+    cursor: String
+  }
+  
+  input SortInput {
+    field: String!
+    order: SortOrder!
+  }
+  
+  input FilterInput {
+    field: String!
+    operator: FilterOperator!
+    value: JSON!
+  }
+  
+  input QueryOptions {
+    pagination: PaginationInput
+    sort: [SortInput!]
+    filters: [FilterInput!]
+  }
+`;
+```
+
+**검증 기준**:
+- [ ] 커스텀 스칼라 타입 정의
+- [ ] 유효성 검증 로직
+- [ ] Enum 타입 완성도
+- [ ] Input 타입 구조
+
+#### SubTask 6.11.2: 객체 타입 및 인터페이스 설계
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+
+```graphql
+# backend/src/graphql/schema/types.graphql
+
+# 인터페이스 정의
+interface Node {
+  id: ID!
+}
+
+interface Timestamped {
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+interface Owned {
+  owner: User!
+}
+
+# 프로젝트 타입
+type Project implements Node & Timestamped & Owned {
+  id: ID!
+  name: String!
+  description: String
+  framework: String!
+  status: ProjectStatus!
+  owner: User!
+  components: [Component!]!
+  agents: [AgentExecution!]!
+  settings: ProjectSettings!
+  statistics: ProjectStatistics!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ProjectSettings {
+  id: ID!
+  project: Project!
+  theme: JSON
+  buildConfig: JSON
+  deploymentConfig: JSON
+  environmentVariables: [EnvironmentVariable!]!
+}
+
+type ProjectStatistics {
+  componentCount: Int!
+  linesOfCode: Int!
+  lastBuildTime: DateTime
+  buildStatus: String
+  testCoverage: Float
+}
+
+# 컴포넌트 타입
+type Component implements Node & Timestamped {
+  id: ID!
+  name: String!
+  type: ComponentType!
+  category: String
+  code: ComponentCode!
+  styles: String
+  props: [PropDefinition!]!
+  dependencies: [Dependency!]!
+  parent: Component
+  children: [Component!]!
+  project: Project!
+  version: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type PropDefinition {
+  name: String!
+  type: String!
+  required: Boolean!
+  defaultValue: JSON
+  description: String
+}
+
+type Dependency {
+  name: String!
+  version: String!
+  type: String! # npm, component, asset
+}
+
+# 에이전트 실행 타입
+type AgentExecution implements Node & Timestamped {
+  id: ID!
+  agent: AgentType!
+  status: ExecutionStatus!
+  input: JSON!
+  output: JSON
+  project: Project!
+  triggeredBy: User!
+  startedAt: DateTime
+  completedAt: DateTime
+  duration: Int
+  error: ExecutionError
+  logs: [ExecutionLog!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ExecutionError {
+  code: String!
+  message: String!
+  details: JSON
+  stackTrace: String
+}
+
+type ExecutionLog {
+  timestamp: DateTime!
+  level: String!
+  message: String!
+  data: JSON
+}
+
+# 사용자 타입
+type User implements Node & Timestamped {
+  id: ID!
+  email: String!
+  name: String
+  avatar: String
+  role: UserRole!
+  projects: [Project!]!
+  executions: [AgentExecution!]!
+  preferences: UserPreferences!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type UserPreferences {
+  theme: String!
+  language: String!
+  notifications: NotificationSettings!
+  shortcuts: JSON
+}
+
+type NotificationSettings {
+  email: Boolean!
+  push: Boolean!
+  inApp: Boolean!
+  agentCompleted: Boolean!
+  deploymentStatus: Boolean!
+}
+
+# 페이지네이션 타입
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+  totalCount: Int
+}
+
+type ProjectConnection {
+  edges: [ProjectEdge!]!
+  pageInfo: PageInfo!
+}
+
+type ProjectEdge {
+  node: Project!
+  cursor: String!
+}
+
+# Union 타입
+union SearchResult = Project | Component | User
+
+# 에러 타입
+type ValidationError {
+  field: String!
+  message: String!
+  code: String!
+}
+
+type MutationResponse {
+  success: Boolean!
+  message: String
+  errors: [ValidationError!]
+}
+```
+
+```python
+# backend/src/graphql/schema/type_registry.py
+from typing import Dict, List, Type
+from graphql import GraphQLObjectType, GraphQLInterfaceType
+
+class TypeRegistry:
+    """GraphQL 타입 레지스트리"""
+    
+    def __init__(self):
+        self.types: Dict[str, GraphQLObjectType] = {}
+        self.interfaces: Dict[str, GraphQLInterfaceType] = {}
+        self.resolvers: Dict[str, Dict[str, callable]] = {}
+    
+    def register_type(self, name: str, type_def: GraphQLObjectType):
+        """타입 등록"""
+        self.types[name] = type_def
+    
+    def register_interface(self, name: str, interface: GraphQLInterfaceType):
+        """인터페이스 등록"""
+        self.interfaces[name] = interface
+    
+    def register_resolver(self, type_name: str, field_name: str, resolver: callable):
+        """리졸버 등록"""
+        if type_name not in self.resolvers:
+            self.resolvers[type_name] = {}
+        self.resolvers[type_name][field_name] = resolver
+    
+    def get_type_map(self) -> Dict:
+        """전체 타입 맵 반환"""
+        return {
+            **self.types,
+            **self.interfaces
+        }
+
+class TypeValidator:
+    """타입 유효성 검증"""
+    
+    def validate_schema(self, schema: str) -> List[str]:
+        """스키마 유효성 검증"""
+        errors = []
+        
+        # 순환 참조 체크
+        errors.extend(self.check_circular_references(schema))
+        
+        # 필수 필드 체크
+        errors.extend(self.check_required_fields(schema))
+        
+        # 타입 일관성 체크
+        errors.extend(self.check_type_consistency(schema))
+        
+        return errors
+```
+
+**검증 기준**:
+- [ ] 인터페이스 설계
+- [ ] 타입 관계 정의
+- [ ] 페이지네이션 타입
+- [ ] Union/Interface 활용
+
+#### SubTask 6.11.3: 쿼리 및 뮤테이션 스키마
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+
+```graphql
+# backend/src/graphql/schema/operations.graphql
+
+type Query {
+  # 단일 조회
+  project(id: ID!): Project
+  component(id: ID!): Component
+  user(id: ID!): User
+  agentExecution(id: ID!): AgentExecution
+  
+  # 목록 조회
+  projects(
+    options: QueryOptions
+    status: ProjectStatus
+    ownerId: ID
+  ): ProjectConnection!
+  
+  components(
+    projectId: ID!
+    options: QueryOptions
+    type: ComponentType
+  ): ComponentConnection!
+  
+  agentExecutions(
+    projectId: ID
+    agentType: AgentType
+    status: ExecutionStatus
+    options: QueryOptions
+  ): AgentExecutionConnection!
+  
+  # 검색
+  search(
+    query: String!
+    types: [String!]
+    limit: Int = 10
+  ): [SearchResult!]!
+  
+  # 통계
+  projectStatistics(projectId: ID!): ProjectStatistics!
+  userStatistics(userId: ID!): UserStatistics!
+  systemStatistics: SystemStatistics!
+  
+  # 현재 사용자
+  me: User
+  myProjects(options: QueryOptions): ProjectConnection!
+  
+  # 컴포넌트 라이브러리
+  componentLibrary(
+    category: String
+    framework: String
+    options: QueryOptions
+  ): ComponentConnection!
+  
+  # 에이전트 정보
+  availableAgents: [AgentInfo!]!
+  agentStatus(agentType: AgentType!): AgentStatus!
+}
+
+type Mutation {
+  # 프로젝트 관리
+  createProject(input: CreateProjectInput!): ProjectPayload!
+  updateProject(id: ID!, input: UpdateProjectInput!): ProjectPayload!
+  deleteProject(id: ID!): DeletePayload!
+  archiveProject(id: ID!): ProjectPayload!
+  
+  # 컴포넌트 관리
+  createComponent(input: CreateComponentInput!): ComponentPayload!
+  updateComponent(id: ID!, input: UpdateComponentInput!): ComponentPayload!
+  deleteComponent(id: ID!): DeletePayload!
+  duplicateComponent(id: ID!): ComponentPayload!
+  
+  # 에이전트 실행
+  executeAgent(input: ExecuteAgentInput!): AgentExecutionPayload!
+  cancelAgentExecution(id: ID!): AgentExecutionPayload!
+  retryAgentExecution(id: ID!): AgentExecutionPayload!
+  
+  # 코드 생성
+  generateCode(projectId: ID!, options: GenerateOptions): GenerateCodePayload!
+  generateComponent(input: GenerateComponentInput!): ComponentPayload!
+  optimizeStyles(componentId: ID!): OptimizeStylesPayload!
+  
+  # 배포
+  deployProject(projectId: ID!, environment: String!): DeploymentPayload!
+  rollbackDeployment(deploymentId: ID!): DeploymentPayload!
+  
+  # 사용자 관리
+  updateProfile(input: UpdateProfileInput!): UserPayload!
+  updatePreferences(input: UpdatePreferencesInput!): UserPayload!
+  
+  # 협업
+  shareProject(projectId: ID!, userId: ID!, role: String!): SharePayload!
+  removeCollaborator(projectId: ID!, userId: ID!): MutationResponse!
+  
+  # 버전 관리
+  createVersion(projectId: ID!, tag: String!): VersionPayload!
+  restoreVersion(versionId: ID!): ProjectPayload!
+}
+
+# Input 타입들
+input CreateProjectInput {
+  name: String!
+  description: String
+  framework: String!
+  template: String
+  settings: ProjectSettingsInput
+}
+
+input UpdateProjectInput {
+  name: String
+  description: String
+  status: ProjectStatus
+  settings: ProjectSettingsInput
+}
+
+input CreateComponentInput {
+  projectId: ID!
+  name: String!
+  type: ComponentType!
+  category: String
+  parentId: ID
+  code: ComponentCode
+  styles: String
+}
+
+input UpdateComponentInput {
+  name: String
+  category: String
+  code: ComponentCode
+  styles: String
+  props: [PropDefinitionInput!]
+}
+
+input ExecuteAgentInput {
+  projectId: ID!
+  agentType: AgentType!
+  input: JSON!
+  options: AgentOptions
+}
+
+input AgentOptions {
+  timeout: Int
+  priority: Int
+  parallel: Boolean
+}
+
+# Payload 타입들
+type ProjectPayload {
+  project: Project
+  success: Boolean!
+  message: String
+  errors: [ValidationError!]
+}
+
+type ComponentPayload {
+  component: Component
+  success: Boolean!
+  message: String
+  errors: [ValidationError!]
+}
+
+type AgentExecutionPayload {
+  execution: AgentExecution
+  success: Boolean!
+  message: String
+  errors: [ValidationError!]
+}
+
+type GenerateCodePayload {
+  code: String!
+  files: [GeneratedFile!]!
+  success: Boolean!
+  message: String
+}
+
+type GeneratedFile {
+  path: String!
+  content: String!
+  type: String!
+}
+```
+
+```typescript
+// backend/src/graphql/schema/schema-builder.ts
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import { mergeTypeDefs, mergeResolvers } from '@graphql-tools/merge';
+
+export class SchemaBuilder {
+  private typeDefs: string[] = [];
+  private resolvers: any[] = [];
+  
+  constructor() {
+    this.loadTypeDefs();
+    this.loadResolvers();
+  }
+  
+  private loadTypeDefs(): void {
+    // 기본 타입 정의
+    this.typeDefs.push(ScalarDefinitions);
+    this.typeDefs.push(EnumDefinitions);
+    this.typeDefs.push(InterfaceDefinitions);
+    this.typeDefs.push(TypeDefinitions);
+    this.typeDefs.push(QueryDefinitions);
+    this.typeDefs.push(MutationDefinitions);
+    this.typeDefs.push(SubscriptionDefinitions);
+  }
+  
+  private loadResolvers(): void {
+    // 리졸버 로드
+    this.resolvers.push(ScalarResolvers);
+    this.resolvers.push(QueryResolvers);
+    this.resolvers.push(MutationResolvers);
+    this.resolvers.push(SubscriptionResolvers);
+    this.resolvers.push(TypeResolvers);
+  }
+  
+  build(): GraphQLSchema {
+    const mergedTypeDefs = mergeTypeDefs(this.typeDefs);
+    const mergedResolvers = mergeResolvers(this.resolvers);
+    
+    return makeExecutableSchema({
+      typeDefs: mergedTypeDefs,
+      resolvers: mergedResolvers,
+      inheritResolversFromInterfaces: true
+    });
+  }
+  
+  addPlugin(plugin: GraphQLPlugin): void {
+    if (plugin.typeDefs) {
+      this.typeDefs.push(plugin.typeDefs);
+    }
+    if (plugin.resolvers) {
+      this.resolvers.push(plugin.resolvers);
+    }
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 완전한 Query 정의
+- [ ] 완전한 Mutation 정의
+- [ ] Input/Payload 타입
+- [ ] 스키마 조합 로직
+
+#### SubTask 6.11.4: 스키마 유효성 검증 및 최적화
+
+**담당자**: 백엔드 아키텍트  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```python
+# backend/src/graphql/schema/validator.py
+from graphql import validate, parse, build_schema
+from typing import List, Dict, Any
+
+class SchemaValidator:
+    """GraphQL 스키마 검증기"""
+    
+    def __init__(self):
+        self.rules = self.load_validation_rules()
+        self.warnings = []
+        self.errors = []
+    
+    def validate_schema(self, schema_string: str) -> ValidationResult:
+        """스키마 유효성 검증"""
+        
+        try:
+            # 스키마 파싱
+            schema = build_schema(schema_string)
+            
+            # 구조적 검증
+            self.validate_structure(schema)
+            
+            # 네이밍 규칙 검증
+            self.validate_naming_conventions(schema)
+            
+            # 순환 참조 검증
+            self.validate_circular_references(schema)
+            
+            # 복잡도 검증
+            self.validate_complexity(schema)
+            
+            # 보안 검증
+            self.validate_security(schema)
+            
+            return ValidationResult(
+                valid=len(self.errors) == 0,
+                errors=self.errors,
+                warnings=self.warnings
+            )
+            
+        except Exception as e:
+            self.errors.append(f"Schema parsing error: {str(e)}")
+            return ValidationResult(valid=False, errors=self.errors)
+    
+    def validate_structure(self, schema):
+        """구조적 유효성 검증"""
+        
+        # Query 타입 존재 확인
+        if not schema.query_type:
+            self.errors.append("Query type is required")
+        
+        # 모든 타입의 필드 검증
+        for type_name, type_def in schema.type_map.items():
+            if type_name.startswith("__"):
+                continue
+                
+            # 빈 타입 체크
+            if hasattr(type_def, 'fields') and not type_def.fields:
+                self.warnings.append(f"Type {type_name} has no fields")
+            
+            # 필드 타입 검증
+            if hasattr(type_def, 'fields'):
+                for field_name, field in type_def.fields.items():
+                    self.validate_field(type_name, field_name, field)
+    
+    def validate_naming_conventions(self, schema):
+        """네이밍 규칙 검증"""
+        
+        for type_name in schema.type_map:
+            if type_name.startswith("__"):
+                continue
+            
+            # 타입 이름은 PascalCase
+            if not self.is_pascal_case(type_name):
+                self.warnings.append(
+                    f"Type {type_name} should be in PascalCase"
+                )
+            
+            type_def = schema.type_map[type_name]
+            
+            # 필드 이름은 camelCase
+            if hasattr(type_def, 'fields'):
+                for field_name in type_def.fields:
+                    if not self.is_camel_case(field_name):
+                        self.warnings.append(
+                            f"Field {type_name}.{field_name} should be in camelCase"
+                        )
+    
+    def validate_circular_references(self, schema):
+        """순환 참조 검증"""
+        
+        visited = set()
+        rec_stack = set()
+        
+        def has_cycle(type_name: str) -> bool:
+            visited.add(type_name)
+            rec_stack.add(type_name)
+            
+            type_def = schema.type_map.get(type_name)
+            if not type_def or not hasattr(type_def, 'fields'):
+                rec_stack.remove(type_name)
+                return False
+            
+            for field_name, field in type_def.fields.items():
+                field_type = self.get_base_type(field.type)
+                
+                if field_type not in visited:
+                    if has_cycle(field_type):
+                        return True
+                elif field_type in rec_stack:
+                    self.warnings.append(
+                        f"Circular reference detected: {type_name} -> {field_type}"
+                    )
+            
+            rec_stack.remove(type_name)
+            return False
+        
+        for type_name in schema.type_map:
+            if type_name not in visited and not type_name.startswith("__"):
+                has_cycle(type_name)
+
+class SchemaOptimizer:
+    """스키마 최적화"""
+    
+    def optimize(self, schema: str) -> str:
+        """스키마 최적화"""
+        
+        # 중복 타입 제거
+        schema = self.remove_duplicate_types(schema)
+        
+        # 사용하지 않는 타입 제거
+        schema = self.remove_unused_types(schema)
+        
+        # 필드 최적화
+        schema = self.optimize_fields(schema)
+        
+        # 쿼리 복잡도 최적화
+        schema = self.optimize_query_complexity(schema)
+        
+        return schema
+    
+    def analyze_complexity(self, query: str, schema) -> ComplexityAnalysis:
+        """쿼리 복잡도 분석"""
+        
+        ast = parse(query)
+        
+        complexity = 0
+        depth = 0
+        
+        def visit_field(node, current_depth=0):
+            nonlocal complexity, depth
+            
+            complexity += self.calculate_field_complexity(node)
+            depth = max(depth, current_depth)
+            
+            if hasattr(node, 'selection_set') and node.selection_set:
+                for selection in node.selection_set.selections:
+                    visit_field(selection, current_depth + 1)
+        
+        for definition in ast.definitions:
+            if hasattr(definition, 'selection_set'):
+                for selection in definition.selection_set.selections:
+                    visit_field(selection)
+        
+        return ComplexityAnalysis(
+            complexity=complexity,
+            depth=depth,
+            exceeds_limit=complexity > 1000 or depth > 10
+        )
+
+class DeprecationManager:
+    """스키마 deprecation 관리"""
+    
+    def mark_deprecated(
+        self,
+        schema,
+        type_name: str,
+        field_name: str,
+        reason: str,
+        removal_date: str
+    ):
+        """필드 deprecation 마킹"""
+        
+        directive = f'@deprecated(reason: "{reason}", removalDate: "{removal_date}")'
+        
+        # 스키마에 deprecation 디렉티브 추가
+        return self.add_directive(schema, type_name, field_name, directive)
+    
+    def get_deprecated_fields(self, schema) -> List[DeprecatedField]:
+        """Deprecated 필드 목록 조회"""
+        
+        deprecated = []
+        
+        for type_name, type_def in schema.type_map.items():
+            if hasattr(type_def, 'fields'):
+                for field_name, field in type_def.fields.items():
+                    if field.is_deprecated:
+                        deprecated.append(DeprecatedField(
+                            type=type_name,
+                            field=field_name,
+                            reason=field.deprecation_reason
+                        ))
+        
+        return deprecated
+```
+
+**검증 기준**:
+- [ ] 스키마 구조 검증
+- [ ] 네이밍 규칙 검증
+- [ ] 순환 참조 감지
+- [ ] 복잡도 분석
+
+---
+
+### Task 6.12: Resolver 구현
+
+#### SubTask 6.12.1: 쿼리 리졸버 구현
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+
+```typescript
+// backend/src/graphql/resolvers/query-resolvers.ts
+import { IResolvers } from '@graphql-tools/utils';
+import { Context } from '../context';
+
+export const QueryResolvers: IResolvers = {
+  Query: {
+    // 단일 조회 리졸버
+    project: async (parent, { id }, context: Context) => {
+      // 권한 확인
+      await context.authorize('project:read', id);
+      
+      // 데이터 로드
+      const project = await context.dataSources.projectAPI.getProject(id);
+      
+      if (!project) {
+        throw new NotFoundError(`Project ${id} not found`);
+      }
+      
+      return project;
+    },
+    
+    component: async (parent, { id }, context: Context) => {
+      const component = await context.dataSources.componentAPI.getComponent(id);
+      
+      // 프로젝트 권한 확인
+      await context.authorize('project:read', component.projectId);
+      
+      return component;
+    },
+    
+    // 목록 조회 리졸버
+    projects: async (parent, args, context: Context) => {
+      const { options, status, ownerId } = args;
+      
+      // 필터 구성
+      const filters: any = {};
+      if (status) filters.status = status;
+      if (ownerId) filters.ownerId = ownerId;
+      
+      // 페이지네이션 처리
+      const connection = await context.dataSources.projectAPI.getProjects({
+        filters,
+        ...options
+      });
+      
+      return connection;
+    },
+    
+    components: async (parent, { projectId, options, type }, context: Context) => {
+      // 프로젝트 권한 확인
+      await context.authorize('project:read', projectId);
+      
+      const filters: any = { projectId };
+      if (type) filters.type = type;
+      
+      return await context.dataSources.componentAPI.getComponents({
+        filters,
+        ...options
+      });
+    },
+    
+    // 검색 리졸버
+    search: async (parent, { query, types, limit }, context: Context) => {
+      const searchService = context.services.searchService;
+      
+      const results = await searchService.search({
+        query,
+        types: types || ['Project', 'Component', 'User'],
+        limit,
+        userId: context.user.id
+      });
+      
+      // Union 타입 리졸버를 위한 __typename 추가
+      return results.map(result => ({
+        ...result,
+        __typename: result.type
+      }));
+    },
+    
+    // 통계 리졸버
+    projectStatistics: async (parent, { projectId }, context: Context) => {
+      await context.authorize('project:read', projectId);
+      
+      const stats = await context.services.analyticsService.getProjectStats(projectId);
+      
+      return {
+        componentCount: stats.components,
+        linesOfCode: stats.loc,
+        lastBuildTime: stats.lastBuild,
+        buildStatus: stats.buildStatus,
+        testCoverage: stats.coverage
+      };
+    },
+    
+    // 현재 사용자
+    me: async (parent, args, context: Context) => {
+      if (!context.user) {
+        return null;
+      }
+      
+      return await context.dataSources.userAPI.getUser(context.user.id);
+    },
+    
+    myProjects: async (parent, { options }, context: Context) => {
+      if (!context.user) {
+        throw new AuthenticationError('Not authenticated');
+      }
+      
+      return await context.dataSources.projectAPI.getProjects({
+        filters: { ownerId: context.user.id },
+        ...options
+      });
+    },
+    
+    // 컴포넌트 라이브러리
+    componentLibrary: async (parent, { category, framework, options }, context: Context) => {
+      const filters: any = { isLibrary: true };
+      if (category) filters.category = category;
+      if (framework) filters.framework = framework;
+      
+      return await context.dataSources.componentAPI.getLibraryComponents({
+        filters,
+        ...options
+      });
+    },
+    
+    // 에이전트 정보
+    availableAgents: async (parent, args, context: Context) => {
+      const agents = await context.services.agentService.getAvailableAgents();
+      
+      return agents.map(agent => ({
+        type: agent.type,
+        name: agent.name,
+        description: agent.description,
+        status: agent.status,
+        capabilities: agent.capabilities
+      }));
+    },
+    
+    agentStatus: async (parent, { agentType }, context: Context) => {
+      const status = await context.services.agentService.getAgentStatus(agentType);
+      
+      return {
+        type: agentType,
+        available: status.available,
+        queueLength: status.queueLength,
+        averageExecutionTime: status.avgTime,
+        successRate: status.successRate
+      };
+    }
+  }
+};
+
+// 효율적인 배치 처리를 위한 DataLoader 사용
+export class QueryOptimizer {
+  constructor(private context: Context) {}
+  
+  createLoaders() {
+    return {
+      projectLoader: new DataLoader(async (ids: string[]) => {
+        const projects = await this.context.dataSources.projectAPI.getProjectsByIds(ids);
+        return ids.map(id => projects.find(p => p.id === id));
+      }),
+      
+      componentLoader: new DataLoader(async (ids: string[]) => {
+        const components = await this.context.dataSources.componentAPI.getComponentsByIds(ids);
+        return ids.map(id => components.find(c => c.id === id));
+      }),
+      
+      userLoader: new DataLoader(async (ids: string[]) => {
+        const users = await this.context.dataSources.userAPI.getUsersByIds(ids);
+        return ids.map(id => users.find(u => u.id === id));
+      })
+    };
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 모든 Query 리졸버 구현
+- [ ] 권한 확인 로직
+- [ ] DataLoader 통합
+- [ ] 에러 처리
+
+#### SubTask 6.12.2: 뮤테이션 리졸버 구현
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+
+```python
+# backend/src/graphql/resolvers/mutation_resolvers.py
+from typing import Dict, Any
+from graphql import GraphQLError
+
+class MutationResolvers:
+    """뮤테이션 리졸버"""
+    
+    @staticmethod
+    async def create_project(parent, args, context):
+        """프로젝트 생성"""
+        
+        input_data = args['input']
+        
+        # 권한 확인
+        if not context.user:
+            raise GraphQLError("Authentication required")
+        
+        # 입력 검증
+        validation_errors = await validate_project_input(input_data)
+        if validation_errors:
+            return {
+                'project': None,
+                'success': False,
+                'errors': validation_errors
+            }
+        
+        try:
+            # 프로젝트 생성
+            project = await context.services.project_service.create_project({
+                **input_data,
+                'owner_id': context.user.id
+            })
+            
+            # 초기 설정 생성
+            if input_data.get('settings'):
+                await context.services.project_service.update_settings(
+                    project.id,
+                    input_data['settings']
+                )
+            
+            # 템플릿 적용
+            if input_data.get('template'):
+                await context.services.template_service.apply_template(
+                    project.id,
+                    input_data['template']
+                )
+            
+            # 이벤트 발생
+            await context.pubsub.publish('project_created', {
+                'projectCreated': project
+            })
+            
+            return {
+                'project': project,
+                'success': True,
+                'message': 'Project created successfully'
+            }
+            
+        except Exception as e:
+            return {
+                'project': None,
+                'success': False,
+                'message': str(e)
+            }
+    
+    @staticmethod
+    async def execute_agent(parent, args, context):
+        """에이전트 실행"""
+        
+        input_data = args['input']
+        
+        # 프로젝트 권한 확인
+        await context.authorize('project:write', input_data['project_id'])
+        
+        # 에이전트 실행 생성
+        execution = await context.services.agent_service.create_execution({
+            'project_id': input_data['project_id'],
+            'agent_type': input_data['agent_type'],
+            'input': input_data['input'],
+            'triggered_by': context.user.id,
+            'options': input_data.get('options', {})
+        })
+        
+        # 비동기 실행 시작
+        asyncio.create_task(
+            self._execute_agent_async(execution.id, context)
+        )
+        
+        # 실시간 업데이트를 위한 구독 트리거
+        await context.pubsub.publish(f'agent_execution_{execution.id}', {
+            'agentExecutionUpdated': execution
+        })
+        
+        return {
+            'execution': execution,
+            'success': True,
+            'message': 'Agent execution started'
+        }
+    
+    @staticmethod
+    async def _execute_agent_async(execution_id: str, context):
+        """비동기 에이전트 실행"""
+        
+        try:
+            # 에이전트 실행
+            result = await context.services.agent_service.execute(execution_id)
+            
+            # 상태 업데이트
+            await context.services.agent_service.update_execution(
+                execution_id,
+                {
+                    'status': 'completed',
+                    'output': result,
+                    'completed_at': datetime.now()
+                }
+            )
+            
+        except Exception as e:
+            # 실패 처리
+            await context.services.agent_service.update_execution(
+                execution_id,
+                {
+                    'status': 'failed',
+                    'error': {
+                        'code': 'EXECUTION_ERROR',
+                        'message': str(e)
+                    }
+                }
+            )
+        
+        finally:
+            # 완료 이벤트 발생
+            execution = await context.services.agent_service.get_execution(execution_id)
+            await context.pubsub.publish(f'agent_execution_{execution_id}', {
+                'agentExecutionUpdated': execution
+            })
+    
+    @staticmethod
+    async def generate_code(parent, args, context):
+        """코드 생성"""
+        
+        project_id = args['project_id']
+        options = args.get('options', {})
+        
+        # 권한 확인
+        await context.authorize('project:write', project_id)
+        
+        # 프로젝트 로드
+        project = await context.services.project_service.get_project(project_id)
+        
+        # 코드 생성 파이프라인 실행
+        pipeline = CodeGenerationPipeline(project, options)
+        
+        # 각 에이전트 순차 실행
+        agents = [
+            'requirements_analyzer',
+            'ui_generator',
+            'component_designer',
+            'api_integrator',
+            'state_manager',
+            'route_configurator',
+            'style_optimizer',
+            'test_generator',
+            'deployment_preparer'
+        ]
+        
+        generated_files = []
+        
+        for agent_type in agents:
+            # 에이전트 실행
+            result = await context.services.agent_service.execute_sync(
+                project_id,
+                agent_type,
+                pipeline.get_input_for_agent(agent_type)
+            )
+            
+            # 결과 처리
+            pipeline.process_agent_result(agent_type, result)
+            
+            # 파일 생성
+            files = pipeline.generate_files_from_result(agent_type, result)
+            generated_files.extend(files)
+        
+        # 최종 코드 조합
+        final_code = pipeline.combine_results()
+        
+        return {
+            'code': final_code,
+            'files': generated_files,
+            'success': True,
+            'message': f'Generated {len(generated_files)} files'
+        }
+    
+    @staticmethod
+    async def deploy_project(parent, args, context):
+        """프로젝트 배포"""
+        
+        project_id = args['project_id']
+        environment = args['environment']
+        
+        # 권한 확인
+        await context.authorize('project:deploy', project_id)
+        
+        # 배포 전 검증
+        validation = await context.services.deployment_service.validate_deployment(
+            project_id,
+            environment
+        )
+        
+        if not validation['valid']:
+            return {
+                'deployment': None,
+                'success': False,
+                'message': 'Deployment validation failed',
+                'errors': validation['errors']
+            }
+        
+        # 배포 생성
+        deployment = await context.services.deployment_service.create_deployment({
+            'project_id': project_id,
+            'environment': environment,
+            'initiated_by': context.user.id
+        })
+        
+        # 비동기 배포 시작
+        asyncio.create_task(
+            context.services.deployment_service.execute_deployment(deployment.id)
+        )
+        
+        return {
+            'deployment': deployment,
+            'success': True,
+            'message': 'Deployment initiated'
+        }
+```
+
+**검증 기준**:
+- [ ] 모든 Mutation 리졸버
+- [ ] 트랜잭션 처리
+- [ ] 비동기 작업 처리
+- [ ] 에러 핸들링
+
+#### SubTask 6.12.3: 필드 리졸버 및 관계 처리
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```typescript
+// backend/src/graphql/resolvers/field-resolvers.ts
+export const FieldResolvers = {
+  Project: {
+    owner: async (project, args, context) => {
+      // DataLoader를 사용한 배치 로딩
+      return context.loaders.userLoader.load(project.ownerId);
+    },
+    
+    components: async (project, { limit, offset }, context) => {
+      return await context.dataSources.componentAPI.getComponentsByProject(
+        project.id,
+        { limit, offset }
+      );
+    },
+    
+    agents: async (project, args, context) => {
+      return await context.dataSources.agentAPI.getExecutionsByProject(project.id);
+    },
+    
+    settings: async (project, args, context) => {
+      // 캐싱된 설정 반환
+      const cacheKey = `project_settings_${project.id}`;
+      const cached = await context.cache.get(cacheKey);
+      
+      if (cached) {
+        return cached;
+      }
+      
+      const settings = await context.dataSources.projectAPI.getSettings(project.id);
+      await context.cache.set(cacheKey, settings, 300); // 5분 캐싱
+      
+      return settings;
+    },
+    
+    statistics: async (project, args, context) => {
+      // 통계는 실시간 계산
+      return await context.services.analyticsService.calculateProjectStats(project.id);
+    }
+  },
+  
+  Component: {
+    project: async (component, args, context) => {
+      return context.loaders.projectLoader.load(component.projectId);
+    },
+    
+    parent: async (component, args, context) => {
+      if (!component.parentId) return null;
+      return context.loaders.componentLoader.load(component.parentId);
+    },
+    
+    children: async (component, args, context) => {
+      return await context.dataSources.componentAPI.getChildComponents(component.id);
+    },
+    
+    dependencies: async (component, args, context) => {
+      // 의존성 분석
+      const deps = await context.services.dependencyService.analyze(component.code);
+      return deps.map(dep => ({
+        name: dep.name,
+        version: dep.version,
+        type: dep.type
+      }));
+    }
+  },
+  
+  AgentExecution: {
+    project: async (execution, args, context) => {
+      return context.loaders.projectLoader.load(execution.projectId);
+    },
+    
+    triggeredBy: async (execution, args, context) => {
+      return context.loaders.userLoader.load(execution.triggeredById);
+    },
+    
+    logs: async (execution, { level, limit }, context) => {
+      const filters: any = {};
+      if (level) filters.level = level;
+      
+      return await context.dataSources.logsAPI.getExecutionLogs(
+        execution.id,
+        { filters, limit }
+      );
+    },
+    
+    duration: (execution) => {
+      if (!execution.startedAt || !execution.completedAt) {
+        return null;
+      }
+      return execution.completedAt.getTime() - execution.startedAt.getTime();
+    }
+  },
+  
+  User: {
+    projects: async (user, { limit, offset }, context) => {
+      // 사용자의 프로젝트만 조회 가능
+      if (context.user.id !== user.id && !context.user.isAdmin) {
+        throw new ForbiddenError('Cannot access other user projects');
+      }
+      
+      return await context.dataSources.projectAPI.getUserProjects(
+        user.id,
+        { limit, offset }
+      );
+    },
+    
+    executions: async (user, args, context) => {
+      if (context.user.id !== user.id && !context.user.isAdmin) {
+        return [];
+      }
+      
+      return await context.dataSources.agentAPI.getUserExecutions(user.id);
+    },
+    
+    preferences: async (user, args, context) => {
+      // 자신의 설정만 조회 가능
+      if (context.user.id !== user.id) {
+        return null;
+      }
+      
+      return await context.dataSources.userAPI.getPreferences(user.id);
+    }
+  },
+  
+  // Union 타입 리졸버
+  SearchResult: {
+    __resolveType(obj) {
+      if (obj.framework) return 'Project';
+      if (obj.code) return 'Component';
+      if (obj.email) return 'User';
+      return null;
+    }
+  },
+  
+  // Interface 리졸버
+  Node: {
+    __resolveType(obj) {
+      return obj.__typename;
+    }
+  }
+};
+
+// 관계 최적화
+export class RelationshipOptimizer {
+  optimizeQuery(info: GraphQLResolveInfo): QueryPlan {
+    const fields = this.parseSelectionSet(info);
+    
+    // 필요한 관계 파악
+    const requiredJoins = this.identifyRequiredJoins(fields);
+    
+    // 쿼리 계획 생성
+    return {
+      joins: requiredJoins,
+      projections: this.getProjections(fields),
+      batchKeys: this.getBatchKeys(fields)
+    };
+  }
+  
+  private parseSelectionSet(info: GraphQLResolveInfo): FieldNode[] {
+    const selections = info.fieldNodes[0].selectionSet?.selections || [];
+    return this.flattenSelections(selections);
+  }
+  
+  private identifyRequiredJoins(fields: FieldNode[]): string[] {
+    const joins = new Set<string>();
+    
+    for (const field of fields) {
+      if (this.isRelationField(field)) {
+        joins.add(field.name.value);
+      }
+    }
+    
+    return Array.from(joins);
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 모든 타입 필드 리졸버
+- [ ] DataLoader 활용
+- [ ] 캐싱 전략
+- [ ] Union/Interface 리졸버
+
+#### SubTask 6.12.4: DataLoader 및 배치 처리
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```python
+# backend/src/graphql/resolvers/dataloaders.py
+from aiodataloader import DataLoader
+from typing import List, Dict, Any
+import asyncio
+
+class ProjectLoader(DataLoader):
+    """프로젝트 DataLoader"""
+    
+    def __init__(self, project_service):
+        super().__init__()
+        self.project_service = project_service
+    
+    async def batch_load_fn(self, project_ids: List[str]) -> List[Any]:
+        """배치 로드 함수"""
+        
+        # 한 번의 쿼리로 모든 프로젝트 조회
+        projects = await self.project_service.get_projects_by_ids(project_ids)
+        
+        # ID 순서대로 정렬
+        project_map = {p.id: p for p in projects}
+        return [project_map.get(pid) for pid in project_ids]
+
+class ComponentLoader(DataLoader):
+    """컴포넌트 DataLoader"""
+    
+    def __init__(self, component_service):
+        super().__init__()
+        self.component_service = component_service
+        self.max_batch_size = 100
+    
+    async def batch_load_fn(self, component_ids: List[str]) -> List[Any]:
+        # 대량 요청 분할 처리
+        if len(component_ids) > self.max_batch_size:
+            return await self._load_in_chunks(component_ids)
+        
+        components = await self.component_service.get_components_by_ids(component_ids)
+        component_map = {c.id: c for c in components}
+        return [component_map.get(cid) for cid in component_ids]
+    
+    async def _load_in_chunks(self, ids: List[str]) -> List[Any]:
+        """청크 단위 로드"""
+        
+        chunks = [
+            ids[i:i + self.max_batch_size]
+            for i in range(0, len(ids), self.max_batch_size)
+        ]
+        
+        results = await asyncio.gather(*[
+            self.component_service.get_components_by_ids(chunk)
+            for chunk in chunks
+        ])
+        
+        # 결과 병합
+        all_components = []
+        for chunk_result in results:
+            all_components.extend(chunk_result)
+        
+        component_map = {c.id: c for c in all_components}
+        return [component_map.get(cid) for cid in ids]
+
+class RelationshipLoader(DataLoader):
+    """관계 DataLoader"""
+    
+    def __init__(self, relationship_service):
+        super().__init__()
+        self.relationship_service = relationship_service
+        self.cache_enabled = True
+    
+    async def batch_load_fn(self, keys: List[tuple]) -> List[Any]:
+        """관계 배치 로드
+        
+        keys: [(parent_type, parent_id, relation_name), ...]
+        """
+        
+        # 타입별로 그룹화
+        grouped = {}
+        for parent_type, parent_id, relation in keys:
+            key = (parent_type, relation)
+            if key not in grouped:
+                grouped[key] = []
+            grouped[key].append(parent_id)
+        
+        # 각 그룹별로 쿼리
+        results = {}
+        for (parent_type, relation), parent_ids in grouped.items():
+            relation_data = await self.relationship_service.get_relations(
+                parent_type,
+                parent_ids,
+                relation
+            )
+            
+            for parent_id, data in relation_data.items():
+                results[(parent_type, parent_id, relation)] = data
+        
+        # 원래 순서대로 반환
+        return [results.get(key, None) for key in keys]
+
+class DataLoaderRegistry:
+    """DataLoader 레지스트리"""
+    
+    def __init__(self, services):
+        self.services = services
+        self.loaders = {}
+        self.initialize_loaders()
+    
+    def initialize_loaders(self):
+        """로더 초기화"""
+        
+        self.loaders['project'] = ProjectLoader(
+            self.services.project_service
+        )
+        
+        self.loaders['component'] = ComponentLoader(
+            self.services.component_service
+        )
+        
+        self.loaders['user'] = UserLoader(
+            self.services.user_service
+        )
+        
+        self.loaders['relationship'] = RelationshipLoader(
+            self.services.relationship_service
+        )
+        
+        # 캐싱 로더
+        self.loaders['cached_stats'] = CachedStatsLoader(
+            self.services.analytics_service
+        )
+    
+    def get_loader(self, name: str) -> DataLoader:
+        """로더 조회"""
+        
+        if name not in self.loaders:
+            raise ValueError(f"Loader {name} not found")
+        
+        return self.loaders[name]
+    
+    def create_context_loaders(self) -> Dict[str, DataLoader]:
+        """컨텍스트용 로더 생성"""
+        
+        # 각 요청마다 새로운 로더 인스턴스 생성
+        return {
+            'projectLoader': ProjectLoader(self.services.project_service),
+            'componentLoader': ComponentLoader(self.services.component_service),
+            'userLoader': UserLoader(self.services.user_service),
+            'relationshipLoader': RelationshipLoader(self.services.relationship_service)
+        }
+
+class BatchProcessor:
+    """배치 처리 최적화"""
+    
+    def __init__(self):
+        self.batch_size = 50
+        self.batch_delay = 10  # ms
+    
+    async def process_batch(
+        self,
+        items: List[Any],
+        processor: callable
+    ) -> List[Any]:
+        """배치 처리"""
+        
+        # 지연 시간 대기 (더 많은 요청 수집)
+        await asyncio.sleep(self.batch_delay / 1000)
+        
+        # 배치 실행
+        return await processor(items)
+    
+    def optimize_query(self, query: str, batch_size: int) -> str:
+        """쿼리 최적화"""
+        
+        # IN 절 사용
+        if batch_size > 1:
+            return query.replace('= ?', 'IN (?)')
+        
+        return query
+```
+
+**검증 기준**:
+- [ ] DataLoader 구현
+- [ ] 배치 처리 최적화
+- [ ] 캐싱 통합
+- [ ] N+1 문제 해결
+
+---
+
+### Task 6.13: Subscription 및 실시간 업데이트
+
+#### SubTask 6.13.1: Subscription 스키마 정의
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```graphql
+# backend/src/graphql/schema/subscriptions.graphql
+
+type Subscription {
+  # 프로젝트 실시간 업데이트
+  projectUpdated(projectId: ID!): Project!
+  projectDeleted(projectId: ID!): ID!
+  
+  # 컴포넌트 변경 알림
+  componentChanged(projectId: ID!): ComponentChangeEvent!
+  
+  # 에이전트 실행 상태
+  agentExecutionUpdated(executionId: ID!): AgentExecution!
+  agentExecutionLog(executionId: ID!): ExecutionLog!
+  
+  # 코드 생성 진행 상황
+  codeGenerationProgress(projectId: ID!): GenerationProgress!
+  
+  # 배포 상태
+  deploymentStatusChanged(deploymentId: ID!): DeploymentStatus!
+  
+  # 협업 이벤트
+  collaboratorJoined(projectId: ID!): CollaboratorEvent!
+  collaboratorLeft(projectId: ID!): CollaboratorEvent!
+  
+  # 실시간 코드 편집
+  codeEdited(componentId: ID!): CodeEditEvent!
+  cursorMoved(componentId: ID!): CursorEvent!
+  
+  # 시스템 알림
+  systemNotification(userId: ID!): SystemNotification!
+  
+  # 성능 메트릭
+  performanceMetrics(projectId: ID!): PerformanceMetric!
+}
+
+# 이벤트 타입들
+type ComponentChangeEvent {
+  type: ChangeType!
+  component: Component!
+  changedBy: User!
+  timestamp: DateTime!
+  changes: [FieldChange!]!
+}
+
+type FieldChange {
+  field: String!
+  oldValue: JSON
+  newValue: JSON
+}
+
+enum ChangeType {
+  CREATED
+  UPDATED
+  DELETED
+  MOVED
+  RENAMED
+}
+
+type GenerationProgress {
+  projectId: ID!
+  currentAgent: AgentType!
+  progress: Float!
+  message: String!
+  estimatedTimeRemaining: Int
+  completedAgents: [AgentType!]!
+  pendingAgents: [AgentType!]!
+}
+
+type DeploymentStatus {
+  deploymentId: ID!
+  status: String!
+  stage: String!
+  progress: Float!
+  logs: [String!]!
+  error: String
+  url: String
+}
+
+type CollaboratorEvent {
+  projectId: ID!
+  user: User!
+  action: String!
+  timestamp: DateTime!
+}
+
+type CodeEditEvent {
+  componentId: ID!
+  userId: ID!
+  changes: [CodeChange!]!
+  timestamp: DateTime!
+}
+
+type CodeChange {
+  line: Int!
+  column: Int!
+  action: String! # insert, delete, replace
+  text: String
+}
+
+type CursorEvent {
+  componentId: ID!
+  userId: ID!
+  line: Int!
+  column: Int!
+  selection: Selection
+}
+
+type Selection {
+  startLine: Int!
+  startColumn: Int!
+  endLine: Int!
+  endColumn: Int!
+}
+
+type SystemNotification {
+  id: ID!
+  type: NotificationType!
+  title: String!
+  message: String!
+  severity: NotificationSeverity!
+  timestamp: DateTime!
+  data: JSON
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+  AGENT_COMPLETED
+  DEPLOYMENT_READY
+  COLLABORATION_REQUEST
+}
+
+enum NotificationSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+type PerformanceMetric {
+  projectId: ID!
+  timestamp: DateTime!
+  buildTime: Float
+  bundleSize: Int
+  memoryUsage: Float
+  cpuUsage: Float
+  responseTime: Float
+}
+```
+
+```typescript
+// backend/src/graphql/subscriptions/subscription-manager.ts
+export class SubscriptionManager {
+  private pubsub: PubSub;
+  private connections: Map<string, Set<string>> = new Map();
+  
+  constructor() {
+    this.pubsub = new PubSub();
+    this.setupEventListeners();
+  }
+  
+  private setupEventListeners(): void {
+    // 도메인 이벤트 리스너
+    eventBus.on('project:updated', (data) => {
+      this.pubsub.publish(`project_${data.projectId}`, {
+        projectUpdated: data.project
+      });
+    });
+    
+    eventBus.on('component:changed', (data) => {
+      this.pubsub.publish(`component_changes_${data.projectId}`, {
+        componentChanged: data
+      });
+    });
+    
+    eventBus.on('agent:execution:updated', (data) => {
+      this.pubsub.publish(`agent_execution_${data.executionId}`, {
+        agentExecutionUpdated: data.execution
+      });
+    });
+  }
+  
+  async subscribe(
+    topic: string,
+    connectionId: string,
+    filter?: any
+  ): AsyncIterator {
+    // 연결 추적
+    if (!this.connections.has(connectionId)) {
+      this.connections.set(connectionId, new Set());
+    }
+    this.connections.get(connectionId)!.add(topic);
+    
+    // 필터링된 구독
+    if (filter) {
+      return this.pubsub.asyncIterator(topic, {
+        filter: (payload) => this.applyFilter(payload, filter)
+      });
+    }
+    
+    return this.pubsub.asyncIterator(topic);
+  }
+  
+  private applyFilter(payload: any, filter: any): boolean {
+    // 필터 로직 구현
+    for (const [key, value] of Object.entries(filter)) {
+      if (payload[key] !== value) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  unsubscribe(connectionId: string, topic?: string): void {
+    if (topic) {
+      this.connections.get(connectionId)?.delete(topic);
+    } else {
+      this.connections.delete(connectionId);
+    }
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 완전한 Subscription 스키마
+- [ ] 이벤트 타입 정의
+- [ ] 구독 관리 시스템
+- [ ] 필터링 지원
+
+---
+
+### Task 6.13: Subscription 및 실시간 업데이트 (계속)
+
+#### SubTask 6.13.2: PubSub 시스템 구현
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+
+```python
+# backend/src/graphql/subscriptions/pubsub_system.py
+import asyncio
+from typing import Dict, List, Any, Set, Optional
+from dataclasses import dataclass
+import redis.asyncio as redis
+
+@dataclass
+class Subscription:
+    """구독 정보"""
+    id: str
+    topic: str
+    filter: Optional[Dict] = None
+    connection_id: str = None
+    created_at: datetime = field(default_factory=datetime.now)
+
+class PubSubSystem:
+    """발행-구독 시스템"""
+    
+    def __init__(self, redis_url: Optional[str] = None):
+        self.subscriptions: Dict[str, Set[Subscription]] = {}
+        self.connections: Dict[str, Set[str]] = {}
+        self.event_queue: asyncio.Queue = asyncio.Queue()
+        
+        # Redis를 사용한 분산 PubSub
+        if redis_url:
+            self.redis_client = redis.from_url(redis_url)
+            self.redis_pubsub = self.redis_client.pubsub()
+            self.use_redis = True
+        else:
+            self.use_redis = False
+    
+    async def publish(self, topic: str, payload: Any) -> None:
+        """이벤트 발행"""
+        
+        event = {
+            'topic': topic,
+            'payload': payload,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        if self.use_redis:
+            # Redis를 통한 분산 발행
+            await self.redis_client.publish(
+                topic,
+                json.dumps(event, default=str)
+            )
+        else:
+            # 로컬 발행
+            await self.event_queue.put(event)
+            await self._notify_subscribers(topic, payload)
+    
+    async def subscribe(
+        self,
+        topic: str,
+        connection_id: str,
+        filter_fn: Optional[callable] = None
+    ) -> AsyncIterator:
+        """토픽 구독"""
+        
+        subscription = Subscription(
+            id=generate_id(),
+            topic=topic,
+            filter=filter_fn,
+            connection_id=connection_id
+        )
+        
+        # 구독 등록
+        if topic not in self.subscriptions:
+            self.subscriptions[topic] = set()
+        self.subscriptions[topic].add(subscription)
+        
+        # 연결별 구독 추적
+        if connection_id not in self.connections:
+            self.connections[connection_id] = set()
+        self.connections[connection_id].add(subscription.id)
+        
+        # Redis 구독
+        if self.use_redis:
+            await self.redis_pubsub.subscribe(topic)
+        
+        # 비동기 이터레이터 반환
+        return self._create_async_iterator(subscription)
+    
+    async def _create_async_iterator(
+        self,
+        subscription: Subscription
+    ) -> AsyncIterator:
+        """비동기 이터레이터 생성"""
+        
+        queue = asyncio.Queue()
+        
+        async def message_handler():
+            while True:
+                try:
+                    if self.use_redis:
+                        # Redis에서 메시지 수신
+                        message = await self.redis_pubsub.get_message(
+                            ignore_subscribe_messages=True,
+                            timeout=1.0
+                        )
+                        
+                        if message:
+                            data = json.loads(message['data'])
+                            if self._should_deliver(data['payload'], subscription):
+                                await queue.put(data['payload'])
+                    else:
+                        # 로컬 큐에서 메시지 수신
+                        event = await self.event_queue.get()
+                        if event['topic'] == subscription.topic:
+                            if self._should_deliver(event['payload'], subscription):
+                                await queue.put(event['payload'])
+                                
+                except asyncio.CancelledError:
+                    break
+                except Exception as e:
+                    await self.handle_error(e, subscription)
+        
+        # 백그라운드 태스크 시작
+        task = asyncio.create_task(message_handler())
+        
+        try:
+            while True:
+                yield await queue.get()
+        finally:
+            task.cancel()
+    
+    def _should_deliver(
+        self,
+        payload: Any,
+        subscription: Subscription
+    ) -> bool:
+        """메시지 전달 여부 결정"""
+        
+        if not subscription.filter:
+            return True
+        
+        return subscription.filter(payload)
+    
+    async def unsubscribe(
+        self,
+        subscription_id: str,
+        connection_id: str
+    ) -> None:
+        """구독 해제"""
+        
+        # 구독 찾기
+        subscription = None
+        for topic_subs in self.subscriptions.values():
+            for sub in topic_subs:
+                if sub.id == subscription_id:
+                    subscription = sub
+                    break
+        
+        if not subscription:
+            return
+        
+        # 구독 제거
+        self.subscriptions[subscription.topic].discard(subscription)
+        
+        # 연결 추적 제거
+        if connection_id in self.connections:
+            self.connections[connection_id].discard(subscription_id)
+        
+        # Redis 구독 해제
+        if self.use_redis:
+            # 해당 토픽의 다른 구독이 없으면 unsubscribe
+            if not self.subscriptions.get(subscription.topic):
+                await self.redis_pubsub.unsubscribe(subscription.topic)
+    
+    async def disconnect(self, connection_id: str) -> None:
+        """연결 종료 시 모든 구독 해제"""
+        
+        if connection_id not in self.connections:
+            return
+        
+        subscription_ids = self.connections[connection_id].copy()
+        
+        for sub_id in subscription_ids:
+            await self.unsubscribe(sub_id, connection_id)
+        
+        del self.connections[connection_id]
+
+class EventAggregator:
+    """이벤트 집계기"""
+    
+    def __init__(self, pubsub: PubSubSystem):
+        self.pubsub = pubsub
+        self.buffers: Dict[str, List[Any]] = {}
+        self.timers: Dict[str, asyncio.Task] = {}
+        
+    async def aggregate(
+        self,
+        topic: str,
+        event: Any,
+        window: float = 1.0,
+        max_size: int = 100
+    ) -> None:
+        """이벤트 집계 및 배치 발행"""
+        
+        # 버퍼에 추가
+        if topic not in self.buffers:
+            self.buffers[topic] = []
+        
+        self.buffers[topic].append(event)
+        
+        # 크기 제한 확인
+        if len(self.buffers[topic]) >= max_size:
+            await self.flush(topic)
+            return
+        
+        # 타이머 설정
+        if topic not in self.timers or self.timers[topic].done():
+            self.timers[topic] = asyncio.create_task(
+                self._flush_after_delay(topic, window)
+            )
+    
+    async def _flush_after_delay(self, topic: str, delay: float) -> None:
+        """지연 후 플러시"""
+        
+        await asyncio.sleep(delay)
+        await self.flush(topic)
+    
+    async def flush(self, topic: str) -> None:
+        """버퍼 플러시"""
+        
+        if topic not in self.buffers or not self.buffers[topic]:
+            return
+        
+        # 배치 이벤트 발행
+        batch = self.buffers[topic].copy()
+        self.buffers[topic].clear()
+        
+        await self.pubsub.publish(topic, {
+            'type': 'batch',
+            'events': batch,
+            'count': len(batch)
+        })
+        
+        # 타이머 취소
+        if topic in self.timers:
+            self.timers[topic].cancel()
+            del self.timers[topic]
+
+class SubscriptionResolvers:
+    """Subscription 리졸버"""
+    
+    def __init__(self, pubsub: PubSubSystem):
+        self.pubsub = pubsub
+        self.aggregator = EventAggregator(pubsub)
+    
+    async def project_updated(self, parent, args, context, info):
+        """프로젝트 업데이트 구독"""
+        
+        project_id = args['project_id']
+        
+        # 권한 확인
+        await context.authorize('project:read', project_id)
+        
+        # 구독
+        return self.pubsub.subscribe(
+            f'project_{project_id}',
+            context.connection_id
+        )
+    
+    async def agent_execution_updated(self, parent, args, context, info):
+        """에이전트 실행 상태 구독"""
+        
+        execution_id = args['execution_id']
+        
+        # 실행 정보 조회 및 권한 확인
+        execution = await context.services.agent_service.get_execution(execution_id)
+        await context.authorize('project:read', execution.project_id)
+        
+        return self.pubsub.subscribe(
+            f'agent_execution_{execution_id}',
+            context.connection_id
+        )
+    
+    async def code_generation_progress(self, parent, args, context, info):
+        """코드 생성 진행 상황 구독"""
+        
+        project_id = args['project_id']
+        await context.authorize('project:read', project_id)
+        
+        # 집계된 이벤트 구독
+        return self.pubsub.subscribe(
+            f'generation_progress_{project_id}',
+            context.connection_id,
+            filter_fn=lambda payload: payload.get('type') == 'progress'
+        )
+```
+
+**검증 기준**:
+- [ ] PubSub 시스템 구현
+- [ ] Redis 통합 (분산)
+- [ ] 이벤트 집계
+- [ ] 구독 관리
+
+#### SubTask 6.13.3: 실시간 이벤트 필터링
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```typescript
+// backend/src/graphql/subscriptions/event-filtering.ts
+export interface EventFilter {
+  field: string;
+  operator: FilterOperator;
+  value: any;
+}
+
+export class EventFilteringSystem {
+  private filters: Map<string, EventFilter[]> = new Map();
+  private compiledFilters: Map<string, CompiledFilter> = new Map();
+  
+  addFilter(subscriptionId: string, filter: EventFilter): void {
+    if (!this.filters.has(subscriptionId)) {
+      this.filters.set(subscriptionId, []);
+    }
+    
+    this.filters.get(subscriptionId)!.push(filter);
+    this.compileFilter(subscriptionId);
+  }
+  
+  private compileFilter(subscriptionId: string): void {
+    const filters = this.filters.get(subscriptionId);
+    if (!filters) return;
+    
+    // 필터를 최적화된 함수로 컴파일
+    const compiled = new CompiledFilter(filters);
+    this.compiledFilters.set(subscriptionId, compiled);
+  }
+  
+  shouldDeliver(subscriptionId: string, event: any): boolean {
+    const compiled = this.compiledFilters.get(subscriptionId);
+    if (!compiled) return true;
+    
+    return compiled.evaluate(event);
+  }
+}
+
+class CompiledFilter {
+  private filterFn: (event: any) => boolean;
+  
+  constructor(filters: EventFilter[]) {
+    this.filterFn = this.compile(filters);
+  }
+  
+  private compile(filters: EventFilter[]): (event: any) => boolean {
+    // 필터를 JavaScript 함수로 컴파일
+    const conditions: string[] = [];
+    
+    for (const filter of filters) {
+      const condition = this.compileCondition(filter);
+      conditions.push(condition);
+    }
+    
+    const fnBody = `return ${conditions.join(' && ')};`;
+    return new Function('event', fnBody) as (event: any) => boolean;
+  }
+  
+  private compileCondition(filter: EventFilter): string {
+    const field = `event.${filter.field}`;
+    const value = JSON.stringify(filter.value);
+    
+    switch (filter.operator) {
+      case FilterOperator.EQUALS:
+        return `${field} === ${value}`;
+      case FilterOperator.NOT_EQUALS:
+        return `${field} !== ${value}`;
+      case FilterOperator.GREATER_THAN:
+        return `${field} > ${value}`;
+      case FilterOperator.LESS_THAN:
+        return `${field} < ${value}`;
+      case FilterOperator.IN:
+        return `${value}.includes(${field})`;
+      case FilterOperator.CONTAINS:
+        return `${field}.includes(${value})`;
+      default:
+        return 'true';
+    }
+  }
+  
+  evaluate(event: any): boolean {
+    try {
+      return this.filterFn(event);
+    } catch (error) {
+      console.error('Filter evaluation error:', error);
+      return false;
+    }
+  }
+}
+
+// 권한 기반 필터링
+export class PermissionBasedFilter {
+  constructor(private authService: AuthService) {}
+  
+  async createFilter(userId: string, resourceType: string): Promise<EventFilter[]> {
+    const permissions = await this.authService.getUserPermissions(userId);
+    const filters: EventFilter[] = [];
+    
+    // 리소스 타입별 필터 생성
+    switch (resourceType) {
+      case 'Project':
+        // 사용자가 접근 가능한 프로젝트만
+        const projectIds = await this.authService.getAccessibleProjects(userId);
+        filters.push({
+          field: 'projectId',
+          operator: FilterOperator.IN,
+          value: projectIds
+        });
+        break;
+        
+      case 'Component':
+        // 컴포넌트는 프로젝트 권한을 상속
+        const componentProjectIds = await this.authService.getAccessibleProjects(userId);
+        filters.push({
+          field: 'project.id',
+          operator: FilterOperator.IN,
+          value: componentProjectIds
+        });
+        break;
+    }
+    
+    return filters;
+  }
+}
+
+// 이벤트 변환 및 필터링 파이프라인
+export class EventPipeline {
+  private transformers: Array<(event: any) => any> = [];
+  private filters: Array<(event: any) => boolean> = [];
+  
+  addTransformer(transformer: (event: any) => any): void {
+    this.transformers.push(transformer);
+  }
+  
+  addFilter(filter: (event: any) => boolean): void {
+    this.filters.push(filter);
+  }
+  
+  async process(event: any): Promise<any | null> {
+    // 변환 적용
+    let transformed = event;
+    for (const transformer of this.transformers) {
+      transformed = await transformer(transformed);
+    }
+    
+    // 필터 적용
+    for (const filter of this.filters) {
+      if (!await filter(transformed)) {
+        return null; // 필터링됨
+      }
+    }
+    
+    return transformed;
+  }
+}
+
+// 이벤트 샘플링
+export class EventSampler {
+  private sampleRates: Map<string, number> = new Map();
+  private counters: Map<string, number> = new Map();
+  
+  setSampleRate(eventType: string, rate: number): void {
+    this.sampleRates.set(eventType, rate);
+  }
+  
+  shouldSample(eventType: string): boolean {
+    const rate = this.sampleRates.get(eventType);
+    if (!rate || rate >= 1) return true;
+    if (rate <= 0) return false;
+    
+    // 카운터 기반 샘플링
+    const counter = this.counters.get(eventType) || 0;
+    this.counters.set(eventType, counter + 1);
+    
+    return (counter % Math.floor(1 / rate)) === 0;
+  }
+}
+
+// 이벤트 윈도우 필터
+export class WindowFilter {
+  private windows: Map<string, TimeWindow> = new Map();
+  
+  createWindow(
+    id: string,
+    duration: number,
+    maxEvents: number
+  ): void {
+    this.windows.set(id, new TimeWindow(duration, maxEvents));
+  }
+  
+  shouldAccept(windowId: string, event: any): boolean {
+    const window = this.windows.get(windowId);
+    if (!window) return true;
+    
+    return window.accept(event);
+  }
+}
+
+class TimeWindow {
+  private events: Array<{ timestamp: number; event: any }> = [];
+  
+  constructor(
+    private duration: number, // seconds
+    private maxEvents: number
+  ) {}
+  
+  accept(event: any): boolean {
+    const now = Date.now();
+    
+    // 오래된 이벤트 제거
+    this.events = this.events.filter(
+      e => (now - e.timestamp) < this.duration * 1000
+    );
+    
+    // 최대 이벤트 수 확인
+    if (this.events.length >= this.maxEvents) {
+      return false;
+    }
+    
+    this.events.push({ timestamp: now, event });
+    return true;
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 이벤트 필터링 시스템
+- [ ] 권한 기반 필터
+- [ ] 샘플링 지원
+- [ ] 윈도우 기반 필터
+
+#### SubTask 6.13.4: 연결 관리 및 확장성
+
+**담당자**: 시스템 아키텍트  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+
+```python
+# backend/src/graphql/subscriptions/connection_manager.py
+from typing import Dict, Set, Optional
+import asyncio
+from dataclasses import dataclass
+
+@dataclass
+class ConnectionInfo:
+    """연결 정보"""
+    id: str
+    user_id: Optional[str]
+    ip_address: str
+    user_agent: str
+    connected_at: datetime
+    last_ping: datetime
+    subscriptions: Set[str] = field(default_factory=set)
+    metadata: Dict = field(default_factory=dict)
+
+class ConnectionManager:
+    """WebSocket 연결 관리"""
+    
+    def __init__(self):
+        self.connections: Dict[str, ConnectionInfo] = {}
+        self.user_connections: Dict[str, Set[str]] = {}
+        self.health_checker = ConnectionHealthChecker()
+        self.rate_limiter = ConnectionRateLimiter()
+        
+    async def add_connection(
+        self,
+        connection_id: str,
+        websocket,
+        request_info: Dict
+    ) -> ConnectionInfo:
+        """연결 추가"""
+        
+        # Rate limiting
+        if not await self.rate_limiter.check_limit(request_info['ip']):
+            raise RateLimitExceededError("Too many connections")
+        
+        # 연결 정보 생성
+        conn_info = ConnectionInfo(
+            id=connection_id,
+            user_id=request_info.get('user_id'),
+            ip_address=request_info['ip'],
+            user_agent=request_info.get('user_agent', ''),
+            connected_at=datetime.now(),
+            last_ping=datetime.now()
+        )
+        
+        # 저장
+        self.connections[connection_id] = conn_info
+        
+        # 사용자별 연결 추적
+        if conn_info.user_id:
+            if conn_info.user_id not in self.user_connections:
+                self.user_connections[conn_info.user_id] = set()
+            self.user_connections[conn_info.user_id].add(connection_id)
+        
+        # Health check 시작
+        asyncio.create_task(
+            self.health_checker.start_monitoring(connection_id, websocket)
+        )
+        
+        return conn_info
+    
+    async def remove_connection(self, connection_id: str) -> None:
+        """연결 제거"""
+        
+        if connection_id not in self.connections:
+            return
+        
+        conn_info = self.connections[connection_id]
+        
+        # 사용자 연결 추적 제거
+        if conn_info.user_id:
+            self.user_connections[conn_info.user_id].discard(connection_id)
+            if not self.user_connections[conn_info.user_id]:
+                del self.user_connections[conn_info.user_id]
+        
+        # Health check 중지
+        await self.health_checker.stop_monitoring(connection_id)
+        
+        # 연결 정보 제거
+        del self.connections[connection_id]
+        
+        # 정리 이벤트 발생
+        await self.emit_disconnection_event(conn_info)
+    
+    def get_connection(self, connection_id: str) -> Optional[ConnectionInfo]:
+        """연결 정보 조회"""
+        return self.connections.get(connection_id)
+    
+    def get_user_connections(self, user_id: str) -> List[ConnectionInfo]:
+        """사용자의 모든 연결 조회"""
+        
+        connection_ids = self.user_connections.get(user_id, set())
+        return [
+            self.connections[cid]
+            for cid in connection_ids
+            if cid in self.connections
+        ]
+    
+    async def broadcast_to_user(
+        self,
+        user_id: str,
+        message: Any
+    ) -> None:
+        """사용자의 모든 연결에 브로드캐스트"""
+        
+        connections = self.get_user_connections(user_id)
+        
+        await asyncio.gather(*[
+            self.send_to_connection(conn.id, message)
+            for conn in connections
+        ])
+    
+    def get_statistics(self) -> Dict:
+        """연결 통계"""
+        
+        return {
+            'total_connections': len(self.connections),
+            'unique_users': len(self.user_connections),
+            'connections_by_user': {
+                user_id: len(conns)
+                for user_id, conns in self.user_connections.items()
+            },
+            'average_connection_duration': self.calculate_avg_duration(),
+            'peak_connections': self.get_peak_connections()
+        }
+
+class ConnectionHealthChecker:
+    """연결 상태 체크"""
+    
+    def __init__(self):
+        self.ping_interval = 30  # seconds
+        self.pong_timeout = 10   # seconds
+        self.monitors: Dict[str, asyncio.Task] = {}
+    
+    async def start_monitoring(
+        self,
+        connection_id: str,
+        websocket
+    ) -> None:
+        """연결 모니터링 시작"""
+        
+        async def monitor():
+            while True:
+                try:
+                    # Ping 전송
+                    pong_waiter = await websocket.ping()
+                    
+                    # Pong 대기
+                    await asyncio.wait_for(
+                        pong_waiter,
+                        timeout=self.pong_timeout
+                    )
+                    
+                    # 상태 업데이트
+                    await self.update_health_status(connection_id, True)
+                    
+                    await asyncio.sleep(self.ping_interval)
+                    
+                except asyncio.TimeoutError:
+                    # Pong 타임아웃
+                    await self.handle_unhealthy_connection(connection_id)
+                    break
+                    
+                except Exception as e:
+                    # 연결 오류
+                    await self.handle_connection_error(connection_id, e)
+                    break
+        
+        self.monitors[connection_id] = asyncio.create_task(monitor())
+    
+    async def stop_monitoring(self, connection_id: str) -> None:
+        """모니터링 중지"""
+        
+        if connection_id in self.monitors:
+            self.monitors[connection_id].cancel()
+            del self.monitors[connection_id]
+
+class ScalableSubscriptionManager:
+    """확장 가능한 구독 관리"""
+    
+    def __init__(self, redis_cluster: RedisCluster):
+        self.redis = redis_cluster
+        self.local_cache = TTLCache(maxsize=10000, ttl=60)
+        self.shard_manager = ShardManager()
+    
+    async def distribute_subscription(
+        self,
+        subscription_id: str,
+        topic: str,
+        connection_id: str
+    ) -> str:
+        """구독 분산"""
+        
+        # 샤드 결정
+        shard = self.shard_manager.get_shard(topic)
+        
+        # Redis에 구독 정보 저장
+        key = f"subscription:{shard}:{subscription_id}"
+        value = {
+            'topic': topic,
+            'connection_id': connection_id,
+            'shard': shard,
+            'created_at': datetime.now().isoformat()
+        }
+        
+        await self.redis.hset(key, mapping=value)
+        
+        # 로컬 캐시 업데이트
+        self.local_cache[subscription_id] = value
+        
+        # 샤드별 구독 카운트 증가
+        await self.redis.hincrby(f"shard:stats:{shard}", "subscriptions", 1)
+        
+        return shard
+    
+    async def rebalance_shards(self) -> None:
+        """샤드 재균형"""
+        
+        # 각 샤드의 부하 측정
+        shard_loads = await self.measure_shard_loads()
+        
+        # 불균형 감지
+        if self.is_imbalanced(shard_loads):
+            # 재균형 계획 수립
+            plan = self.create_rebalancing_plan(shard_loads)
+            
+            # 구독 마이그레이션
+            await self.migrate_subscriptions(plan)
+            
+            # 샤드 맵 업데이트
+            await self.shard_manager.update_shard_map(plan)
+
+class ConnectionRateLimiter:
+    """연결 속도 제한"""
+    
+    def __init__(self):
+        self.limits = {
+            'connections_per_ip': 10,
+            'connections_per_user': 5,
+            'new_connections_per_minute': 20
+        }
+        self.counters = {}
+    
+    async def check_limit(self, identifier: str) -> bool:
+        """제한 확인"""
+        
+        current = self.counters.get(identifier, 0)
+        
+        if current >= self.limits['connections_per_ip']:
+            return False
+        
+        self.counters[identifier] = current + 1
+        
+        # 시간 기반 제한
+        return await self.check_time_based_limit(identifier)
+    
+    async def check_time_based_limit(self, identifier: str) -> bool:
+        """시간 기반 제한 확인"""
+        
+        key = f"rate_limit:{identifier}:{int(time.time() / 60)}"
+        
+        count = await redis_client.incr(key)
+        
+        if count == 1:
+            await redis_client.expire(key, 60)
+        
+        return count <= self.limits['new_connections_per_minute']
+
+class AutoScalingManager:
+    """자동 스케일링 관리"""
+    
+    def __init__(self):
+        self.metrics = MetricsCollector()
+        self.scaler = K8sScaler()
+        self.thresholds = {
+            'cpu_high': 80,
+            'cpu_low': 20,
+            'memory_high': 85,
+            'memory_low': 30,
+            'connections_per_pod': 1000
+        }
+    
+    async def monitor_and_scale(self) -> None:
+        """모니터링 및 스케일링"""
+        
+        while True:
+            metrics = await self.metrics.collect()
+            
+            # 스케일 아웃 필요 여부
+            if self.should_scale_out(metrics):
+                await self.scale_out()
+            
+            # 스케일 인 필요 여부
+            elif self.should_scale_in(metrics):
+                await self.scale_in()
+            
+            await asyncio.sleep(30)
+    
+    def should_scale_out(self, metrics: Dict) -> bool:
+        """스케일 아웃 필요 여부"""
+        
+        return (
+            metrics['cpu'] > self.thresholds['cpu_high'] or
+            metrics['memory'] > self.thresholds['memory_high'] or
+            metrics['connections_per_pod'] > self.thresholds['connections_per_pod']
+        )
+    
+    async def scale_out(self) -> None:
+        """스케일 아웃"""
+        
+        current_replicas = await self.scaler.get_replicas()
+        new_replicas = min(current_replicas + 1, 10)  # 최대 10개
+        
+        await self.scaler.set_replicas(new_replicas)
+        
+        # 이벤트 로깅
+        await self.log_scaling_event('scale_out', current_replicas, new_replicas)
+```
+
+**검증 기준**:
+- [ ] 연결 관리 시스템
+- [ ] Health Check
+- [ ] 분산 구독 관리
+- [ ] 자동 스케일링
+
+---
+
+### Task 6.14: WebSocket 서버 구현
+
+#### SubTask 6.14.1: WebSocket 서버 초기화
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```typescript
+// backend/src/websocket/server.ts
+import { Server } from 'ws';
+import { createServer } from 'http';
+import { parse } from 'url';
+
+export class WebSocketServer {
+  private wss: Server;
+  private httpServer: any;
+  private connections: Map<string, WebSocket> = new Map();
+  private handlers: Map<string, MessageHandler> = new Map();
+  
+  constructor(private config: WebSocketConfig) {
+    this.initialize();
+  }
+  
+  private initialize(): void {
+    // HTTP 서버 생성
+    this.httpServer = createServer();
+    
+    // WebSocket 서버 생성
+    this.wss = new Server({
+      server: this.httpServer,
+      path: this.config.path || '/ws',
+      maxPayload: this.config.maxPayload || 100 * 1024 * 1024, // 100MB
+      perMessageDeflate: {
+        zlibDeflateOptions: {
+          chunkSize: 1024,
+          memLevel: 7,
+          level: 3
+        },
+        zlibInflateOptions: {
+          chunkSize: 10 * 1024
+        },
+        clientNoContextTakeover: true,
+        serverNoContextTakeover: true,
+        serverMaxWindowBits: 10,
+        concurrencyLimit: 10,
+        threshold: 1024
+      }
+    });
+    
+    this.setupEventHandlers();
+    this.registerDefaultHandlers();
+  }
+  
+  private setupEventHandlers(): void {
+    // 연결 이벤트
+    this.wss.on('connection', async (ws, request) => {
+      const connectionId = generateConnectionId();
+      const clientInfo = this.extractClientInfo(request);
+      
+      try {
+        // 연결 처리
+        await this.handleConnection(ws, connectionId, clientInfo);
+      } catch (error) {
+        console.error('Connection handling error:', error);
+        ws.close(1002, 'Connection error');
+      }
+    });
+    
+    // 서버 에러
+    this.wss.on('error', (error) => {
+      console.error('WebSocket server error:', error);
+      this.handleServerError(error);
+    });
+    
+    // 서버 종료
+    this.wss.on('close', () => {
+      console.log('WebSocket server closed');
+      this.cleanup();
+    });
+  }
+  
+  private async handleConnection(
+    ws: WebSocket,
+    connectionId: string,
+    clientInfo: ClientInfo
+  ): Promise<void> {
+    console.log(`New connection: ${connectionId}`);
+    
+    // 연결 저장
+    this.connections.set(connectionId, ws);
+    
+    // 연결 컨텍스트 생성
+    const context = new ConnectionContext(connectionId, clientInfo);
+    ws['context'] = context;
+    
+    // 환영 메시지
+    await this.sendMessage(ws, {
+      type: 'connection',
+      payload: {
+        connectionId,
+        version: this.config.version,
+        features: this.config.features
+      }
+    });
+    
+    // 메시지 핸들러 설정
+    ws.on('message', async (data) => {
+      await this.handleMessage(ws, data, context);
+    });
+    
+    // 에러 핸들러
+    ws.on('error', (error) => {
+      console.error(`Connection ${connectionId} error:`, error);
+      this.handleConnectionError(connectionId, error);
+    });
+    
+    // 연결 종료 핸들러
+    ws.on('close', (code, reason) => {
+      console.log(`Connection ${connectionId} closed: ${code} ${reason}`);
+      this.handleDisconnection(connectionId, code, reason);
+    });
+    
+    // Ping/Pong 설정
+    this.setupHeartbeat(ws, connectionId);
+  }
+  
+  private setupHeartbeat(ws: WebSocket, connectionId: string): void {
+    const interval = this.config.heartbeatInterval || 30000;
+    let isAlive = true;
+    
+    ws.on('pong', () => {
+      isAlive = true;
+    });
+    
+    const heartbeat = setInterval(() => {
+      if (!isAlive) {
+        // 연결 종료
+        this.terminateConnection(connectionId);
+        return;
+      }
+      
+      isAlive = false;
+      ws.ping();
+    }, interval);
+    
+    ws['heartbeat'] = heartbeat;
+  }
+  
+  private extractClientInfo(request: any): ClientInfo {
+    const url = parse(request.url || '', true);
+    
+    return {
+      ip: request.socket.remoteAddress,
+      userAgent: request.headers['user-agent'],
+      origin: request.headers['origin'],
+      query: url.query,
+      headers: request.headers
+    };
+  }
+  
+  async start(port: number = 8080): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.httpServer.listen(port, () => {
+        console.log(`WebSocket server listening on port ${port}`);
+        resolve();
+      });
+      
+      this.httpServer.on('error', reject);
+    });
+  }
+  
+  async stop(): Promise<void> {
+    // 모든 연결 종료
+    for (const [connectionId, ws] of this.connections) {
+      ws.close(1001, 'Server shutting down');
+    }
+    
+    // 서버 종료
+    return new Promise((resolve) => {
+      this.wss.close(() => {
+        this.httpServer.close(() => {
+          resolve();
+        });
+      });
+    });
+  }
+}
+
+// WebSocket 설정
+export interface WebSocketConfig {
+  path?: string;
+  maxPayload?: number;
+  heartbeatInterval?: number;
+  version: string;
+  features: string[];
+  ssl?: {
+    cert: string;
+    key: string;
+  };
+  cors?: {
+    origin: string | string[];
+    credentials: boolean;
+  };
+}
+
+// 연결 컨텍스트
+export class ConnectionContext {
+  public authenticated: boolean = false;
+  public user?: User;
+  public subscriptions: Set<string> = new Set();
+  public metadata: Map<string, any> = new Map();
+  
+  constructor(
+    public connectionId: string,
+    public clientInfo: ClientInfo
+  ) {
+    this.metadata.set('connectedAt', new Date());
+  }
+  
+  authenticate(user: User): void {
+    this.authenticated = true;
+    this.user = user;
+    this.metadata.set('authenticatedAt', new Date());
+  }
+  
+  addSubscription(subscriptionId: string): void {
+    this.subscriptions.add(subscriptionId);
+  }
+  
+  removeSubscription(subscriptionId: string): void {
+    this.subscriptions.delete(subscriptionId);
+  }
+}
+```
+
+**검증 기준**:
+- [ ] WebSocket 서버 설정
+- [ ] 연결 처리
+- [ ] Heartbeat 메커니즘
+- [ ] 컨텍스트 관리
+
+#### SubTask 6.14.2: 연결 핸들링 및 인증
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 12시간
+
+**작업 내용**:
+
+```python
+# backend/src/websocket/connection_handler.py
+import jwt
+from typing import Optional, Dict, Any
+import asyncio
+
+class ConnectionHandler:
+    """WebSocket 연결 핸들러"""
+    
+    def __init__(self, auth_service, connection_manager):
+        self.auth_service = auth_service
+        self.connection_manager = connection_manager
+        self.pending_auth: Dict[str, asyncio.Task] = {}
+    
+    async def handle_new_connection(
+        self,
+        websocket,
+        connection_id: str,
+        request_info: Dict
+    ) -> Optional[ConnectionContext]:
+        """새 연결 처리"""
+        
+        try:
+            # 1. 초기 검증
+            if not await self.validate_origin(request_info):
+                await websocket.close(1008, "Invalid origin")
+                return None
+            
+            # 2. Rate limiting 체크
+            if not await self.check_rate_limit(request_info['ip']):
+                await websocket.close(1008, "Rate limit exceeded")
+                return None
+            
+            # 3. 연결 컨텍스트 생성
+            context = ConnectionContext(
+                connection_id=connection_id,
+                websocket=websocket,
+                ip_address=request_info['ip'],
+                user_agent=request_info.get('user_agent')
+            )
+            
+            # 4. 인증 처리
+            auth_token = self.extract_auth_token(request_info)
+            if auth_token:
+                # 즉시 인증
+                auth_result = await self.authenticate_connection(
+                    context,
+                    auth_token
+                )
+                if not auth_result:
+                    await websocket.close(1008, "Authentication failed")
+                    return None
+            else:
+                # 인증 대기 (grace period)
+                self.schedule_auth_timeout(context)
+            
+            # 5. 연결 등록
+            await self.connection_manager.add_connection(
+                connection_id,
+                websocket,
+                context
+            )
+            
+            # 6. 환영 메시지
+            await self.send_welcome_message(context)
+            
+            return context
+            
+        except Exception as e:
+            await websocket.close(1011, "Server error")
+            raise e
+    
+    async def authenticate_connection(
+        self,
+        context: ConnectionContext,
+        token: str
+    ) -> bool:
+        """연결 인증"""
+        
+        try:
+            # JWT 토큰 검증
+            payload = jwt.decode(
+                token,
+                self.auth_service.secret_key,
+                algorithms=['HS256']
+            )
+            
+            # 사용자 정보 조회
+            user = await self.auth_service.get_user(payload['user_id'])
+            if not user:
+                return False
+            
+            # 권한 확인
+            permissions = await self.auth_service.get_permissions(user.id)
+            
+            # 컨텍스트 업데이트
+            context.authenticate(user, permissions)
+            
+            # 인증 성공 메시지
+            await context.send({
+                'type': 'auth_success',
+                'payload': {
+                    'user_id': user.id,
+                    'permissions': permissions
+                }
+            })
+            
+            return True
+            
+        except jwt.ExpiredSignatureError:
+            await context.send({
+                'type': 'auth_error',
+                'payload': {'error': 'Token expired'}
+            })
+            return False
+            
+        except jwt.InvalidTokenError:
+            await context.send({
+                'type': 'auth_error',
+                'payload': {'error': 'Invalid token'}
+            })
+            return False
+    
+    def extract_auth_token(self, request_info: Dict) -> Optional[str]:
+        """인증 토큰 추출"""
+        
+        # 1. Query parameter
+        if 'token' in request_info.get('query', {}):
+            return request_info['query']['token']
+        
+        # 2. Cookie
+        cookies = request_info.get('cookies', {})
+        if 'auth_token' in cookies:
+            return cookies['auth_token']
+        
+        # 3. Authorization header
+        auth_header = request_info.get('headers', {}).get('authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            return auth_header[7:]
+        
+        return None
+    
+    def schedule_auth_timeout(self, context: ConnectionContext):
+        """인증 타임아웃 스케줄링"""
+        
+        async def auth_timeout():
+            await asyncio.sleep(30)  # 30초 대기
+            
+            if not context.authenticated:
+                await context.send({
+                    'type': 'auth_required',
+                    'payload': {
+                        'message': 'Authentication required',
+                        'timeout': 30
+                    }
+                })
+                
+                await asyncio.sleep(10)  # 추가 10초 대기
+                
+                if not context.authenticated:
+                    await context.websocket.close(
+                        1008,
+                        "Authentication timeout"
+                    )
+        
+        task = asyncio.create_task(auth_timeout())
+        self.pending_auth[context.connection_id] = task
+    
+    async def handle_auth_message(
+        self,
+        context: ConnectionContext,
+        message: Dict
+    ):
+        """인증 메시지 처리"""
+        
+        token = message.get('token')
+        if not token:
+            await context.send({
+                'type': 'auth_error',
+                'payload': {'error': 'Token required'}
+            })
+            return
+        
+        # 인증 시도
+        success = await self.authenticate_connection(context, token)
+        
+        if success:
+            # 타임아웃 태스크 취소
+            if context.connection_id in self.pending_auth:
+                self.pending_auth[context.connection_id].cancel()
+                del self.pending_auth[context.connection_id]
+        else:
+            # 인증 실패 카운터
+            context.auth_attempts += 1
+            
+            if context.auth_attempts >= 3:
+                await context.websocket.close(
+                    1008,
+                    "Too many authentication attempts"
+                )
+
+class PermissionChecker:
+    """권한 체크"""
+    
+    def __init__(self):
+        self.permission_cache = TTLCache(maxsize=1000, ttl=300)
+    
+    async def check_permission(
+        self,
+        context: ConnectionContext,
+        resource: str,
+        action: str
+    ) -> bool:
+        """권한 확인"""
+        
+        if not context.authenticated:
+            return False
+        
+        # 캐시 확인
+        cache_key = f"{context.user.id}:{resource}:{action}"
+        if cache_key in self.permission_cache:
+            return self.permission_cache[cache_key]
+        
+        # 권한 체크
+        has_permission = await self.evaluate_permission(
+            context.permissions,
+            resource,
+            action
+        )
+        
+        # 캐시 저장
+        self.permission_cache[cache_key] = has_permission
+        
+        return has_permission
+    
+    async def evaluate_permission(
+        self,
+        permissions: List[str],
+        resource: str,
+        action: str
+    ) -> bool:
+        """권한 평가"""
+        
+        required = f"{resource}:{action}"
+        
+        # 직접 권한
+        if required in permissions:
+            return True
+        
+        # 와일드카드 권한
+        if f"{resource}:*" in permissions:
+            return True
+        
+        if "*:*" in permissions:  # 관리자
+            return True
+        
+        return False
+
+class SecureConnectionUpgrade:
+    """보안 연결 업그레이드"""
+    
+    async def upgrade_to_secure(
+        self,
+        context: ConnectionContext
+    ) -> bool:
+        """TLS 업그레이드"""
+        
+        # TLS 핸드셰이크
+        await context.send({
+            'type': 'security_upgrade',
+            'payload': {
+                'method': 'TLS',
+                'version': '1.3'
+            }
+        })
+        
+        # 클라이언트 응답 대기
+        response = await context.receive()
+        
+        if response.get('type') == 'security_upgrade_accept':
+            # TLS 연결 설정
+            context.secure = True
+            context.tls_version = '1.3'
+            return True
+        
+        return False
+```
+
+**검증 기준**:
+- [ ] 연결 인증 시스템
+- [ ] JWT 토큰 처리
+- [ ] 권한 관리
+- [ ] 보안 업그레이드
+
+#### SubTask 6.14.3: 메시지 프로토콜 정의
+
+**담당자**: 백엔드 개발자  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```typescript
+// backend/src/websocket/protocol.ts
+export interface Message {
+  id: string;
+  type: MessageType;
+  payload: any;
+  timestamp: number;
+  metadata?: MessageMetadata;
+}
+
+export interface MessageMetadata {
+  correlationId?: string;
+  replyTo?: string;
+  ttl?: number;
+  priority?: number;
+  compression?: string;
+}
+
+export enum MessageType {
+  // 연결 관리
+  CONNECTION = 'connection',
+  PING = 'ping',
+  PONG = 'pong',
+  CLOSE = 'close',
+  
+  // 인증
+  AUTH_REQUEST = 'auth_request',
+  AUTH_RESPONSE = 'auth_response',
+  AUTH_ERROR = 'auth_error',
+  
+  // 구독
+  SUBSCRIBE = 'subscribe',
+  UNSUBSCRIBE = 'unsubscribe',
+  SUBSCRIPTION_DATA = 'subscription_data',
+  
+  // RPC
+  RPC_REQUEST = 'rpc_request',
+  RPC_RESPONSE = 'rpc_response',
+  RPC_ERROR = 'rpc_error',
+  
+  // 이벤트
+  EVENT = 'event',
+  BROADCAST = 'broadcast',
+  
+  // 에러
+  ERROR = 'error'
+}
+
+export class MessageProtocol {
+  private version: string = '1.0';
+  private encoders: Map<string, MessageEncoder> = new Map();
+  private decoders: Map<string, MessageDecoder> = new Map();
+  
+  constructor() {
+    this.registerEncoders();
+    this.registerDecoders();
+  }
+  
+  private registerEncoders(): void {
+    // JSON 인코더
+    this.encoders.set('json', {
+      encode: (message: Message) => JSON.stringify(message),
+      contentType: 'application/json'
+    });
+    
+    // MessagePack 인코더
+    this.encoders.set('msgpack', {
+      encode: (message: Message) => msgpack.encode(message),
+      contentType: 'application/msgpack'
+    });
+    
+    // Protocol Buffers 인코더
+    this.encoders.set('protobuf', {
+      encode: (message: Message) => this.encodeProtobuf(message),
+      contentType: 'application/protobuf'
+    });
+  }
+  
+  encode(
+    message: Message,
+    format: string = 'json'
+  ): Buffer | string {
+    const encoder = this.encoders.get(format);
+    if (!encoder) {
+      throw new Error(`Unknown encoding format: ${format}`);
+    }
+    
+    // 메시지 유효성 검증
+    this.validateMessage(message);
+    
+    // 메타데이터 추가
+    message.timestamp = message.timestamp || Date.now();
+    message.id = message.id || generateMessageId();
+    
+    return encoder.encode(message);
+  }
+  
+  decode(data: Buffer | string, format: string = 'json'): Message {
+    const decoder = this.decoders.get(format);
+    if (!decoder) {
+      throw new Error(`Unknown decoding format: ${format}`);
+    }
+    
+    const message = decoder.decode(data);
+    
+    // 메시지 유효성 검증
+    this.validateMessage(message);
+    
+    return message;
+  }
+  
+  private validateMessage(message: Message): void {
+    if (!message.type) {
+      throw new Error('Message type is required');
+    }
+    
+    if (!message.id) {
+      message.id = generateMessageId();
+    }
+    
+    // 타입별 페이로드 검증
+    this.validatePayload(message.type, message.payload);
+  }
+  
+  private validatePayload(type: MessageType, payload: any): void {
+    const schema = this.getPayloadSchema(type);
+    if (!schema) return;
+    
+    const validator = new Ajv();
+    const valid = validator.validate(schema, payload);
+    
+    if (!valid) {
+      throw new Error(`Invalid payload: ${validator.errors}`);
+    }
+  }
+}
+
+// 메시지 빌더
+export class MessageBuilder {
+  private message: Partial<Message> = {};
+  
+  static create(type: MessageType): MessageBuilder {
+    const builder = new MessageBuilder();
+    builder.message.type = type;
+    return builder;
+  }
+  
+  withPayload(payload: any): MessageBuilder {
+    this.message.payload = payload;
+    return this;
+  }
+  
+  withCorrelationId(id: string): MessageBuilder {
+    if (!this.message.metadata) {
+      this.message.metadata = {};
+    }
+    this.message.metadata.correlationId = id;
+    return this;
+  }
+  
+  withReplyTo(replyTo: string): MessageBuilder {
+    if (!this.message.metadata) {
+      this.message.metadata = {};
+    }
+    this.message.metadata.replyTo = replyTo;
+    return this;
+  }
+  
+  withPriority(priority: number): MessageBuilder {
+    if (!this.message.metadata) {
+      this.message.metadata = {};
+    }
+    this.message.metadata.priority = priority;
+    return this;
+  }
+  
+  build(): Message {
+    return {
+      id: generateMessageId(),
+      type: this.message.type!,
+      payload: this.message.payload,
+      timestamp: Date.now(),
+      metadata: this.message.metadata
+    } as Message;
+  }
+}
+
+// 메시지 라우터
+export class MessageRouter {
+  private routes: Map<MessageType, MessageHandler[]> = new Map();
+  private middleware: MessageMiddleware[] = [];
+  
+  use(middleware: MessageMiddleware): void {
+    this.middleware.push(middleware);
+  }
+  
+  on(type: MessageType, handler: MessageHandler): void {
+    if (!this.routes.has(type)) {
+      this.routes.set(type, []);
+    }
+    this.routes.get(type)!.push(handler);
+  }
+  
+  async route(
+    message: Message,
+    context: ConnectionContext
+  ): Promise<void> {
+    // 미들웨어 실행
+    for (const mw of this.middleware) {
+      const shouldContinue = await mw(message, context);
+      if (!shouldContinue) return;
+    }
+    
+    // 핸들러 실행
+    const handlers = this.routes.get(message.type) || [];
+    
+    for (const handler of handlers) {
+      try {
+        await handler(message, context);
+      } catch (error) {
+        await this.handleError(error, message, context);
+      }
+    }
+  }
+  
+  private async handleError(
+    error: Error,
+    message: Message,
+    context: ConnectionContext
+  ): Promise<void> {
+    const errorMessage = MessageBuilder
+      .create(MessageType.ERROR)
+      .withPayload({
+        error: error.message,
+        originalMessage: message.id,
+        code: 'HANDLER_ERROR'
+      })
+      .withCorrelationId(message.id)
+      .build();
+    
+    await context.send(errorMessage);
+  }
+}
+```
+
+**검증 기준**:
+- [ ] 메시지 프로토콜 정의
+- [ ] 인코딩/디코딩
+- [ ] 메시지 검증
+- [ ] 라우팅 시스템
+
+#### SubTask 6.14.4: 연결 풀 관리
+
+**담당자**: 시스템 엔지니어  
+**예상 소요시간**: 10시간
+
+**작업 내용**:
+
+```python
+# backend/src/websocket/connection_pool.py
+from typing import Dict, List, Optional, Set
+import asyncio
+from dataclasses import dataclass
+
+@dataclass
+class PoolConfig:
+    """연결 풀 설정"""
+    min_size: int = 10
+    max_size: int = 1000
+    max_idle_time: int = 300  # seconds
+    max_lifetime: int = 3600  # seconds
+    health_check_interval: int = 30
+    overflow_policy: str = 'reject'  # reject, queue, scale
+
+class ConnectionPool:
+    """WebSocket 연결 풀"""
+    
+    def __init__(self, config: PoolConfig):
+        self.config = config
+        self.connections: Dict[str, PooledConnection] = {}
+        self.available: asyncio.Queue = asyncio.Queue()
+        self.in_use: Set[str] = set()
+        self.waiting: asyncio.Queue = asyncio.Queue()
+        self.stats = PoolStatistics()
+        
+    async def initialize(self):
+        """풀 초기화"""
+        
+        # 최소 연결 생성
+        for _ in range(self.config.min_size):
+            conn = await self.create_connection()
+            await self.available.put(conn)
+        
+        # 헬스 체크 시작
+        asyncio.create_task(self.health_check_loop())
+        
+        # 정리 작업 시작
+        asyncio.create_task(self.cleanup_loop())
+    
+    async def acquire(
+        self,
+        timeout: Optional[float] = None
+    ) -> PooledConnection:
+        """연결 획득"""
+        
+        self.stats.acquire_attempts += 1
+        
+        try:
+            # 사용 가능한 연결 확인
+            if not self.available.empty():
+                conn = await self.available.get()
+                
+                # 연결 상태 확인
+                if await self.validate_connection(conn):
+                    self.in_use.add(conn.id)
+                    self.stats.active_connections += 1
+                    return conn
+                else:
+                    # 연결 재생성
+                    await self.destroy_connection(conn)
+                    return await self.acquire(timeout)
+            
+            # 풀 크기 확인
+            current_size = len(self.connections)
+            
+            if current_size < self.config.max_size:
+                # 새 연결 생성
+                conn = await self.create_connection()
+                self.in_use.add(conn.id)
+                self.stats.active_connections += 1
+                return conn
+            
+            # 오버플로우 정책 적용
+            return await self.handle_overflow(timeout)
+            
+        except asyncio.TimeoutError:
+            self.stats.acquire_timeouts += 1
+            raise PoolExhaustedError("Connection pool exhausted")
+    
+    async def release(self, connection: PooledConnection):
+        """연결 반환"""
+        
+        if connection.id not in self.in_use:
+            return
+        
+        self.in_use.remove(connection.id)
+        self.stats.active_connections -= 1
+        
+        # 연결 상태 확인
+        if await self.validate_connection(connection):
+            # 재사용 가능
+            connection.last_used = datetime.now()
+            await self.available.put(connection)
+            
+            # 대기 중인 요청 처리
+            if not self.waiting.empty():
+                waiter = await self.waiting.get()
+                waiter.set_result(connection)
+        else:
+            # 연결 폐기
+            await self.destroy_connection(connection)
+            
+            # 새 연결 생성
+            if len(self.connections) < self.config.min_size:
+                new_conn = await self.create_connection()
+                await self.available.put(new_conn)
+    
+    async def handle_overflow(
+        self,
+        timeout: Optional[float]
+    ) -> PooledConnection:
+        """오버플로우 처리"""
+        
+        if self.config.overflow_policy == 'reject':
+            raise PoolExhaustedError("Connection pool at maximum capacity")
+            
+        elif self.config.overflow_policy == 'queue':
+            # 대기 큐에 추가
+            future = asyncio.Future()
+            await self.waiting.put(future)
+            
+            if timeout:
+                return await asyncio.wait_for(future, timeout)
+            else:
+                return await future
+                
+        elif self.config.overflow_policy == 'scale':
+            # 동적 스케일링
+            await self.scale_up()
+            return await self.acquire(timeout)
+    
+    async def health_check_loop(self):
+        """헬스 체크 루프"""
+        
+        while True:
+            await asyncio.sleep(self.config.health_check_interval)
+            
+            # 모든 연결 체크
+            for conn in list(self.connections.values()):
+                if not await self.ping_connection(conn):
+                    await self.handle_unhealthy_connection(conn)
+            
+            # 통계 업데이트
+            self.stats.update()
+    
+    async def cleanup_loop(self):
+        """정리 작업 루프"""
+        
+        while True:
+            await asyncio.sleep(60)  # 1분마다
+            
+            now = datetime.now()
+            
+            # 유휴 연결 정리
+            while not self.available.empty():
+                conn = await self.available.get()
+                
+                idle_time = (now - conn.last_used).total_seconds()
+                lifetime = (now - conn.created_at).total_seconds()
+                
+                if (idle_time > self.config.max_idle_time or
+                    lifetime > self.config.max_lifetime):
+                    await self.destroy_connection(conn)
+                else:
+                    await self.available.put(conn)
+                    break
+            
+            # 최소 크기 유지
+            await self.maintain_min_size()
+
+@dataclass
+class PooledConnection:
+    """풀링된 연결"""
+    id: str
+    websocket: Any
+    created_at: datetime
+    last_used: datetime
+    metadata: Dict = field(default_factory=dict)
+
+class ConnectionPoolManager:
+    """연결 풀 관리자"""
+    
+    def __init__(self):
+        self.pools: Dict[str, ConnectionPool] = {}
+        self.default_config = PoolConfig()
+    
+    def create_pool(
+        self,
+        name: str,
+        config: Optional[PoolConfig] = None
+    ) -> ConnectionPool:
+        """풀 생성"""
+        
+        if name in self.pools:
+            raise ValueError(f"Pool {name} already exists")
+        
+        config = config or self.default_config
+        pool = ConnectionPool(config)
+        self.pools[name] = pool
+        
+        return pool
+    
+    def get_pool(self, name: str) -> Optional[ConnectionPool]:
+        """풀 조회"""
+        return self.pools.get(name)
+    
+    async def get_connection(
+        self,
+        pool_name: str = 'default'
+    ) -> PooledConnection:
+        """연결 획득"""
+        
+        pool = self.get_pool(pool_name)
+        if not pool:
+            pool = self.create_pool(pool_name)
+            await pool.initialize()
+        
+        return await pool.acquire()
+    
+    def get_statistics(self) -> Dict[str, PoolStatistics]:
+        """통계 조회"""
+        
+        return {
+            name: pool.stats
+            for name, pool in self.pools.items()
+        }
+
+class PoolStatistics:
+    """풀 통계"""
+    
+    def __init__(self):
+        self.total_connections = 0
+        self.active_connections = 0
+        self.idle_connections = 0
+        self.acquire_attempts = 0
+        self.acquire_timeouts = 0
+        self.connection_errors = 0
+        self.created_connections = 0
+        self.destroyed_connections = 0
+    
+    def update(self):
+        """통계 업데이트"""
+        
+        self.idle_connections = self.total_connections - self.active_connections
+    
+    def to_dict(self) -> Dict:
+        """딕셔너리 변환"""
+        
+        return {
+            'total': self.total_connections,
+            'active': self.active_connections,
+            'idle': self.idle_connections,
+            'acquire_attempts': self.acquire_attempts,
+            'acquire_timeouts': self.acquire_timeouts,
+            'errors': self.connection_errors,
+            'created': self.created_connections,
+            'destroyed': self.destroyed_connections,
+            'utilization': (
+                self.active_connections / self.total_connections * 100
+                if self.total_connections > 0 else 0
+            )
+        }
+```
+
+**검증 기준**:
+- [ ] 연결 풀링
+- [ ] 오버플로우 정책
+- [ ] 헬스 체크
+- [ ] 통계 수집
+
+---
+

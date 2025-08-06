@@ -160,7 +160,7 @@ export class HighAvailabilityManager {
     await this.updateDnsRouting(healthiestRegion);
     
     // Promote to primary
-    await this.promoteTorimary(healthiestRegion);
+    await this.promoteToPrimary(healthiestRegion);
     
     console.log(`Failover completed to ${healthiestRegion}`);
   }
@@ -220,7 +220,7 @@ export class HighAvailabilityManager {
     console.log(`Updating DNS to ${newPrimaryRegion}`);
   }
 
-  private async promoteTorimary(region: string): Promise<void> {
+  private async promoteToPrimary(region: string): Promise<void> {
     // Promote DR region to primary
     console.log(`Promoting ${region} to primary`);
   }
