@@ -16,9 +16,21 @@ Object.entries(testEnvVars).forEach(([key, value]) => {
   process.env[key] = value;
 });
 
-// 테스트 후 정리
-afterEach(() => {
-  jest.clearAllMocks();
+// Mock AWS SDK
+jest.mock('@aws-sdk/client-dynamodb');
+jest.mock('@aws-sdk/lib-dynamodb');
+jest.mock('@aws-sdk/client-s3');
+
+// Mock Redis
+jest.mock('ioredis', () => {
+  return jest.fn().mockImplementation(() => ({
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+    exists: jest.fn(),
+    expire: jest.fn(),
+    disconnect: jest.fn()
+  }));
 });
 
 // 전역 타임아웃 설정

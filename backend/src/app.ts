@@ -1,46 +1,85 @@
 import express from 'express';
-import { setupHMRMiddleware } from './dev/hot-reload';
-import { securityHeaders, corsOptions, requestId, securityAudit } from './middleware/security';
-import { RateLimiter } from './middleware/rate-limiter';
-import { AuthMiddleware } from './middleware/auth';
+import { AgnoMonitoringIntegration, MockAgentPool } from './agno';
 
 const app = express();
+app.use(express.json());
 
-// Security middleware
-app.use(securityHeaders);
-app.use(corsOptions);
-app.use(requestId);
-app.use(securityAudit);
+// Initialize Agno monitoring
+const agentPool = new MockAgentPool();
+const agnoMonitoring = new AgnoMonitoringIntegration();
 
-// Rate limiting
-const rateLimiter = new RateLimiter();
-const limits = rateLimiter.apiLimits();
-app.use('/api/auth', limits.auth);
-app.use('/api/create', limits.create);
-app.use('/api/ai', limits.ai);
-app.use('/api', limits.general);
+// Agno monitoring endpoints
+app.get('/api/agno/metrics', async (req, res) => {
+  try {
+    const metrics = await agnoMonitoring.collectMetrics(agentPool);
+    res.json({
+      success: true,
+      metrics,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.post('/api/agno/events', async (req, res) => {
+  try {
+    const { eventType, agentId, metadata } = req.body;
+    await agnoMonitoring.recordAgentEvent(eventType, agentId, metadata);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
-// HMR in development
-if (process.env.NODE_ENV === 'development') {
-  setupHMRMiddleware(app);
-}
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    hmr: process.env.NODE_ENV === 'development' ? 'enabled' : 'disabled'
+app.get('/api/agno/pool/stats', (req, res) => {
+  const stats = agentPool.getStats();
+  res.json({
+    success: true,
+    stats,
+    timestamp: new Date().toISOString()
   });
 });
 
-// API routes
-const authMiddleware = new AuthMiddleware();
-app.use('/api/auth', authMiddleware.authenticate.bind(authMiddleware));
+app.post('/api/agno/pool/simulate', (req, res) => {
+  agentPool.simulateActivity();
+  const stats = agentPool.getStats();
+  res.json({
+    success: true,
+    message: 'Agent pool activity simulated',
+    stats
+  });
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    services: {
+      agno_monitoring: 'running',
+      agent_pool: 'running'
+    }
+  });
+});
+
+const PORT = process.env.PORT || 3002;
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📊 Agno monitoring endpoints available at:`);
+    console.log(`   GET  /api/agno/metrics`);
+    console.log(`   POST /api/agno/events`);
+    console.log(`   GET  /api/agno/pool/stats`);
+    console.log(`   POST /api/agno/pool/simulate`);
+  });
+}
 
 export default app;

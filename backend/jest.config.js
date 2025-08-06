@@ -18,6 +18,11 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  globals: {
+    'ts-jest': {
+      isolatedModules: true
+    }
+  },
   testTimeout: 10000,
   reporters: [
     'default',

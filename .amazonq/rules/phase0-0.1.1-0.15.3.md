@@ -3622,105 +3622,105 @@ export function setupSwagger(app: Express): void {
  */
 ```
 
-### SubTask 0.8.2: 코드 문서화 표준 설정
-**목표**: JSDoc/TSDoc 표준 및 자동 생성 설정
+  ### SubTask 0.8.2: 코드 문서화 표준 설정
+  **목표**: JSDoc/TSDoc 표준 및 자동 생성 설정
 
-**구현 내용**:
-```typescript
-// backend/typedoc.json
-{
-  "entryPoints": ["./src"],
-  "entryPointStrategy": "expand",
-  "out": "./docs/api",
-  "exclude": [
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "**/node_modules/**"
-  ],
-  "theme": "default",
-  "name": "T-Developer API Reference",
-  "includeVersion": true,
-  "excludePrivate": true,
-  "excludeProtected": false,
-  "excludeInternal": true,
-  "readme": "./README.md",
-  "plugin": ["typedoc-plugin-markdown"],
-  "githubPages": false,
-  "validation": {
-    "notExported": true,
-    "invalidLink": true,
-    "notDocumented": false
+  **구현 내용**:
+  ```typescript
+  // backend/typedoc.json
+  {
+    "entryPoints": ["./src"],
+    "entryPointStrategy": "expand",
+    "out": "./docs/api",
+    "exclude": [
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "**/node_modules/**"
+    ],
+    "theme": "default",
+    "name": "T-Developer API Reference",
+    "includeVersion": true,
+    "excludePrivate": true,
+    "excludeProtected": false,
+    "excludeInternal": true,
+    "readme": "./README.md",
+    "plugin": ["typedoc-plugin-markdown"],
+    "githubPages": false,
+    "validation": {
+      "notExported": true,
+      "invalidLink": true,
+      "notDocumented": false
+    }
   }
-}
-```
+  ```
 
-```typescript
-// backend/src/standards/documentation.ts
-/**
- * T-Developer 문서화 표준 예시
- * 
- * @module DocumentationStandards
- */
-
-/**
- * 프로젝트 생성 서비스
- * 
- * @class ProjectService
- * @description 자연어 설명을 기반으로 프로젝트를 생성하고 관리하는 서비스
- * 
- * @example
- * ```typescript
- * const projectService = new ProjectService();
- * const project = await projectService.createProject({
- *   name: "My E-commerce Platform",
- *   description: "Create a modern e-commerce platform with React and Node.js"
- * });
- * ```
- */
-export class ProjectService {
+  ```typescript
+  // backend/src/standards/documentation.ts
   /**
-   * 새로운 프로젝트 생성
-   * 
-   * @param {CreateProjectDto} dto - 프로젝트 생성 정보
-   * @param {string} dto.name - 프로젝트 이름
-   * @param {string} dto.description - 자연어 프로젝트 설명
-   * @param {string} [dto.projectType] - 프로젝트 타입 (web, api, mobile 등)
-   * @param {string[]} [dto.targetPlatforms] - 대상 플랫폼 목록
-   * 
-   * @returns {Promise<Project>} 생성된 프로젝트 정보
-   * 
-   * @throws {ValidationError} 입력 데이터가 유효하지 않은 경우
-   * @throws {QuotaExceededError} 프로젝트 생성 한도 초과
-   * 
-   * @since 1.0.0
-   * @author T-Developer Team
-   */
-  async createProject(dto: CreateProjectDto): Promise<Project> {
-    // 구현...
-  }
-  
+  * T-Developer 문서화 표준 예시
+  * 
+  * @module DocumentationStandards
+  */
+
   /**
-   * 프로젝트 상태 업데이트
-   * 
-   * @param {string} projectId - 프로젝트 ID
-   * @param {ProjectStatus} status - 새로운 상태
-   * @param {Object} [metadata] - 추가 메타데이터
-   * 
-   * @returns {Promise<void>}
-   * 
-   * @fires ProjectStatusChanged - 상태 변경 시 이벤트 발생
-   * 
-   * @internal
-   */
-  private async updateProjectStatus(
-    projectId: string, 
-    status: ProjectStatus,
-    metadata?: Record<string, any>
-  ): Promise<void> {
-    // 구현...
+  * 프로젝트 생성 서비스
+  * 
+  * @class ProjectService
+  * @description 자연어 설명을 기반으로 프로젝트를 생성하고 관리하는 서비스
+  * 
+  * @example
+  * ```typescript
+  * const projectService = new ProjectService();
+  * const project = await projectService.createProject({
+  *   name: "My E-commerce Platform",
+  *   description: "Create a modern e-commerce platform with React and Node.js"
+  * });
+  * ```
+  */
+  export class ProjectService {
+    /**
+    * 새로운 프로젝트 생성
+    * 
+    * @param {CreateProjectDto} dto - 프로젝트 생성 정보
+    * @param {string} dto.name - 프로젝트 이름
+    * @param {string} dto.description - 자연어 프로젝트 설명
+    * @param {string} [dto.projectType] - 프로젝트 타입 (web, api, mobile 등)
+    * @param {string[]} [dto.targetPlatforms] - 대상 플랫폼 목록
+    * 
+    * @returns {Promise<Project>} 생성된 프로젝트 정보
+    * 
+    * @throws {ValidationError} 입력 데이터가 유효하지 않은 경우
+    * @throws {QuotaExceededError} 프로젝트 생성 한도 초과
+    * 
+    * @since 1.0.0
+    * @author T-Developer Team
+    */
+    async createProject(dto: CreateProjectDto): Promise<Project> {
+      // 구현...
+    }
+    
+    /**
+    * 프로젝트 상태 업데이트
+    * 
+    * @param {string} projectId - 프로젝트 ID
+    * @param {ProjectStatus} status - 새로운 상태
+    * @param {Object} [metadata] - 추가 메타데이터
+    * 
+    * @returns {Promise<void>}
+    * 
+    * @fires ProjectStatusChanged - 상태 변경 시 이벤트 발생
+    * 
+    * @internal
+    */
+    private async updateProjectStatus(
+      projectId: string, 
+      status: ProjectStatus,
+      metadata?: Record<string, any>
+    ): Promise<void> {
+      // 구현...
+    }
   }
-}
-```
+  ```
 
 ### SubTask 0.8.3: README 템플릿 생성
 **목표**: 프로젝트 및 컴포넌트별 README 템플릿
@@ -5201,165 +5201,6 @@ export const alertTemplates = {
 - 알림 채널 환경 변수 설정 (Slack, Email 등)
 
 ---
-
-## 📋 Phase 0 완료 체크리스트
-
-### ✅ 완료된 작업
-- [x] 개발 환경 초기 설정 (Task 0.1)
-- [x] AWS 리소스 초기 설정 (Task 0.2)
-- [x] 프로젝트 의존성 설치 (Task 0.3)
-- [x] 보안 및 인증 기초 설정 (Task 0.4)
-- [x] 테스트 환경 구축 (Task 0.5)
-- [x] 로컬 개발 인프라 구성 (Task 0.6)
-- [x] CI/CD 파이프라인 기초 설정 (Task 0.7)
-- [x] 문서화 시스템 구축 (Task 0.8)
-- [x] 모니터링 및 로깅 시스템 구축 (Task 0.9)
-
-### 🎯 Phase 1 준비 완료
-
-Phase 0의 모든 작업이 완료되었습니다. 이제 Phase 1: 코어 인프라 구축을 시작할 준비가 되었습니다.
-
-**다음 단계**: Phase 1 문서 작성 및 구현 시작
-```dockerfile
-# backend/Dockerfile
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-RUN npm run build
-
-FROM node:18-alpine
-RUN apk add --no-cache dumb-init
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
-
-WORKDIR /app
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/package.json ./
-
-USER nodejs
-EXPOSE 8000
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node healthcheck.js || exit 1
-
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/main.js"]
-```
-
-**🔧 사용자 작업**:
-- GitHub 저장소에 secrets 설정 (SNYK_TOKEN, NPM_TOKEN)
-- Docker registry 권한 설정
-- 브랜치 보호 규칙 설정
-### SubTask 0.7.4: 테스트 자동화 파이프라인 설정
-**목표**: PR 및 머지 시 자동 테스트 실행 설정
-
-**구현 내용**:
-```yaml
-# .github/workflows/test-automation.yml
-name: Automated Testing Pipeline
-
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  push:
-    branches: [main, develop]
-
-jobs:
-  test-matrix:
-    name: Test Suite - ${{ matrix.test-suite }}
-    runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        test-suite: [unit, integration, e2e]
-        node-version: [18.x, 20.x]
-    
-    services:
-      dynamodb:
-        image: amazon/dynamodb-local
-        ports:
-          - 8000:8000
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: |
-          cd backend
-          npm ci
-      
-      - name: Run ${{ matrix.test-suite }} tests
-        run: |
-          cd backend
-          npm run test:${{ matrix.test-suite }} -- --coverage
-        timeout-minutes: 30
-        env:
-          NODE_ENV: test
-          DYNAMODB_ENDPOINT: http://localhost:8000
-          REDIS_HOST: localhost
-      
-      - name: Upload coverage reports
-        if: matrix.node-version == '18.x'
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-${{ matrix.test-suite }}
-          path: backend/coverage/
-```
-
-### SubTask 0.7.5: 의존성 업데이트 자동화
-**목표**: 보안 취약점 및 의존성 업데이트 자동화
-
-**구현 내용**:
-```yaml
-# .github/dependabot.yml
-version: 2
-updates:
-  - package-ecosystem: "npm"
-    directory: "/backend"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
-    groups:
-      aws-sdk:
-        patterns:
-          - "@aws-sdk/*"
-      development:
-        patterns:
-          - "@types/*"
-          - "eslint*"
-          - "prettier*"
-          - "jest*"
-    
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-```
-
-**🔧 사용자 작업**:
-- GitHub 저장소에 secrets 설정 (SNYK_TOKEN, NPM_TOKEN)
-- Docker registry 권한 설정
-- 브랜치 보호 규칙 설정
-- Dependabot 활성화
 
 ## Task 0.10: 보안 강화 설정
 
@@ -8307,566 +8148,6 @@ export class DynamoQueryBuilder {
     
     return result;
   }
-}
-```
-
-### SubTask 0.11.3: 비동기 작업 큐 시스템
-**목표**: 백그라운드 작업 처리를 위한 큐 시스템 구축
-
-**구현 내용**:
-```typescript
-// backend/src/performance/job-queue.ts
-import Bull, { Queue, Job, JobOptions, WorkerOptions, QueueScheduler } from 'bull';
-import { logger } from '../config/logger';
-import { MetricsHelper } from '../config/metrics';
-import Redis from 'ioredis';
-
-// 작업 타입 정의
-export enum JobType {
-  AGENT_EXECUTION = 'agent_execution',
-  PROJECT_BUILD = 'project_build',
-  COMPONENT_GENERATION = 'component_generation',
-  EMAIL_NOTIFICATION = 'email_notification',
-  REPORT_GENERATION = 'report_generation',
-  CACHE_WARMING = 'cache_warming',
-  DATA_EXPORT = 'data_export',
-  CLEANUP = 'cleanup'
-}
-
-// 작업 우선순위
-export enum JobPriority {
-  CRITICAL = 1,
-  HIGH = 2,
-  NORMAL = 3,
-  LOW = 4
-}
-
-// 작업 데이터 인터페이스
-interface BaseJobData {
-  type: JobType;
-  userId?: string;
-  projectId?: string;
-  timestamp: number;
-}
-
-interface AgentExecutionJob extends BaseJobData {
-  type: JobType.AGENT_EXECUTION;
-  agentName: string;
-  input: any;
-}
-
-interface ProjectBuildJob extends BaseJobData {
-  type: JobType.PROJECT_BUILD;
-  projectConfig: any;
-}
-
-export type JobData = AgentExecutionJob | ProjectBuildJob;
-
-// 큐 매니저
-export class QueueManager {
-  private queues: Map<string, Queue> = new Map();
-  private schedulers: Map<string, QueueScheduler> = new Map();
-  private redisConnection: Redis;
-  
-  constructor() {
-    this.redisConnection = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-      maxRetriesPerRequest: null
-    });
-  }
-  
-  // 큐 초기화
-  async initialize(): Promise<void> {
-    // 메인 작업 큐
-    await this.createQueue('main', {
-      defaultJobOptions: {
-        removeOnComplete: 100,
-        removeOnFail: 1000,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000
-        }
-      }
-    });
-    
-    // 우선순위 큐
-    await this.createQueue('priority', {
-      defaultJobOptions: {
-        removeOnComplete: 50,
-        removeOnFail: 500,
-        attempts: 5
-      }
-    });
-    
-    // 배치 작업 큐
-    await this.createQueue('batch', {
-      defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: false,
-        attempts: 1
-      }
-    });
-    
-    // 스케줄 작업 큐
-    await this.createQueue('scheduled', {
-      defaultJobOptions: {
-        removeOnComplete: true,
-        attempts: 3
-      }
-    });
-    
-    logger.info('Job queues initialized');
-  }
-  
-  // 큐 생성
-  private async createQueue(name: string, options?: any): Promise<Queue> {
-    const queue = new Bull(name, {
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD
-      },
-      ...options
-    });
-    
-    // 큐 스케줄러 생성 (지연 작업 지원)
-    const scheduler = new QueueScheduler(name, {
-      connection: this.redisConnection
-    });
-    
-    this.queues.set(name, queue);
-    this.schedulers.set(name, scheduler);
-    
-    // 큐 이벤트 리스너
-    this.setupQueueEventListeners(queue, name);
-    
-    return queue;
-  }
-  
-  // 작업 추가
-  async addJob(
-    queueName: string,
-    jobName: string,
-    data: JobData,
-    options?: JobOptions
-  ): Promise<Job> {
-    const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
-    
-    const jobOptions: JobOptions = {
-      ...options,
-      priority: this.getJobPriority(data.type)
-    };
-    
-    const job = await queue.add(jobName, data, jobOptions);
-    
-    logger.info(`Job added to queue ${queueName}:`, {
-      jobId: job.id,
-      jobName,
-      type: data.type
-    });
-    
-    // 메트릭 기록
-    MetricsHelper.recordJobQueued(queueName, jobName);
-    
-    return job;
-  }
-  
-  // 배치 작업 추가
-  async addBulkJobs(
-    queueName: string,
-    jobs: Array<{ name: string; data: JobData; opts?: JobOptions }>
-  ): Promise<Job[]> {
-    const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
-    
-    const bulkJobs = jobs.map(job => ({
-      name: job.name,
-      data: job.data,
-      opts: {
-        ...job.opts,
-        priority: this.getJobPriority(job.data.type)
-      }
-    }));
-    
-    const addedJobs = await queue.addBulk(bulkJobs);
-    
-    logger.info(`${jobs.length} jobs added to queue ${queueName}`);
-    
-    // 메트릭 기록
-    MetricsHelper.recordBulkJobsQueued(queueName, jobs.length);
-    
-    return addedJobs;
-  }
-  
-  // 스케줄 작업 추가
-  async scheduleJob(
-    queueName: string,
-    jobName: string,
-    data: JobData,
-    cronExpression: string,
-    options?: JobOptions
-  ): Promise<void> {
-    const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
-    
-    await queue.add(jobName, data, {
-      ...options,
-      repeat: {
-        cron: cronExpression,
-        tz: 'UTC'
-      }
-    });
-    
-    logger.info(`Scheduled job added to queue ${queueName}:`, {
-      jobName,
-      cron: cronExpression
-    });
-  }
-  
-  // 지연 작업 추가
-  async addDelayedJob(
-    queueName: string,
-    jobName: string,
-    data: JobData,
-    delayMs: number,
-    options?: JobOptions
-  ): Promise<Job> {
-    return this.addJob(queueName, jobName, data, {
-      ...options,
-      delay: delayMs
-    });
-  }
-  
-  // 작업 상태 조회
-  async getJobStatus(queueName: string, jobId: string): Promise<any> {
-    const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
-    
-    const job = await queue.getJob(jobId);
-    if (!job) {
-      return null;
-    }
-    
-    const state = await job.getState();
-    const progress = job.progress();
-    
-    return {
-      id: job.id,
-      name: job.name,
-      data: job.data,
-      state,
-      progress,
-      attemptsMade: job.attemptsMade,
-      processedOn: job.processedOn,
-      finishedOn: job.finishedOn,
-      failedReason: job.failedReason
-    };
-  }
-  
-  // 큐 상태 조회
-  async getQueueStats(queueName: string): Promise<any> {
-    const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
-    
-    const [
-      waitingCount,
-      activeCount,
-      completedCount,
-      failedCount,
-      delayedCount,
-      pausedCount
-    ] = await Promise.all([
-      queue.getWaitingCount(),
-      queue.getActiveCount(),
-      queue.getCompletedCount(),
-      queue.getFailedCount(),
-      queue.getDelayedCount(),
-      queue.isPaused()
-    ]);
-    
-    return {
-      name: queueName,
-      counts: {
-        waiting: waitingCount,
-        active: activeCount,
-        completed: completedCount,
-        failed: failedCount,
-        delayed: delayedCount
-      },
-      isPaused: pausedCount
-    };
-  }
-  
-  // 큐 일시정지/재개
-  async pauseQueue(queueName: string): Promise<void> {
-    const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
-    
-    await queue.pause();
-    logger.info(`Queue ${queueName} paused`);
-  }
-  
-  async resumeQueue(queueName: string): Promise<void> {
-    const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
-    
-    await queue.resume();
-    logger.info(`Queue ${queueName} resumed`);
-  }
-  
-  // 큐 정리
-  async cleanQueue(queueName: string, grace: number = 5000): Promise<void> {
-    const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
-    
-    await queue.clean(grace, 'completed');
-    await queue.clean(grace, 'failed');
-    
-    logger.info(`Queue ${queueName} cleaned`);
-  }
-  
-  // 실패한 작업 재시도
-  async retryFailedJobs(queueName: string): Promise<number> {
-    const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
-    
-    const failedJobs = await queue.getFailed();
-    let retryCount = 0;
-    
-    for (const job of failedJobs) {
-      if (job.attemptsMade < (job.opts.attempts || 3)) {
-        await job.retry();
-        retryCount++;
-      }
-    }
-    
-    logger.info(`Retried ${retryCount} failed jobs in queue ${queueName}`);
-    
-    return retryCount;
-  }
-  
-  // 큐 이벤트 리스너 설정
-  private setupQueueEventListeners(queue: Queue, name: string): void {
-    queue.on('completed', (job, result) => {
-      logger.debug(`Job completed in queue ${name}:`, {
-        jobId: job.id,
-        duration: Date.now() - job.timestamp
-      });
-      
-      MetricsHelper.recordJobCompleted(name, job.name, Date.now() - job.timestamp);
-    });
-    
-    queue.on('failed', (job, err) => {
-      logger.error(`Job failed in queue ${name}:`, {
-        jobId: job.id,
-        error: err.message,
-        attempts: job.attemptsMade
-      });
-      
-      MetricsHelper.recordJobFailed(name, job.name);
-    });
-    
-    queue.on('stalled', (job) => {
-      logger.warn(`Job stalled in queue ${name}:`, {
-        jobId: job.id
-      });
-    });
-    
-    queue.on('progress', (job, progress) => {
-      logger.debug(`Job progress in queue ${name}:`, {
-        jobId: job.id,
-        progress
-      });
-    });
-  }
-  
-  // 작업 우선순위 결정
-  private getJobPriority(jobType: JobType): number {
-    const priorityMap: Record<JobType, JobPriority> = {
-      [JobType.AGENT_EXECUTION]: JobPriority.HIGH,
-      [JobType.PROJECT_BUILD]: JobPriority.HIGH,
-      [JobType.COMPONENT_GENERATION]: JobPriority.NORMAL,
-      [JobType.EMAIL_NOTIFICATION]: JobPriority.NORMAL,
-      [JobType.REPORT_GENERATION]: JobPriority.LOW,
-      [JobType.CACHE_WARMING]: JobPriority.LOW,
-      [JobType.DATA_EXPORT]: JobPriority.NORMAL,
-      [JobType.CLEANUP]: JobPriority.LOW
-    };
-    
-    return priorityMap[jobType] || JobPriority.NORMAL;
-  }
-  
-  // 종료 처리
-  async shutdown(): Promise<void> {
-    logger.info('Shutting down job queues...');
-    
-    // 모든 큐 종료
-    for (const [name, queue] of this.queues) {
-      await queue.close();
-      logger.info(`Queue ${name} closed`);
-    }
-    
-    // 스케줄러 종료
-    for (const [name, scheduler] of this.schedulers) {
-      await scheduler.close();
-      logger.info(`Scheduler ${name} closed`);
-    }
-    
-    // Redis 연결 종료
-    await this.redisConnection.quit();
-    
-    logger.info('Job queues shutdown complete');
-  }
-}
-
-// Job Worker 베이스 클래스
-export abstract class JobWorker {
-  protected queue: Queue;
-  protected concurrency: number;
-  
-  constructor(queue: Queue, concurrency: number = 1) {
-    this.queue = queue;
-    this.concurrency = concurrency;
-  }
-  
-  // 워커 시작
-  async start(): Promise<void> {
-    this.queue.process(this.concurrency, async (job: Job) => {
-      const startTime = Date.now();
-      
-      try {
-        logger.info(`Processing job ${job.id} of type ${job.name}`);
-        
-        // 진행률 업데이트
-        await job.progress(0);
-        
-        // 실제 작업 처리
-        const result = await this.process(job);
-        
-        // 완료 진행률
-        await job.progress(100);
-        
-        const duration = Date.now() - startTime;
-        logger.info(`Job ${job.id} completed in ${duration}ms`);
-        
-        return result;
-        
-      } catch (error) {
-        logger.error(`Job ${job.id} failed:`, error);
-        throw error;
-      }
-    });
-  }
-  
-  // 추상 메서드: 실제 작업 처리
-  abstract process(job: Job): Promise<any>;
-}
-
-// 에이전트 실행 워커 예시
-export class AgentExecutionWorker extends JobWorker {
-  async process(job: Job<AgentExecutionJob>): Promise<any> {
-    const { agentName, input } = job.data;
-    
-    // 진행률 업데이트
-    await job.progress(10);
-    
-    // 에이전트 초기화
-    const agent = await this.initializeAgent(agentName);
-    await job.progress(30);
-    
-    // 에이전트 실행
-    const result = await agent.execute(input);
-    await job.progress(90);
-    
-    // 결과 저장
-    await this.saveResult(job.data.projectId!, result);
-    
-    return result;
-  }
-  
-  private async initializeAgent(agentName: string): Promise<any> {
-    // 에이전트 초기화 로직
-    return {};
-  }
-  
-  private async saveResult(projectId: string, result: any): Promise<void> {
-    // 결과 저장 로직
-  }
-}
-
-// 큐 관리 API 엔드포인트
-export function setupQueueManagementEndpoints(app: Express, queueManager: QueueManager): void {
-  // 큐 상태 조회
-  app.get('/api/admin/queues/:name/stats', async (req, res) => {
-    try {
-      const stats = await queueManager.getQueueStats(req.params.name);
-      res.json(stats);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-  
-  // 작업 상태 조회
-  app.get('/api/admin/queues/:name/jobs/:id', async (req, res) => {
-    try {
-      const status = await queueManager.getJobStatus(req.params.name, req.params.id);
-      res.json(status);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-  
-  // 큐 일시정지
-  app.post('/api/admin/queues/:name/pause', async (req, res) => {
-    try {
-      await queueManager.pauseQueue(req.params.name);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-  
-  // 큐 재개
-  app.post('/api/admin/queues/:name/resume', async (req, res) => {
-    try {
-      await queueManager.resumeQueue(req.params.name);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-  
-  // 실패한 작업 재시도
-  app.post('/api/admin/queues/:name/retry-failed', async (req, res) => {
-    try {
-      const count = await queueManager.retryFailedJobs(req.params.name);
-      res.json({ retriedJobs: count });
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
 }
 ```
 ---
@@ -15150,7 +14431,6 @@ npm run phase1:init
 
 **작성일**: 2024-XX-XX  
 **작성자**: T-Developer Team
-```
 
 ### SubTask 0.15.2: Phase 1 초기 설정
 **목표**: Phase 1 작업을 위한 기초 설정
