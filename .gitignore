@@ -118,4 +118,4 @@ pids/
 .dynamodb/
 
 # TernJS port file
-.tern-port
+.tern-portdocker/redis/

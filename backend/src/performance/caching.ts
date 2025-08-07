@@ -282,6 +282,79 @@ export function Cacheable(namespace: CacheNamespace, ttl?: number) {
   };
 }
 
+// Integration with new multi-layer cache manager
+import { cacheManager as multiLayerCache } from '../memory/cache-manager';
+
+export class EnhancedCacheManager extends CacheManager {
+  constructor() {
+    super();
+  }
+
+  // Enhanced get with multi-layer fallback
+  async get<T>(
+    namespace: CacheNamespace,
+    identifier: string,
+    params?: any
+  ): Promise<T | null> {
+    // First try the existing Redis/Memory cache
+    let result = await super.get<T>(namespace, identifier, params);
+    
+    if (result === null) {
+      // Fallback to multi-layer cache manager
+      const key = this.generateKey(namespace, identifier, params);
+      result = await multiLayerCache.get<T>(key);
+      
+      if (result !== null) {
+        // Promote to primary cache
+        await this.set(namespace, identifier, result, params);
+      }
+    }
+    
+    return result;
+  }
+
+  // Enhanced set with multi-layer support
+  async set<T>(
+    namespace: CacheNamespace,
+    identifier: string,
+    value: T,
+    params?: any,
+    ttl?: number
+  ): Promise<void> {
+    // Set in primary cache
+    await super.set(namespace, identifier, value, params, ttl);
+    
+    // Also set in multi-layer cache
+    const key = this.generateKey(namespace, identifier, params);
+    const finalTTL = (ttl || CacheTTL[namespace] || 3600) * 1000; // Convert to milliseconds
+    await multiLayerCache.set(key, value, finalTTL);
+  }
+
+  // Enhanced invalidation with multi-layer support
+  async invalidate(namespace: CacheNamespace, identifier: string, params?: any): Promise<void> {
+    // Invalidate from primary cache
+    await super.invalidate(namespace, identifier, params);
+    
+    // Also invalidate from multi-layer cache
+    const key = this.generateKey(namespace, identifier, params);
+    await multiLayerCache.delete(key);
+  }
+
+  private generateKey(namespace: CacheNamespace, identifier: string, params?: any): string {
+    if (!params) {
+      return `${namespace}:${identifier}`;
+    }
+    
+    // 파라미터 해시화
+    const paramHash = crypto
+      .createHash('md5')
+      .update(JSON.stringify(params))
+      .digest('hex');
+    
+    return `${namespace}:${identifier}:${paramHash}`;
+  }
+}
+
 // HTTP 응답 캐싱 미들웨어
 export function httpCacheMiddleware(options: {
   namespace?: CacheNamespace;

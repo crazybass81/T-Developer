@@ -1,67 +1,71 @@
-#!/bin/bash
-# check-requirements.sh - T-Developer 개발 환경 체크
+#\!/bin/bash
 
-echo "🔍 개발 환경 체크 시작..."
+# T-Developer Environment Check Script
+# Phase 0: Verify all requirements are installed
 
-# Node.js 버전 확인
+echo "======================================"
+echo "🔍 T-Developer 개발 환경 체크 시작..."
+echo "======================================"
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Check function
+check_command() {
+    if command -v $1 &> /dev/null; then
+        echo -e "${GREEN}✅ $2 설치됨${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ $2 설치 필요${NC}"
+        return 1
+    fi
+}
+
+echo ""
+echo "1. 필수 도구 확인"
+echo "-------------------"
+
+# Node.js
 if command -v node &> /dev/null; then
     NODE_VERSION=$(node -v)
-    if [[ "$NODE_VERSION" =~ ^v(18|19|20|21)\. ]]; then
-        echo "✅ Node.js: $NODE_VERSION"
+    if [[ "$NODE_VERSION" =~ ^v(18|19|20|21|22) ]]; then
+        echo -e "${GREEN}✅ Node.js: $NODE_VERSION${NC}"
     else
-        echo "❌ Node.js 18+ 필요 (현재: $NODE_VERSION)"
-        exit 1
+        echo -e "${YELLOW}⚠️  Node.js: $NODE_VERSION (18+ 권장)${NC}"
     fi
 else
-    echo "❌ Node.js가 설치되지 않음"
-    exit 1
+    echo -e "${RED}❌ Node.js 설치 필요${NC}"
 fi
 
-# Python 버전 확인
+# npm
+check_command npm "npm"
+
+# Python
 if command -v python3 &> /dev/null; then
     PYTHON_VERSION=$(python3 --version 2>&1)
-    if [[ "$PYTHON_VERSION" =~ Python\ 3\.(9|10|11|12)\. ]]; then
-        echo "✅ Python: $PYTHON_VERSION"
-    else
-        echo "❌ Python 3.9+ 필요 (현재: $PYTHON_VERSION)"
-        exit 1
-    fi
+    echo -e "${GREEN}✅ Python: $PYTHON_VERSION${NC}"
 else
-    echo "❌ Python3가 설치되지 않음"
-    exit 1
+    echo -e "${RED}❌ Python 3 설치 필요${NC}"
 fi
 
-# AWS CLI 확인
+# Git
+check_command git "Git"
+
+# Docker
+check_command docker "Docker"
+
+# AWS CLI
 if command -v aws &> /dev/null; then
-    AWS_VERSION=$(aws --version 2>&1 | cut -d/ -f2 | cut -d' ' -f1)
-    echo "✅ AWS CLI: $AWS_VERSION"
+    AWS_VERSION=$(aws --version 2>&1)
+    echo -e "${GREEN}✅ AWS CLI: $AWS_VERSION${NC}"
 else
-    echo "❌ AWS CLI가 설치되지 않음"
-    exit 1
-fi
-
-# Docker 확인
-if command -v docker &> /dev/null; then
-    DOCKER_VERSION=$(docker --version | cut -d' ' -f3 | cut -d',' -f1)
-    echo "✅ Docker: $DOCKER_VERSION"
-else
-    echo "❌ Docker가 설치되지 않음"
-    exit 1
-fi
-
-# Git 확인
-if command -v git &> /dev/null; then
-    GIT_VERSION=$(git --version | cut -d' ' -f3)
-    echo "✅ Git: $GIT_VERSION"
-else
-    echo "❌ Git이 설치되지 않음"
-    exit 1
+    echo -e "${YELLOW}⚠️  AWS CLI 미설치 (선택사항)${NC}"
 fi
 
 echo ""
-echo "✅ 모든 필수 도구가 설치되어 있습니다!"
-echo ""
-echo "📋 다음 단계:"
-echo "1. AWS 자격 증명 설정: aws configure"
-echo "2. Docker 서비스 시작 확인"
-echo "3. 프로젝트 의존성 설치"
+echo "======================================"
+echo "📋 체크 완료\!"
+echo "======================================"

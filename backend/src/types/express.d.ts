@@ -1,12 +1,14 @@
-import { TokenPayload } from '../utils/auth';
+/**
+ * Express Type Definitions
+ * Extend Express Request interface
+ */
+
+import { User } from '@prisma/client';
 
 declare global {
   namespace Express {
     interface Request {
-      user?: TokenPayload & {
-        scopes?: string[];
-        authMethod?: string;
-      };
+      user?: User;
     }
   }
 }

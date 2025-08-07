@@ -1,6 +1,26 @@
 version: '3.8'
 
 services:
+  # PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: t-developer-postgres
+    environment:
+      POSTGRES_DB: tdeveloper
+      POSTGRES_USER: tdeveloper
+      POSTGRES_PASSWORD: tdeveloper123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tdeveloper -d tdeveloper"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - t-developer-network
+
   # DynamoDB Local
   dynamodb:
     image: amazon/dynamodb-local:latest
@@ -56,6 +76,7 @@ services:
       - t-developer-network
 
 volumes:
+  postgres_data:
   redis-data:
   localstack-data:
   elasticsearch-data:
