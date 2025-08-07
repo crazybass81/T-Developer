@@ -51,7 +51,8 @@
       "Bash(./scripts/aws/add-missing-parameters.sh:*)",
       "Bash(cp:*)",
       "Bash(gh run list:*)",
-      "Bash(npm uninstall 2)"
+      "Bash(npm uninstall 2)",
+      "Bash(touch:*)"
     ],
     "deny": []
   }
