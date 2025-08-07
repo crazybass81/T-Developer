@@ -3,6 +3,7 @@
     "@aws-sdk/client-bedrock": "^3.859.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.859.0",
     "@aws-sdk/client-dynamodb": "^3.859.0",
+    "@aws-sdk/client-ssm": "^3.863.0",
     "@aws-sdk/lib-dynamodb": "^3.859.0",
     "@slack/web-api": "^7.9.3",
     "axios": "^1.11.0",

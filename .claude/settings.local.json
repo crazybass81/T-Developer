@@ -35,7 +35,21 @@
       "Bash(git commit:*)",
       "Bash(find:*)",
       "Bash(git filter-branch:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(npm cache clean:*)",
+      "Bash(lsblk:*)",
+      "Bash(sudo growpart:*)",
+      "Bash(sudo:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(git restore:*)",
+      "Bash(aws secretsmanager list-secrets:*)",
+      "Bash(timeout 10s npm run dev)",
+      "Bash(./scripts/aws/setup-parameters.sh:*)",
+      "Bash(./scripts/aws/setup-secrets.sh:*)",
+      "Bash(grep:*)",
+      "Bash(./scripts/aws/update-ai-keys.sh:*)",
+      "Bash(./scripts/aws/add-missing-parameters.sh:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

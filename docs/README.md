@@ -2,7 +2,7 @@
 
 ## 📚 Documentation Overview
 
-T-Developer는 AWS Agent Squad + Agno Framework + Bedrock AgentCore 기반의 AI 멀티 에이전트 개발 플랫폼입니다.
+T-Developer는 AWS Bedrock Agent 기반의 AI 멀티 에이전트 개발 플랫폼입니다.
 
 ## 🏗️ Architecture Documentation
 
