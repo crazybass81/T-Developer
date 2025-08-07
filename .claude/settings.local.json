@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(npm install:*)",
+      "Bash(rm:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 10s npm run dev:simple)",
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(docker-compose:*)",
+      "Bash(cat:*)",
+      "Bash(lsof:*)",
+      "Bash(./test-integration.sh:*)",
+      "Bash(export BEDROCK_AGENT_ID=NYZHMLSDOJ)",
+      "Bash(export BEDROCK_AGENT_ALIAS_ID=IBQK7SYNGG)",
+      "Bash(aws sts get-caller-identity:*)",
+      "Bash(aws bedrock-agent get-agent:*)",
+      "Bash(node:*)",
+      "Bash(./test-complete-squad.sh:*)",
+      "Bash(npm search:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(/home/ec2-user/T-DeveloperMVP/test-agno-api.sh:*)",
+      "Bash(/home/ec2-user/T-DeveloperMVP/demo-complete-integration.sh:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(kill:*)",
+      "Bash(pkill:*)",
+      "Bash(npx next dev:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run lint)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(find:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(git stash:*)"
+    ],
+    "deny": []
+  }
+}
