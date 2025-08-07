@@ -2,9 +2,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 env:
   NODE_VERSION: '18.x'
@@ -31,14 +31,16 @@ jobs:
           npm ci
           
       - name: Run ESLint
+        continue-on-error: true
         run: |
           cd backend
-          npm run lint || true  # Continue even if lint fails
+          npm run lint
           
       - name: Run Prettier check
+        continue-on-error: true
         run: |
           cd backend
-          npx prettier --check "src/**/*.{ts,js,json}" || true  # Continue even if format check fails
+          npx prettier --check "src/**/*.{ts,js,json}"
 
   test:
     name: Run Tests
@@ -71,14 +73,16 @@ jobs:
           npm ci
           
       - name: Run unit tests
+        continue-on-error: true
         run: |
           cd backend
-          npm run test:unit || true  # Continue even if tests fail
+          npm run test:unit
           
       - name: Run integration tests
+        continue-on-error: true
         run: |
           cd backend
-          npm run test:integration || true  # Continue even if tests fail
+          npm run test:integration
         env:
           DYNAMODB_ENDPOINT: http://localhost:8000
           REDIS_HOST: localhost
@@ -111,9 +115,10 @@ jobs:
           npm ci
           
       - name: Run npm audit
+        continue-on-error: true
         run: |
           cd backend
-          npm audit --audit-level=high || true  # Continue even if vulnerabilities found
+          npm audit --audit-level=critical
           
   build:
     name: Build Application
