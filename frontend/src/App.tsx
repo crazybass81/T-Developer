@@ -1,12 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
 const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
+const WS_URL = API_URL.replace('http', 'ws');
 
 interface AgentStep {
   id: number;
   name: string;
-  status: 'waiting' | 'active' | 'completed';
+  status: 'waiting' | 'active' | 'completed' | 'error';
+  progress?: number;
+  message?: string;
+  timestamp?: string;
+}
+
+interface GenerationProgress {
+  step: number;
+  stepName: string;
+  progress: number;
+  message: string;
+  timestamp: string;
 }
 
 function App() {
@@ -15,6 +27,9 @@ function App() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connected' | 'error'>('disconnected');
+  const wsRef = useRef<WebSocket | null>(null);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [agentSteps, setAgentSteps] = useState<AgentStep[]>([
     { id: 1, name: '자연어 분석 중...', status: 'waiting' },
     { id: 2, name: 'UI 기술 스택 선택 중...', status: 'waiting' },
@@ -35,6 +50,64 @@ function App() {
     '대시보드를 만들어줘',
     '채팅 앱을 만들어줘'
   ];
+
+  // WebSocket 연결 관리
+  const connectWebSocket = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    try {
+      wsRef.current = new WebSocket(`${WS_URL}/ws`);
+      
+      wsRef.current.onopen = () => {
+        console.log('WebSocket connected');
+        setConnectionStatus('connected');
+      };
+
+      wsRef.current.onmessage = (event) => {
+        try {
+          const data: GenerationProgress = JSON.parse(event.data);
+          updateAgentStep(data);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+
+      wsRef.current.onclose = () => {
+        console.log('WebSocket disconnected');
+        setConnectionStatus('disconnected');
+      };
+
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setConnectionStatus('error');
+      };
+    } catch (error) {
+      console.error('Failed to connect WebSocket:', error);
+      setConnectionStatus('error');
+    }
+  };
+
+  // Agent 단계 업데이트
+  const updateAgentStep = (progress: GenerationProgress) => {
+    setAgentSteps(prev => 
+      prev.map(step => {
+        if (step.id === progress.step) {
+          return {
+            ...step,
+            status: progress.progress === 100 ? 'completed' : 'active',
+            progress: progress.progress,
+            message: progress.message,
+            timestamp: progress.timestamp
+          };
+        } else if (step.id < progress.step) {
+          return { ...step, status: 'completed', progress: 100 };
+        }
+        return step;
+      })
+    );
+  };
 
   const simulateProgress = () => {
     let currentStep = 0;
@@ -81,7 +154,8 @@ function App() {
     setResult(null);
     resetSteps();
 
-    const progressInterval = simulateProgress();
+    // WebSocket 연결 확인
+    connectWebSocket();
 
     try {
       const response = await fetch(`${API_URL}/api/v1/generate`, {
@@ -90,32 +164,54 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          query: query.trim(),
-          framework: framework || undefined 
+          user_input: query.trim(),
+          project_name: `project_${Date.now()}`,
+          project_type: framework || 'react',
+          features: extractFeatures(query.trim())
         }),
       });
 
       const data = await response.json();
 
-      if (data.status === 'success') {
+      if (data.success) {
         setResult(data);
+        setCurrentProjectId(data.project_id);
         // 모든 단계 완료 표시
         setAgentSteps(prev => 
           prev.map(step => ({ ...step, status: 'completed' }))
         );
       } else {
-        setError(data.message || '요청 처리 중 오류가 발생했습니다.');
-        clearInterval(progressInterval);
+        setError(data.detail || '요청 처리 중 오류가 발생했습니다.');
         resetSteps();
       }
     } catch (err: any) {
       console.error('Error:', err);
-      setError('서버와의 연결에 실패했습니다.');
-      clearInterval(progressInterval);
+      setError(`서버와의 연결에 실패했습니다: ${err.message}`);
       resetSteps();
     } finally {
       setLoading(false);
     }
+  };
+
+  // 특성 추출 헬퍼 함수
+  const extractFeatures = (query: string): string[] => {
+    const features = [];
+    const queryLower = query.toLowerCase();
+    
+    if (queryLower.includes('todo') || queryLower.includes('할일')) {
+      features.push('todo');
+    }
+    if (queryLower.includes('로그인') || queryLower.includes('인증')) {
+      features.push('auth');
+    }
+    if (queryLower.includes('라우팅') || queryLower.includes('페이지')) {
+      features.push('routing');
+    }
+    if (queryLower.includes('상태관리') || queryLower.includes('redux')) {
+      features.push('state-management');
+    }
+    
+    return features;
   };
 
   const handleExampleClick = (exampleQuery: string) => {
@@ -129,20 +225,48 @@ function App() {
     }, 100);
   };
 
-  // 컴포넌트 마운트 시 서버 상태 확인
+  // 컴포넌트 마운트 시 서버 상태 확인 및 WebSocket 연결
   useEffect(() => {
     const checkServerHealth = async () => {
       try {
         const response = await fetch(`${API_URL}/health`);
         const data = await response.json();
         console.log('Server status:', data);
+        
+        // 서버가 정상이면 WebSocket 연결 시도
+        connectWebSocket();
       } catch (error) {
         console.error('Server not available:', error);
       }
     };
     
     checkServerHealth();
+
+    // 컴포넌트 언마운트 시 WebSocket 연결 해제
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
   }, []);
+
+  // 연결 상태에 따른 재연결 시도
+  useEffect(() => {
+    let reconnectTimeout: NodeJS.Timeout;
+
+    if (connectionStatus === 'disconnected' || connectionStatus === 'error') {
+      reconnectTimeout = setTimeout(() => {
+        console.log('Attempting to reconnect WebSocket...');
+        connectWebSocket();
+      }, 5000);
+    }
+
+    return () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+    };
+  }, [connectionStatus]);
 
   return (
     <div className="App">
@@ -153,6 +277,11 @@ function App() {
           <span className="badge">🧠 9-Agent Pipeline</span>
           <span className="badge">⚡ 실시간 생성</span>
           <span className="badge">📦 즉시 다운로드</span>
+          <span className={`connection-status ${connectionStatus}`}>
+            {connectionStatus === 'connected' && '🟢 실시간 연결'}
+            {connectionStatus === 'disconnected' && '🟡 연결 중...'}
+            {connectionStatus === 'error' && '🔴 연결 오류'}
+          </span>
         </div>
       </header>
 
@@ -225,10 +354,27 @@ function App() {
               {agentSteps.map(step => (
                 <div key={step.id} className={`progress-step ${step.status}`}>
                   <div className="step-number">{step.id}</div>
-                  <div className="step-name">{step.name}</div>
+                  <div className="step-content">
+                    <div className="step-name">{step.name}</div>
+                    {step.message && (
+                      <div className="step-message">{step.message}</div>
+                    )}
+                    {step.progress !== undefined && step.status === 'active' && (
+                      <div className="progress-bar">
+                        <div 
+                          className="progress-fill" 
+                          style={{ width: `${step.progress}%` }}
+                        ></div>
+                      </div>
+                    )}
+                    {step.timestamp && (
+                      <div className="step-timestamp">{new Date(step.timestamp).toLocaleTimeString()}</div>
+                    )}
+                  </div>
                   <div className="step-status">
                     {step.status === 'completed' && <span>✅</span>}
                     {step.status === 'active' && <div className="step-spinner"></div>}
+                    {step.status === 'error' && <span>❌</span>}
                   </div>
                 </div>
               ))}
@@ -293,12 +439,12 @@ function App() {
                   </div>
                 </div>
                 <a 
-                  href={`${API_URL}${result.result?.downloadUrl}`}
+                  href={`${API_URL}${result.download_url}`}
                   download
                   className="download-btn"
-                  onClick={() => handleDownload(result.result?.downloadUrl)}
+                  onClick={() => handleDownload(result.download_url)}
                 >
-                  📦 ZIP 파일 다운로드
+                  📦 ZIP 파일 다운로드 ({result.project_id}.zip)
                 </a>
               </div>
               
