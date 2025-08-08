@@ -47,7 +47,61 @@ Testing            → Python (pytest), TypeScript (Jest/Playwright)
 
 ## 🚨 CRITICAL RULES - MUST FOLLOW
 
-### 1. ❌ NO MOCK IMPLEMENTATIONS
+### 1. 🔄 GIT COMMIT & PUSH RULES - 필수 준수
+**모든 단위 작업 완료 시 즉시 커밋 & 푸시**
+- **단위 작업 정의**: 
+  - 하나의 기능 구현 완료
+  - 하나의 버그 수정 완료
+  - 하나의 파일/모듈 리팩토링 완료
+  - 하나의 테스트 작성 완료
+  - 문서 업데이트 완료
+- **커밋 규칙**:
+  - 작업 완료 즉시 커밋 (최대 2시간 이내)
+  - Conventional Commits 형식 사용
+  - 의미 있는 단위로 분리
+  - 커밋 메시지에 작업 내용 명확히 기술
+- **푸시 규칙**:
+  - 커밋 후 즉시 푸시 (리뷰 용이성)
+  - feature 브랜치 사용 권장
+  - main 브랜치는 안정된 코드만
+- **목적**:
+  - 다른 개발자/AI 서비스의 즉각적인 리뷰 가능
+  - 작업 히스토리 명확한 추적
+  - 충돌 최소화 및 빠른 통합
+  - 백업 및 협업 효율성 증대
+
+### 커밋 메시지 템플릿
+```bash
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### 타입 종류
+- **feat**: 새로운 기능 추가
+- **fix**: 버그 수정
+- **docs**: 문서 수정
+- **style**: 코드 포맷팅, 세미콜론 누락 등
+- **refactor**: 코드 리팩토링
+- **test**: 테스트 추가
+- **chore**: 빌드 업무, 패키지 매니저 수정 등
+
+### 예시
+```bash
+# 단위 작업 완료 후 즉시 실행
+git add .
+git commit -m "feat(agent): Implement NL Input Agent with production logic"
+git push origin feature/nl-input-agent
+
+# 또는 main 브랜치 직접 푸시 (소규모 수정)
+git add .
+git commit -m "fix(api): Resolve download path issue in simple_api.py"
+git push origin main
+```
+
+### 2. ❌ NO MOCK IMPLEMENTATIONS
 - **NEVER** create mock, dummy, or placeholder implementations
 - **NEVER** use hardcoded responses or fake data
 - **NEVER** implement "temporary" solutions
