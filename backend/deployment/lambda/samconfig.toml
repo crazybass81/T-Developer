@@ -1,0 +1,67 @@
+version = 0.1
+
+[default]
+[default.global]
+[default.global.parameters]
+stack_name = "t-developer-lambda-stack"
+
+[default.build]
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.deploy]
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+confirm_changeset = true
+resolve_s3 = true
+s3_prefix = "t-developer-lambda"
+region = "us-east-1"
+image_repositories = []
+disable_rollback = false
+
+[default.sync]
+[default.sync.parameters]
+watch = true
+
+[development]
+[development.global]
+[development.global.parameters]
+stack_name = "t-developer-lambda-stack-dev"
+
+[development.deploy]
+[development.deploy.parameters]
+parameter_overrides = [
+    "Environment=development"
+]
+s3_bucket = "t-developer-sam-deployments-dev"
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+confirm_changeset = false
+
+[staging]
+[staging.global]
+[staging.global.parameters]
+stack_name = "t-developer-lambda-stack-staging"
+
+[staging.deploy]
+[staging.deploy.parameters]
+parameter_overrides = [
+    "Environment=staging"
+]
+s3_bucket = "t-developer-sam-deployments-staging"
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+confirm_changeset = true
+
+[production]
+[production.global]
+[production.global.parameters]
+stack_name = "t-developer-lambda-stack-prod"
+
+[production.deploy]
+[production.deploy.parameters]
+parameter_overrides = [
+    "Environment=production"
+]
+s3_bucket = "t-developer-sam-deployments-prod"
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+confirm_changeset = true

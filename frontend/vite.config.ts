@@ -26,13 +26,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-ui': ['@mui/material', '@emotion/react', '@emotion/styled'],
-          'vendor-utils': ['axios', 'lodash', 'date-fns'],
-          'vendor-charts': ['recharts', 'd3'],
-          'feature-editor': ['monaco-editor', '@monaco-editor/react'],
-          'feature-analytics': ['./src/features/analytics/index.ts'],
-          'feature-auth': ['./src/features/auth/index.ts']
+          'vendor-react': ['react', 'react-dom']
         },
         chunkFileNames: (chunkInfo) => {
           const facadeModuleId = chunkInfo.facadeModuleId ? 

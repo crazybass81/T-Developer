@@ -1,0 +1,189 @@
+{
+  "Comment": "T-Developer MVP Agent Squad Pipeline",
+  "StartAt": "NLInputProcessing",
+  "States": {
+    "NLInputProcessing": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "t-developer-nl-input-agent",
+        "Payload": {
+          "query.$": "$.user_input",
+          "context.$": "$.context"
+        }
+      },
+      "ResultPath": "$.nl_result",
+      "Next": "UISelection",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError"
+        }
+      ]
+    },
+    "UISelection": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "t-developer-ui-selection-agent",
+        "Payload": {
+          "requirements.$": "$.nl_result.Payload",
+          "context.$": "$.context"
+        }
+      },
+      "ResultPath": "$.ui_result",
+      "Next": "ParallelProcessing"
+    },
+    "ParallelProcessing": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Parsing",
+          "States": {
+            "Parsing": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "t-developer-parser-agent",
+                "Payload": {
+                  "input_data.$": "$.nl_result.Payload",
+                  "ui_selection.$": "$.ui_result.Payload"
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "ComponentDecision",
+          "States": {
+            "ComponentDecision": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "t-developer-component-decision-agent",
+                "Payload": {
+                  "parsed_project.$": "$.nl_result.Payload",
+                  "ui_selection.$": "$.ui_result.Payload"
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "ResultPath": "$.parallel_results",
+      "Next": "MatchRateCalculation"
+    },
+    "MatchRateCalculation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "t-developer-match-rate-agent",
+        "Payload": {
+          "requirements.$": "$.parallel_results[0].Payload",
+          "technology_stack.$": "$.parallel_results[1].Payload"
+        }
+      },
+      "ResultPath": "$.match_result",
+      "Next": "ComponentSearch"
+    },
+    "ComponentSearch": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "t-developer-search-agent",
+        "Payload": {
+          "requirements.$": "$.parallel_results[0].Payload",
+          "technology_stack.$": "$.parallel_results[1].Payload",
+          "matching_result.$": "$.match_result.Payload"
+        }
+      },
+      "ResultPath": "$.search_result",
+      "Next": "CodeGeneration"
+    },
+    "CodeGeneration": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "t-developer-generation-agent",
+        "Payload": {
+          "parsed_project.$": "$.parallel_results[0].Payload",
+          "technology_stack.$": "$.parallel_results[1].Payload",
+          "search_results.$": "$.search_result.Payload"
+        }
+      },
+      "ResultPath": "$.generation_result",
+      "Next": "ProjectAssembly",
+      "TimeoutSeconds": 300
+    },
+    "ProjectAssembly": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "t-developer-assembly-agent",
+        "Payload": {
+          "generation_result.$": "$.generation_result.Payload",
+          "technology_stack.$": "$.parallel_results[1].Payload"
+        }
+      },
+      "ResultPath": "$.assembly_result",
+      "Next": "DownloadPreparation"
+    },
+    "DownloadPreparation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "t-developer-download-agent",
+        "Payload": {
+          "assembly_result.$": "$.assembly_result.Payload"
+        }
+      },
+      "ResultPath": "$.download_result",
+      "Next": "NotifyCompletion"
+    },
+    "NotifyCompletion": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:t-developer-notifications",
+        "Subject": "T-Developer Project Generation Complete",
+        "Message": {
+          "session_id.$": "$.context.session_id",
+          "project_name.$": "$.context.project_name",
+          "download_links.$": "$.download_result.Payload.download_links",
+          "status": "SUCCESS"
+        }
+      },
+      "Next": "Success"
+    },
+    "HandleError": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:us-east-1:123456789012:t-developer-notifications",
+        "Subject": "T-Developer Pipeline Error",
+        "Message": {
+          "session_id.$": "$.context.session_id",
+          "error.$": "$.error",
+          "status": "FAILED"
+        }
+      },
+      "Next": "Fail"
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "Fail": {
+      "Type": "Fail"
+    }
+  }
+}

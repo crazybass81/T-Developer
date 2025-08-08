@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # API Service
+  api:
+    build:
+      context: ../..
+      dockerfile: deployment/ecs/Dockerfile.local
+    container_name: t-developer-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - PORT=8000
+      - LOG_LEVEL=DEBUG
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/t_developer
+      - REDIS_URL=redis://redis:6379/0
+      - USE_LOCAL_MODE=true
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ../../src:/app/src
+      - ../../downloads:/app/downloads
+    networks:
+      - t-developer-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: t-developer-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=t_developer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - t-developer-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: t-developer-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - t-developer-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: t-developer-nginx
+    ports:
+      - "8888:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    networks:
+      - t-developer-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  t-developer-network:
+    driver: bridge
