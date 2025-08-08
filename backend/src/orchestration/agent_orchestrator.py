@@ -12,8 +12,8 @@ import logging
 from enum import Enum
 
 from .agent_squad_core import AgentSquadOrchestrator, TaskStatus
-from ..agents.framework.base_agent import BaseAgent
-from ..agents.framework.agent_types import AgentType
+from ..agents.framework.core.base_agent import BaseAgent
+from ..agents.framework.core.agent_types import AgentType
 
 logger = logging.getLogger(__name__)
 
