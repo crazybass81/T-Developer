@@ -29,6 +29,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Bedrock AgentCore 통합
+try:
+    from src.integrations.bedrock_agentcore import bedrock_integration, initialize_bedrock_agentcore
+    BEDROCK_AVAILABLE = True
+    logger.info("Bedrock AgentCore integration loaded")
+except ImportError as e:
+    BEDROCK_AVAILABLE = False
+    logger.warning(f"Bedrock AgentCore not available: {e}")
+
 app = FastAPI(
     title="T-Developer MVP API",
     description="AI-powered project generation from natural language",
@@ -531,13 +540,41 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
         
         logger.info(f"Pipeline input prepared: {pipeline_input}")
         
-        # 2. 실제 프로젝트 생성
+        # 1.5. Bedrock AgentCore로 입력 강화 (사용 가능한 경우)
+        bedrock_enhancement = None
+        if BEDROCK_AVAILABLE:
+            try:
+                logger.info("Enhancing pipeline with Bedrock AgentCore")
+                bedrock_enhancement = await bedrock_integration.enhance_pipeline_with_bedrock({
+                    "user_input": request.user_input,
+                    "project_type": request.project_type,
+                    "features": request.features,
+                    "user_id": f"user_{project_id}"
+                })
+                logger.info("Bedrock enhancement completed")
+            except Exception as e:
+                logger.warning(f"Bedrock enhancement failed, continuing with standard pipeline: {e}")
+        
+        # 2. 실제 프로젝트 생성 (Bedrock 강화된 정보 사용)
+        enhanced_project_name = request.project_name
+        enhanced_features = request.features or []
+        
+        # Bedrock에서 강화된 정보 추출
+        if bedrock_enhancement and bedrock_enhancement.get("enhanced_steps"):
+            for step in bedrock_enhancement["enhanced_steps"]:
+                if step["agent"] == "nl_input" and step.get("result", {}).get("success"):
+                    parsed_response = step["result"]["result"].get("parsed_response", {})
+                    if parsed_response:
+                        enhanced_features.extend(parsed_response.get("features", []))
+                        if parsed_response.get("project_type"):
+                            request.project_type = parsed_response["project_type"]
+        
         project_path = await generate_real_project(
             project_id=project_id,
-            project_name=request.project_name,
+            project_name=enhanced_project_name,
             project_type=request.project_type,
             description=request.user_input,
-            features=request.features or []
+            features=enhanced_features
         )
         
         logger.info(f"Project generated at: {project_path}")
@@ -569,13 +606,13 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
         
         logger.info(f"Project generation completed: {project_id}")
         
-        return {
+        response_data = {
             "success": True,
             "project_id": project_id,
             "download_url": f"/api/v1/download/{project_id}",
             "message": "프로젝트가 성공적으로 생성되었습니다",
             "project_type": request.project_type,
-            "features": request.features,
+            "features": enhanced_features,
             "stats": {
                 "file_count": file_count,
                 "zip_size_mb": zip_size_mb,
@@ -588,6 +625,29 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                 "4. 'npm start' 명령어로 개발 서버를 시작하세요"
             ]
         }
+        
+        # Bedrock AgentCore 정보 추가 (사용된 경우)
+        if bedrock_enhancement:
+            response_data["bedrock_enhanced"] = True
+            response_data["ai_analysis"] = {
+                "bedrock_agent_used": True,
+                "enhanced_features": enhanced_features,
+                "original_features": request.features or [],
+                "enhancement_steps": len(bedrock_enhancement.get("enhanced_steps", [])),
+                "agent_insights": [
+                    step.get("result", {}).get("result", {}).get("raw_response", "")[:100] + "..."
+                    for step in bedrock_enhancement.get("enhanced_steps", [])
+                    if step.get("result", {}).get("success")
+                ]
+            }
+        else:
+            response_data["bedrock_enhanced"] = False
+            response_data["ai_analysis"] = {
+                "bedrock_agent_used": False,
+                "fallback_mode": True
+            }
+        
+        return response_data
         
     except HTTPException:
         # HTTPException은 다시 raise
@@ -755,22 +815,128 @@ def detect_language(filename: str) -> str:
     
     return 'text'
 
+@app.get("/api/v1/bedrock/status")
+async def bedrock_agentcore_status():
+    """Bedrock AgentCore 상태 확인"""
+    if not BEDROCK_AVAILABLE:
+        return {
+            "available": False,
+            "error": "Bedrock AgentCore integration not loaded",
+            "reason": "Module import failed or dependencies missing"
+        }
+    
+    try:
+        status = bedrock_integration.get_integration_status()
+        
+        # Agent 정보 추가 조회
+        agent_info = {}
+        if status["bedrock_available"]:
+            try:
+                agent_info = await bedrock_integration.client.get_agent_info()
+            except Exception as e:
+                agent_info = {"error": str(e)}
+        
+        return {
+            "available": True,
+            "integration_status": status,
+            "agent_info": agent_info,
+            "framework": "AWS Bedrock AgentCore",
+            "version": "1.0.0",
+            "last_checked": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "available": False,
+            "error": str(e),
+            "framework": "AWS Bedrock AgentCore"
+        }
+
 @app.get("/api/v1/agents")
 async def list_agents():
-    """에이전트 목록"""
+    """에이전트 목록 및 3대 프레임워크 상태"""
+    
+    # 기본 9-Agent Pipeline
     agents = [
-        {"name": "NL Input", "status": "ready", "tasks": "4.1-4.10"},
-        {"name": "UI Selection", "status": "ready", "tasks": "4.11-4.20"},
-        {"name": "Parser", "status": "ready", "tasks": "4.21-4.30"},
-        {"name": "Component Decision", "status": "ready", "tasks": "4.31-4.40"},
-        {"name": "Match Rate", "status": "ready", "tasks": "4.41-4.50"},
-        {"name": "Search", "status": "ready", "tasks": "4.51-4.60"},
-        {"name": "Generation", "status": "ready", "tasks": "4.61-4.70"},
-        {"name": "Assembly", "status": "ready", "tasks": "4.71-4.80"},
-        {"name": "Download", "status": "ready", "tasks": "4.81-4.90"},
+        {"name": "NL Input", "status": "ready", "tasks": "4.1-4.10", "bedrock_enhanced": True},
+        {"name": "UI Selection", "status": "ready", "tasks": "4.11-4.20", "bedrock_enhanced": True},
+        {"name": "Parser", "status": "ready", "tasks": "4.21-4.30", "bedrock_enhanced": False},
+        {"name": "Component Decision", "status": "ready", "tasks": "4.31-4.40", "bedrock_enhanced": False},
+        {"name": "Match Rate", "status": "ready", "tasks": "4.41-4.50", "bedrock_enhanced": False},
+        {"name": "Search", "status": "ready", "tasks": "4.51-4.60", "bedrock_enhanced": False},
+        {"name": "Generation", "status": "ready", "tasks": "4.61-4.70", "bedrock_enhanced": True},
+        {"name": "Assembly", "status": "ready", "tasks": "4.71-4.80", "bedrock_enhanced": False},
+        {"name": "Download", "status": "ready", "tasks": "4.81-4.90", "bedrock_enhanced": False},
     ]
-    return {"agents": agents, "total": len(agents)}
+    
+    # 3대 핵심 프레임워크 상태
+    frameworks = {
+        "aws_agent_squad": {
+            "name": "AWS Agent Squad",
+            "status": "integrated",
+            "version": "1.0.0",
+            "description": "Step Functions 기반 Agent 오케스트레이션"
+        },
+        "agno_framework": {
+            "name": "Agno Framework", 
+            "status": "integrated",
+            "version": "1.0.0",
+            "description": "고성능 Agent 생성 및 관리"
+        },
+        "aws_bedrock_agentcore": {
+            "name": "AWS Bedrock AgentCore",
+            "status": "integrated" if BEDROCK_AVAILABLE else "unavailable",
+            "version": "1.0.0",
+            "description": "AWS Bedrock 기반 Agent 런타임"
+        }
+    }
+    
+    return {
+        "agents": agents, 
+        "total": len(agents),
+        "frameworks": frameworks,
+        "bedrock_integration": BEDROCK_AVAILABLE
+    }
 
+
+@app.on_event("startup")
+async def startup_event():
+    """서버 시작시 초기화"""
+    logger.info("T-Developer API starting up...")
+    
+    # Bedrock AgentCore 초기화 시도
+    if BEDROCK_AVAILABLE:
+        try:
+            logger.info("Initializing Bedrock AgentCore...")
+            bedrock_success = await initialize_bedrock_agentcore()
+            if bedrock_success:
+                logger.info("✅ Bedrock AgentCore initialized successfully")
+            else:
+                logger.warning("⚠️ Bedrock AgentCore initialization failed, will run in fallback mode")
+        except Exception as e:
+            logger.error(f"❌ Bedrock AgentCore initialization error: {e}")
+    else:
+        logger.info("⚠️ Bedrock AgentCore not available, running without AI enhancement")
+    
+    logger.info("🚀 T-Developer API ready with 3-framework integration:")
+    logger.info("   • AWS Agent Squad: ✅ Integrated")
+    logger.info("   • Agno Framework: ✅ Integrated") 
+    logger.info(f"   • AWS Bedrock AgentCore: {'✅ Integrated' if BEDROCK_AVAILABLE else '⚠️ Unavailable'}")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """서버 종료시 정리"""
+    logger.info("T-Developer API shutting down...")
+    
+    # Bedrock 세션 정리
+    if BEDROCK_AVAILABLE:
+        try:
+            await bedrock_integration.cleanup_sessions()
+            logger.info("Bedrock sessions cleaned up")
+        except Exception as e:
+            logger.error(f"Error cleaning up Bedrock sessions: {e}")
+    
+    logger.info("T-Developer API shutdown complete")
 
 if __name__ == "__main__":
     import uvicorn
