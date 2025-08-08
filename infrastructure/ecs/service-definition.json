@@ -1,0 +1,75 @@
+{
+  "serviceName": "t-developer-service",
+  "taskDefinition": "t-developer-agents:latest",
+  "desiredCount": 2,
+  "launchType": "FARGATE",
+  
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "subnet-xxx",
+        "subnet-yyy"
+      ],
+      "securityGroups": [
+        "sg-xxx"
+      ],
+      "assignPublicIp": "DISABLED"
+    }
+  },
+  
+  "loadBalancers": [
+    {
+      "targetGroupArn": "arn:aws:elasticloadbalancing:REGION:ACCOUNT:targetgroup/t-developer-tg/xxx",
+      "containerName": "orchestrator",
+      "containerPort": 8000
+    }
+  ],
+  
+  "serviceRegistries": [
+    {
+      "registryArn": "arn:aws:servicediscovery:REGION:ACCOUNT:service/srv-xxx",
+      "containerName": "orchestrator",
+      "containerPort": 8000
+    }
+  ],
+  
+  "deploymentConfiguration": {
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    },
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 100
+  },
+  
+  "capacityProviderStrategy": [
+    {
+      "capacityProvider": "FARGATE_SPOT",
+      "weight": 2,
+      "base": 0
+    },
+    {
+      "capacityProvider": "FARGATE",
+      "weight": 1,
+      "base": 1
+    }
+  ],
+  
+  "enableECSManagedTags": true,
+  "propagateTags": "SERVICE",
+  
+  "tags": [
+    {
+      "key": "Environment",
+      "value": "Production"
+    },
+    {
+      "key": "Project",
+      "value": "T-Developer"
+    },
+    {
+      "key": "ManagedBy",
+      "value": "ECS"
+    }
+  ]
+}

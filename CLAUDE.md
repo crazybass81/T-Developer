@@ -300,57 +300,98 @@ When explaining to the user:
 
 ## 🖥️ COMPUTE ENVIRONMENT RULES
 
-### Lambda Functions (서버리스)
-**용도**: 짧은 실행, 이벤트 기반, 비용 효율
+### ECS Fargate 통합 아키텍처 (프로덕션 표준)
+**완벽한 기능 구현을 위한 ECS 통합 전략**
+
 ```yaml
-Lambda에서 실행:
-  - 가벼운 Agent: NL Input, UI Selection, Parser, Search
-  - API 엔드포인트: /health, /frameworks, /validate
-  - 유틸리티: 입력 검증, URL 생성, 정리 작업
-  - 이벤트 핸들러: S3 트리거, SQS 처리
+ECS Fargate 클러스터:
+  이름: t-developer-cluster
   
-제약사항:
-  - 실행시간: 최대 15분
-  - 메모리: 최대 10GB
-  - 파일시스템: /tmp 512MB
-  - Stateless only
+  서비스 구성:
+    분석 그룹 (Service 1):
+      - Agents: NL Input, UI Selection, Parser
+      - CPU: 1 vCPU
+      - Memory: 2GB
+      - Auto-scaling: 2-10 tasks
+      - 특징: 빠른 텍스트 처리, 경량 작업
+    
+    결정 그룹 (Service 2):
+      - Agents: Component Decision, Match Rate, Search
+      - CPU: 2 vCPU
+      - Memory: 4GB
+      - Auto-scaling: 2-8 tasks
+      - 특징: 중간 복잡도, 계산 집약적
+    
+    생성 그룹 (Service 3):
+      - Agents: Generation, Assembly, Download
+      - CPU: 4 vCPU
+      - Memory: 8GB
+      - Auto-scaling: 1-5 tasks
+      - 특징: 무거운 작업, 파일 I/O 집약적
+
+통합 장점:
+  - ✅ 무제한 실행 시간 (Generation 30분+ 가능)
+  - ✅ 에이전트 간 직접 메모리 공유
+  - ✅ 일관된 성능 (콜드 스타트 없음)
+  - ✅ 완벽한 기능 구현
+  - ✅ 통합 모니터링 및 로깅
+  - ✅ 롤백 및 배포 단순화
 ```
 
-### EC2/ECS/Fargate (인스턴스)
-**용도**: 장시간 실행, 상태 유지, 무거운 작업
+### Lambda Functions (보조 유틸리티만)
+**용도**: ECS를 지원하는 경량 유틸리티
 ```yaml
-인스턴스에서 실행:
-  - 무거운 Agent: Generation, Assembly, Download
-  - 오케스트레이션: AWS Agent Squad, Supervisor
-  - 상태 유지: WebSocket, Session, Cache
-  - 메인 앱: Frontend Server, API Gateway
-  - AI/ML: 모델 추론, 배치 처리
+Lambda 사용 케이스:
+  - 헬스체크 엔드포인트
+  - S3 이벤트 트리거
+  - CloudWatch 알람 핸들러
+  - 정기 정리 작업 (Cron)
   
-장점:
-  - 무제한 실행시간
-  - 고메모리/GPU 지원
-  - WebSocket 가능
-  - Stateful 서비스
+주의: 메인 에이전트는 모두 ECS에서 실행
 ```
 
-### 선택 가이드
+### 아키텍처 선택 기준
 ```python
-def choose_compute(task):
-    if task.duration < 900 and task.memory < 10240:  # 15분, 10GB
-        return "Lambda"
-    elif task.needs_websocket or task.stateful:
-        return "EC2/ECS"
-    elif task.duration > 900:
-        return "EC2/Fargate"
+def choose_compute(component):
+    """모든 핵심 에이전트는 ECS에서 실행"""
+    if component.type == "agent":
+        return "ECS_FARGATE"  # 9개 에이전트 모두
+    elif component.type == "utility":
+        return "Lambda"  # 보조 기능만
+    elif component.type == "database":
+        return "RDS/DynamoDB"
     else:
-        return "Lambda"  # 기본값
+        return "ECS_FARGATE"  # 기본값
 ```
 
-### 비용 최적화
-- Lambda: 실행 횟수 과금 → 간헐적 작업
-- EC2 Spot: 90% 절감 → 중단 가능 작업
-- ECS Fargate: 자동 스케일링 → 예측 가능 워크로드
-- EC2 Reserved: 72% 절감 → 24/7 서비스
+### 비용 최적화 전략
+```yaml
+ECS Fargate Spot:
+  - 70% 비용 절감
+  - 개발/테스트 환경 적합
+  - 중단 허용 작업
+
+ECS Fargate (On-Demand):
+  - 프로덕션 환경
+  - 예측 가능한 성능
+  - Auto-scaling으로 효율화
+
+Savings Plans:
+  - 1년/3년 약정
+  - 최대 50% 절감
+  - 안정적인 워크로드
+```
+
+### 배포 파이프라인
+```yaml
+CI/CD with ECS:
+  1. GitHub Push
+  2. CodeBuild: Docker 이미지 빌드
+  3. ECR: 이미지 저장
+  4. CodeDeploy: Blue/Green 배포
+  5. ECS Service 업데이트
+  6. Health Check & Rollback
+```
 
 ## 📦 DEPLOYMENT CHECKLIST
 - [ ] All tests passing

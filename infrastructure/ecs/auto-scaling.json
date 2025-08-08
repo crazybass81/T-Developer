@@ -1,0 +1,106 @@
+{
+  "serviceAutoScaling": {
+    "analysis-service": {
+      "resourceId": "service/t-developer-cluster/analysis-service",
+      "scalableDimension": "ecs:service:DesiredCount",
+      "minCapacity": 2,
+      "maxCapacity": 10,
+      
+      "targetTrackingScalingPolicies": [
+        {
+          "policyName": "cpu-scaling",
+          "targetValue": 70.0,
+          "predefinedMetricSpecification": {
+            "predefinedMetricType": "ECSServiceAverageCPUUtilization"
+          },
+          "scaleOutCooldown": 60,
+          "scaleInCooldown": 300
+        },
+        {
+          "policyName": "memory-scaling",
+          "targetValue": 80.0,
+          "predefinedMetricSpecification": {
+            "predefinedMetricType": "ECSServiceAverageMemoryUtilization"
+          },
+          "scaleOutCooldown": 60,
+          "scaleInCooldown": 300
+        }
+      ]
+    },
+    
+    "decision-service": {
+      "resourceId": "service/t-developer-cluster/decision-service",
+      "scalableDimension": "ecs:service:DesiredCount",
+      "minCapacity": 2,
+      "maxCapacity": 8,
+      
+      "targetTrackingScalingPolicies": [
+        {
+          "policyName": "cpu-scaling",
+          "targetValue": 75.0,
+          "predefinedMetricSpecification": {
+            "predefinedMetricType": "ECSServiceAverageCPUUtilization"
+          }
+        }
+      ]
+    },
+    
+    "generation-service": {
+      "resourceId": "service/t-developer-cluster/generation-service",
+      "scalableDimension": "ecs:service:DesiredCount",
+      "minCapacity": 1,
+      "maxCapacity": 5,
+      
+      "targetTrackingScalingPolicies": [
+        {
+          "policyName": "cpu-scaling",
+          "targetValue": 60.0,
+          "predefinedMetricSpecification": {
+            "predefinedMetricType": "ECSServiceAverageCPUUtilization"
+          },
+          "scaleOutCooldown": 120,
+          "scaleInCooldown": 600
+        }
+      ],
+      
+      "stepScalingPolicies": [
+        {
+          "policyName": "high-load-scaling",
+          "adjustmentType": "ChangeInCapacity",
+          "metricAggregationType": "Average",
+          "stepAdjustments": [
+            {
+              "metricIntervalLowerBound": 0,
+              "metricIntervalUpperBound": 20,
+              "scalingAdjustment": 1
+            },
+            {
+              "metricIntervalLowerBound": 20,
+              "metricIntervalUpperBound": 40,
+              "scalingAdjustment": 2
+            },
+            {
+              "metricIntervalLowerBound": 40,
+              "scalingAdjustment": 3
+            }
+          ]
+        }
+      ]
+    }
+  },
+  
+  "scheduledActions": [
+    {
+      "scheduledActionName": "scale-up-business-hours",
+      "schedule": "cron(0 8 ? * MON-FRI *)",
+      "minCapacity": 3,
+      "maxCapacity": 15
+    },
+    {
+      "scheduledActionName": "scale-down-night",
+      "schedule": "cron(0 20 ? * * *)",
+      "minCapacity": 1,
+      "maxCapacity": 5
+    }
+  ]
+}

@@ -35,7 +35,7 @@
 - 자동 스케일링
 - 소비 기반 과금
 
-## 🎨 전체 시스템 아키텍처
+## 🎨 전체 시스템 아키텍처 (ECS Integrated)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -86,13 +86,17 @@
 ┌─────────────────────────────────────────────────────────────┐
 │              AWS Infrastructure Services                     │
 ├─────────────┬─────────────┬─────────────┬──────────────────┤
-│   Lambda    │   DynamoDB  │      S3     │   CloudWatch     │
-│  Functions  │  (Session   │  (Artifacts │   (Monitoring)   │
-│  (Compute)  │   Storage)  │   Storage)  │                  │
+│ ECS Fargate │   DynamoDB  │      S3     │   CloudWatch     │
+│  (Primary   │  (Session   │  (Artifacts │   (Monitoring)   │
+│   Compute)  │   Storage)  │   Storage)  │                  │
 ├─────────────┼─────────────┼─────────────┼──────────────────┤
 │    Step     │   Bedrock   │  CloudFront │   EventBridge    │
 │  Functions  │   Models    │    (CDN)    │   (Events)       │
 │ (Workflows) │    (LLMs)   │             │                  │
+├─────────────┼─────────────┼─────────────┼──────────────────┤
+│   Lambda    │     ECR     │     ALB     │   Auto Scaling   │
+│  (Utility   │   (Docker   │    (Load    │   (Dynamic       │
+│   Only)     │   Images)   │  Balancer)  │    Scaling)      │
 └─────────────┴─────────────┴─────────────────────────────────┘
 ```
 
@@ -207,16 +211,17 @@ framework_language_mapping = {
 }
 ```
 
-### Component-Specific Language Rules
+### Component-Specific Language Rules (ECS Deployment)
 ```yaml
 components:
-  # 9-Agent Pipeline
+  # 9-Agent Pipeline (ECS Fargate)
   agents:
     current_implementation: "TypeScript"  # 현재 상태
     target_implementation: "Python"       # 목표 (production)
+    deployment: "ECS Fargate"            # 모든 에이전트 ECS 통합
     location: 
-      - "backend/src/agents/*.ts" (현재)
-      - "backend/src/agents/implementations/*.py" (목표)
+      - "backend/src/agents/ecs-integrated/*.py" (통합 버전)
+      - "backend/src/agents/final/*" (최종 구현)
     
   # Frontend
   web_interface:
@@ -230,12 +235,14 @@ components:
     target: "Python (FastAPI)"
     reason: "Agent 통합 및 성능"
   
-  # AWS Infrastructure
+  # AWS Infrastructure (ECS-First)
   infrastructure:
     language: "Python"
+    primary_compute: "ECS Fargate"
     tools:
       - "AWS CDK (Python)"
-      - "Terraform (HCL)"
+      - "Docker & Docker Compose"
+      - "ECS Task Definitions"
       - "CloudFormation (YAML/JSON)"
     
   # Testing
@@ -269,27 +276,71 @@ components:
    - 설정 파일
    - CI/CD 파이프라인
 
+## 🚀 ECS Fargate 배포 아키텍처
+
+### ECS 클러스터 구성
+```yaml
+Cluster: t-developer-cluster
+  Service Groups:
+    1. Analysis Group (경량 에이전트):
+       - Agents: NL Input, UI Selection, Parser
+       - Resources: 1 vCPU, 2GB RAM
+       - Scaling: 2-10 tasks
+       
+    2. Decision Group (중간 에이전트):
+       - Agents: Component Decision, Match Rate, Search
+       - Resources: 2 vCPU, 4GB RAM
+       - Scaling: 2-8 tasks
+       
+    3. Generation Group (무거운 에이전트):
+       - Agents: Generation, Assembly, Download
+       - Resources: 4 vCPU, 8GB RAM
+       - Scaling: 1-5 tasks
+
+  Networking:
+    - VPC: Private subnets with NAT
+    - ALB: Application Load Balancer
+    - Service Discovery: AWS Cloud Map
+    
+  Storage:
+    - EFS: Shared file system for agents
+    - S3: Generated project storage
+```
+
+### Container 구조
+```dockerfile
+# 통합 Dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY agents/ ./agents/
+COPY api/ ./api/
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0"]
+```
+
 ## ⚙️ 핵심 설계 원칙
 
-### 1. **Multi-Agent Collaboration**
+### 1. **ECS-First Architecture**
+- 모든 에이전트는 ECS Fargate에서 실행
+- 완벽한 기능 구현 (Lambda 제약 없음)
+- 에이전트 간 직접 메모리 공유
+
+### 2. **Multi-Agent Collaboration**
 - 각 에이전트는 전문 영역 담당
 - AWS Agent Squad로 조율
 - 병렬 처리 최대화
 
-### 2. **Performance First**
-- Agno Framework의 3μs 인스턴스화
-- 6.5KB 메모리 사용량
-- 10,000x 성능 최적화
-
-### 3. **Language Agnostic**
-- Python 우선 (MetaRules.md)
-- TypeScript 지원
-- 다중 언어 프로젝트 생성
+### 3. **Performance & Scalability**
+- Auto-scaling으로 부하 대응
+- 콜드 스타트 없는 일관된 성능
+- 무제한 실행 시간 지원
 
 ### 4. **Production Ready**
 - Mock 구현 절대 금지
 - 모든 코드는 production 수준
 - 엔터프라이즈 보안
+- Blue/Green 배포
 
 ## 📊 성능 목표
 

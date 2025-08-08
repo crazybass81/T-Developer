@@ -1,28 +1,50 @@
-# T-Developer MVP
+# T-Developer Enterprise Platform
 
-AI-powered multi-agent development platform.
+AI-powered multi-agent development platform with ECS Fargate architecture.
+
+## 🏗️ Architecture Overview
+
+**Production-Grade ECS Fargate Deployment**
+- 9 AI Agents running on ECS Fargate (not Lambda)
+- Complete feature implementation without serverless constraints
+- Direct memory sharing between agents for optimal performance
+- Auto-scaling based on load
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js 18+
 - Python 3.9+
-- AWS Account
-- Docker
+- AWS Account with ECS/Fargate access
+- Docker & Docker Compose
+- AWS CLI configured
 
 ### Installation
+
+#### Local Development
 ```bash
 # Check requirements
 bash scripts/check-requirements.sh
 
-# Install backend dependencies
+# Install dependencies
 bash scripts/install-backend-deps.sh
-
-# Install Python dependencies
 bash scripts/install-python-deps.sh
 
-# Install global development tools
-bash scripts/install-global-tools.sh
+# Run with Docker Compose
+docker-compose up -d
+```
+
+#### ECS Deployment
+```bash
+# Build and push Docker images
+docker build -t t-developer .
+aws ecr get-login-password | docker login --username AWS --password-stdin [ECR_URI]
+docker tag t-developer:latest [ECR_URI]/t-developer:latest
+docker push [ECR_URI]/t-developer:latest
+
+# Deploy to ECS
+aws ecs create-cluster --cluster-name t-developer-cluster
+aws ecs create-service --cluster t-developer-cluster --service-name t-developer-service
 ```
 
 ## 📚 Documentation
