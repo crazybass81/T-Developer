@@ -1,0 +1,265 @@
+{
+  "test_suite": "T-Developer MVP User Scenario Tests",
+  "execution_time": "2025-08-08T11:42:31.541970",
+  "results": {
+    "total_scenarios": 5,
+    "passed": 5,
+    "failed": 0,
+    "success_rate": 100.0,
+    "overall_success": true,
+    "scenario_results": [
+      {
+        "scenario": "신규 개발자 - 첫 React 앱",
+        "success": true,
+        "scenario_context": "신규 개발자",
+        "user_input": "리액트로 간단한 웹 앱을 만들어 주세요. 처음 해보는 거라 쉬운 걸로 부탁합니다.",
+        "project_id": "project_20250808_114136_ce8e09d5",
+        "total_duration_seconds": 17.356154,
+        "workflow_steps": [
+          {
+            "step": "1. 프로젝트 생성 요청",
+            "success": true,
+            "duration_seconds": 0.004387,
+            "details": "프로젝트 ID: project_20250808_114136_ce8e09d5"
+          },
+          {
+            "step": "2. 프로젝트 미리보기",
+            "success": true,
+            "duration_seconds": 0.002391,
+            "details": "파일 개수: 8"
+          },
+          {
+            "step": "3. ZIP 파일 다운로드",
+            "success": true,
+            "duration_seconds": 0.004291,
+            "details": "파일 크기: 0.00MB"
+          },
+          {
+            "step": "4. ZIP 압축 해제 및 파일 검증",
+            "success": true,
+            "duration_seconds": 0.001314,
+            "details": "모든 예상 파일 존재 확인"
+          },
+          {
+            "step": "5. package.json 검증",
+            "success": true,
+            "duration_seconds": 6.2e-05,
+            "details": "의존성 개수: 4"
+          },
+          {
+            "step": "6. npm install 검증",
+            "success": true,
+            "duration_seconds": 17.343709,
+            "details": "dry-run 성공"
+          }
+        ],
+        "step_success_rate": 100.0,
+        "zip_size_mb": 0.0034856796264648438,
+        "file_validation": "PASSED"
+      },
+      {
+        "scenario": "블로거 - 개인 블로그 생성",
+        "success": true,
+        "scenario_context": "블로거",
+        "user_input": "개인 블로그 웹사이트를 만들고 싶어요. 여러 페이지가 있고 포스트를 볼 수 있는 기능이 필요해요.",
+        "project_id": "project_20250808_114154_d499ab1e",
+        "total_duration_seconds": 9.338555,
+        "workflow_steps": [
+          {
+            "step": "1. 프로젝트 생성 요청",
+            "success": true,
+            "duration_seconds": 0.006543,
+            "details": "프로젝트 ID: project_20250808_114154_d499ab1e"
+          },
+          {
+            "step": "2. 프로젝트 미리보기",
+            "success": true,
+            "duration_seconds": 0.002725,
+            "details": "파일 개수: 8"
+          },
+          {
+            "step": "3. ZIP 파일 다운로드",
+            "success": true,
+            "duration_seconds": 0.002343,
+            "details": "파일 크기: 0.00MB"
+          },
+          {
+            "step": "4. ZIP 압축 해제 및 파일 검증",
+            "success": true,
+            "duration_seconds": 0.001223,
+            "details": "모든 예상 파일 존재 확인"
+          },
+          {
+            "step": "5. package.json 검증",
+            "success": true,
+            "duration_seconds": 8.5e-05,
+            "details": "의존성 개수: 5"
+          },
+          {
+            "step": "6. npm install 검증",
+            "success": true,
+            "duration_seconds": 9.325636,
+            "details": "dry-run 성공"
+          }
+        ],
+        "step_success_rate": 100.0,
+        "zip_size_mb": 0.0035800933837890625,
+        "file_validation": "PASSED"
+      },
+      {
+        "scenario": "스타트업 - MVP 대시보드",
+        "success": true,
+        "scenario_context": "스타트업",
+        "user_input": "스타트업용 관리자 대시보드를 만들어주세요. 차트와 데이터 시각화가 포함된 현대적인 디자인으로요.",
+        "project_id": "project_20250808_114203_8f48f6fe",
+        "total_duration_seconds": 9.113502,
+        "workflow_steps": [
+          {
+            "step": "1. 프로젝트 생성 요청",
+            "success": true,
+            "duration_seconds": 0.00685,
+            "details": "프로젝트 ID: project_20250808_114203_8f48f6fe"
+          },
+          {
+            "step": "2. 프로젝트 미리보기",
+            "success": true,
+            "duration_seconds": 0.002563,
+            "details": "파일 개수: 8"
+          },
+          {
+            "step": "3. ZIP 파일 다운로드",
+            "success": true,
+            "duration_seconds": 0.002218,
+            "details": "파일 크기: 0.00MB"
+          },
+          {
+            "step": "4. ZIP 압축 해제 및 파일 검증",
+            "success": true,
+            "duration_seconds": 0.001239,
+            "details": "모든 예상 파일 존재 확인"
+          },
+          {
+            "step": "5. package.json 검증",
+            "success": true,
+            "duration_seconds": 8.6e-05,
+            "details": "의존성 개수: 4"
+          },
+          {
+            "step": "6. npm install 검증",
+            "success": true,
+            "duration_seconds": 9.100546,
+            "details": "dry-run 성공"
+          }
+        ],
+        "step_success_rate": 100.0,
+        "zip_size_mb": 0.0035791397094726562,
+        "file_validation": "PASSED"
+      },
+      {
+        "scenario": "학생 - 할일 관리 앱",
+        "success": true,
+        "scenario_context": "학생",
+        "user_input": "과제 관리를 위한 할일 앱을 만들어주세요. 추가, 수정, 삭제 기능이 있었으면 좋겠어요.",
+        "project_id": "project_20250808_114212_22d7b8f7",
+        "total_duration_seconds": 9.097292999999999,
+        "workflow_steps": [
+          {
+            "step": "1. 프로젝트 생성 요청",
+            "success": true,
+            "duration_seconds": 0.006134,
+            "details": "프로젝트 ID: project_20250808_114212_22d7b8f7"
+          },
+          {
+            "step": "2. 프로젝트 미리보기",
+            "success": true,
+            "duration_seconds": 0.00224,
+            "details": "파일 개수: 8"
+          },
+          {
+            "step": "3. ZIP 파일 다운로드",
+            "success": true,
+            "duration_seconds": 0.001814,
+            "details": "파일 크기: 0.00MB"
+          },
+          {
+            "step": "4. ZIP 압축 해제 및 파일 검증",
+            "success": true,
+            "duration_seconds": 0.000914,
+            "details": "모든 예상 파일 존재 확인"
+          },
+          {
+            "step": "5. package.json 검증",
+            "success": true,
+            "duration_seconds": 6.4e-05,
+            "details": "의존성 개수: 4"
+          },
+          {
+            "step": "6. npm install 검증",
+            "success": true,
+            "duration_seconds": 9.085948,
+            "details": "dry-run 성공"
+          },
+          {
+            "step": "7. Todo 기능 검증",
+            "success": true,
+            "duration_seconds": 0.000179,
+            "details": "모든 Todo 기능 확인됨"
+          }
+        ],
+        "step_success_rate": 100.0,
+        "zip_size_mb": 0.003894805908203125,
+        "file_validation": "PASSED"
+      },
+      {
+        "scenario": "소상공인 - 쇼핑몰 사이트",
+        "success": true,
+        "scenario_context": "소상공인",
+        "user_input": "작은 온라인 쇼핑몰을 만들고 싶어요. 상품 목록, 장바구니 기능이 있는 이커머스 사이트로요.",
+        "project_id": "project_20250808_114221_bd55086e",
+        "total_duration_seconds": 9.989267000000002,
+        "workflow_steps": [
+          {
+            "step": "1. 프로젝트 생성 요청",
+            "success": true,
+            "duration_seconds": 0.006105,
+            "details": "프로젝트 ID: project_20250808_114221_bd55086e"
+          },
+          {
+            "step": "2. 프로젝트 미리보기",
+            "success": true,
+            "duration_seconds": 0.002164,
+            "details": "파일 개수: 8"
+          },
+          {
+            "step": "3. ZIP 파일 다운로드",
+            "success": true,
+            "duration_seconds": 0.001779,
+            "details": "파일 크기: 0.00MB"
+          },
+          {
+            "step": "4. ZIP 압축 해제 및 파일 검증",
+            "success": true,
+            "duration_seconds": 0.000884,
+            "details": "모든 예상 파일 존재 확인"
+          },
+          {
+            "step": "5. package.json 검증",
+            "success": true,
+            "duration_seconds": 5.4e-05,
+            "details": "의존성 개수: 7"
+          },
+          {
+            "step": "6. npm install 검증",
+            "success": true,
+            "duration_seconds": 9.978281,
+            "details": "dry-run 성공"
+          }
+        ],
+        "step_success_rate": 100.0,
+        "zip_size_mb": 0.00362396240234375,
+        "file_validation": "PASSED"
+      }
+    ],
+    "timestamp": "2025-08-08T11:42:31.541892"
+  }
+}

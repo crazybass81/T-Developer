@@ -133,7 +133,9 @@
       "Bash(SecurityGroupId=sg-0746354ce6a362496 )",
       "Bash(--no-confirm-changeset )",
       "Bash(npm start)",
-      "Bash(npm run start:all:*)"
+      "Bash(npm run start:all:*)",
+      "Bash(infrastructure/aws/deploy-basic.sh:*)",
+      "Bash(infrastructure/aws/deploy-s3-only.sh:*)"
     ],
     "deny": []
   }
