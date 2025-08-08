@@ -16,16 +16,16 @@ import boto3
 from aws_lambda_powertools import Logger, Tracer, Metrics
 from aws_lambda_powertools.metrics import MetricUnit
 
-# Production 에이전트 임포트
-from agents.production.nl_input import NLInputAgent
-from agents.production.ui_selection import UISelectionAgent
-from agents.production.parser import ParserAgent
-from agents.production.component_decision import ComponentDecisionAgent
-from agents.production.match_rate import MatchRateAgent
-from agents.production.search import SearchAgent
-from agents.production.generation import GenerationAgent
-from agents.production.assembly import AssemblyAgent
-from agents.production.download import DownloadAgent
+# ECS-Integrated 에이전트 임포트
+from agents.ecs_integrated.nl_input.main import NLInputAgent
+from agents.ecs_integrated.ui_selection.main import UISelectionAgent
+from agents.ecs_integrated.parser.main import ParserAgent
+from agents.ecs_integrated.component_decision.main import ComponentDecisionAgent
+from agents.ecs_integrated.match_rate.main import MatchRateAgent
+from agents.ecs_integrated.search.main import SearchAgent
+from agents.ecs_integrated.generation.main import GenerationAgent
+from agents.ecs_integrated.assembly.main import AssemblyAgent
+from agents.ecs_integrated.download.main import DownloadAgent
 
 # AWS 클라이언트
 stepfunctions = boto3.client('stepfunctions')

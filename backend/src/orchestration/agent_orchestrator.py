@@ -71,15 +71,15 @@ class AgentOrchestrator:
 
     async def _initialize_agents(self) -> None:
         """Initialize all 9 core agents"""
-        from ..agents.implementations.nl_input_agent import NLInputAgent
-        from ..agents.implementations.ui_selection_agent import UISelectionAgent
-        from ..agents.implementations.parser_agent import ParserAgent
-        from ..agents.implementations.component_decision_agent import ComponentDecisionAgent
-        from ..agents.implementations.match_rate_agent import MatchRateAgent
-        from ..agents.implementations.search_agent import SearchAgent
-        from ..agents.implementations.generation_agent import GenerationAgent
-        from ..agents.implementations.assembly_agent import AssemblyAgent
-        from ..agents.implementations.download_agent import DownloadAgent
+        from ..agents.ecs_integrated.nl_input.main import NLInputAgent
+        from ..agents.ecs_integrated.ui_selection.main import UISelectionAgent
+        from ..agents.ecs_integrated.parser.main import ParserAgent
+        from ..agents.ecs_integrated.component_decision.main import ComponentDecisionAgent
+        from ..agents.ecs_integrated.match_rate.main import MatchRateAgent
+        from ..agents.ecs_integrated.search.main import SearchAgent
+        from ..agents.ecs_integrated.generation.main import GenerationAgent
+        from ..agents.ecs_integrated.assembly.main import AssemblyAgent
+        from ..agents.ecs_integrated.download.main import DownloadAgent
 
         agent_classes = {
             AgentType.NL_INPUT: NLInputAgent,
