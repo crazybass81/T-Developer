@@ -4,7 +4,8 @@ from typing import Dict, Any, Optional, List, Callable
 from dataclasses import dataclass
 from enum import Enum
 import json
-from .communication import AgentMessage, MessageType
+from ..core.base_agent import AgentMessage
+from .communication_manager import MessageType
 
 try:
     import aioredis

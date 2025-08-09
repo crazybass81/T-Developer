@@ -17,13 +17,20 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult, AgentStatus
 
 # Module imports
-from .modules.framework_selector import FrameworkSelector
-from .modules.component_library_matcher import ComponentLibraryMatcher
-from .modules.design_system_analyzer import DesignSystemAnalyzer
-from .modules.responsive_strategy import ResponsiveStrategy
-from .modules.accessibility_checker import AccessibilityChecker
-from .modules.performance_optimizer import PerformanceOptimizer
-from .modules.theme_generator import ThemeGenerator
+# from .modules.framework_selector import FrameworkSelector  # 임시로 비활성화
+FrameworkSelector = None  # 임시 스텁
+# from .modules.component_library_matcher import ComponentLibraryMatcher  # 임시로 비활성화
+ComponentLibraryMatcher = None  # 임시 스텁
+# from .modules.design_system_analyzer import DesignSystemAnalyzer  # 임시로 비활성화
+DesignSystemAnalyzer = None  # 임시 스텁
+# from .modules.responsive_strategy import ResponsiveStrategy  # 임시로 비활성화
+ResponsiveStrategy = None  # 임시 스텁
+# from .modules.accessibility_checker import AccessibilityChecker  # 임시로 비활성화
+AccessibilityChecker = None  # 임시 스텁
+# from .modules.performance_optimizer import PerformanceOptimizer  # 임시로 비활성화
+PerformanceOptimizer = None  # 임시 스텁
+# from .modules.theme_generator import ThemeGenerator  # 임시로 비활성화
+ThemeGenerator = None  # 임시 스텁
 
 @dataclass
 class UISelectionResult:
@@ -71,13 +78,13 @@ class UISelectionAgent(BaseAgent):
         super().__init__(config)
         
         # Initialize modules
-        self.framework_selector = FrameworkSelector()
-        self.component_matcher = ComponentLibraryMatcher()
-        self.design_analyzer = DesignSystemAnalyzer()
-        self.responsive_strategy = ResponsiveStrategy()
-        self.accessibility_checker = AccessibilityChecker()
-        self.performance_optimizer = PerformanceOptimizer()
-        self.theme_generator = ThemeGenerator()
+        self.framework_selector = FrameworkSelector() if FrameworkSelector else None
+        self.component_matcher = ComponentLibraryMatcher() if ComponentLibraryMatcher else None
+        self.design_analyzer = DesignSystemAnalyzer() if DesignSystemAnalyzer else None
+        self.responsive_strategy = ResponsiveStrategy() if ResponsiveStrategy else None
+        self.accessibility_checker = AccessibilityChecker() if AccessibilityChecker else None
+        self.performance_optimizer = PerformanceOptimizer() if PerformanceOptimizer else None
+        self.theme_generator = ThemeGenerator() if ThemeGenerator else None
     
     async def initialize(self) -> bool:
         """Initialize agent and its modules"""

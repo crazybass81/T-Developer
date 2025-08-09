@@ -1,10 +1,11 @@
 """
-T-Developer MVP - Main Application Entry Point
+T-Developer MVP - Basic Entry Point (Skeleton)
 
-FastAPI application for T-Developer backend
+⚠️  이 파일은 기본 스켈레톤입니다.
+🚀 실제 프로덕션 API는 src/main_api.py를 사용하세요!
 
-Author: T-Developer Team
-Created: 2024-12
+Features: 기본 health check만 제공
+Production API: src/main_api.py (9-Agent Pipeline, Bedrock 통합)
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

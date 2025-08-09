@@ -1,6 +1,46 @@
 version: '3.8'
 
 services:
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile  # Use Dockerfile.production for production
+    container_name: t-developer-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - AWS_REGION=us-east-1
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - dynamodb
+      - redis
+    volumes:
+      - "./backend:/app"
+    networks:
+      - t-developer-network
+
+  # Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    container_name: t-developer-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - "./frontend:/app"
+    networks:
+      - t-developer-network
+
   # PostgreSQL
   postgres:
     image: postgres:15-alpine
@@ -26,8 +66,27 @@ services:
     image: amazon/dynamodb-local:latest
     container_name: t-developer-dynamodb
     ports:
-      - "8000:8000"
+      - "8001:8000"  # Changed port to avoid conflict with backend
     command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+    networks:
+      - t-developer-network
+
+  # DynamoDB Admin
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    container_name: t-developer-dynamodb-admin
+    ports:
+      - "8002:8001"
+    environment:
+      DYNAMO_ENDPOINT: "http://dynamodb:8000"
+      AWS_REGION: "us-east-1"
+      AWS_ACCESS_KEY_ID: "local"
+      AWS_SECRET_ACCESS_KEY: "local"
+    depends_on:
+      - dynamodb
     networks:
       - t-developer-network
 
@@ -40,6 +99,20 @@ services:
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-devpassword}
     volumes:
       - redis-data:/data
+    networks:
+      - t-developer-network
+
+  # Redis Commander (Redis UI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: t-developer-redis-ui
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: "local:redis:6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-devpassword}
+    depends_on:
+      - redis
     networks:
       - t-developer-network
 

@@ -17,11 +17,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult, AgentStatus
 
 # Module imports
-from .modules.project_structurer import ProjectStructurer
-from .modules.dependency_installer import DependencyInstaller
-from .modules.config_merger import ConfigMerger
-from .modules.build_optimizer import BuildOptimizer
-from .modules.validation_runner import ValidationRunner
+# from .modules.project_structurer import ProjectStructurer  # 임시로 비활성화
+ProjectStructurer = None  # 임시 스텁
+# from .modules.dependency_installer import DependencyInstaller  # 임시로 비활성화
+DependencyInstaller = None  # 임시 스텁
+# from .modules.config_merger import ConfigMerger  # 임시로 비활성화
+ConfigMerger = None  # 임시 스텁
+# from .modules.build_optimizer import BuildOptimizer  # 임시로 비활성화
+BuildOptimizer = None  # 임시 스텁
+# from .modules.validation_runner import ValidationRunner  # 임시로 비활성화
+ValidationRunner = None  # 임시 스텁
 
 @dataclass
 class AssemblyAgentResult:
@@ -55,11 +60,11 @@ class AssemblyAgent(BaseAgent):
         super().__init__(config)
         
         # Initialize modules
-        self.project_structurer = ProjectStructurer()
-        self.dependency_installer = DependencyInstaller()
-        self.config_merger = ConfigMerger()
-        self.build_optimizer = BuildOptimizer()
-        self.validation_runner = ValidationRunner()
+        self.project_structurer = ProjectStructurer() if ProjectStructurer else None
+        self.dependency_installer = DependencyInstaller() if DependencyInstaller else None
+        self.config_merger = ConfigMerger() if ConfigMerger else None
+        self.build_optimizer = BuildOptimizer() if BuildOptimizer else None
+        self.validation_runner = ValidationRunner() if ValidationRunner else None
     
     async def initialize(self) -> bool:
         """Initialize agent and its modules"""

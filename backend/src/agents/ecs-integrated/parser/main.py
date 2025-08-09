@@ -17,11 +17,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult, AgentStatus
 
 # Module imports
-from .modules.syntax_analyzer import SyntaxAnalyzer
-from .modules.structure_extractor import StructureExtractor
-from .modules.dependency_resolver import DependencyResolver
-from .modules.code_generator_config import CodeGeneratorConfig
-from .modules.validation_engine import ValidationEngine
+# from .modules.syntax_analyzer import SyntaxAnalyzer  # 임시로 비활성화
+SyntaxAnalyzer = None  # 임시 스텁
+# from .modules.structure_extractor import StructureExtractor  # 임시로 비활성화
+StructureExtractor = None  # 임시 스텁
+# from .modules.dependency_resolver import DependencyResolver  # 임시로 비활성화
+DependencyResolver = None  # 임시 스텁
+# from .modules.code_generator_config import CodeGeneratorConfig  # 임시로 비활성화
+CodeGeneratorConfig = None  # 임시 스텁
+# from .modules.validation_engine import ValidationEngine  # 임시로 비활성화
+ValidationEngine = None  # 임시 스텁
 
 @dataclass
 class ParserAgentResult:
@@ -55,11 +60,11 @@ class ParserAgent(BaseAgent):
         super().__init__(config)
         
         # Initialize modules
-        self.syntax_analyzer = SyntaxAnalyzer()
-        self.structure_extractor = StructureExtractor()
-        self.dependency_resolver = DependencyResolver()
-        self.code_generator_config = CodeGeneratorConfig()
-        self.validation_engine = ValidationEngine()
+        self.syntax_analyzer = SyntaxAnalyzer() if SyntaxAnalyzer else None
+        self.structure_extractor = StructureExtractor() if StructureExtractor else None
+        self.dependency_resolver = DependencyResolver() if DependencyResolver else None
+        self.code_generator_config = CodeGeneratorConfig() if CodeGeneratorConfig else None
+        self.validation_engine = ValidationEngine() if ValidationEngine else None
     
     async def initialize(self) -> bool:
         """Initialize agent and its modules"""

@@ -17,11 +17,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult, AgentStatus
 
 # Module imports
-from .modules.component_analyzer import ComponentAnalyzer
-from .modules.architecture_selector import ArchitectureSelector
-from .modules.dependency_manager import DependencyManager
-from .modules.integration_planner import IntegrationPlanner
-from .modules.optimization_advisor import OptimizationAdvisor
+# from .modules.component_analyzer import ComponentAnalyzer  # 임시로 비활성화
+ComponentAnalyzer = None  # 임시 스텁
+# from .modules.architecture_selector import ArchitectureSelector  # 임시로 비활성화
+ArchitectureSelector = None  # 임시 스텁
+# from .modules.dependency_manager import DependencyManager  # 임시로 비활성화
+DependencyManager = None  # 임시 스텁
+# from .modules.integration_planner import IntegrationPlanner  # 임시로 비활성화
+IntegrationPlanner = None  # 임시 스텁
+# from .modules.optimization_advisor import OptimizationAdvisor  # 임시로 비활성화
+OptimizationAdvisor = None  # 임시 스텁
 
 @dataclass
 class ComponentDecisionAgentResult:
@@ -55,11 +60,11 @@ class ComponentDecisionAgent(BaseAgent):
         super().__init__(config)
         
         # Initialize modules
-        self.component_analyzer = ComponentAnalyzer()
-        self.architecture_selector = ArchitectureSelector()
-        self.dependency_manager = DependencyManager()
-        self.integration_planner = IntegrationPlanner()
-        self.optimization_advisor = OptimizationAdvisor()
+        self.component_analyzer = ComponentAnalyzer() if ComponentAnalyzer else None
+        self.architecture_selector = ArchitectureSelector() if ArchitectureSelector else None
+        self.dependency_manager = DependencyManager() if DependencyManager else None
+        self.integration_planner = IntegrationPlanner() if IntegrationPlanner else None
+        self.optimization_advisor = OptimizationAdvisor() if OptimizationAdvisor else None
     
     async def initialize(self) -> bool:
         """Initialize agent and its modules"""

@@ -17,11 +17,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult, AgentStatus
 
 # Module imports
-from .modules.code_generator import CodeGenerator
-from .modules.config_generator import ConfigGenerator
-from .modules.test_generator import TestGenerator
-from .modules.documentation_generator import DocumentationGenerator
-from .modules.deployment_generator import DeploymentGenerator
+# from .modules.code_generator import CodeGenerator  # 임시로 비활성화
+CodeGenerator = None  # 임시 스텁
+# from .modules.config_generator import ConfigGenerator  # 임시로 비활성화
+ConfigGenerator = None  # 임시 스텁
+# from .modules.test_generator import TestGenerator  # 임시로 비활성화
+TestGenerator = None  # 임시 스텁
+# from .modules.documentation_generator import DocumentationGenerator  # 임시로 비활성화
+DocumentationGenerator = None  # 임시 스텁
+# from .modules.deployment_generator import DeploymentGenerator  # 임시로 비활성화
+DeploymentGenerator = None  # 임시 스텁
 
 @dataclass
 class GenerationAgentResult:
@@ -55,11 +60,11 @@ class GenerationAgent(BaseAgent):
         super().__init__(config)
         
         # Initialize modules
-        self.code_generator = CodeGenerator()
-        self.config_generator = ConfigGenerator()
-        self.test_generator = TestGenerator()
-        self.documentation_generator = DocumentationGenerator()
-        self.deployment_generator = DeploymentGenerator()
+        self.code_generator = CodeGenerator() if CodeGenerator else None
+        self.config_generator = ConfigGenerator() if ConfigGenerator else None
+        self.test_generator = TestGenerator() if TestGenerator else None
+        self.documentation_generator = DocumentationGenerator() if DocumentationGenerator else None
+        self.deployment_generator = DeploymentGenerator() if DeploymentGenerator else None
     
     async def initialize(self) -> bool:
         """Initialize agent and its modules"""

@@ -2,16 +2,37 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# uv 설치
+# Install system dependencies including curl for health checks
+RUN apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for faster dependency management
 RUN pip install uv
 
-# 의존성 복사 및 설치
+# Copy requirements and install Python dependencies using uv
 COPY backend/requirements.txt .
-RUN uv pip install -r requirements.txt
+RUN uv pip install --system -r requirements.txt
 
-# 소스 코드 복사
-COPY backend/ .
+# Copy application code
+COPY backend/src/ ./src/
 
+# Create basic environment file
+RUN echo "ENVIRONMENT=development" > .env && \
+    echo "AWS_REGION=us-east-1" >> .env
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /app
+USER app
+
+# Expose port
 EXPOSE 8000
 
-CMD ["python", "main.py"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the application
+CMD ["python", "src/main_api.py"]

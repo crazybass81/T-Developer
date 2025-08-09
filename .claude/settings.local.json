@@ -140,7 +140,9 @@
       "Bash(config_schema.py dependency_manager.py deployment_scaling.py )",
       "Bash(initialization.py lifecycle_events.py parallel_coordinator.py )",
       "Bash(state_store.py sync_async_layer.py termination.py )",
-      "Bash(version_manager.py workflow_engine.py extras/)"
+      "Bash(version_manager.py workflow_engine.py extras/)",
+      "Bash(docker system:*)",
+      "Bash(docker build:*)"
     ],
     "deny": []
   }

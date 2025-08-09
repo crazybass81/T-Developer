@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 import uuid
 from datetime import datetime
-from .base_agent import AgentMessage
+from ..core.base_agent import AgentMessage
 
 logger = logging.getLogger(__name__)
 

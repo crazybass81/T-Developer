@@ -17,11 +17,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult, AgentStatus
 
 # Module imports
-from .modules.similarity_calculator import SimilarityCalculator
-from .modules.feature_matcher import FeatureMatcher
-from .modules.gap_analyzer import GapAnalyzer
-from .modules.confidence_scorer import ConfidenceScorer
-from .modules.recommendation_engine import RecommendationEngine
+# from .modules.similarity_calculator import SimilarityCalculator  # 임시로 비활성화
+SimilarityCalculator = None  # 임시 스텁
+# from .modules.feature_matcher import FeatureMatcher  # 임시로 비활성화
+FeatureMatcher = None  # 임시 스텁
+# from .modules.gap_analyzer import GapAnalyzer  # 임시로 비활성화
+GapAnalyzer = None  # 임시 스텁
+# from .modules.confidence_scorer import ConfidenceScorer  # 임시로 비활성화
+ConfidenceScorer = None  # 임시 스텁
+# from .modules.recommendation_engine import RecommendationEngine  # 임시로 비활성화
+RecommendationEngine = None  # 임시 스텁
 
 @dataclass
 class MatchRateAgentResult:
@@ -55,11 +60,11 @@ class MatchRateAgent(BaseAgent):
         super().__init__(config)
         
         # Initialize modules
-        self.similarity_calculator = SimilarityCalculator()
-        self.feature_matcher = FeatureMatcher()
-        self.gap_analyzer = GapAnalyzer()
-        self.confidence_scorer = ConfidenceScorer()
-        self.recommendation_engine = RecommendationEngine()
+        self.similarity_calculator = SimilarityCalculator() if SimilarityCalculator else None
+        self.feature_matcher = FeatureMatcher() if FeatureMatcher else None
+        self.gap_analyzer = GapAnalyzer() if GapAnalyzer else None
+        self.confidence_scorer = ConfidenceScorer() if ConfidenceScorer else None
+        self.recommendation_engine = RecommendationEngine() if RecommendationEngine else None
     
     async def initialize(self) -> bool:
         """Initialize agent and its modules"""

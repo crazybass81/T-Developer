@@ -17,11 +17,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult, AgentStatus
 
 # Module imports
-from .modules.code_searcher import CodeSearcher
-from .modules.library_finder import LibraryFinder
-from .modules.solution_matcher import SolutionMatcher
-from .modules.api_explorer import ApiExplorer
-from .modules.documentation_finder import DocumentationFinder
+# from .modules.code_searcher import CodeSearcher  # 임시로 비활성화
+CodeSearcher = None  # 임시 스텁
+# from .modules.library_finder import LibraryFinder  # 임시로 비활성화
+LibraryFinder = None  # 임시 스텁
+# from .modules.solution_matcher import SolutionMatcher  # 임시로 비활성화
+SolutionMatcher = None  # 임시 스텁
+# from .modules.api_explorer import ApiExplorer  # 임시로 비활성화
+ApiExplorer = None  # 임시 스텁
+# from .modules.documentation_finder import DocumentationFinder  # 임시로 비활성화
+DocumentationFinder = None  # 임시 스텁
 
 @dataclass
 class SearchAgentResult:
@@ -55,11 +60,11 @@ class SearchAgent(BaseAgent):
         super().__init__(config)
         
         # Initialize modules
-        self.code_searcher = CodeSearcher()
-        self.library_finder = LibraryFinder()
-        self.solution_matcher = SolutionMatcher()
-        self.api_explorer = ApiExplorer()
-        self.documentation_finder = DocumentationFinder()
+        self.code_searcher = CodeSearcher() if CodeSearcher else None
+        self.library_finder = LibraryFinder() if LibraryFinder else None
+        self.solution_matcher = SolutionMatcher() if SolutionMatcher else None
+        self.api_explorer = ApiExplorer() if ApiExplorer else None
+        self.documentation_finder = DocumentationFinder() if DocumentationFinder else None
     
     async def initialize(self) -> bool:
         """Initialize agent and its modules"""

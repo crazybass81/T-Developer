@@ -17,11 +17,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult, AgentStatus
 
 # Module imports
-from .modules.project_packager import ProjectPackager
-from .modules.compression_engine import CompressionEngine
-from .modules.metadata_generator import MetadataGenerator
-from .modules.readme_creator import ReadmeCreator
-from .modules.deployment_preparer import DeploymentPreparer
+# from .modules.project_packager import ProjectPackager  # 임시로 비활성화
+ProjectPackager = None  # 임시 스텁
+# from .modules.compression_engine import CompressionEngine  # 임시로 비활성화
+CompressionEngine = None  # 임시 스텁
+# from .modules.metadata_generator import MetadataGenerator  # 임시로 비활성화
+MetadataGenerator = None  # 임시 스텁
+# from .modules.readme_creator import ReadmeCreator  # 임시로 비활성화
+ReadmeCreator = None  # 임시 스텁
+# from .modules.deployment_preparer import DeploymentPreparer  # 임시로 비활성화
+DeploymentPreparer = None  # 임시 스텁
 
 @dataclass
 class DownloadAgentResult:
@@ -55,11 +60,11 @@ class DownloadAgent(BaseAgent):
         super().__init__(config)
         
         # Initialize modules
-        self.project_packager = ProjectPackager()
-        self.compression_engine = CompressionEngine()
-        self.metadata_generator = MetadataGenerator()
-        self.readme_creator = ReadmeCreator()
-        self.deployment_preparer = DeploymentPreparer()
+        self.project_packager = ProjectPackager() if ProjectPackager else None
+        self.compression_engine = CompressionEngine() if CompressionEngine else None
+        self.metadata_generator = MetadataGenerator() if MetadataGenerator else None
+        self.readme_creator = ReadmeCreator() if ReadmeCreator else None
+        self.deployment_preparer = DeploymentPreparer() if DeploymentPreparer else None
     
     async def initialize(self) -> bool:
         """Initialize agent and its modules"""

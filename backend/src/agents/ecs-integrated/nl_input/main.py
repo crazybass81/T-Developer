@@ -18,17 +18,56 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult
 
-# Import modules
-from .modules.context_enhancer import ContextEnhancer
-from .modules.requirement_validator import RequirementValidator
-from .modules.project_type_classifier import ProjectTypeClassifier
-from .modules.tech_stack_analyzer import TechStackAnalyzer
-from .modules.requirement_extractor import RequirementExtractor
-from .modules.entity_recognizer import EntityRecognizer
-from .modules.multilingual_processor import MultilingualProcessor
-from .modules.intent_analyzer import IntentAnalyzer
-from .modules.ambiguity_resolver import AmbiguityResolver
-from .modules.template_matcher import TemplateMatcher
+# Import modules - 절대 임포트로 변경
+import importlib.util
+import sys
+from pathlib import Path
+
+def safe_import_module(module_name, file_path):
+    """안전한 모듈 임포트"""
+    try:
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+            return module
+    except Exception as e:
+        print(f"Failed to import {module_name}: {e}")
+        return None
+
+# 모듈들을 절대 경로로 임포트
+modules_path = Path(__file__).parent / "modules"
+
+context_enhancer_mod = safe_import_module("context_enhancer", modules_path / "context_enhancer.py")
+ContextEnhancer = getattr(context_enhancer_mod, "ContextEnhancer", None) if context_enhancer_mod else None
+
+requirement_validator_mod = safe_import_module("requirement_validator", modules_path / "requirement_validator.py")
+RequirementValidator = getattr(requirement_validator_mod, "RequirementValidator", None) if requirement_validator_mod else None
+
+project_type_classifier_mod = safe_import_module("project_type_classifier", modules_path / "project_type_classifier.py")
+ProjectTypeClassifier = getattr(project_type_classifier_mod, "ProjectTypeClassifier", None) if project_type_classifier_mod else None
+
+tech_stack_analyzer_mod = safe_import_module("tech_stack_analyzer", modules_path / "tech_stack_analyzer.py")
+TechStackAnalyzer = getattr(tech_stack_analyzer_mod, "TechStackAnalyzer", None) if tech_stack_analyzer_mod else None
+
+requirement_extractor_mod = safe_import_module("requirement_extractor", modules_path / "requirement_extractor.py")
+RequirementExtractor = getattr(requirement_extractor_mod, "RequirementExtractor", None) if requirement_extractor_mod else None
+
+entity_recognizer_mod = safe_import_module("entity_recognizer", modules_path / "entity_recognizer.py")
+EntityRecognizer = getattr(entity_recognizer_mod, "EntityRecognizer", None) if entity_recognizer_mod else None
+
+multilingual_processor_mod = safe_import_module("multilingual_processor", modules_path / "multilingual_processor.py")
+MultilingualProcessor = getattr(multilingual_processor_mod, "MultilingualProcessor", None) if multilingual_processor_mod else None
+
+intent_analyzer_mod = safe_import_module("intent_analyzer", modules_path / "intent_analyzer.py")
+IntentAnalyzer = getattr(intent_analyzer_mod, "IntentAnalyzer", None) if intent_analyzer_mod else None
+
+ambiguity_resolver_mod = safe_import_module("ambiguity_resolver", modules_path / "ambiguity_resolver.py")
+AmbiguityResolver = getattr(ambiguity_resolver_mod, "AmbiguityResolver", None) if ambiguity_resolver_mod else None
+
+template_matcher_mod = safe_import_module("template_matcher", modules_path / "template_matcher.py")
+TemplateMatcher = getattr(template_matcher_mod, "TemplateMatcher", None) if template_matcher_mod else None
 
 # AI Provider Support
 try:
@@ -80,17 +119,17 @@ class NLInputAgent(BaseAgent):
         )
         super().__init__(config)
         
-        # Initialize modules
-        self.context_enhancer = ContextEnhancer()
-        self.requirement_validator = RequirementValidator()
-        self.project_classifier = ProjectTypeClassifier()
-        self.tech_analyzer = TechStackAnalyzer()
-        self.requirement_extractor = RequirementExtractor()
-        self.entity_recognizer = EntityRecognizer()
-        self.multilingual_processor = MultilingualProcessor()
-        self.intent_analyzer = IntentAnalyzer()
-        self.ambiguity_resolver = AmbiguityResolver()
-        self.template_matcher = TemplateMatcher()
+        # Initialize modules with None check
+        self.context_enhancer = ContextEnhancer() if ContextEnhancer else None
+        self.requirement_validator = RequirementValidator() if RequirementValidator else None
+        self.project_classifier = ProjectTypeClassifier() if ProjectTypeClassifier else None
+        self.tech_analyzer = TechStackAnalyzer() if TechStackAnalyzer else None
+        self.requirement_extractor = RequirementExtractor() if RequirementExtractor else None
+        self.entity_recognizer = EntityRecognizer() if EntityRecognizer else None
+        self.multilingual_processor = MultilingualProcessor() if MultilingualProcessor else None
+        self.intent_analyzer = IntentAnalyzer() if IntentAnalyzer else None
+        self.ambiguity_resolver = AmbiguityResolver() if AmbiguityResolver else None
+        self.template_matcher = TemplateMatcher() if TemplateMatcher else None
         
         # AI clients
         self.anthropic_client: Optional[AsyncAnthropic] = None
