@@ -42,7 +42,7 @@ class PipelineStage(Enum):
     """파이프라인 단계"""
     NL_INPUT = "nl_input"
     UI_SELECTION = "ui_selection"
-    PARSING = "parsing"
+    PARSER = "parser"
     COMPONENT_DECISION = "component_decision"
     MATCH_RATE = "match_rate"
     SEARCH = "search"
@@ -137,7 +137,7 @@ class AgentSquadOrchestrator:
         self.agents = {
             PipelineStage.NL_INPUT: NLInputAgent(self.environment),
             PipelineStage.UI_SELECTION: UISelectionAgent(self.environment),
-            PipelineStage.PARSING: ParserAgent(self.environment),
+            PipelineStage.PARSER: ParserAgent(self.environment),
             PipelineStage.COMPONENT_DECISION: ComponentDecisionAgent(self.environment),
             PipelineStage.MATCH_RATE: MatchRateAgent(self.environment),
             PipelineStage.SEARCH: SearchAgent(self.environment),
@@ -247,9 +247,9 @@ class AgentSquadOrchestrator:
         context.intermediate_results['ui_selection'] = ui_result
         
         # 3. Parsing
-        context.current_stage = PipelineStage.PARSING
+        context.current_stage = PipelineStage.PARSER
         parsed_result = await self._execute_stage(
-            PipelineStage.PARSING,
+            PipelineStage.PARSER,
             {
                 'input_data': nl_result,
                 'ui_selection': ui_result
@@ -396,7 +396,7 @@ class AgentSquadOrchestrator:
                     )
                     result = result.to_dict() if hasattr(result, 'to_dict') else asdict(result)
                     
-                elif stage == PipelineStage.PARSING:
+                elif stage == PipelineStage.PARSER:
                     result = await agent.parse_project(
                         input_data['input_data']
                     )

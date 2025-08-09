@@ -10,9 +10,9 @@ class AgentType(Enum):
     """T-Developer 9개 핵심 에이전트 타입"""
     NL_INPUT = 'nl-input'
     UI_SELECTION = 'ui-selection'
-    PARSING = 'parsing'
+    PARSER = 'parser'
     COMPONENT_DECISION = 'component-decision'
-    MATCHING_RATE = 'matching-rate'
+    MATCH_RATE = 'match-rate'
     SEARCH = 'search'
     GENERATION = 'generation'
     ASSEMBLY = 'assembly'
@@ -48,8 +48,8 @@ AGENT_SPECIFICATIONS: Dict[AgentType, AgentSpec] = {
         dependencies=[AgentType.NL_INPUT]
     ),
     
-    AgentType.PARSING: AgentSpec(
-        type=AgentType.PARSING,
+    AgentType.PARSER: AgentSpec(
+        type=AgentType.PARSER,
         name='Code Parsing Agent',
         description='Parses and analyzes existing codebases',
         inputs=['codebase_url', 'repository_info'],
@@ -63,11 +63,11 @@ AGENT_SPECIFICATIONS: Dict[AgentType, AgentSpec] = {
         description='Makes architectural decisions about component selection',
         inputs=['requirements', 'available_components', 'constraints'],
         outputs=['component_decisions', 'architecture_plan'],
-        dependencies=[AgentType.UI_SELECTION, AgentType.PARSING]
+        dependencies=[AgentType.UI_SELECTION, AgentType.PARSER]
     ),
     
-    AgentType.MATCHING_RATE: AgentSpec(
-        type=AgentType.MATCHING_RATE,
+    AgentType.MATCH_RATE: AgentSpec(
+        type=AgentType.MATCH_RATE,
         name='Matching Rate Calculator Agent',
         description='Calculates compatibility scores between requirements and components',
         inputs=['requirements', 'components', 'criteria'],
@@ -81,7 +81,7 @@ AGENT_SPECIFICATIONS: Dict[AgentType, AgentSpec] = {
         description='Searches for components across multiple registries',
         inputs=['search_criteria', 'registries', 'filters'],
         outputs=['found_components', 'search_results'],
-        dependencies=[AgentType.MATCHING_RATE]
+        dependencies=[AgentType.MATCH_RATE]
     ),
     
     AgentType.GENERATION: AgentSpec(
@@ -121,9 +121,9 @@ def get_execution_order() -> List[AgentType]:
     return [
         AgentType.NL_INPUT,
         AgentType.UI_SELECTION,
-        AgentType.PARSING,
+        AgentType.PARSER,
         AgentType.COMPONENT_DECISION,
-        AgentType.MATCHING_RATE,
+        AgentType.MATCH_RATE,
         AgentType.SEARCH,
         AgentType.GENERATION,
         AgentType.ASSEMBLY,
