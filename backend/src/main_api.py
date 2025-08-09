@@ -10,14 +10,14 @@ Features:
 - Project Preview & Download Functionality
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 import logging
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Set
 import os
 import sys
 import json
@@ -70,6 +70,63 @@ try:
 except ImportError as e:
     BEDROCK_AVAILABLE = False
     logger.warning(f"Bedrock AgentCore not available: {e}")
+
+# WebSocket Connection Manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, Set[WebSocket]] = {}
+        
+    async def connect(self, websocket: WebSocket, project_id: str):
+        await websocket.accept()
+        if project_id not in self.active_connections:
+            self.active_connections[project_id] = set()
+        self.active_connections[project_id].add(websocket)
+        
+    def disconnect(self, websocket: WebSocket, project_id: str):
+        if project_id in self.active_connections:
+            self.active_connections[project_id].discard(websocket)
+            if not self.active_connections[project_id]:
+                del self.active_connections[project_id]
+                
+    async def send_log(self, project_id: str, message: str, level: str = "info"):
+        if project_id in self.active_connections:
+            log_data = {
+                "type": "log",
+                "timestamp": datetime.now().isoformat(),
+                "message": message,
+                "level": level
+            }
+            disconnected = set()
+            for connection in self.active_connections[project_id]:
+                try:
+                    await connection.send_json(log_data)
+                except:
+                    disconnected.add(connection)
+            # Remove disconnected websockets
+            for conn in disconnected:
+                self.active_connections[project_id].discard(conn)
+                
+    async def send_progress(self, project_id: str, agent_id: int, progress: int, status: str):
+        if project_id in self.active_connections:
+            progress_data = {
+                "type": "progress",
+                "agent_id": agent_id,
+                "progress": progress,
+                "status": status,
+                "timestamp": datetime.now().isoformat()
+            }
+            disconnected = set()
+            for connection in self.active_connections[project_id]:
+                try:
+                    await connection.send_json(progress_data)
+                except:
+                    disconnected.add(connection)
+            # Remove disconnected websockets
+            for conn in disconnected:
+                self.active_connections[project_id].discard(conn)
+
+# Create connection manager instance
+ws_manager = ConnectionManager()
 
 app = FastAPI(
     title="T-Developer MVP API",
@@ -619,6 +676,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
     
     try:
         logger.info(f"Starting project generation: {project_id}")
+        await ws_manager.send_log(project_id, f"프로젝트 생성 시작: {project_id}", "info")
         
         # 기존 API 호환성 처리
         user_input = request.idea or request.user_input or request.description
@@ -648,6 +706,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
             )
         
         logger.info(f"Validation passed for project: {project_id}")
+        await ws_manager.send_log(project_id, "입력 검증 완료", "success")
         
         # Initialize variables for both paths
         enhanced_features = features
@@ -662,6 +721,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
         if ECS_PIPELINE_AVAILABLE:
             try:
                 logger.info("Using ECS Pipeline for project generation")
+                await ws_manager.send_log(project_id, "ECS Pipeline 시작", "info")
                 
                 # ECS Pipeline 실행
                 pipeline_result = await ecs_pipeline.execute(
@@ -715,6 +775,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                     
             except Exception as e:
                 logger.error(f"ECS Pipeline error: {e}, falling back to template generation")
+                await ws_manager.send_log(project_id, f"ECS Pipeline 오류, 템플릿 모드로 전환", "warning")
                 project_path = await generate_real_project(
                     project_id=project_id,
                     project_name=project_name,
@@ -772,6 +833,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
             )
         
         logger.info(f"Project generated at: {project_path}")
+        await ws_manager.send_log(project_id, "프로젝트 파일 생성 완료", "success")
         
         # 3. 프로젝트 검증
         if not project_path.exists():
@@ -790,6 +852,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
             )
         
         logger.info(f"ZIP created: {zip_path}")
+        await ws_manager.send_log(project_id, "ZIP 파일 생성 완료", "success")
         
         # 5. 백그라운드에서 임시 파일 정리
         background_tasks.add_task(cleanup_temp_files, project_path)
@@ -799,6 +862,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
         zip_size_mb = round(zip_path.stat().st_size / (1024 * 1024), 2)
         
         logger.info(f"Project generation completed: {project_id}")
+        await ws_manager.send_log(project_id, "프로젝트 생성이 성공적으로 완료되었습니다!", "success")
         
         response_data = {
             "success": True,
@@ -1156,6 +1220,32 @@ async def shutdown_event():
             logger.error(f"Error cleaning up Bedrock sessions: {e}")
     
     logger.info("T-Developer API shutdown complete")
+
+@app.websocket("/ws/{project_id}")
+async def websocket_endpoint(websocket: WebSocket, project_id: str):
+    """WebSocket endpoint for real-time project generation updates"""
+    await ws_manager.connect(websocket, project_id)
+    try:
+        # Send initial connection message
+        await websocket.send_json({
+            "type": "connection",
+            "message": f"Connected to project {project_id}",
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Keep connection alive
+        while True:
+            # Wait for messages from client (ping/pong)
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+                
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, project_id)
+        logger.info(f"WebSocket disconnected for project {project_id}")
+    except Exception as e:
+        logger.error(f"WebSocket error for project {project_id}: {e}")
+        ws_manager.disconnect(websocket, project_id)
 
 if __name__ == "__main__":
     import uvicorn

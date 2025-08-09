@@ -153,16 +153,7 @@ export const useProjectStore = create<ProjectState>()(
           }).catch(() => null)
 
           if (!response || !response.ok) {
-            // Create mock project if API is not available
-            const mockProject: Project = {
-              id: `project-${Date.now()}`,
-              ...data,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            }
-            get().addProject(mockProject)
-            get().setCurrentProject(mockProject)
-            return
+            throw new Error('프로젝트 생성 실패: API 서버에 연결할 수 없습니다')
           }
 
           const project: Project = await response.json()
@@ -185,31 +176,7 @@ export const useProjectStore = create<ProjectState>()(
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/projects`)
           
           if (!response.ok) {
-            // Use mock data if API is not available
-            const mockProjects: Project[] = [
-              {
-                id: 'mock-1',
-                name: '샘플 할일 관리 앱',
-                description: 'AI로 생성된 할일 관리 애플리케이션',
-                status: 'completed',
-                framework: 'react',
-                userId: 'user-1',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-              {
-                id: 'mock-2',
-                name: '온라인 쇼핑몰',
-                description: '이커머스 플랫폼 프로젝트',
-                status: 'building',
-                framework: 'nextjs',
-                userId: 'user-1',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              },
-            ]
-            get().setProjects(mockProjects)
-            return
+            throw new Error('프로젝트 목록을 불러올 수 없습니다')
           }
 
           const projects: Project[] = await response.json()
@@ -281,25 +248,7 @@ export const useProjectStore = create<ProjectState>()(
               get().updateAgentStatus(i, { status: 'completed', progress: 100 })
             }
           } else {
-            // If API fails, use simulation
-            console.warn('Generation API not available, using mock pipeline')
-            
-            // Simulate pipeline progress for demo
-            let progress = 0
-            const interval = setInterval(() => {
-              progress += 10
-              if (progress >= 100) {
-                clearInterval(interval)
-                get().updateAgentStatus(9, { status: 'completed', progress: 100 })
-                get().updateProject(projectId, { status: 'completed' })
-              } else {
-                const agentIndex = Math.floor(progress / 11)
-                get().updateAgentStatus(agentIndex + 1, { status: 'processing', progress: 100 })
-                if (agentIndex > 0) {
-                  get().updateAgentStatus(agentIndex, { status: 'completed', progress: 100 })
-                }
-              }
-            }, 1000)
+            throw new Error('프로젝트 생성 실패: 서버 응답 오류')
           }
         } catch (error) {
           get().setError(error instanceof Error ? error.message : 'Unknown error')

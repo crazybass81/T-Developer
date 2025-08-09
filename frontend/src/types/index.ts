@@ -69,6 +69,11 @@ export interface AgentPipeline {
   startTime?: Date
   endTime?: Date
   totalProgress: number
+  logs?: Array<{
+    timestamp: string
+    message: string
+    level: string
+  }>
 }
 
 // WebSocket message types

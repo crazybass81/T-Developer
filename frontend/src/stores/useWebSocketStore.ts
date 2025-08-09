@@ -58,7 +58,7 @@ export const useWebSocketStore = create<WebSocketState>()(
         try {
           set({ status: 'connecting', error: null })
           
-          const wsUrl = projectId ? `${WS_URL}/ws/project/${projectId}` : `${WS_URL}/ws`
+          const wsUrl = projectId ? `${WS_URL}/ws/${projectId}` : `${WS_URL}/ws`
           const ws = new WebSocket(wsUrl)
 
           ws.onopen = () => {

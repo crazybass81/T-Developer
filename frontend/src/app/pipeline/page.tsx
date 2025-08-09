@@ -49,8 +49,27 @@ export default function PipelinePage() {
       // Connect to WebSocket for this specific project
       connect(projectId)
       
+      // Subscribe to log messages
+      const unsubscribeLogs = useWebSocketStore.getState().subscribe('log', (data) => {
+        const pipeline = useProjectStore.getState().pipeline
+        if (pipeline) {
+          const newLogs = [...(pipeline.logs || []), data]
+          useProjectStore.getState().setPipeline({ ...pipeline, logs: newLogs })
+        }
+      })
+      
+      // Subscribe to progress messages
+      const unsubscribeProgress = useWebSocketStore.getState().subscribe('progress', (data) => {
+        useProjectStore.getState().updateAgentStatus(data.agent_id, {
+          progress: data.progress,
+          status: data.status
+        })
+      })
+      
       return () => {
         disconnect()
+        unsubscribeLogs()
+        unsubscribeProgress()
       }
     }
   }, [projectId, connect, disconnect])
@@ -320,12 +339,8 @@ interface LogStreamProps {
 }
 
 function LogStream({ pipeline }: LogStreamProps) {
-  const logs = [
-    { timestamp: new Date(), message: '[INFO] 파이프라인 초기화 완료', level: 'info' },
-    { timestamp: new Date(), message: '[INFO] NL Input Agent 시작...', level: 'info' },
-    { timestamp: new Date(), message: '[SUCCESS] 자연어 처리 완료', level: 'success' },
-    { timestamp: new Date(), message: '[INFO] UI Selection Agent 실행 중...', level: 'info' },
-  ]
+  // Real logs should come from WebSocket or API
+  const logs = pipeline.logs || []
 
   const getLogColor = (level: string) => {
     switch (level) {
@@ -336,12 +351,20 @@ function LogStream({ pipeline }: LogStreamProps) {
     }
   }
 
+  if (logs.length === 0) {
+    return (
+      <div className="text-gray-500 text-xs">
+        실시간 로그를 기다리는 중...
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-1">
       {logs.map((log, index) => (
         <div key={index} className={`${getLogColor(log.level)} text-xs`}>
           <span className="text-gray-500">
-            {log.timestamp.toLocaleTimeString()}
+            {new Date(log.timestamp).toLocaleTimeString()}
           </span>
           {' '}
           {log.message}
@@ -359,11 +382,9 @@ interface CompletedResultsProps {
 }
 
 function CompletedResults({ project }: CompletedResultsProps) {
-  const results = [
-    { type: 'Source Code', size: '2.3 MB', status: 'ready' },
-    { type: 'Build Output', size: '890 KB', status: 'ready' },
-    { type: 'Documentation', size: '45 KB', status: 'ready' },
-    { type: 'Deployment', size: '-', status: project.deployUrl ? 'deployed' : 'pending' },
+  // Real results should come from API
+  const results = project.results || [
+    { type: 'Project Files', size: '-', status: 'ready' },
   ]
 
   return (
