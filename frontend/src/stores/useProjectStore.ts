@@ -236,38 +236,71 @@ export const useProjectStore = create<ProjectState>()(
           
           get().setPipeline(pipeline)
 
-          // Try to call API, but don't fail if it doesn't exist
-          try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/projects/${projectId}/generate`, {
-              method: 'POST',
-            }).catch(() => null)
-
-            if (!response || !response.ok) {
-              console.warn('Generation API not available, using mock pipeline')
-            }
-          } catch (apiError) {
-            console.warn('Generation API error:', apiError)
-          }
-
           // Update project status
           get().updateProject(projectId, { status: 'building' })
-          
-          // Simulate pipeline progress for demo
-          let progress = 0
-          const interval = setInterval(() => {
-            progress += 10
-            if (progress >= 100) {
-              clearInterval(interval)
-              get().updateAgentStatus(9, { status: 'completed', progress: 100 })
-              get().updateProject(projectId, { status: 'completed' })
-            } else {
-              const agentIndex = Math.floor(progress / 11)
-              get().updateAgentStatus(agentIndex + 1, { status: 'processing', progress: 100 })
-              if (agentIndex > 0) {
-                get().updateAgentStatus(agentIndex, { status: 'completed', progress: 100 })
-              }
+
+          // Call the actual generation API endpoint with the project data
+          const project = get().projects.find(p => p.id === projectId)
+          if (!project) {
+            throw new Error('Project not found')
+          }
+
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/generate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              name: project.name,
+              description: project.description,
+              framework: project.framework,
+              template: project.template || 'blank',
+              settings: project.settings || {},
+            }),
+          }).catch(() => null)
+
+          if (response && response.ok) {
+            const result = await response.json()
+            // Store the actual project ID from backend
+            get().updateProject(projectId, { 
+              status: 'completed',
+              downloadId: result.project_id,
+              downloadUrl: result.download_url,
+            })
+            
+            // Update pipeline to complete
+            get().setPipeline({
+              ...pipeline,
+              status: 'completed',
+              totalProgress: 100,
+              endTime: new Date(),
+            })
+            
+            // Update all agents to complete
+            for (let i = 1; i <= 9; i++) {
+              get().updateAgentStatus(i, { status: 'completed', progress: 100 })
             }
-          }, 1000)
+          } else {
+            // If API fails, use simulation
+            console.warn('Generation API not available, using mock pipeline')
+            
+            // Simulate pipeline progress for demo
+            let progress = 0
+            const interval = setInterval(() => {
+              progress += 10
+              if (progress >= 100) {
+                clearInterval(interval)
+                get().updateAgentStatus(9, { status: 'completed', progress: 100 })
+                get().updateProject(projectId, { status: 'completed' })
+              } else {
+                const agentIndex = Math.floor(progress / 11)
+                get().updateAgentStatus(agentIndex + 1, { status: 'processing', progress: 100 })
+                if (agentIndex > 0) {
+                  get().updateAgentStatus(agentIndex, { status: 'completed', progress: 100 })
+                }
+              }
+            }, 1000)
+          }
         } catch (error) {
           get().setError(error instanceof Error ? error.message : 'Unknown error')
           get().resetPipeline()

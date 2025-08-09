@@ -511,7 +511,7 @@ async def create_project_zip(project_path: Path, project_id: str) -> Path:
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for file_path in project_path.rglob('*'):
             if file_path.is_file():
-                arcname = file_path.relative_to(project_path.parent)
+                arcname = file_path.relative_to(project_path)
                 zipf.write(file_path, arcname)
     
     return zip_path
@@ -698,29 +698,29 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                         logger.warning("ECS Pipeline didn't generate code, falling back to template")
                         project_path = await generate_real_project(
                             project_id=project_id,
-                            project_name=request.project_name,
-                            project_type=request.project_type,
-                            description=request.user_input,
-                            features=request.features or []
+                            project_name=project_name,
+                            project_type=project_type,
+                            description=user_input,
+                            features=enhanced_features
                         )
                 else:
                     logger.warning(f"ECS Pipeline failed: {pipeline_result.errors}, falling back to template")
                     project_path = await generate_real_project(
                         project_id=project_id,
-                        project_name=request.project_name,
-                        project_type=request.project_type,
-                        description=request.user_input,
-                        features=request.features or []
+                        project_name=project_name,
+                        project_type=project_type,
+                        description=user_input,
+                        features=enhanced_features
                     )
                     
             except Exception as e:
                 logger.error(f"ECS Pipeline error: {e}, falling back to template generation")
                 project_path = await generate_real_project(
                     project_id=project_id,
-                    project_name=request.project_name,
-                    project_type=request.project_type,
-                    description=request.user_input,
-                    features=request.features or []
+                    project_name=project_name,
+                    project_type=project_type,
+                    description=user_input,
+                    features=enhanced_features
                 )
         else:
             # ECS Pipeline 사용 불가능 - 템플릿 기반 생성
@@ -728,10 +728,10 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
             
             # 1. Agent Pipeline 실행을 위한 데이터 준비
             pipeline_input = {
-                "query": request.user_input,
-                "project_name": request.project_name,
-                "project_type": request.project_type,
-                "features": request.features or []
+                "query": user_input,
+                "project_name": project_name,
+                "project_type": project_type,
+                "features": enhanced_features
             }
             
             logger.info(f"Pipeline input prepared: {pipeline_input}")
@@ -741,9 +741,9 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                 try:
                     logger.info("Enhancing pipeline with Bedrock AgentCore")
                     bedrock_enhancement = await bedrock_integration.enhance_pipeline_with_bedrock({
-                        "user_input": request.user_input,
-                        "project_type": request.project_type,
-                        "features": request.features,
+                        "user_input": user_input,
+                        "project_type": project_type,
+                        "features": features,
                         "user_id": f"user_{project_id}"
                     })
                     logger.info("Bedrock enhancement completed")
@@ -751,7 +751,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                     logger.warning(f"Bedrock enhancement failed, continuing with standard pipeline: {e}")
             
             # 2. 실제 프로젝트 생성 (Bedrock 강화된 정보 사용)
-            enhanced_project_name = request.project_name
+            enhanced_project_name = project_name
             
             # Bedrock에서 강화된 정보 추출
             if bedrock_enhancement and bedrock_enhancement.get("enhanced_steps"):
@@ -761,13 +761,13 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                         if parsed_response:
                             enhanced_features.extend(parsed_response.get("features", []))
                             if parsed_response.get("project_type"):
-                                request.project_type = parsed_response["project_type"]
+                                project_type = parsed_response["project_type"]
             
             project_path = await generate_real_project(
                 project_id=project_id,
                 project_name=enhanced_project_name,
-                project_type=request.project_type,
-                description=request.user_input,
+                project_type=project_type,
+                description=user_input,
                 features=enhanced_features
             )
         
@@ -805,7 +805,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
             "project_id": project_id,
             "download_url": f"/api/v1/download/{project_id}",
             "message": "프로젝트가 성공적으로 생성되었습니다",
-            "project_type": request.project_type,
+            "project_type": project_type,
             "features": enhanced_features,
             "stats": {
                 "file_count": file_count,

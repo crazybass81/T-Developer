@@ -257,8 +257,13 @@ function ProjectControls({ project, pipeline }: ProjectControlsProps) {
   }
 
   const handleDownload = () => {
-    // TODO: Implement download functionality
-    console.log('Download project')
+    // Get download URL from project
+    const downloadId = project.downloadId || project.id
+    const downloadUrl = project.downloadUrl || `/api/v1/download/${downloadId}`
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    
+    // Open download link
+    window.open(`${baseUrl}${downloadUrl}`, '_blank')
   }
 
   return (

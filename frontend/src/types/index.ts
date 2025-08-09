@@ -23,6 +23,8 @@ export interface Project extends BaseEntity {
   userId: string
   buildId?: string
   deployUrl?: string
+  downloadId?: string
+  downloadUrl?: string
   sourceCode?: string
   thumbnail?: string
   tags?: string[]
