@@ -142,7 +142,8 @@
       "Bash(state_store.py sync_async_layer.py termination.py )",
       "Bash(version_manager.py workflow_engine.py extras/)",
       "Bash(docker system:*)",
-      "Bash(docker build:*)"
+      "Bash(docker build:*)",
+      "Bash(npx create-next-app:*)"
     ],
     "deny": []
   }

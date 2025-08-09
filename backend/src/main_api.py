@@ -95,12 +95,34 @@ GENERATED_PATH = Path("generated")
 GENERATED_PATH.mkdir(exist_ok=True, parents=True)
 
 
-class ProjectRequest(BaseModel):
-    """프로젝트 생성 요청"""
-    user_input: str
-    project_name: Optional[str] = "untitled"
-    project_type: Optional[str] = "react"
+class ProjectSettings(BaseModel):
+    """프로젝트 설정"""
+    theme: Optional[str] = "light"
+    language: Optional[str] = "typescript"
+    cssFramework: Optional[str] = "tailwind"
+    buildTool: Optional[str] = "vite"
+    packageManager: Optional[str] = "npm"
     features: Optional[List[str]] = []
+
+class ProjectRequest(BaseModel):
+    """프로젝트 생성 요청 - 프론트엔드 호환"""
+    # 필수 필드
+    name: str
+    description: str
+    framework: str  # react, nextjs, vue, svelte
+    
+    # 선택 필드
+    idea: Optional[str] = None  # 자연어 프로젝트 설명
+    template: Optional[str] = "blank"  # blank, dashboard, ecommerce, blog, portfolio, todo
+    status: Optional[str] = "draft"
+    userId: Optional[str] = "user-1"
+    settings: Optional[ProjectSettings] = None
+    
+    # 기존 API 호환성을 위한 필드 (deprecated)
+    user_input: Optional[str] = None  # idea와 동일
+    project_name: Optional[str] = None  # name과 동일
+    project_type: Optional[str] = None  # framework와 동일
+    features: Optional[List[str]] = None  # settings.features와 동일
 
 class ErrorResponse(BaseModel):
     """에러 응답"""
@@ -504,6 +526,19 @@ async def cleanup_temp_files(project_path: Path):
         print(f"Error cleaning up {project_path}: {e}")
 
 
+def get_template_features(template: str) -> List[str]:
+    """템플릿별 기본 기능 반환"""
+    template_features = {
+        "blank": [],
+        "dashboard": ["Authentication", "Database Integration", "API Integration", "Dark Mode"],
+        "ecommerce": ["Authentication", "Database Integration", "Payment Integration", "Shopping Cart"],
+        "blog": ["Authentication", "Database Integration", "CMS", "SEO"],
+        "portfolio": ["Dark Mode", "Contact Form", "SEO", "Gallery"],
+        "todo": ["Database Integration", "Real-time Updates", "Drag and Drop"]
+    }
+    return template_features.get(template, [])
+
+
 @app.get("/")
 async def root():
     """API 루트"""
@@ -529,6 +564,51 @@ async def health_check():
     }
 
 
+# In-memory storage for projects (간단한 데모용)
+projects_store = []
+
+@app.get("/api/v1/projects")
+async def get_projects():
+    """모든 프로젝트 목록 조회"""
+    return projects_store
+
+@app.post("/api/v1/projects")
+async def create_project(project: dict):
+    """새 프로젝트 생성 및 저장"""
+    project_id = str(uuid.uuid4())
+    
+    # 프로젝트 데이터 정규화
+    new_project = {
+        "id": project_id,
+        "name": project.get("name", "새 프로젝트"),
+        "description": project.get("description", ""),
+        "framework": project.get("framework", "react"),
+        "template": project.get("template", "blank"),
+        "status": project.get("status", "draft"),
+        "userId": project.get("userId", "user-1"),
+        "settings": project.get("settings", {
+            "theme": "light",
+            "language": "typescript",
+            "cssFramework": "tailwind",
+            "buildTool": "vite",
+            "packageManager": "npm",
+            "features": []
+        }),
+        "createdAt": datetime.now().isoformat(),
+        "updatedAt": datetime.now().isoformat(),
+    }
+    
+    # 메모리에 저장
+    projects_store.append(new_project)
+    
+    # 프로젝트가 'building' 상태면 실제 생성 프로세스 시작
+    if new_project["status"] == "building":
+        # TODO: 백그라운드에서 실제 프로젝트 생성
+        pass
+    
+    return new_project
+
+
 @app.post("/api/v1/generate")
 async def generate_project(request: ProjectRequest, background_tasks: BackgroundTasks):
     """
@@ -540,22 +620,28 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
     try:
         logger.info(f"Starting project generation: {project_id}")
         
+        # 기존 API 호환성 처리
+        user_input = request.idea or request.user_input or request.description
+        project_name = request.name or request.project_name or "untitled"
+        project_type = request.framework or request.project_type or "react"
+        features = request.settings.features if request.settings else request.features or []
+        
         # 입력 검증
-        if not request.user_input.strip():
+        if not user_input or not user_input.strip():
             raise HTTPException(
                 status_code=400, 
                 detail="프로젝트 설명을 입력해주세요"
             )
         
-        if len(request.user_input) > 2000:
+        if len(user_input) > 2000:
             raise HTTPException(
                 status_code=400,
                 detail="프로젝트 설명이 너무 깁니다 (최대 2000자)"
             )
         
         # 지원되는 프로젝트 타입 확인
-        supported_types = ["react", "vue", "nextjs"]
-        if request.project_type not in supported_types:
+        supported_types = ["react", "vue", "nextjs", "svelte"]
+        if project_type not in supported_types:
             raise HTTPException(
                 status_code=400,
                 detail=f"지원되지 않는 프로젝트 타입입니다. 지원 타입: {', '.join(supported_types)}"
@@ -564,8 +650,13 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
         logger.info(f"Validation passed for project: {project_id}")
         
         # Initialize variables for both paths
-        enhanced_features = request.features or []
+        enhanced_features = features
         bedrock_enhancement = None
+        
+        # 템플릿에 따른 추가 기능 설정
+        if request.template:
+            template_features = get_template_features(request.template)
+            enhanced_features = list(set(enhanced_features + template_features))
         
         # ECS Pipeline 사용 가능한 경우
         if ECS_PIPELINE_AVAILABLE:

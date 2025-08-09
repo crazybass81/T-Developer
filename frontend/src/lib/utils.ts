@@ -27,9 +27,17 @@ export function formatFileSize(bytes: number): string {
 /**
  * Format relative time (e.g., "2 minutes ago")
  */
-export function formatRelativeTime(date: Date): string {
+export function formatRelativeTime(date: Date | string): string {
+  // Convert string to Date if needed
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) {
+    return '날짜 없음'
+  }
+  
   const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  const diffInSeconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000)
 
   if (diffInSeconds < 60) {
     return '방금 전'
@@ -43,7 +51,7 @@ export function formatRelativeTime(date: Date): string {
     const days = Math.floor(diffInSeconds / 86400)
     return `${days}일 전`
   } else {
-    return date.toLocaleDateString('ko-KR')
+    return dateObj.toLocaleDateString('ko-KR')
   }
 }
 

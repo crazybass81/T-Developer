@@ -205,6 +205,25 @@ interface ProjectCardProps {
 }
 
 function ProjectCard({ project, onDelete }: ProjectCardProps) {
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case 'completed': return 'success'
+      case 'building': return 'warning'
+      case 'error': return 'error'
+      default: return 'default'
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed': return '완료'
+      case 'building': return '빌드 중'
+      case 'error': return '오류'
+      case 'draft': return '초안'
+      default: return status
+    }
+  }
+
   return (
     <Card hover="lift" className="group">
       <CardHeader>
@@ -247,12 +266,29 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
 
       <CardFooter>
         <div className="flex gap-2 w-full">
-          <Button size="sm" variant="outline" className="flex-1">
-            <Play className="w-3 h-3 mr-1" />
-            열기
-          </Button>
+          <Link href={`/pipeline?project=${project.id}`} className="flex-1">
+            <Button size="sm" variant="outline" className="w-full">
+              <Play className="w-3 h-3 mr-1" />
+              열기
+            </Button>
+          </Link>
+          {project.status === 'completed' && (
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={() => window.open(`http://localhost:8000/api/v1/download/${project.id}`, '_blank')}
+              title="다운로드"
+            >
+              <Download className="w-3 h-3" />
+            </Button>
+          )}
           {project.deployUrl && (
-            <Button size="sm" variant="ghost">
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={() => window.open(project.deployUrl, '_blank')}
+              title="미리보기"
+            >
               <ExternalLink className="w-3 h-3" />
             </Button>
           )}
@@ -263,6 +299,25 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
 }
 
 function ProjectListItem({ project, onDelete }: ProjectCardProps) {
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case 'completed': return 'success'
+      case 'building': return 'warning'
+      case 'error': return 'error'
+      default: return 'default'
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed': return '완료'
+      case 'building': return '빌드 중'
+      case 'error': return '오류'
+      case 'draft': return '초안'
+      default: return status
+    }
+  }
+
   return (
     <Card className="group">
       <div className="p-4">
@@ -302,12 +357,18 @@ function ProjectListItem({ project, onDelete }: ProjectCardProps) {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline">
-              <Play className="w-3 h-3 mr-1" />
-              열기
-            </Button>
+            <Link href={`/pipeline?project=${project.id}`}>
+              <Button size="sm" variant="outline">
+                <Play className="w-3 h-3 mr-1" />
+                열기
+              </Button>
+            </Link>
             {project.deployUrl && (
-              <Button size="sm" variant="ghost">
+              <Button 
+                size="sm" 
+                variant="ghost"
+                onClick={() => window.open(project.deployUrl, '_blank')}
+              >
                 <ExternalLink className="w-3 h-3" />
               </Button>
             )}

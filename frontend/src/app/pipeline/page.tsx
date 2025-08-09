@@ -24,8 +24,25 @@ export default function PipelinePage() {
   const searchParams = useSearchParams()
   const projectId = searchParams.get('project')
   
-  const { currentProject, pipeline, startProjectGeneration } = useProjectStore()
+  const { projects, currentProject, pipeline, startProjectGeneration, setCurrentProject, loadProjects } = useProjectStore()
   const { connect, disconnect, status: wsStatus } = useWebSocketStore()
+
+  useEffect(() => {
+    // Load projects if not loaded
+    if (projects.length === 0) {
+      loadProjects()
+    }
+  }, [projects.length, loadProjects])
+
+  useEffect(() => {
+    // Find and set current project
+    if (projectId && projects.length > 0) {
+      const project = projects.find(p => p.id === projectId)
+      if (project) {
+        setCurrentProject(project)
+      }
+    }
+  }, [projectId, projects, setCurrentProject])
 
   useEffect(() => {
     if (projectId) {
@@ -39,11 +56,21 @@ export default function PipelinePage() {
   }, [projectId, connect, disconnect])
 
   useEffect(() => {
-    // If we have a project but no active pipeline, start generation
-    if (currentProject && !pipeline && currentProject.status === 'draft') {
-      startProjectGeneration(currentProject.id)
+    // Only start generation if explicitly requested (not automatically)
+    // This prevents auto-generation when just viewing a project
+    if (currentProject && !pipeline && currentProject.status === 'building') {
+      // Project is already building, initialize pipeline view
+      const mockPipeline = {
+        id: `pipeline-${currentProject.id}`,
+        projectId: currentProject.id,
+        agents: [],
+        status: 'running' as const,
+        startTime: new Date(),
+        totalProgress: 50,
+      }
+      // Don't auto-start, just show current state
     }
-  }, [currentProject, pipeline, startProjectGeneration])
+  }, [currentProject, pipeline])
 
   if (!currentProject) {
     return (
@@ -78,6 +105,15 @@ export default function PipelinePage() {
           
           <div className="flex items-center space-x-4">
             <WebSocketStatus status={wsStatus} />
+            {!pipeline && currentProject.status === 'draft' && (
+              <Button
+                onClick={() => startProjectGeneration(currentProject.id)}
+                className="bg-primary-600 hover:bg-primary-700 text-white"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                프로젝트 생성 시작
+              </Button>
+            )}
             <ProjectControls project={currentProject} pipeline={pipeline} />
           </div>
         </div>
