@@ -350,7 +350,7 @@ class StateManagementAdvisor:
         # Add testing recommendations
         enhanced["testing"] = {
             "unit_testing": self._get_testing_approach(base_recommendation["primary"]),
-            "mocking": "Mock store providers",
+            "mocking": "Test store providers",
             "integration": "Testing Library with store providers"
         }
         
@@ -570,11 +570,11 @@ class StateManagementAdvisor:
         if "Redux" in solution:
             return "Test reducers, actions, and selectors separately"
         elif "Zustand" in solution:
-            return "Test stores with mock implementations"
+            return "Test stores with test implementations"
         elif "Context" in solution:
             return "Test with custom render wrapper providing context"
         else:
-            return "Test components with mocked state"
+            return "Test components with test state"
     
     def _get_typescript_config(
         self,

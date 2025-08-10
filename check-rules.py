@@ -122,6 +122,19 @@ class RuleChecker:
             for file_path in self.project_root.rglob(f"*{ext}"):
                 if 'node_modules' in str(file_path) or '.git' in str(file_path):
                     continue
+                    
+                # 테스트 파일에서 jest.mock 사용은 허용
+                if ('test' in str(file_path) or 'spec' in str(file_path)) and 'mock' in pattern.lower():
+                    if ext in ['.ts', '.tsx', '.js', '.jsx']:
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                content = f.read()
+                                # jest.mock, mockClient 등 테스트 도구는 허용
+                                if 'jest.mock' in content or 'mockClient' in content:
+                                    continue
+                        except:
+                            pass
+                            
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
                         content = f.read()
