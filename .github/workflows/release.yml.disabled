@@ -1,3 +1,10 @@
+# Disabled - Needs configuration for Python project
+# This workflow was designed for Node.js project
+# To enable:
+# 1. Configure semantic-release for Python
+# 2. Update package management commands
+# 3. Remove .disabled extension from filename
+
 name: Release
 
 on:

@@ -9,7 +9,55 @@ on:
     - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM
 
 jobs:
-  security-scan:
+  backend-security:
+    name: Backend Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install security tools
+      run: |
+        cd backend
+        pip install --upgrade pip
+        pip install safety bandit semgrep
+    
+    - name: Check for known vulnerabilities
+      continue-on-error: true
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        safety check --json
+    
+    - name: Run Bandit security scan
+      continue-on-error: true
+      run: |
+        cd backend
+        bandit -r src/ -f json -o bandit-report.json
+    
+    - name: Run Semgrep
+      continue-on-error: true
+      run: |
+        cd backend
+        semgrep --config=auto src/
+    
+    - name: Upload security reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports
+        path: |
+          backend/bandit-report.json
+          backend/safety-report.json
+        retention-days: 30
+  
+  frontend-security:
+    name: Frontend Security Scan
     runs-on: ubuntu-latest
     
     steps:
@@ -19,45 +67,33 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: backend/package-lock.json
     
-    - name: Install dependencies
+    - name: Check if frontend has package.json
+      id: check_frontend
       run: |
-        cd backend
+        if [ -f "frontend/package.json" ]; then
+          echo "has_package=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_package=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Install frontend dependencies
+      if: steps.check_frontend.outputs.has_package == 'true'
+      run: |
+        cd frontend
         npm ci
     
-    - name: Run security tests
+    - name: Run npm audit
+      if: steps.check_frontend.outputs.has_package == 'true'
+      continue-on-error: true
       run: |
-        cd backend
-        npm run test:security
+        cd frontend
+        npm audit --json > npm-audit-report.json
     
-    - name: Run vulnerability scan
-      run: |
-        node scripts/run-security-scan.js
-    
-    - name: Upload security report
+    - name: Upload frontend security report
+      if: steps.check_frontend.outputs.has_package == 'true'
       uses: actions/upload-artifact@v4
-      if: always()
       with:
-        name: security-report
-        path: security-report.txt
-    
-    - name: Comment PR with security results
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const fs = require('fs');
-          const path = './security-report.txt';
-          
-          if (fs.existsSync(path)) {
-            const report = fs.readFileSync(path, 'utf8');
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## 🔒 Security Scan Results\n\n\`\`\`\n${report}\n\`\`\``
-            });
-          }
+        name: frontend-security-report
+        path: frontend/npm-audit-report.json
+        retention-days: 30

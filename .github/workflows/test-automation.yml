@@ -5,19 +5,23 @@ on:
     types: [opened, synchronize, reopened]
   push:
     branches: [main, develop]
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight
 
 jobs:
-  test-matrix:
-    name: Test Suite - ${{ matrix.test-suite }}
+  backend-tests:
+    name: Backend Test Suite
     runs-on: ubuntu-latest
     
     strategy:
       matrix:
-        test-suite: [unit, integration, e2e]
-        node-version: [18.x]
-        include:
-          - test-suite: unit
-            timeout: 10
+        python-version: ['3.9', '3.10', '3.11']
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
           - test-suite: integration
             timeout: 20
           - test-suite: e2e
