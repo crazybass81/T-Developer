@@ -436,7 +436,8 @@ export default App;""",
         project_name: Optional[str] = None,
         project_type: Optional[str] = None,
         features: Optional[List[str]] = None,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        ws_manager=None  # WebSocket manager for real-time updates
     ) -> ProductionPipelineResult:
         """프로덕션 파이프라인 실행"""
         
@@ -477,6 +478,20 @@ export default App;""",
                 stage_start = time.time()
                 logger.info(f"Stage {i}/9: {agent_name.upper()}")
                 
+                # WebSocket으로 진행상황 전송
+                if ws_manager and project_id:
+                    await ws_manager.send_progress(
+                        project_id=project_id,
+                        agent_id=i,
+                        progress=0,
+                        status="processing"
+                    )
+                    await ws_manager.send_log(
+                        project_id=project_id,
+                        message=f"🔄 {agent_name.upper()} 에이전트 시작...",
+                        level="info"
+                    )
+                
                 # 에이전트 실행 (재시도 로직 포함)
                 result = await self._execute_agent_with_retry(
                     agent_name, 
@@ -490,11 +505,57 @@ export default App;""",
                 if result.success:
                     # 성공시 데이터 업데이트
                     pipeline_data[f"{agent_name}_result"] = result.output_data
+                    
+                    # 특별 처리: Assembly와 Download Agent의 결과를 pipeline_data에 추가
+                    if agent_name == "assembly" and result.output_data:
+                        # Assembly Agent의 결과를 다음 에이전트에 전달
+                        if "processed_data" in result.output_data:
+                            pipeline_data.update(result.output_data["processed_data"])
+                    elif agent_name == "download" and result.output_data:
+                        # Download Agent의 결과를 최종 결과에 포함
+                        if "processed_data" in result.output_data:
+                            download_info = result.output_data["processed_data"]
+                            pipeline_data["download_url"] = download_info.get("download_url")
+                            pipeline_data["download_id"] = download_info.get("download_id")
+                            pipeline_data["generated_code"] = {
+                                "status": "packaged",
+                                "download_url": download_info.get("download_url"),
+                                "size_mb": download_info.get("size_mb", 0)
+                            }
+                    
                     logger.info(f"✅ {agent_name} completed ({stage_time:.2f}s)")
+                    
+                    # WebSocket으로 성공 알림
+                    if ws_manager and project_id:
+                        await ws_manager.send_progress(
+                            project_id=project_id,
+                            agent_id=i,
+                            progress=100,
+                            status="completed"
+                        )
+                        await ws_manager.send_log(
+                            project_id=project_id,
+                            message=f"✅ {agent_name.upper()} 완료 ({stage_time:.2f}초)",
+                            level="success"
+                        )
                 else:
                     # 실패시 에러 기록하지만 계속 진행
                     errors.append(f"{agent_name}: {result.error}")
                     logger.warning(f"⚠️ {agent_name} failed: {result.error}")
+                    
+                    # WebSocket으로 실패 알림
+                    if ws_manager and project_id:
+                        await ws_manager.send_progress(
+                            project_id=project_id,
+                            agent_id=i,
+                            progress=0,
+                            status="error"
+                        )
+                        await ws_manager.send_log(
+                            project_id=project_id,
+                            message=f"⚠️ {agent_name.upper()} 실패: {result.error}",
+                            level="error"
+                        )
                 
                 # 메모리 정리 (3단계마다)
                 if MEMORY_OPTIMIZER_AVAILABLE and memory_optimizer and i % 3 == 0:

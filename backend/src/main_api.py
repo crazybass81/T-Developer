@@ -751,36 +751,53 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                 logger.info("Using ECS Pipeline for project generation")
                 await ws_manager.send_log(project_id, "ECS Pipeline 시작", "info")
                 
-                # ECS Pipeline 실행
+                # ECS Pipeline 실행 (WebSocket manager 전달)
                 pipeline_result = await ecs_pipeline.execute(
-                    user_input=request.user_input,
-                    project_name=request.project_name,
-                    project_type=request.project_type,
-                    features=request.features,
+                    user_input=user_input,
+                    project_name=project_name,
+                    project_type=project_type,
+                    features=enhanced_features,
                     context={
                         "project_id": project_id,
                         "timestamp": datetime.now().isoformat()
-                    }
+                    },
+                    ws_manager=ws_manager  # WebSocket manager for real-time updates
                 )
                 
                 if pipeline_result.success:
                     logger.info(f"ECS Pipeline completed successfully for {project_id}")
                     
-                    # 파이프라인 결과에서 생성된 코드 추출
-                    generated_code = pipeline_result.metadata.get("pipeline_data", {}).get("generated_code", {})
+                    # 파이프라인 결과에서 다운로드 정보 추출
+                    pipeline_data = pipeline_result.metadata.get("pipeline_data", {})
+                    download_url = pipeline_data.get("download_url")
+                    download_id = pipeline_data.get("download_id")
+                    generated_code = pipeline_data.get("generated_code", {})
                     
-                    if generated_code and generated_code.get("files"):
-                        # ECS Pipeline이 생성한 코드로 프로젝트 생성
-                        project_path = GENERATED_PATH / project_id
-                        project_path.mkdir(exist_ok=True, parents=True)
-                        
-                        # 생성된 파일들 저장
-                        for file_path, content in generated_code["files"].items():
-                            full_path = project_path / file_path
-                            full_path.parent.mkdir(exist_ok=True, parents=True)
-                            full_path.write_text(content)
-                        
-                        logger.info(f"Project files created from ECS Pipeline output at {project_path}")
+                    # 파이프라인이 완전히 실행되어 다운로드 URL이 있는 경우
+                    if download_url and download_id:
+                        logger.info(f"Pipeline created downloadable package: {download_url}")
+                        # ZIP 파일이 이미 생성됨, 추가 작업 불필요
+                        zip_path = DOWNLOAD_PATH / f"{download_id}.zip"
+                        if not zip_path.exists():
+                            # 파일이 없으면 폴백
+                            logger.warning("Download file not found, falling back to code generator")
+                            download_url = None
+                    
+                    # 다운로드 URL이 없으면 폴백
+                    if not download_url:
+                        # 파이프라인 결과에서 생성된 코드 추출 (레거시 지원)
+                        if generated_code and generated_code.get("files"):
+                            # ECS Pipeline이 생성한 코드로 프로젝트 생성
+                            project_path = GENERATED_PATH / project_id
+                            project_path.mkdir(exist_ok=True, parents=True)
+                            
+                            # 생성된 파일들 저장
+                            for file_path, content in generated_code["files"].items():
+                                full_path = project_path / file_path
+                                full_path.parent.mkdir(exist_ok=True, parents=True)
+                                full_path.write_text(content)
+                            
+                            logger.info(f"Project files created from ECS Pipeline output at {project_path}")
                     else:
                         # 폴백: Production Code Generator Service 사용
                         if CODE_GENERATOR_AVAILABLE:
