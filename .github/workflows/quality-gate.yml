@@ -106,7 +106,6 @@ jobs:
   frontend-quality:
     name: Frontend Quality Gate
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('frontend/package.json') != '' }}
     
     steps:
       - uses: actions/checkout@v4
