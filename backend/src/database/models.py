@@ -199,7 +199,7 @@ class Project(Base):
     # Project data
     query = Column(Text)  # Original NL query
     requirements = Column(JSONB, default={})
-    metadata = Column(JSONB, default={})
+    project_metadata = Column(JSONB, default={})  # Renamed from metadata to avoid SQLAlchemy conflict
     
     # Generation details
     framework = Column(String(50))
@@ -415,7 +415,7 @@ class AuditLog(Base):
     # Details
     old_values = Column(JSONB)
     new_values = Column(JSONB)
-    metadata = Column(JSONB)
+    audit_metadata = Column(JSONB)  # Renamed from metadata to avoid SQLAlchemy conflict
     
     # Result
     status = Column(String(20))  # success, failure, error

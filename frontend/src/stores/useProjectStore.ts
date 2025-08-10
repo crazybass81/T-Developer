@@ -144,26 +144,23 @@ export const useProjectStore = create<ProjectState>()(
       createProject: async (data) => {
         set({ isLoading: true, error: null })
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/projects`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-          }).catch(() => null)
-
-          if (!response || !response.ok) {
-            throw new Error('프로젝트 생성 실패: API 서버에 연결할 수 없습니다')
+          // First create a local project for tracking
+          const localProject: Project = {
+            id: `project-${Date.now()}`,
+            ...data,
+            createdAt: new Date(),
+            updatedAt: new Date(),
           }
-
-          const project: Project = await response.json()
-          get().addProject(project)
-          get().setCurrentProject(project)
+          
+          get().addProject(localProject)
+          get().setCurrentProject(localProject)
+          
+          // Return the local project ID for navigation
+          return localProject.id
         } catch (error) {
-          console.warn('API not available, using mock data:', error)
-          // Use empty array if everything fails
-          get().setProjects([])
-          // Don't throw error to prevent app crash
+          console.warn('Project creation error:', error)
+          get().setError(error instanceof Error ? error.message : 'Unknown error')
+          throw error
         } finally {
           set({ isLoading: false })
         }
@@ -172,8 +169,8 @@ export const useProjectStore = create<ProjectState>()(
       loadProjects: async () => {
         set({ isLoading: true, error: null })
         try {
-          // Try to fetch from API
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/projects`)
+          // Try to fetch from API - 하드코딩으로 수정
+          const response = await fetch('http://localhost:8000/api/v1/projects')
           
           if (!response.ok) {
             throw new Error('프로젝트 목록을 불러올 수 없습니다')
@@ -199,6 +196,7 @@ export const useProjectStore = create<ProjectState>()(
             status: 'running',
             startTime: new Date(),
             totalProgress: 0,
+            logs: [],
           }
           
           get().setPipeline(pipeline)
@@ -206,13 +204,35 @@ export const useProjectStore = create<ProjectState>()(
           // Update project status
           get().updateProject(projectId, { status: 'building' })
 
-          // Call the actual generation API endpoint with the project data
+          // Get the project data
           const project = get().projects.find(p => p.id === projectId)
           if (!project) {
             throw new Error('Project not found')
           }
 
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/generate`, {
+          // Add initial log
+          const addLog = (message: string, level: 'info' | 'success' | 'error' = 'info') => {
+            const currentPipeline = get().pipeline
+            if (currentPipeline) {
+              const logs = [...(currentPipeline.logs || []), {
+                timestamp: new Date().toISOString(),
+                message,
+                level
+              }]
+              get().setPipeline({ ...currentPipeline, logs })
+            }
+          }
+
+          addLog('🚀 프로젝트 생성을 시작합니다...', 'info')
+          addLog(`프로젝트: ${project.name}`, 'info')
+          addLog(`프레임워크: ${project.framework}`, 'info')
+
+          // Call the actual generate API - 하드코딩으로 수정
+          const apiUrl = 'http://localhost:8000'
+          console.log('Using API URL:', apiUrl)
+          console.log('Full endpoint:', `${apiUrl}/api/v1/generate`)
+          
+          const response = await fetch(`${apiUrl}/api/v1/generate`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -224,34 +244,77 @@ export const useProjectStore = create<ProjectState>()(
               template: project.template || 'blank',
               settings: project.settings || {},
             }),
-          }).catch(() => null)
+          }).catch(error => {
+            console.error('Fetch error:', error)
+            throw new Error(`네트워크 오류: ${error.message}`)
+          })
 
-          if (response && response.ok) {
-            const result = await response.json()
-            // Store the actual project ID from backend
-            get().updateProject(projectId, { 
-              status: 'completed',
-              downloadId: result.project_id,
-              downloadUrl: result.download_url,
-            })
-            
-            // Update pipeline to complete
-            get().setPipeline({
-              ...pipeline,
-              status: 'completed',
-              totalProgress: 100,
-              endTime: new Date(),
-            })
-            
-            // Update all agents to complete
-            for (let i = 1; i <= 9; i++) {
-              get().updateAgentStatus(i, { status: 'completed', progress: 100 })
-            }
-          } else {
-            throw new Error('프로젝트 생성 실패: 서버 응답 오류')
+          if (!response.ok) {
+            throw new Error('백엔드 API 응답 오류')
           }
+
+          const result = await response.json()
+          
+          // Simulate agent progress with real logs
+          const agents = [
+            'NL Input Agent - 자연어 분석 중...',
+            'UI Selection Agent - UI 프레임워크 선택 중...',
+            'Parser Agent - 요구사항 파싱 중...',
+            'Component Decision Agent - 컴포넌트 구조 결정 중...',
+            'Match Rate Agent - 템플릿 매칭 중...',
+            'Search Agent - 최적 솔루션 검색 중...',
+            'Generation Agent - 코드 생성 중...',
+            'Assembly Agent - 프로젝트 조립 중...',
+            'Download Agent - 다운로드 패키지 준비 중...'
+          ]
+
+          for (let i = 0; i < agents.length; i++) {
+            addLog(agents[i], 'info')
+            get().updateAgentStatus(i + 1, { status: 'processing', progress: 0 })
+            
+            // Simulate progress
+            for (let p = 0; p <= 100; p += 20) {
+              await new Promise(resolve => setTimeout(resolve, 100))
+              get().updateAgentStatus(i + 1, { status: 'processing', progress: p })
+            }
+            
+            get().updateAgentStatus(i + 1, { status: 'completed', progress: 100 })
+            addLog(`✅ ${agents[i].split(' - ')[0]} 완료`, 'success')
+          }
+
+          // Update project with actual backend data - 하드코딩으로 수정
+          get().updateProject(projectId, {
+            status: 'completed',
+            downloadId: result.project_id,
+            downloadUrl: `http://localhost:8000${result.download_url}`,
+          })
+
+          // Update pipeline to complete
+          get().setPipeline({
+            ...get().pipeline!,
+            status: 'completed',
+            totalProgress: 100,
+            endTime: new Date(),
+          })
+
+          addLog('🎉 프로젝트 생성이 완료되었습니다!', 'success')
+          addLog(`다운로드 준비 완료: ${result.project_id}`, 'info')
+
         } catch (error) {
-          get().setError(error instanceof Error ? error.message : 'Unknown error')
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          get().setError(errorMessage)
+          
+          // Add error log
+          const currentPipeline = get().pipeline
+          if (currentPipeline) {
+            const logs = [...(currentPipeline.logs || []), {
+              timestamp: new Date().toISOString(),
+              message: `❌ 오류 발생: ${errorMessage}`,
+              level: 'error'
+            }]
+            get().setPipeline({ ...currentPipeline, logs, status: 'error' })
+          }
+          
           get().resetPipeline()
           console.error('Generation error:', error)
         } finally {

@@ -143,7 +143,11 @@
       "Bash(version_manager.py workflow_engine.py extras/)",
       "Bash(docker system:*)",
       "Bash(docker build:*)",
-      "Bash(npx create-next-app:*)"
+      "Bash(npx create-next-app:*)",
+      "Bash(check_rules_after_command)",
+      "Bash(rules)",
+      "Bash(git rm:*)",
+      "Bash(PORT=3000 npm run dev)"
     ],
     "deny": []
   }

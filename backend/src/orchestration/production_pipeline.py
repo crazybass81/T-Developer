@@ -37,8 +37,11 @@ def load_agent_class(agent_name: str):
     try:
         agent_path = Path(__file__).parent.parent / "agents" / "ecs-integrated" / agent_name
         if not agent_path.exists():
-            print(f"Agent path does not exist: {agent_path}")
-            return None
+            # Fallback to implementations directory
+            agent_path = Path(__file__).parent.parent / "agents" / "implementations"
+            if not agent_path.exists():
+                print(f"Agent path does not exist: {agent_path}")
+                return None
         
         # sys.path에 에이전트 디렉토리 추가
         agent_str_path = str(agent_path.parent)

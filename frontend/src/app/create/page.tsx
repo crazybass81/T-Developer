@@ -74,10 +74,11 @@ export default function CreateProjectPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      await createProject({
+      // Create the project and get its ID
+      const projectId = await createProject({
         name: projectData.name || '새 프로젝트',
         description: projectData.description || projectData.idea.slice(0, 100),
-        status: 'draft' as const,
+        status: 'building' as const,  // Start as building
         framework: projectData.framework as any,
         template: projectData.template,
         userId: 'user-1', // TODO: Get from auth
@@ -90,7 +91,13 @@ export default function CreateProjectPage() {
           features: projectData.features
         }
       })
-      router.push('/projects')
+      
+      // Navigate to pipeline page to show generation progress
+      if (projectId) {
+        router.push(`/pipeline?project=${projectId}`)
+      } else {
+        router.push('/projects')
+      }
     } catch (error) {
       console.error('Failed to create project:', error)
     } finally {

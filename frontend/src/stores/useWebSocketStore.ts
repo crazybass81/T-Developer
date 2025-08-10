@@ -31,7 +31,7 @@ interface WebSocketState {
   resetReconnectCount: () => void
 }
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'
+const WS_URL = 'ws://localhost:8000' // 하드코딩으로 수정
 
 export const useWebSocketStore = create<WebSocketState>()(
   devtools(
@@ -44,6 +44,10 @@ export const useWebSocketStore = create<WebSocketState>()(
       messageHandlers: new Map(),
 
       connect: (projectId) => {
+        // WebSocket 연결 비활성화 - 백엔드에서 현재 지원하지 않음
+        console.log('WebSocket 연결 건너뛰기 - 선택적 기능')
+        return
+        
         const { status, reconnectCount, maxReconnectAttempts } = get()
         
         if (status === 'connected' || status === 'connecting') {
@@ -94,7 +98,8 @@ export const useWebSocketStore = create<WebSocketState>()(
           }
 
           ws.onerror = (event) => {
-            console.error('WebSocket error:', event)
+            // WebSocket 에러 무시 - 선택적 기능
+            console.log('WebSocket 연결 실패 (선택적 기능)', event.type)
             set({ 
               status: 'error', 
               error: 'WebSocket connection error' 

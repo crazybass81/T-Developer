@@ -46,50 +46,45 @@ export default function PipelinePage() {
 
   useEffect(() => {
     if (projectId) {
-      // Connect to WebSocket for this specific project
-      connect(projectId)
-      
-      // Subscribe to log messages
-      const unsubscribeLogs = useWebSocketStore.getState().subscribe('log', (data) => {
-        const pipeline = useProjectStore.getState().pipeline
-        if (pipeline) {
-          const newLogs = [...(pipeline.logs || []), data]
-          useProjectStore.getState().setPipeline({ ...pipeline, logs: newLogs })
-        }
-      })
-      
-      // Subscribe to progress messages
-      const unsubscribeProgress = useWebSocketStore.getState().subscribe('progress', (data) => {
-        useProjectStore.getState().updateAgentStatus(data.agent_id, {
-          progress: data.progress,
-          status: data.status
+      // WebSocket 연결 시도 - 실패해도 계속 진행
+      try {
+        connect(projectId)
+        
+        // Subscribe to log messages
+        const unsubscribeLogs = useWebSocketStore.getState().subscribe('log', (data) => {
+          const pipeline = useProjectStore.getState().pipeline
+          if (pipeline) {
+            const newLogs = [...(pipeline.logs || []), data]
+            useProjectStore.getState().setPipeline({ ...pipeline, logs: newLogs })
+          }
         })
-      })
-      
-      return () => {
-        disconnect()
-        unsubscribeLogs()
-        unsubscribeProgress()
+        
+        // Subscribe to progress messages
+        const unsubscribeProgress = useWebSocketStore.getState().subscribe('progress', (data) => {
+          useProjectStore.getState().updateAgentStatus(data.agent_id, {
+            progress: data.progress,
+            status: data.status
+          })
+        })
+        
+        return () => {
+          disconnect()
+          unsubscribeLogs()
+          unsubscribeProgress()
+        }
+      } catch (error) {
+        console.log('WebSocket 연결 실패 - 계속 진행', error)
       }
     }
   }, [projectId, connect, disconnect])
 
   useEffect(() => {
-    // Only start generation if explicitly requested (not automatically)
-    // This prevents auto-generation when just viewing a project
+    // Start generation if project is in building status but pipeline hasn't started
     if (currentProject && !pipeline && currentProject.status === 'building') {
-      // Project is already building, initialize pipeline view
-      const mockPipeline = {
-        id: `pipeline-${currentProject.id}`,
-        projectId: currentProject.id,
-        agents: [],
-        status: 'running' as const,
-        startTime: new Date(),
-        totalProgress: 50,
-      }
-      // Don't auto-start, just show current state
+      // Start the actual generation process
+      startProjectGeneration(currentProject.id)
     }
-  }, [currentProject, pipeline])
+  }, [currentProject, pipeline, startProjectGeneration])
 
   if (!currentProject) {
     return (

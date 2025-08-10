@@ -276,7 +276,15 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
             <Button 
               size="sm" 
               variant="ghost"
-              onClick={() => window.open(`http://localhost:8000/api/v1/download/${project.id}`, '_blank')}
+              onClick={() => {
+                if (project.downloadUrl) {
+                  window.open(project.downloadUrl, '_blank')
+                } else if (project.downloadId) {
+                  window.open(`http://localhost:8000/api/v1/download/${project.downloadId}`, '_blank')
+                } else {
+                  console.error('No download URL or ID available')
+                }
+              }}
               title="다운로드"
             >
               <Download className="w-3 h-3" />
@@ -411,7 +419,18 @@ function ProjectMenu({ project, onDelete }: ProjectCardProps) {
           </DropdownMenu.Item>
           
           {project.status === 'completed' && (
-            <DropdownMenu.Item className="flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm hover:bg-gray-100">
+            <DropdownMenu.Item 
+              className="flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm hover:bg-gray-100"
+              onClick={() => {
+                if (project.downloadUrl) {
+                  window.open(project.downloadUrl, '_blank')
+                } else if (project.downloadId) {
+                  window.open(`http://localhost:8000/api/v1/download/${project.downloadId}`, '_blank')
+                } else {
+                  console.error('No download URL or ID available')
+                }
+              }}
+            >
               <Download className="mr-2 h-4 w-4" />
               다운로드
             </DropdownMenu.Item>
