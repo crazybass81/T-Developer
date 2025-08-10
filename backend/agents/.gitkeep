@@ -1,0 +1,20 @@
+# 9-Agent Pipeline Directory Structure
+
+## Directory Layout
+```
+agents/
+├── nl_input/        # Natural Language Input Agent
+├── ui_selection/    # UI Framework Selection Agent
+├── parser/          # Project Structure Parser Agent
+├── component_decision/ # Component Architecture Decision Agent
+├── match_rate/      # Template Matching Rate Agent
+├── search/          # Solution Search Agent
+├── generation/      # Code Generation Agent
+├── assembly/        # Project Assembly Agent
+└── download/        # Download Package Agent
+
+Each agent contains:
+├── modules/         # Individual functional modules
+├── tests/          # Unit and integration tests
+└── docs/           # Agent-specific documentation
+```

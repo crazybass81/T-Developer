@@ -1,0 +1,346 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'T-Developer Storage Resources Stack (DynamoDB, S3)'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: development
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Environment name
+
+Resources:
+  # DynamoDB Tables
+  PipelineStateTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 't-developer-pipeline-state-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pipelineId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: N
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pipelineId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: StatusIndex
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Project
+          Value: T-Developer
+        - Key: Environment
+          Value: !Ref Environment
+
+  AgentMemoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 't-developer-agent-memory-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: sessionId
+          AttributeType: S
+        - AttributeName: sequenceNumber
+          AttributeType: N
+        - AttributeName: agentName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: sessionId
+          KeyType: HASH
+        - AttributeName: sequenceNumber
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: AgentNameIndex
+          KeySchema:
+            - AttributeName: agentName
+              KeyType: HASH
+            - AttributeName: sequenceNumber
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Project
+          Value: T-Developer
+        - Key: Environment
+          Value: !Ref Environment
+
+  TemplateLibraryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 't-developer-template-library-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: templateId
+          AttributeType: S
+        - AttributeName: category
+          AttributeType: S
+        - AttributeName: framework
+          AttributeType: S
+        - AttributeName: popularity
+          AttributeType: N
+      KeySchema:
+        - AttributeName: templateId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: CategoryIndex
+          KeySchema:
+            - AttributeName: category
+              KeyType: HASH
+            - AttributeName: popularity
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: FrameworkIndex
+          KeySchema:
+            - AttributeName: framework
+              KeyType: HASH
+            - AttributeName: popularity
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Project
+          Value: T-Developer
+        - Key: Environment
+          Value: !Ref Environment
+
+  ProjectMetadataTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 't-developer-project-metadata-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: projectId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: N
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: projectId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserProjectsIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Project
+          Value: T-Developer
+        - Key: Environment
+          Value: !Ref Environment
+
+  # S3 Buckets
+  ProjectStorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 't-developer-projects-${Environment}-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldProjects
+            Status: Enabled
+            ExpirationInDays: 7
+            NoncurrentVersionExpirationInDays: 1
+          - Id: TransitionToIA
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 3
+                StorageClass: STANDARD_IA
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+            AllowedOrigins:
+              - '*'
+            MaxAge: 3600
+      Tags:
+        - Key: Project
+          Value: T-Developer
+        - Key: Environment
+          Value: !Ref Environment
+
+  TemplateBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 't-developer-templates-${Environment}-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: T-Developer
+        - Key: Environment
+          Value: !Ref Environment
+
+  CacheBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 't-developer-cache-${Environment}-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldCache
+            Status: Enabled
+            ExpirationInDays: 1
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: T-Developer
+        - Key: Environment
+          Value: !Ref Environment
+
+  # CloudWatch Log Groups
+  ApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/t-developer/${Environment}/application'
+      RetentionInDays: 30
+
+  AgentLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/t-developer/${Environment}/agents'
+      RetentionInDays: 30
+
+  PerformanceLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/t-developer/${Environment}/performance'
+      RetentionInDays: 7
+
+Outputs:
+  PipelineStateTableName:
+    Description: Name of the Pipeline State DynamoDB table
+    Value: !Ref PipelineStateTable
+    Export:
+      Name: !Sub '${AWS::StackName}-PipelineStateTable'
+
+  PipelineStateTableArn:
+    Description: ARN of the Pipeline State DynamoDB table
+    Value: !GetAtt PipelineStateTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-PipelineStateTableArn'
+
+  AgentMemoryTableName:
+    Description: Name of the Agent Memory DynamoDB table
+    Value: !Ref AgentMemoryTable
+    Export:
+      Name: !Sub '${AWS::StackName}-AgentMemoryTable'
+
+  TemplateLibraryTableName:
+    Description: Name of the Template Library DynamoDB table
+    Value: !Ref TemplateLibraryTable
+    Export:
+      Name: !Sub '${AWS::StackName}-TemplateLibraryTable'
+
+  ProjectMetadataTableName:
+    Description: Name of the Project Metadata DynamoDB table
+    Value: !Ref ProjectMetadataTable
+    Export:
+      Name: !Sub '${AWS::StackName}-ProjectMetadataTable'
+
+  ProjectStorageBucketName:
+    Description: Name of the Project Storage S3 bucket
+    Value: !Ref ProjectStorageBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-ProjectStorageBucket'
+
+  TemplateBucketName:
+    Description: Name of the Template S3 bucket
+    Value: !Ref TemplateBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-TemplateBucket'
+
+  CacheBucketName:
+    Description: Name of the Cache S3 bucket
+    Value: !Ref CacheBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-CacheBucket'
+
+  ApplicationLogGroupName:
+    Description: Name of the Application CloudWatch Log Group
+    Value: !Ref ApplicationLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ApplicationLogGroup'
+
+  AgentLogGroupName:
+    Description: Name of the Agent CloudWatch Log Group
+    Value: !Ref AgentLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-AgentLogGroup'

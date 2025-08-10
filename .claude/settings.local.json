@@ -160,7 +160,10 @@
       "Bash(aws ssm get-parameter:*)",
       "Bash(aws ssm put-parameter:*)",
       "Bash(ENVIRONMENT=development python3 src/config/env_loader.py)",
-      "Bash(export ENVIRONMENT=development)"
+      "Bash(export ENVIRONMENT=development)",
+      "Bash(pip install:*)",
+      "Bash(pre-commit:*)",
+      "Bash(git config:*)"
     ],
     "deny": []
   }

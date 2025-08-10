@@ -1,0 +1,122 @@
+version: '3.9'
+
+services:
+  # Main API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: t-developer-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - AWS_REGION=us-east-1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./:/app
+      - ~/.aws:/root/.aws:ro
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - t-developer-network
+    command: uvicorn src.main_api:app --host 0.0.0.0 --port 8000 --reload
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: t-developer-postgres
+    environment:
+      - POSTGRES_USER=tdeveloper
+      - POSTGRES_PASSWORD=tdeveloper123
+      - POSTGRES_DB=t_developer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - t-developer-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: t-developer-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - t-developer-network
+
+  # LocalStack for AWS Services (Development)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: t-developer-localstack
+    ports:
+      - "4566:4566"
+      - "4571:4571"
+    environment:
+      - SERVICES=s3,dynamodb,sqs,sns,lambda,sts
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - localstack_data:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - t-developer-network
+
+  # Agent Worker Service
+  agent-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: t-developer-worker
+    environment:
+      - ENVIRONMENT=development
+      - WORKER_TYPE=agent
+    volumes:
+      - ./:/app
+      - ~/.aws:/root/.aws:ro
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - t-developer-network
+    command: python -m src.workers.agent_worker
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: t-developer-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - t-developer-network
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: t-developer-grafana
+    ports:
+      - "3030:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - t-developer-network
+
+networks:
+  t-developer-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  localstack_data:
+  prometheus_data:
+  grafana_data:
