@@ -276,8 +276,8 @@ class ProductionECSPipeline:
             config = self.agent_configs.get(agent_name, {})
             
             try:
-                # 실제 에이전트 로직 시뮬레이션
-                processing_time = min(config.get('timeout', 30) * 0.1, 2.0)  # 최대 2초
+                # 실제 에이전트 로직 시뮬레이션 - 속도 개선
+                processing_time = min(config.get('timeout', 30) * 0.01, 0.2)  # 최대 0.2초로 단축
                 await asyncio.sleep(processing_time)
                 
                 # 에이전트별 출력 생성
@@ -537,7 +537,7 @@ export default App;""",
                     "final_memory_mb": final_memory.process_memory_mb,
                     "memory_diff_mb": memory_diff,
                     "peak_memory_mb": getattr(memory_optimizer, 'peak_memory_mb', 0),
-                    "gc_collections": memory_optimizer.get_gc_stats()
+                    "gc_collections": getattr(memory_optimizer, 'get_gc_stats', lambda: {})()
                 }
                 logger.info(f"🧠 Final memory: {final_memory.process_memory_mb:.1f}MB ({memory_diff:+.1f}MB)")
             

@@ -155,7 +155,8 @@
       "Bash(if ! grep -q \"_custom_initialize\" /home/ec2-user/T-DeveloperMVP/backend/src/agents/ecs-integrated/$agent/main.py)",
       "Bash(then)",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(PORT=3000 npx next dev --port 3000 --hostname 0.0.0.0)"
     ],
     "deny": []
   }

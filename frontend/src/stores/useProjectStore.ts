@@ -227,26 +227,42 @@ export const useProjectStore = create<ProjectState>()(
           addLog(`프로젝트: ${project.name}`, 'info')
           addLog(`프레임워크: ${project.framework}`, 'info')
 
-          // Call the actual generate API - 하드코딩으로 수정
-          const apiUrl = 'http://localhost:8000'
+          // Call the actual generate API - 환경변수 사용
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
           console.log('Using API URL:', apiUrl)
           console.log('Full endpoint:', `${apiUrl}/api/v1/generate`)
+          
+          // 타임아웃을 30초로 설정
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 30000) // 30초 타임아웃
           
           const response = await fetch(`${apiUrl}/api/v1/generate`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
+            signal: controller.signal,
             body: JSON.stringify({
               name: project.name,
               description: project.description,
               framework: project.framework,
               template: project.template || 'blank',
               settings: project.settings || {},
+              // API 필수 필드 추가
+              user_input: project.description,
+              project_name: project.name,
+              project_type: project.framework,
+              features: project.settings?.features || []
             }),
           }).catch(error => {
+            clearTimeout(timeoutId)
+            if (error.name === 'AbortError') {
+              throw new Error('요청 시간 초과 (30초). 다시 시도해주세요.')
+            }
             console.error('Fetch error:', error)
             throw new Error(`네트워크 오류: ${error.message}`)
+          }).finally(() => {
+            clearTimeout(timeoutId)
           })
 
           if (!response.ok) {
