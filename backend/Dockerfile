@@ -19,8 +19,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application code
 COPY src/ ./src/
-COPY templates/ ./templates/ 2>/dev/null || true
-COPY static/ ./static/ 2>/dev/null || true
+# Copy optional directories if they exist
+# Note: If directories don't exist, Docker will skip them with .dockerignore
 
 # Create necessary directories
 RUN mkdir -p /app/generated /app/downloads /app/logs
