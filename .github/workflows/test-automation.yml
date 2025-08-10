@@ -71,7 +71,7 @@ jobs:
           REDIS_HOST: localhost
       
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.test-suite }}
           path: backend/coverage/
