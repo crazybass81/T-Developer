@@ -101,13 +101,25 @@ git commit -m "fix(api): Resolve download path issue in simple_api.py"
 git push origin main
 ```
 
-### 2. ❌ NO MOCK IMPLEMENTATIONS
+### 2. 🔧 ERROR HANDLING RULES - 오류 처리 규칙
+- **NEVER** simplify or skip implementations when errors repeat
+- **NEVER** create workarounds without user permission
+- **ALWAYS** ask for user approval before simplifying complex solutions
+- **ALWAYS** fix the root cause, not symptoms
+- **MUST** report all errors transparently to the user
+- When stuck on repeated errors:
+  - Stop and explain the issue clearly
+  - Provide multiple solution options
+  - Wait for user decision
+  - Do NOT proceed with shortcuts
+
+### 3. ❌ NO MOCK IMPLEMENTATIONS
 - **NEVER** create mock, dummy, or placeholder implementations
 - **NEVER** use hardcoded responses or fake data
 - **NEVER** implement "temporary" solutions
 - All code must be **production-ready** from the start
 
-### 2. ✅ PRODUCTION-READY REQUIREMENTS
+### 4. ✅ PRODUCTION-READY REQUIREMENTS
 Every implementation MUST include:
 - **Error Handling**: Comprehensive try-catch blocks, proper error messages
 - **Validation**: Input validation, type checking, boundary conditions
@@ -118,7 +130,7 @@ Every implementation MUST include:
 - **Testing**: Unit tests, integration tests where applicable
 - **Documentation**: Clear comments and docstrings
 
-### 3. 🎯 AGENT IMPLEMENTATION STANDARDS
+### 5. 🎯 AGENT IMPLEMENTATION STANDARDS
 For the 9-agent pipeline, each agent MUST:
 - Implement **real logic**, not placeholder returns
 - Include **data processing algorithms**
@@ -128,13 +140,13 @@ For the 9-agent pipeline, each agent MUST:
 - Include **performance metrics**
 - Support **async operations** where needed
 
-### 4. 🔧 TECHNICAL REQUIREMENTS
+### 6. 🔧 TECHNICAL REQUIREMENTS
 - Use the **Python implementations** in `/backend/src/agents/implementations/` as reference
 - These are production-ready with advanced features
 - TypeScript implementations should match Python quality level
 - Include all supporting modules (validators, optimizers, cache, etc.)
 
-### 5. 📊 QUALITY METRICS
+### 7. 📊 QUALITY METRICS
 Each component must achieve:
 - Code coverage: > 80%
 - Cyclomatic complexity: < 10
@@ -142,7 +154,7 @@ Each component must achieve:
 - Error rate: < 0.1%
 - Memory efficiency: No memory leaks
 
-### 6. 🚫 FORBIDDEN PRACTICES
+### 8. 🚫 FORBIDDEN PRACTICES
 - `return mockData` ❌
 - `// TODO: implement later` ❌
 - `console.log("Not implemented")` ❌
@@ -150,7 +162,7 @@ Each component must achieve:
 - Empty catch blocks ❌
 - Ignoring error states ❌
 
-### 7. 📝 CHECKLIST FOR NEW FEATURES
+### 9. 📝 CHECKLIST FOR NEW FEATURES
 Before marking any feature as complete:
 - [ ] Real implementation with actual logic
 - [ ] Error handling for all edge cases
