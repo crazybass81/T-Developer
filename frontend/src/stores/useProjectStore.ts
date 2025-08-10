@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { Project, AgentPipeline, AgentState, AgentStatus } from '@/types'
-import { API_ENDPOINTS, handleApiResponse } from '@/config/api'
+import { API_ENDPOINTS, handleApiResponse } from '@/config/api-simple'
+import { apiClient } from '@/lib/api-client'
 
 interface ProjectState {
   // Projects
@@ -170,14 +171,8 @@ export const useProjectStore = create<ProjectState>()(
       loadProjects: async () => {
         set({ isLoading: true, error: null })
         try {
-          // Try to fetch from API
-          const response = await fetch(API_ENDPOINTS.projects)
-          
-          if (!response.ok) {
-            throw new Error('프로젝트 목록을 불러올 수 없습니다')
-          }
-
-          const projects: Project[] = await response.json()
+          // Use dynamic API client
+          const projects: Project[] = await apiClient.get('/projects')
           get().setProjects(projects || [])
         } catch (error) {
           get().setError(error instanceof Error ? error.message : 'Unknown error')
@@ -228,47 +223,19 @@ export const useProjectStore = create<ProjectState>()(
           addLog(`프로젝트: ${project.name}`, 'info')
           addLog(`프레임워크: ${project.framework}`, 'info')
 
-          // Call the actual generate API
-          console.log('Using API endpoint:', API_ENDPOINTS.generate)
-          
-          // 타임아웃을 30초로 설정
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 30000) // 30초 타임아웃
-          
-          const response = await fetch(API_ENDPOINTS.generate, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            signal: controller.signal,
-            body: JSON.stringify({
-              name: project.name,
-              description: project.description,
-              framework: project.framework,
-              template: project.template || 'blank',
-              settings: project.settings || {},
-              // API 필수 필드 추가
-              user_input: project.description,
-              project_name: project.name,
-              project_type: project.framework,
-              features: project.settings?.features || []
-            }),
-          }).catch(error => {
-            clearTimeout(timeoutId)
-            if (error.name === 'AbortError') {
-              throw new Error('요청 시간 초과 (30초). 다시 시도해주세요.')
-            }
-            console.error('Fetch error:', error)
-            throw new Error(`네트워크 오류: ${error.message}`)
-          }).finally(() => {
-            clearTimeout(timeoutId)
+          // Call the actual generate API using dynamic client
+          const result = await apiClient.post('/generate', {
+            name: project.name,
+            description: project.description,
+            framework: project.framework,
+            template: project.template || 'blank',
+            settings: project.settings || {},
+            // API 필수 필드 추가
+            user_input: project.description,
+            project_name: project.name,
+            project_type: project.framework,
+            features: project.settings?.features || []
           })
-
-          if (!response.ok) {
-            throw new Error('백엔드 API 응답 오류')
-          }
-
-          const result = await response.json()
           
           // Simulate agent progress with real logs
           const agents = [

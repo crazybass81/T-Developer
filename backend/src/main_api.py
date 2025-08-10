@@ -764,11 +764,11 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                     ws_manager=ws_manager  # WebSocket manager for real-time updates
                 )
                 
-                if pipeline_result.success:
+                if pipeline_result and pipeline_result.get("success"):
                     logger.info(f"ECS Pipeline completed successfully for {project_id}")
                     
                     # 파이프라인 결과에서 다운로드 정보 추출
-                    pipeline_data = pipeline_result.metadata.get("pipeline_data", {})
+                    pipeline_data = pipeline_result.get("metadata", {}).get("pipeline_data", {})
                     download_url = pipeline_data.get("download_url")
                     download_id = pipeline_data.get("download_id")
                     generated_code = pipeline_data.get("generated_code", {})
@@ -828,7 +828,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                 else:
                     # ECS Pipeline 실패시 Production Code Generator 사용
                     if CODE_GENERATOR_AVAILABLE:
-                        logger.warning(f"ECS Pipeline failed: {pipeline_result.errors}, using Production Code Generator")
+                        logger.warning(f"ECS Pipeline failed: {pipeline_result.get('errors', 'Unknown error')}, using Production Code Generator")
                         await ws_manager.send_log(project_id, "프로덕션 코드 생성기로 전환", "warning")
                         
                         generation_result = code_generator.generate_project(
@@ -841,7 +841,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                         
                         project_path = Path(generation_result["project_path"])
                     else:
-                        logger.warning(f"ECS Pipeline failed: {pipeline_result.errors}, falling back to template")
+                        logger.warning(f"ECS Pipeline failed: {pipeline_result.get('errors', 'Unknown error')}, falling back to template")
                         project_path = await generate_real_project(
                             project_id=project_id,
                             project_name=project_name,
