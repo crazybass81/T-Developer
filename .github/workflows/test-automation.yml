@@ -149,18 +149,39 @@ jobs:
         run: |
           cd backend
           echo "Starting API server on port 8080..."
-          nohup python src/main_api.py > server.log 2>&1 &
-          echo "Waiting for server to start..."
+          python src/main_api.py > server.log 2>&1 &
+          SERVER_PID=$!
+          echo "Server PID: $SERVER_PID"
+          
+          # Wait for server to start
           for i in {1..30}; do
-            if curl -s http://localhost:8080/health > /dev/null; then
-              echo "Server is ready!"
-              break
+            if ps -p $SERVER_PID > /dev/null; then
+              if curl -s http://localhost:8080/health > /dev/null 2>&1; then
+                echo "✅ Server is ready!"
+                break
+              else
+                echo "⏳ Waiting for server to be ready... ($i/30)"
+              fi
+            else
+              echo "❌ Server process died!"
+              echo "=== Server logs ==="
+              cat server.log
+              echo "==================="
+              exit 1
             fi
-            echo "Waiting... ($i/30)"
             sleep 1
           done
-          echo "Server logs:"
-          cat server.log || true
+          
+          # Final check
+          if ! curl -s http://localhost:8080/health > /dev/null 2>&1; then
+            echo "❌ Server failed to start after 30 seconds"
+            echo "=== Server logs ==="
+            cat server.log
+            echo "==================="
+            ps aux | grep python || true
+            netstat -tulpn 2>/dev/null | grep 8080 || true
+            exit 1
+          fi
         env:
           TESTING: true
           DYNAMODB_ENDPOINT: http://localhost:8000
