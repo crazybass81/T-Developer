@@ -16,17 +16,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult, AgentStatus
 
-# Module imports
-# from .modules.code_generator import CodeGenerator  # 임시로 비활성화
-CodeGenerator = None  # 임시 스텁
-# from .modules.config_generator import ConfigGenerator  # 임시로 비활성화
-ConfigGenerator = None  # 임시 스텁
-# from .modules.test_generator import TestGenerator  # 임시로 비활성화
-TestGenerator = None  # 임시 스텁
-# from .modules.documentation_generator import DocumentationGenerator  # 임시로 비활성화
-DocumentationGenerator = None  # 임시 스텁
-# from .modules.deployment_generator import DeploymentGenerator  # 임시로 비활성화
-DeploymentGenerator = None  # 임시 스텁
+# Module imports - Production Implementation
+from .modules.code_generator import CodeGenerator
+from .modules.config_generator import ConfigGenerator
+from .modules.test_generator import TestGenerator
+from .modules.documentation_generator import DocumentationGenerator
+from .modules.deployment_generator import DeploymentGenerator
 
 @dataclass
 class GenerationAgentResult:
@@ -59,12 +54,12 @@ class GenerationAgent(BaseAgent):
         
         super().__init__(config)
         
-        # Initialize modules
-        self.code_generator = CodeGenerator() if CodeGenerator else None
-        self.config_generator = ConfigGenerator() if ConfigGenerator else None
-        self.test_generator = TestGenerator() if TestGenerator else None
-        self.documentation_generator = DocumentationGenerator() if DocumentationGenerator else None
-        self.deployment_generator = DeploymentGenerator() if DeploymentGenerator else None
+        # Initialize modules - Production instances
+        self.code_generator = CodeGenerator()
+        self.config_generator = ConfigGenerator()
+        self.test_generator = TestGenerator()
+        self.documentation_generator = DocumentationGenerator()
+        self.deployment_generator = DeploymentGenerator()
     
     async def initialize(self) -> bool:
         """Initialize agent and its modules"""
@@ -110,16 +105,86 @@ class GenerationAgent(BaseAgent):
         start_time = datetime.now()
         
         try:
-            # Process with modules
-            processed_data = {}
-            metadata = {}
-            recommendations = []
+            # Extract input specifications
+            project_specs = input_data.get('specifications', {})
+            components = input_data.get('components', [])
+            features = input_data.get('features', [])
             
-            # TODO: Implement actual processing logic
-            self.logger.info("Processing with Generation Agent...")
+            self.logger.info(f"Generating code for {len(components)} components with {len(features)} features")
             
-            # Calculate confidence
-            confidence = 0.85
+            # 1. Generate code files
+            code_result = await self.code_generator.process({
+                'project_type': project_specs.get('type', 'web'),
+                'language': project_specs.get('language', 'python'),
+                'framework': project_specs.get('framework', 'fastapi'),
+                'features': features,
+                'components': components
+            }, context.__dict__ if context else None)
+            
+            # 2. Generate configuration files
+            config_result = await self.config_generator.process({
+                'framework': project_specs.get('framework', 'fastapi'),
+                'features': features,
+                'environment': 'production'
+            }, context.__dict__ if context else None)
+            
+            # 3. Generate tests if requested
+            test_result = {}
+            if 'testing' in features:
+                test_result = await self.test_generator.process({
+                    'components': components,
+                    'framework': project_specs.get('framework', 'fastapi')
+                }, context.__dict__ if context else None)
+            
+            # 4. Generate documentation
+            doc_result = await self.documentation_generator.process({
+                'project_specs': project_specs,
+                'components': components,
+                'features': features
+            }, context.__dict__ if context else None)
+            
+            # 5. Generate deployment configurations
+            deployment_result = await self.deployment_generator.process({
+                'platform': project_specs.get('deployment_platform', 'aws'),
+                'framework': project_specs.get('framework', 'fastapi')
+            }, context.__dict__ if context else None)
+            
+            # Aggregate all generated files
+            processed_data = {
+                'files': {
+                    **code_result.get('files', {}),
+                    **config_result.get('files', {}),
+                    **test_result.get('files', {}),
+                    **doc_result.get('files', {}),
+                    **deployment_result.get('files', {})
+                },
+                'total_files': len(code_result.get('files', {})) + 
+                              len(config_result.get('files', {})) + 
+                              len(test_result.get('files', {})) +
+                              len(doc_result.get('files', {})) +
+                              len(deployment_result.get('files', {}))
+            }
+            
+            # Collect metadata
+            metadata = {
+                'code_quality_score': code_result.get('quality_score', 0),
+                'total_lines': sum(len(content.split('\n')) for content in processed_data['files'].values()),
+                'language': project_specs.get('language', 'python'),
+                'framework': project_specs.get('framework', 'fastapi')
+            }
+            
+            # Generate recommendations
+            recommendations = [
+                "Review generated code for project-specific customizations",
+                "Update environment variables in .env file",
+                "Run tests to ensure code quality",
+                "Configure CI/CD pipelines for automated deployment"
+            ]
+            
+            # Calculate overall confidence based on completeness
+            confidence = min(0.95, 
+                           (processed_data['total_files'] / max(1, len(components) * 3)) * 
+                           (code_result.get('quality_score', 80) / 100))
             
             # Create result
             result = GenerationAgentResult(
