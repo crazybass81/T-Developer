@@ -13,15 +13,18 @@ from dataclasses import dataclass, asdict
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add current directory to path for module imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
 
 from base_agent import BaseAgent, AgentConfig, AgentContext, AgentResult, AgentStatus
 
 # Module imports - Production Implementation
-from .modules.code_generator import CodeGenerator
-from .modules.config_generator import ConfigGenerator
-from .modules.test_generator import TestGenerator
-from .modules.documentation_generator import DocumentationGenerator
-from .modules.deployment_generator import DeploymentGenerator
+from modules.code_generator import CodeGenerator
+from modules.config_generator import ConfigGenerator
+from modules.test_generator import TestGenerator
+from modules.documentation_generator import DocumentationGenerator
+from modules.deployment_generator import DeploymentGenerator
 
 @dataclass
 class GenerationAgentResult:
