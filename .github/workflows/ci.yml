@@ -61,14 +61,9 @@ jobs:
     services:
       # Local DynamoDB for testing
       dynamodb:
-        image: amazon/dynamodb-local
+        image: amazon/dynamodb-local:latest
         ports:
           - 8000:8000
-        options: >-
-          --health-cmd "curl -f http://localhost:8000 || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
       
       # Redis for caching
       redis:
