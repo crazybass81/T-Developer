@@ -62,6 +62,17 @@ except ImportError as e:
     ECS_PIPELINE_TYPE = None
     logger.warning(f"❌ No ECS Pipeline available: {e}")
 
+# Production Code Generator Service 통합
+try:
+    from services.code_generator_service import CodeGeneratorService
+    code_generator = CodeGeneratorService()
+    CODE_GENERATOR_AVAILABLE = True
+    logger.info("✅ Production Code Generator Service loaded")
+except ImportError as e:
+    CODE_GENERATOR_AVAILABLE = False
+    code_generator = None
+    logger.warning(f"⚠️ Code Generator Service not available: {e}")
+
 # Bedrock AgentCore 통합
 try:
     from integrations.bedrock_agentcore import bedrock_integration, initialize_bedrock_agentcore
@@ -754,8 +765,74 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                         
                         logger.info(f"Project files created from ECS Pipeline output at {project_path}")
                     else:
-                        # 폴백: 템플릿 기반 생성
-                        logger.warning("ECS Pipeline didn't generate code, falling back to template")
+                        # 폴백: Production Code Generator Service 사용
+                        if CODE_GENERATOR_AVAILABLE:
+                            logger.warning("ECS Pipeline didn't generate code, using Production Code Generator")
+                            await ws_manager.send_log(project_id, "프로덕션 코드 생성기 사용", "info")
+                            
+                            # Production Code Generator로 프로젝트 생성
+                            generation_result = code_generator.generate_project(
+                                project_id=project_id,
+                                project_type=project_type,
+                                project_name=project_name,
+                                description=user_input,
+                                features=enhanced_features
+                            )
+                            
+                            project_path = Path(generation_result["project_path"])
+                            logger.info(f"Production code generated at {project_path}")
+                        else:
+                            # 최종 폴백: 템플릿 기반 생성
+                            logger.warning("No Code Generator available, falling back to template")
+                            project_path = await generate_real_project(
+                                project_id=project_id,
+                                project_name=project_name,
+                                project_type=project_type,
+                                description=user_input,
+                                features=enhanced_features
+                            )
+                else:
+                    # ECS Pipeline 실패시 Production Code Generator 사용
+                    if CODE_GENERATOR_AVAILABLE:
+                        logger.warning(f"ECS Pipeline failed: {pipeline_result.errors}, using Production Code Generator")
+                        await ws_manager.send_log(project_id, "프로덕션 코드 생성기로 전환", "warning")
+                        
+                        generation_result = code_generator.generate_project(
+                            project_id=project_id,
+                            project_type=project_type,
+                            project_name=project_name,
+                            description=user_input,
+                            features=enhanced_features
+                        )
+                        
+                        project_path = Path(generation_result["project_path"])
+                    else:
+                        logger.warning(f"ECS Pipeline failed: {pipeline_result.errors}, falling back to template")
+                        project_path = await generate_real_project(
+                            project_id=project_id,
+                            project_name=project_name,
+                            project_type=project_type,
+                            description=user_input,
+                            features=enhanced_features
+                        )
+                    
+            except Exception as e:
+                # 에러시 Production Code Generator 시도
+                if CODE_GENERATOR_AVAILABLE:
+                    logger.error(f"ECS Pipeline error: {e}, using Production Code Generator")
+                    await ws_manager.send_log(project_id, f"프로덕션 코드 생성기로 전환", "warning")
+                    
+                    try:
+                        generation_result = code_generator.generate_project(
+                            project_id=project_id,
+                            project_type=project_type,
+                            project_name=project_name,
+                            description=user_input,
+                            features=enhanced_features
+                        )
+                        project_path = Path(generation_result["project_path"])
+                    except Exception as gen_e:
+                        logger.error(f"Code Generator also failed: {gen_e}, falling back to template")
                         project_path = await generate_real_project(
                             project_id=project_id,
                             project_name=project_name,
@@ -764,7 +841,8 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                             features=enhanced_features
                         )
                 else:
-                    logger.warning(f"ECS Pipeline failed: {pipeline_result.errors}, falling back to template")
+                    logger.error(f"ECS Pipeline error: {e}, falling back to template generation")
+                    await ws_manager.send_log(project_id, f"템플릿 모드로 전환", "warning")
                     project_path = await generate_real_project(
                         project_id=project_id,
                         project_name=project_name,
@@ -772,65 +850,79 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                         description=user_input,
                         features=enhanced_features
                     )
-                    
-            except Exception as e:
-                logger.error(f"ECS Pipeline error: {e}, falling back to template generation")
-                await ws_manager.send_log(project_id, f"ECS Pipeline 오류, 템플릿 모드로 전환", "warning")
+        else:
+            # ECS Pipeline 사용 불가능 - Production Code Generator 우선 사용
+            if CODE_GENERATOR_AVAILABLE:
+                logger.info("ECS Pipeline not available, using Production Code Generator")
+                await ws_manager.send_log(project_id, "프로덕션 코드 생성기 사용", "info")
+                
+                try:
+                    generation_result = code_generator.generate_project(
+                        project_id=project_id,
+                        project_type=project_type,
+                        project_name=project_name,
+                        description=user_input,
+                        features=enhanced_features
+                    )
+                    project_path = Path(generation_result["project_path"])
+                    logger.info(f"Production code generated at {project_path}")
+                except Exception as e:
+                    logger.error(f"Code Generator failed: {e}, falling back to template")
+                    await ws_manager.send_log(project_id, "템플릿 모드로 전환", "warning")
+                    project_path = await generate_real_project(
+                        project_id=project_id,
+                        project_name=project_name,
+                        project_type=project_type,
+                        description=user_input,
+                        features=enhanced_features
+                    )
+            else:
+                logger.info("No Code Generator available, using template generation")
+                
+                # 1. Agent Pipeline 실행을 위한 데이터 준비
+                pipeline_input = {
+                    "query": user_input,
+                    "project_name": project_name,
+                    "project_type": project_type,
+                    "features": enhanced_features
+                }
+                
+                logger.info(f"Pipeline input prepared: {pipeline_input}")
+                
+                # 1.5. Bedrock AgentCore로 입력 강화 (사용 가능한 경우)
+                if BEDROCK_AVAILABLE:
+                    try:
+                        logger.info("Enhancing pipeline with Bedrock AgentCore")
+                        bedrock_enhancement = await bedrock_integration.enhance_pipeline_with_bedrock({
+                            "user_input": user_input,
+                            "project_type": project_type,
+                            "features": features,
+                            "user_id": f"user_{project_id}"
+                        })
+                        logger.info("Bedrock enhancement completed")
+                    except Exception as e:
+                        logger.warning(f"Bedrock enhancement failed, continuing with standard pipeline: {e}")
+                
+                # 2. 실제 프로젝트 생성 (Bedrock 강화된 정보 사용)
+                enhanced_project_name = project_name
+                
+                # Bedrock에서 강화된 정보 추출
+                if bedrock_enhancement and bedrock_enhancement.get("enhanced_steps"):
+                    for step in bedrock_enhancement["enhanced_steps"]:
+                        if step["agent"] == "nl_input" and step.get("result", {}).get("success"):
+                            parsed_response = step["result"]["result"].get("parsed_response", {})
+                            if parsed_response:
+                                enhanced_features.extend(parsed_response.get("features", []))
+                                if parsed_response.get("project_type"):
+                                    project_type = parsed_response["project_type"]
+                
                 project_path = await generate_real_project(
                     project_id=project_id,
-                    project_name=project_name,
+                    project_name=enhanced_project_name,
                     project_type=project_type,
                     description=user_input,
                     features=enhanced_features
                 )
-        else:
-            # ECS Pipeline 사용 불가능 - 템플릿 기반 생성
-            logger.info("ECS Pipeline not available, using template generation")
-            
-            # 1. Agent Pipeline 실행을 위한 데이터 준비
-            pipeline_input = {
-                "query": user_input,
-                "project_name": project_name,
-                "project_type": project_type,
-                "features": enhanced_features
-            }
-            
-            logger.info(f"Pipeline input prepared: {pipeline_input}")
-            
-            # 1.5. Bedrock AgentCore로 입력 강화 (사용 가능한 경우)
-            if BEDROCK_AVAILABLE:
-                try:
-                    logger.info("Enhancing pipeline with Bedrock AgentCore")
-                    bedrock_enhancement = await bedrock_integration.enhance_pipeline_with_bedrock({
-                        "user_input": user_input,
-                        "project_type": project_type,
-                        "features": features,
-                        "user_id": f"user_{project_id}"
-                    })
-                    logger.info("Bedrock enhancement completed")
-                except Exception as e:
-                    logger.warning(f"Bedrock enhancement failed, continuing with standard pipeline: {e}")
-            
-            # 2. 실제 프로젝트 생성 (Bedrock 강화된 정보 사용)
-            enhanced_project_name = project_name
-            
-            # Bedrock에서 강화된 정보 추출
-            if bedrock_enhancement and bedrock_enhancement.get("enhanced_steps"):
-                for step in bedrock_enhancement["enhanced_steps"]:
-                    if step["agent"] == "nl_input" and step.get("result", {}).get("success"):
-                        parsed_response = step["result"]["result"].get("parsed_response", {})
-                        if parsed_response:
-                            enhanced_features.extend(parsed_response.get("features", []))
-                            if parsed_response.get("project_type"):
-                                project_type = parsed_response["project_type"]
-            
-            project_path = await generate_real_project(
-                project_id=project_id,
-                project_name=enhanced_project_name,
-                project_type=project_type,
-                description=user_input,
-                features=enhanced_features
-            )
         
         logger.info(f"Project generated at: {project_path}")
         await ws_manager.send_log(project_id, "프로젝트 파일 생성 완료", "success")

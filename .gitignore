@@ -119,3 +119,7 @@ pids/
 
 # TernJS port file
 .tern-portdocker/redis/
+
+# Next.js build files
+frontend/.next/
+

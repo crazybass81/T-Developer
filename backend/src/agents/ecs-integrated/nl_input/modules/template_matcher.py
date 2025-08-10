@@ -25,13 +25,18 @@ class TemplateMatcher:
     """Matches projects against predefined templates"""
     
     def __init__(self):
-        self.templates = self._initialize_templates()
+        self.templates = []
         self.feature_weights = {
             "required": 1.0,
             "optional": 0.5,
             "keyword": 0.3,
             "tech_stack": 0.4
         }
+        self.load_templates()
+    
+    def load_templates(self):
+        """Load templates into memory"""
+        self.templates = self._initialize_templates()
     
     def _initialize_templates(self) -> List[ProjectTemplate]:
         """Initialize project templates"""

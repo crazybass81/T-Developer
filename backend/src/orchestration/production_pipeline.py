@@ -6,6 +6,7 @@ AWS 통합 및 프로덕션 기능을 포함한 완전한 파이프라인
 import asyncio
 import json
 import logging
+import os
 import time
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
@@ -241,7 +242,14 @@ class ProductionECSPipeline:
                 if agent_name in AGENT_CLASSES:
                     # 실제 에이전트 사용
                     try:
-                        self.agents[agent_name] = AGENT_CLASSES[agent_name]()
+                        # 에이전트 설정 생성
+                        from ..agents.ecs_integrated.base_agent import AgentConfig
+                        config = AgentConfig(
+                            name=agent_name,
+                            version="1.0.0",
+                            aws_region=os.getenv('AWS_REGION', 'us-east-1')
+                        )
+                        self.agents[agent_name] = AGENT_CLASSES[agent_name](config)
                         logger.info(f"✅ Real agent loaded: {agent_name}")
                     except Exception as e:
                         logger.warning(f"Failed to initialize real agent {agent_name}: {e}")
@@ -528,7 +536,7 @@ export default App;""",
                     "initial_memory_mb": initial_memory.process_memory_mb,
                     "final_memory_mb": final_memory.process_memory_mb,
                     "memory_diff_mb": memory_diff,
-                    "peak_memory_mb": memory_optimizer.get_peak_memory(),
+                    "peak_memory_mb": getattr(memory_optimizer, 'peak_memory_mb', 0),
                     "gc_collections": memory_optimizer.get_gc_stats()
                 }
                 logger.info(f"🧠 Final memory: {final_memory.process_memory_mb:.1f}MB ({memory_diff:+.1f}MB)")
