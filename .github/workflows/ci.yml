@@ -25,12 +25,12 @@ jobs:
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           
       - name: Install dependencies
         run: |
           cd backend
-          $HOME/.cargo/bin/uv pip install --system flake8 black isort pylint
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv pip install --system flake8 black isort pylint
           
       - name: Run Black (formatter check)
         continue-on-error: true
@@ -76,13 +76,13 @@ jobs:
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           
       - name: Install dependencies
         run: |
           cd backend
-          $HOME/.cargo/bin/uv pip install --system -r requirements.txt
-          $HOME/.cargo/bin/uv pip install --system pytest pytest-cov pytest-asyncio
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv pip install --system -r requirements.txt
+          uv pip install --system pytest pytest-cov pytest-asyncio
           
       - name: Run unit tests
         continue-on-error: true
@@ -118,18 +118,19 @@ jobs:
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           
       - name: Install dependencies
         run: |
           cd backend
-          $HOME/.cargo/bin/uv pip install --system safety bandit
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv pip install --system safety bandit
           
       - name: Run Safety check
         continue-on-error: true
         run: |
           cd backend
-          $HOME/.cargo/bin/uv pip install --system -r requirements.txt
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv pip install --system -r requirements.txt
           safety check
           
       - name: Run Bandit security scan
@@ -154,12 +155,12 @@ jobs:
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           
       - name: Install dependencies
         run: |
           cd backend
-          $HOME/.cargo/bin/uv pip install --system -r requirements.txt
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv pip install --system -r requirements.txt
           
       - name: Validate Python syntax
         run: |

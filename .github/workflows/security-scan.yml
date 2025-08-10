@@ -24,18 +24,19 @@ jobs:
     - name: Install uv
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
     
     - name: Install security tools
       run: |
         cd backend
-        $HOME/.cargo/bin/uv pip install --system safety bandit semgrep
+        export PATH="$HOME/.cargo/bin:$PATH"
+        uv pip install --system safety bandit semgrep
     
     - name: Check for known vulnerabilities
       continue-on-error: true
       run: |
         cd backend
-        $HOME/.cargo/bin/uv pip install --system -r requirements.txt
+        export PATH="$HOME/.cargo/bin:$PATH"
+        uv pip install --system -r requirements.txt
         safety check --json
     
     - name: Run Bandit security scan

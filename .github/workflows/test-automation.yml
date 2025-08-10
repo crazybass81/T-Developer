@@ -47,13 +47,15 @@ jobs:
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          echo "UV_BIN=$HOME/.cargo/bin/uv" >> $GITHUB_ENV
       
       - name: Install dependencies
         run: |
           cd backend
-          $HOME/.cargo/bin/uv pip install --system -r requirements.txt
-          $HOME/.cargo/bin/uv pip install --system pytest pytest-cov pytest-asyncio pytest-mock
+          # Export PATH for this step
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv pip install --system -r requirements.txt
+          uv pip install --system pytest pytest-cov pytest-asyncio pytest-mock
       
       - name: Run unit tests
         run: |
@@ -148,12 +150,12 @@ jobs:
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       
       - name: Install backend dependencies
         run: |
           cd backend
-          $HOME/.cargo/bin/uv pip install --system -r requirements.txt
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv pip install --system -r requirements.txt
       
       - name: Start backend server
         run: |
