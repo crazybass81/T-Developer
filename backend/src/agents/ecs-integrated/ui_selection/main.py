@@ -112,6 +112,10 @@ class UISelectionAgent(BaseAgent):
             self.status = AgentStatus.ERROR
             return False
     
+    async def _custom_initialize(self):
+        """Custom initialization for agent"""
+        pass
+
     async def process(
         self,
         input_data: Dict[str, Any],

@@ -439,8 +439,9 @@ export default App;""",
         # 메모리 스냅샷 시작
         initial_memory = None
         if MEMORY_OPTIMIZER_AVAILABLE and memory_optimizer:
-            initial_memory = memory_optimizer.take_snapshot()
-            logger.info(f"🧠 Initial memory: {initial_memory.process_memory_mb:.1f}MB")
+            if hasattr(memory_optimizer, 'profiler'):
+                initial_memory = memory_optimizer.profiler.take_snapshot()
+                logger.info(f"🧠 Initial memory: {initial_memory.process_memory_mb:.1f}MB")
         
         # 초기화 확인
         if not self.initialized:
@@ -489,9 +490,11 @@ export default App;""",
                 
                 # 메모리 정리 (3단계마다)
                 if MEMORY_OPTIMIZER_AVAILABLE and memory_optimizer and i % 3 == 0:
-                    memory_optimizer.force_gc()
-                    current_memory = memory_optimizer.take_snapshot()
-                    logger.info(f"🧠 Memory after stage {i}: {current_memory.process_memory_mb:.1f}MB")
+                    if hasattr(memory_optimizer, 'cleanup'):
+                        memory_optimizer.cleanup()
+                    if hasattr(memory_optimizer, 'profiler'):
+                        current_memory = memory_optimizer.profiler.take_snapshot()
+                        logger.info(f"🧠 Memory after stage {i}: {current_memory.process_memory_mb:.1f}MB")
                 
                 # 중요한 단계 실패시 중단 여부 결정
                 critical_agents = ["generation", "assembly"]
@@ -516,8 +519,11 @@ export default App;""",
             final_memory = None
             memory_stats = {}
             if MEMORY_OPTIMIZER_AVAILABLE and memory_optimizer and initial_memory:
-                final_memory = memory_optimizer.take_snapshot()
-                memory_diff = final_memory.process_memory_mb - initial_memory.process_memory_mb
+                if hasattr(memory_optimizer, 'profiler'):
+                    final_memory = memory_optimizer.profiler.take_snapshot()
+                    memory_diff = final_memory.process_memory_mb - initial_memory.process_memory_mb
+                else:
+                    memory_diff = 0
                 memory_stats = {
                     "initial_memory_mb": initial_memory.process_memory_mb,
                     "final_memory_mb": final_memory.process_memory_mb,

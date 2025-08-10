@@ -148,7 +148,14 @@
       "Bash(rules)",
       "Bash(git rm:*)",
       "Bash(PORT=3000 npm run dev)",
-      "Bash(python -m pytest tests/test_simple.py::TestMockingAndPatching::test_patch_decorator -xvs)"
+      "Bash(python -m pytest tests/test_simple.py::TestMockingAndPatching::test_patch_decorator -xvs)",
+      "Bash(for agent in ui_selection parser component_decision match_rate search generation assembly download)",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(if ! grep -q \"_custom_initialize\" /home/ec2-user/T-DeveloperMVP/backend/src/agents/ecs-integrated/$agent/main.py)",
+      "Bash(then)",
+      "Bash(fi)",
+      "Bash(done)"
     ],
     "deny": []
   }
