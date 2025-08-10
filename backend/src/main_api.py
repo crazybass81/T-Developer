@@ -36,6 +36,23 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# AWS Parameter Store와 Secrets Manager에서 환경변수 로드
+try:
+    from src.config.env_loader import load_environment
+    logger.info("🔄 Loading environment variables from AWS...")
+    loaded_env = load_environment()
+    logger.info(f"✅ Loaded {len(loaded_env)} environment variables from AWS")
+except ImportError as e:
+    logger.warning(f"⚠️ Environment loader not available: {e}")
+except Exception as e:
+    logger.error(f"❌ Failed to load AWS environment variables: {e}")
+    # 개발 환경에서는 계속 진행
+    if os.getenv('ENVIRONMENT', 'development') == 'development':
+        logger.warning("⚠️ Continuing with local environment variables in development mode")
+    else:
+        # 프로덕션에서는 실패 시 종료
+        sys.exit(1)
+
 # ECS Pipeline 통합 - 프로덕션 및 단순 버전 모두 지원
 try:
     # Direct import to avoid orchestration module issues
@@ -1341,5 +1358,13 @@ async def websocket_endpoint(websocket: WebSocket, project_id: str):
 
 if __name__ == "__main__":
     import uvicorn
+    
+    # AWS Parameter Store에서 PORT 가져오기 (이미 로드됨)
     port = int(os.getenv("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    host = os.getenv("HOST", "0.0.0.0")
+    
+    logger.info(f"🚀 Starting server on {host}:{port}")
+    logger.info(f"📍 Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    logger.info(f"🌍 AWS Region: {os.getenv('AWS_REGION', 'us-east-1')}")
+    
+    uvicorn.run(app, host=host, port=port)

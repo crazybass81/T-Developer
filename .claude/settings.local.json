@@ -156,7 +156,11 @@
       "Bash(then)",
       "Bash(fi)",
       "Bash(done)",
-      "Bash(PORT=3000 npx next dev --port 3000 --hostname 0.0.0.0)"
+      "Bash(PORT=3000 npx next dev --port 3000 --hostname 0.0.0.0)",
+      "Bash(aws ssm get-parameter:*)",
+      "Bash(aws ssm put-parameter:*)",
+      "Bash(ENVIRONMENT=development python3 src/config/env_loader.py)",
+      "Bash(export ENVIRONMENT=development)"
     ],
     "deny": []
   }

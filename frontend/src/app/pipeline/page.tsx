@@ -8,6 +8,7 @@ import { AgentPipeline } from '@/components/features/AgentPipeline'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { API_ENDPOINTS } from '@/config/api'
 import { Progress } from '@/components/ui/Progress'
 import { 
   Clock, 
@@ -273,11 +274,10 @@ function ProjectControls({ project, pipeline }: ProjectControlsProps) {
   const handleDownload = () => {
     // Get download URL from project
     const downloadId = project.downloadId || project.id
-    const downloadUrl = project.downloadUrl || `/api/v1/download/${downloadId}`
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    const downloadUrl = project.downloadUrl || API_ENDPOINTS.download(downloadId)
     
     // Open download link
-    window.open(`${baseUrl}${downloadUrl}`, '_blank')
+    window.open(downloadUrl, '_blank')
   }
 
   return (

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { WSMessage, AgentStatusUpdate, CodeGenerationUpdate, BuildProgressUpdate } from '@/types'
+import { WS_URL } from '@/config/api'
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
 
@@ -30,8 +31,6 @@ interface WebSocketState {
   incrementReconnectCount: () => void
   resetReconnectCount: () => void
 }
-
-const WS_URL = 'ws://localhost:8000' // 하드코딩으로 수정
 
 export const useWebSocketStore = create<WebSocketState>()(
   devtools(

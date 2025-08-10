@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { API_ENDPOINTS } from '@/config/api'
 import { useProjectStore } from '@/stores/useProjectStore'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/Card'
@@ -280,7 +281,7 @@ function ProjectCard({ project, onDelete }: ProjectCardProps) {
                 if (project.downloadUrl) {
                   window.open(project.downloadUrl, '_blank')
                 } else if (project.downloadId) {
-                  window.open(`http://localhost:8000/api/v1/download/${project.downloadId}`, '_blank')
+                  window.open(API_ENDPOINTS.download(project.downloadId), '_blank')
                 } else {
                   console.error('No download URL or ID available')
                 }
@@ -425,7 +426,7 @@ function ProjectMenu({ project, onDelete }: ProjectCardProps) {
                 if (project.downloadUrl) {
                   window.open(project.downloadUrl, '_blank')
                 } else if (project.downloadId) {
-                  window.open(`http://localhost:8000/api/v1/download/${project.downloadId}`, '_blank')
+                  window.open(API_ENDPOINTS.download(project.downloadId), '_blank')
                 } else {
                   console.error('No download URL or ID available')
                 }

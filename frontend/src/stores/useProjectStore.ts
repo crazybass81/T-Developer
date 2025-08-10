@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { Project, AgentPipeline, AgentState, AgentStatus } from '@/types'
+import { API_ENDPOINTS, handleApiResponse } from '@/config/api'
 
 interface ProjectState {
   // Projects
@@ -169,8 +170,8 @@ export const useProjectStore = create<ProjectState>()(
       loadProjects: async () => {
         set({ isLoading: true, error: null })
         try {
-          // Try to fetch from API - 하드코딩으로 수정
-          const response = await fetch('http://localhost:8000/api/v1/projects')
+          // Try to fetch from API
+          const response = await fetch(API_ENDPOINTS.projects)
           
           if (!response.ok) {
             throw new Error('프로젝트 목록을 불러올 수 없습니다')
@@ -227,16 +228,14 @@ export const useProjectStore = create<ProjectState>()(
           addLog(`프로젝트: ${project.name}`, 'info')
           addLog(`프레임워크: ${project.framework}`, 'info')
 
-          // Call the actual generate API - 환경변수 사용
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-          console.log('Using API URL:', apiUrl)
-          console.log('Full endpoint:', `${apiUrl}/api/v1/generate`)
+          // Call the actual generate API
+          console.log('Using API endpoint:', API_ENDPOINTS.generate)
           
           // 타임아웃을 30초로 설정
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 30000) // 30초 타임아웃
           
-          const response = await fetch(`${apiUrl}/api/v1/generate`, {
+          const response = await fetch(API_ENDPOINTS.generate, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -298,11 +297,11 @@ export const useProjectStore = create<ProjectState>()(
             addLog(`✅ ${agents[i].split(' - ')[0]} 완료`, 'success')
           }
 
-          // Update project with actual backend data - 하드코딩으로 수정
+          // Update project with actual backend data
           get().updateProject(projectId, {
             status: 'completed',
             downloadId: result.project_id,
-            downloadUrl: `http://localhost:8000${result.download_url}`,
+            downloadUrl: API_ENDPOINTS.download(result.project_id),
           })
 
           // Update pipeline to complete
