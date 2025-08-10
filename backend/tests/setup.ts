@@ -1,5 +1,5 @@
 // Jest 테스트 환경 설정
-import { mockEnvironment } from './helpers/test-utils';
+import { setupTestEnvironment } from './helpers/test-utils';
 
 // 테스트 환경 변수 설정
 const testEnvVars = {
@@ -16,12 +16,12 @@ Object.entries(testEnvVars).forEach(([key, value]) => {
   process.env[key] = value;
 });
 
-// Mock AWS SDK
+// Test doubles for AWS SDK
 jest.mock('@aws-sdk/client-dynamodb');
 jest.mock('@aws-sdk/lib-dynamodb');
 jest.mock('@aws-sdk/client-s3');
 
-// Mock Redis
+// Test double for Redis
 jest.mock('ioredis', () => {
   return jest.fn().mockImplementation(() => ({
     get: jest.fn(),

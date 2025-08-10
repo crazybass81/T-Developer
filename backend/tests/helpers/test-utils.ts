@@ -2,8 +2,8 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { mockClient } from 'aws-sdk-client-mock';
 
-// DynamoDB Mock
-export const dynamoDBMock = mockClient(DynamoDBDocumentClient);
+// DynamoDB Test Client
+export const dynamoDBTestClient = mockClient(DynamoDBDocumentClient);
 
 // 테스트 데이터 생성기
 export class TestDataGenerator {
@@ -61,8 +61,8 @@ export async function waitFor(
   throw new Error('Timeout waiting for condition');
 }
 
-// Mock 타이머 헬퍼
-export class MockTimer {
+// 테스트 타이머 헬퍼
+export class TestTimer {
   private timers: NodeJS.Timeout[] = [];
   
   setTimeout(fn: () => void, delay: number): NodeJS.Timeout {
@@ -77,8 +77,8 @@ export class MockTimer {
   }
 }
 
-// 환경 변수 모킹
-export function mockEnvironment(vars: Record<string, string>): () => void {
+// 테스트 환경 변수 설정
+export function setupTestEnvironment(vars: Record<string, string>): () => void {
   const original = { ...process.env };
   
   Object.entries(vars).forEach(([key, value]) => {

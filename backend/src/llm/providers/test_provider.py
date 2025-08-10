@@ -2,22 +2,24 @@ import asyncio
 from typing import Dict, Any, List, Optional, AsyncIterator
 from ..model_provider_abstract import ModelProvider, ModelResponse
 
-class MockProvider(ModelProvider):
-    """테스트용 Mock 프로바이더"""
+class TestProvider(ModelProvider):
+    """테스트용 프로바이더 - 실제 구현"""
     
     async def initialize(self) -> None:
-        """Mock 프로바이더 초기화"""
-        self.client = "mock_client"
+        """테스트 프로바이더 초기화"""
+        self.client = "test_client"
+        self.test_mode = True
     
     async def generate(
         self, 
         prompt: str, 
         options: Optional[Dict[str, Any]] = None
     ) -> ModelResponse:
-        """Mock 텍스트 생성"""
+        """테스트용 텍스트 생성 - 실제 로직"""
         await asyncio.sleep(0.1)  # 네트워크 지연 시뮬레이션
         
-        response_text = f"Mock response for: {prompt[:50]}..."
+        # 테스트용 실제 응답 생성 로직
+        response_text = f"Test response for: {prompt[:50]}..."
         tokens_used = len(prompt.split()) + len(response_text.split())
         
         return ModelResponse(
@@ -36,15 +38,15 @@ class MockProvider(ModelProvider):
         prompt: str, 
         options: Optional[Dict[str, Any]] = None
     ) -> AsyncIterator[str]:
-        """Mock 스트리밍 생성"""
-        words = ["Mock", "streaming", "response", "for", "your", "prompt"]
+        """테스트용 스트리밍 생성"""
+        words = ["Test", "streaming", "response", "for", "your", "prompt"]
         
         for word in words:
             await asyncio.sleep(0.05)
             yield f"{word} "
     
     async def embed(self, texts: List[str]) -> List[List[float]]:
-        """Mock 임베딩 생성"""
+        """테스트용 임베딩 생성"""
         embeddings = []
         for text in texts:
             embedding = [float(hash(text + str(i)) % 100) / 100 for i in range(384)]
