@@ -1,8 +1,6 @@
 # T-Developer Backend Requirements
 
 # Core Frameworks
-agno>=0.1.0  # High-performance agent framework (3μs instantiation, 6.5KB footprint)
-agent-squad>=0.1.0
 fastapi>=0.104.1
 uvicorn[standard]>=0.24.0
 python-multipart>=0.0.6

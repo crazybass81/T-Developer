@@ -13,18 +13,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+      
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+      
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           
       - name: Install dependencies
         run: |
           cd backend
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install flake8 black isort pylint pytest pytest-cov
+          $HOME/.cargo/bin/uv pip install --system -r requirements.txt
+          $HOME/.cargo/bin/uv pip install --system flake8 black isort pylint pytest pytest-cov
           
       - name: Code quality check - Black
         continue-on-error: true
@@ -60,24 +64,13 @@ jobs:
         continue-on-error: true
         run: |
           cd backend
-          python -c "
-import json
-with open('coverage.json', 'r') as f:
-    data = json.load(f)
-    coverage = data.get('totals', {}).get('percent_covered', 0)
-    print(f'Coverage: {coverage}%')
-    if coverage < 80:
-        print('❌ Coverage is below 80% threshold')
-        exit(1)
-    else:
-        print('✅ Coverage meets threshold')
-"
+          python -c "import json; data = json.load(open('coverage.json', 'r')); coverage = data.get('totals', {}).get('percent_covered', 0); print(f'Coverage: {coverage}%'); exit(0 if coverage >= 80 else 1)"
           
       - name: Security audit
         continue-on-error: true
         run: |
           cd backend
-          pip install safety
+          $HOME/.cargo/bin/uv pip install --system safety
           safety check
           
       - name: Comment PR
