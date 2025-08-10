@@ -148,7 +148,7 @@ jobs:
       - name: Start backend server
         run: |
           cd backend
-          python src/main_api.py &
+          PORT=8080 python src/main_api.py &
           sleep 5
         env:
           TESTING: true
@@ -157,14 +157,15 @@ jobs:
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
           AWS_REGION: us-east-1
+          PORT: 8080
       
       - name: Test API endpoints
         run: |
           # Health check
-          curl -f http://localhost:8000/health || exit 1
+          curl -f http://localhost:8080/health || exit 1
           
           # Test project generation endpoint
-          curl -X POST http://localhost:8000/api/v1/generate \
+          curl -X POST http://localhost:8080/api/v1/generate \
             -H "Content-Type: application/json" \
             -d '{"name": "test", "description": "test project", "framework": "react"}' \
             -o response.json || true

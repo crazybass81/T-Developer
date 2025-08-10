@@ -242,12 +242,13 @@ jobs:
       - name: Test API startup
         run: |
           cd backend
-          timeout 5s python src/main_api.py || true
+          PORT=8080 timeout 5s python src/main_api.py || true
         env:
           TESTING: true
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
           AWS_REGION: us-east-1
+          PORT: 8080
 
   docker-build:
     name: Docker Build Test
