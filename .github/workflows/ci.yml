@@ -234,18 +234,15 @@ jobs:
       - name: Validate Python imports
         run: |
           cd backend
-          python -c "
-import sys
-sys.path.insert(0, '.')
-try:
-    from src.main_api import app
-    from src.database.dynamodb_client import DynamoDBClient
-    from src.agents.ecs_integrated.generation.main import GenerationAgent
-    print('✅ All imports successful')
-except ImportError as e:
-    print(f'❌ Import error: {e}')
-    sys.exit(1)
-"
+          python -c "import sys; sys.path.insert(0, '.'); \
+          try: \
+              from src.main_api import app; \
+              from src.database.dynamodb_client import DynamoDBClient; \
+              from src.agents.ecs_integrated.generation.main import GenerationAgent; \
+              print('✅ All imports successful'); \
+          except ImportError as e: \
+              print(f'❌ Import error: {e}'); \
+              sys.exit(1)"
           
       - name: Test API startup
         run: |
