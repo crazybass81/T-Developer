@@ -1,5 +1,9 @@
 # T-Developer Backend Requirements
 
+# Local Project Frameworks (install with -e flag or comment out for CI/CD)
+# agno>=0.1.0  # Local framework in src/agno/
+# agent-squad>=0.1.0  # Local framework in src/orchestration/
+
 # Core Frameworks
 fastapi>=0.104.1
 uvicorn[standard]>=0.24.0
