@@ -1,0 +1,261 @@
+{
+  "nl_input": {
+    "todo_app": {
+      "project_type": "web_application",
+      "main_functionality": "task_management",
+      "technical_requirements": {
+        "frontend": ["React", "TypeScript"],
+        "backend": ["Node.js", "Express"],
+        "database": ["PostgreSQL"],
+        "authentication": true,
+        "real_time": false
+      },
+      "features": [
+        "Create todos",
+        "Edit todos",
+        "Delete todos",
+        "Mark as complete",
+        "Filter by status",
+        "Categories/Tags"
+      ],
+      "complexity": "medium"
+    }
+  },
+  "ui_selection": {
+    "todo_app": {
+      "framework": {
+        "name": "React",
+        "version": "18.2.0",
+        "reason": "Most popular, great ecosystem"
+      },
+      "ui_library": {
+        "name": "Material-UI",
+        "version": "5.14.0",
+        "reason": "Comprehensive component library"
+      },
+      "styling": {
+        "name": "Tailwind CSS",
+        "version": "3.3.0",
+        "reason": "Utility-first, highly customizable"
+      },
+      "state_management": {
+        "name": "Redux Toolkit",
+        "version": "1.9.0",
+        "reason": "Official Redux solution, simple API"
+      },
+      "bundler": {
+        "name": "Vite",
+        "version": "4.5.0",
+        "reason": "Fast build times, great DX"
+      }
+    }
+  },
+  "parser": {
+    "todo_app": {
+      "file_structure": {
+        "src/": {
+          "components/": [
+            "TodoList.tsx",
+            "TodoItem.tsx",
+            "TodoForm.tsx",
+            "FilterBar.tsx"
+          ],
+          "pages/": [
+            "Home.tsx",
+            "Login.tsx",
+            "Dashboard.tsx"
+          ],
+          "hooks/": [
+            "useTodos.ts",
+            "useAuth.ts",
+            "useFilters.ts"
+          ],
+          "services/": [
+            "api.ts",
+            "auth.ts",
+            "storage.ts"
+          ],
+          "store/": [
+            "index.ts",
+            "todoSlice.ts",
+            "authSlice.ts"
+          ],
+          "types/": [
+            "todo.ts",
+            "user.ts",
+            "api.ts"
+          ],
+          "utils/": [
+            "constants.ts",
+            "helpers.ts",
+            "validators.ts"
+          ]
+        },
+        "public/": [
+          "index.html",
+          "favicon.ico",
+          "manifest.json"
+        ],
+        "tests/": [
+          "unit/",
+          "integration/",
+          "e2e/"
+        ]
+      },
+      "api_endpoints": [
+        "GET /api/todos",
+        "POST /api/todos",
+        "PUT /api/todos/:id",
+        "DELETE /api/todos/:id",
+        "GET /api/auth/login",
+        "POST /api/auth/register"
+      ],
+      "database_schema": {
+        "users": {
+          "id": "uuid",
+          "email": "string",
+          "password": "string",
+          "created_at": "timestamp"
+        },
+        "todos": {
+          "id": "uuid",
+          "user_id": "uuid",
+          "title": "string",
+          "description": "text",
+          "completed": "boolean",
+          "created_at": "timestamp",
+          "updated_at": "timestamp"
+        }
+      }
+    }
+  },
+  "component_decision": {
+    "todo_app": {
+      "architecture": "feature-based",
+      "design_patterns": [
+        "Container/Presentational",
+        "Custom Hooks",
+        "Redux Toolkit"
+      ],
+      "component_hierarchy": {
+        "App": {
+          "Router": {
+            "PublicRoute": ["Login", "Register"],
+            "PrivateRoute": ["Dashboard", "TodoPage"]
+          },
+          "Layout": {
+            "Header": ["Navigation", "UserMenu"],
+            "Main": ["Content"],
+            "Footer": ["Links", "Copyright"]
+          }
+        }
+      },
+      "data_flow": "unidirectional",
+      "state_management_strategy": "global_store_with_local_state"
+    }
+  },
+  "match_rate": {
+    "todo_app": {
+      "template_matches": [
+        {
+          "template_id": "react-todo-template-01",
+          "match_score": 0.85,
+          "matching_features": ["CRUD", "Auth", "Filters"],
+          "missing_features": ["Real-time sync"],
+          "customization_needed": "minor"
+        },
+        {
+          "template_id": "task-manager-template-02",
+          "match_score": 0.75,
+          "matching_features": ["Task management", "Categories"],
+          "missing_features": ["Auth", "API integration"],
+          "customization_needed": "moderate"
+        }
+      ],
+      "recommended_template": "react-todo-template-01",
+      "confidence": 0.85
+    }
+  },
+  "search": {
+    "todo_app": {
+      "libraries_found": [
+        {
+          "name": "react",
+          "version": "18.2.0",
+          "purpose": "UI framework"
+        },
+        {
+          "name": "redux-toolkit",
+          "version": "1.9.7",
+          "purpose": "State management"
+        },
+        {
+          "name": "axios",
+          "version": "1.6.2",
+          "purpose": "HTTP client"
+        },
+        {
+          "name": "react-router-dom",
+          "version": "6.20.0",
+          "purpose": "Routing"
+        },
+        {
+          "name": "formik",
+          "version": "2.4.5",
+          "purpose": "Form handling"
+        },
+        {
+          "name": "yup",
+          "version": "1.3.3",
+          "purpose": "Validation"
+        }
+      ],
+      "code_snippets": [
+        {
+          "source": "github",
+          "relevance": 0.9,
+          "url": "https://github.com/example/todo-hooks"
+        }
+      ],
+      "best_practices": [
+        "Use custom hooks for logic reuse",
+        "Implement optimistic updates",
+        "Add loading and error states",
+        "Use TypeScript for type safety"
+      ]
+    }
+  },
+  "generation": {
+    "todo_app": {
+      "files_generated": 45,
+      "total_lines_of_code": 2500,
+      "test_coverage": 75,
+      "components_created": 12,
+      "api_endpoints": 8,
+      "configuration_files": 6,
+      "documentation_files": 3
+    }
+  },
+  "assembly": {
+    "todo_app": {
+      "project_structure_valid": true,
+      "dependencies_installed": true,
+      "build_successful": true,
+      "tests_passing": true,
+      "linting_passed": true,
+      "type_checking_passed": true,
+      "bundle_size_kb": 250
+    }
+  },
+  "download": {
+    "todo_app": {
+      "package_format": "zip",
+      "file_size_mb": 2.5,
+      "total_files": 52,
+      "includes_readme": true,
+      "includes_documentation": true,
+      "includes_docker": true,
+      "download_url": "/downloads/todo-app-001.zip"
+    }
+  }
+}
