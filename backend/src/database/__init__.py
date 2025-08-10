@@ -1,21 +1,15 @@
 """
-Database Module
-SQLAlchemy ORM 설정 및 모델
+Database Module - DynamoDB Only
+DynamoDB를 사용한 NoSQL 데이터 저장소
 """
 
-from .base import Base, get_db, SessionLocal, engine
-from .models import User, Project, Agent, ApiKey, AuditLog
-from .connection import DatabaseManager
+from .dynamodb_client import DynamoDBClient, get_dynamodb_client
+from .dynamodb_models import ProjectModel, UserModel, AgentModel
 
 __all__ = [
-    'Base',
-    'get_db',
-    'SessionLocal',
-    'engine',
-    'User',
-    'Project',
-    'Agent',
-    'ApiKey',
-    'AuditLog',
-    'DatabaseManager'
+    'DynamoDBClient',
+    'get_dynamodb_client',
+    'ProjectModel',
+    'UserModel',
+    'AgentModel'
 ]

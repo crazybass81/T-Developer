@@ -13,17 +13,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Database URL
-DATABASE_URL = os.getenv(
-    'DATABASE_URL',
-    'postgresql://postgres:postgres@localhost:5432/t_developer'
-)
-
-# Add async support
-ASYNC_DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://')
-
 # Engine configuration based on environment
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+TESTING = os.getenv('TESTING', 'false').lower() == 'true'
+
+# Database URL configuration
+if TESTING:
+    # Use SQLite for testing (no external dependencies)
+    DATABASE_URL = 'sqlite:///./test.db'
+    ASYNC_DATABASE_URL = 'sqlite+aiosqlite:///./test.db'
+else:
+    DATABASE_URL = os.getenv(
+        'DATABASE_URL',
+        'postgresql://postgres:postgres@localhost:5432/t_developer'
+    )
+    # Add async support
+    ASYNC_DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://')
 
 if ENVIRONMENT == 'production':
     # Production settings with connection pooling
@@ -38,14 +43,15 @@ if ENVIRONMENT == 'production':
         connect_args={
             "connect_timeout": 10,
             "options": "-c statement_timeout=30000"  # 30 seconds statement timeout
-        }
+        } if not TESTING else {}
     )
-elif ENVIRONMENT == 'testing':
-    # Testing with no connection pool
+elif TESTING:
+    # Testing with SQLite
     engine = create_engine(
         DATABASE_URL,
         poolclass=NullPool,
-        echo=False
+        echo=False,
+        connect_args={"check_same_thread": False}  # SQLite specific
     )
 else:
     # Development settings

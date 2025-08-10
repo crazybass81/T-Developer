@@ -8,10 +8,6 @@ import asyncio
 import os
 from typing import Generator, AsyncGenerator
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import StaticPool
-import redis
 from unittest.mock import Mock, AsyncMock, patch
 import jwt
 from datetime import datetime, timedelta
@@ -19,14 +15,7 @@ from datetime import datetime, timedelta
 # Set test environment
 os.environ['ENVIRONMENT'] = 'testing'
 os.environ['LOG_LEVEL'] = 'error'
-
-# Import application components
-from src.database.base import Base, get_db
-from src.database.models import User, Project, Organization
-from src.auth.jwt_handler import JWTHandler
-
-# Test database URL (SQLite in-memory)
-TEST_DATABASE_URL = "sqlite:///:memory:"
+os.environ['TESTING'] = 'true'
 
 # Test Redis
 TEST_REDIS_URL = "redis://localhost:6379/15"
@@ -38,35 +27,32 @@ def event_loop():
     yield loop
     loop.close()
 
-@pytest.fixture(scope="session")
-def test_engine():
-    """Create test database engine"""
-    engine = create_engine(
-        TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(bind=engine)
-    yield engine
-    Base.metadata.drop_all(bind=engine)
-
-@pytest.fixture(scope="function")
-def test_db(test_engine) -> Generator[Session, None, None]:
-    """Create test database session"""
-    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-    session = TestSessionLocal()
-    
-    try:
-        yield session
-    finally:
-        session.rollback()
-        session.close()
-
 @pytest.fixture
 def mock_dynamodb():
-    """Mock DynamoDB client"""
-    with patch('boto3.resource') as mock:
-        yield mock
+    """Mock DynamoDB client for testing"""
+    with patch('boto3.resource') as mock_resource:
+        # Create mock DynamoDB table
+        mock_table = Mock()
+        mock_table.put_item = AsyncMock(return_value={'ResponseMetadata': {'HTTPStatusCode': 200}})
+        mock_table.get_item = AsyncMock(return_value={'Item': {'id': 'test_id'}})
+        mock_table.query = AsyncMock(return_value={'Items': []})
+        mock_table.scan = AsyncMock(return_value={'Items': []})
+        mock_table.delete_item = AsyncMock(return_value={'ResponseMetadata': {'HTTPStatusCode': 200}})
+        
+        mock_resource.return_value.Table.return_value = mock_table
+        yield mock_resource
+
+@pytest.fixture
+def dynamodb_client():
+    """Mock DynamoDB client with common operations"""
+    client = Mock()
+    client.put_item = AsyncMock(return_value={'ResponseMetadata': {'HTTPStatusCode': 200}})
+    client.get_item = AsyncMock(return_value={'Item': {}})
+    client.query = AsyncMock(return_value={'Items': [], 'Count': 0})
+    client.scan = AsyncMock(return_value={'Items': [], 'Count': 0})
+    client.delete_item = AsyncMock(return_value={'ResponseMetadata': {'HTTPStatusCode': 200}})
+    client.create_table = AsyncMock(return_value={'TableDescription': {'TableStatus': 'ACTIVE'}})
+    return client
 
 @pytest.fixture
 def mock_bedrock():
