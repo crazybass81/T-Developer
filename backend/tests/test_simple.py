@@ -6,7 +6,7 @@ Simple tests without database dependencies
 import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, mock_open
 
 # 프로젝트 경로 추가
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -243,15 +243,15 @@ class TestMockingAndPatching:
         with pytest.raises(AttributeError):
             mock_obj.nonexistent_method()
     
-    @patch('builtins.open', Mock())
+    @patch('builtins.open', mock_open(read_data='fake content'))
     def test_patch_decorator(self):
         """Patch 데코레이터 테스트"""
         # open이 mock으로 대체됨
         with open('fake_file.txt', 'r') as f:
-            pass
+            content = f.read()
         
-        # Mock이 호출되었는지 확인
-        open.assert_called()
+        # 내용이 올바르게 읽혔는지 확인
+        assert content == 'fake content'
     
     def test_patch_context_manager(self):
         """Patch 컨텍스트 매니저 테스트"""
