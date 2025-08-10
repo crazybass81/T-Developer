@@ -1,0 +1,26 @@
+#!/bin/bash
+# Pre-push hook for CLAUDE.md rules checking
+# Push 전 최종 규칙 체크
+
+echo "🔍 Running final CLAUDE.md rules check before push..."
+
+# Check if check-rules.py exists
+if [ ! -f "check-rules.py" ]; then
+    echo "⚠️ Warning: check-rules.py not found, skipping rules check"
+    exit 0
+fi
+
+# Run rules check
+python3 check-rules.py
+
+# Check exit status
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "⚠️ Warning: Rules violations detected!"
+    echo "Consider fixing these issues before pushing."
+    echo ""
+    # Warning only, not blocking push
+fi
+
+echo "📤 Proceeding with push..."
+exit 0
