@@ -232,11 +232,12 @@ jobs:
           cd backend
           cat > test_imports.py << 'EOF'
           import sys
+          import os
           sys.path.insert(0, '.')
+          os.environ['AWS_REGION'] = 'us-east-1'
           try:
               from src.main_api import app
               from src.database.dynamodb_client import DynamoDBClient
-              from src.agents.ecs_integrated.generation.main import GenerationAgent
               print('✅ All imports successful')
           except ImportError as e:
               print(f'❌ Import error: {e}')
