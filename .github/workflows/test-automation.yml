@@ -148,8 +148,19 @@ jobs:
       - name: Start backend server
         run: |
           cd backend
-          PORT=8080 python src/main_api.py &
-          sleep 5
+          echo "Starting API server on port 8080..."
+          nohup python src/main_api.py > server.log 2>&1 &
+          echo "Waiting for server to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8080/health > /dev/null; then
+              echo "Server is ready!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 1
+          done
+          echo "Server logs:"
+          cat server.log || true
         env:
           TESTING: true
           DYNAMODB_ENDPOINT: http://localhost:8000
