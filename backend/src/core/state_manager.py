@@ -14,9 +14,24 @@ from dataclasses import dataclass, field
 from src.core.interfaces import (
     PipelineContext, AgentResult, ProcessingStatus
 )
-from src.services.aws_clients import (
-    get_dynamodb_client, get_s3_client, get_redis_client
-)
+try:
+    from src.services.aws_clients import (
+        get_dynamodb_client, get_s3_client
+    )
+    # Redis client is optional
+    try:
+        from src.services.aws_clients import get_redis_client
+    except ImportError:
+        def get_redis_client():
+            return None
+except ImportError:
+    # Fallback if aws_clients is not available
+    def get_dynamodb_client():
+        return None
+    def get_s3_client():
+        return None
+    def get_redis_client():
+        return None
 
 
 class StateType(Enum):

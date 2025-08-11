@@ -28,12 +28,43 @@ except ImportError:
 
 # Path 설정
 sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # backend 디렉토리도 추가
 
-# 실제 에이전트 동적 임포트
+# 실제 에이전트 직접 임포트
 AGENTS_AVAILABLE = False
 AGENT_CLASSES = {}
 
-def load_agent_class(agent_name: str):
+# Unified agents 직접 import
+try:
+    from src.agents.unified.nl_input.agent import UnifiedNLInputAgent
+    from src.agents.unified.ui_selection.agent import UnifiedUISelectionAgent
+    from src.agents.unified.parser.agent import UnifiedParserAgent
+    from src.agents.unified.component_decision.agent import ComponentDecisionAgent
+    from src.agents.unified.match_rate.agent import MatchRateAgent
+    from src.agents.unified.search.agent import SearchAgent
+    from src.agents.unified.generation.agent import GenerationAgent
+    from src.agents.unified.assembly.agent import AssemblyAgent
+    from src.agents.unified.download.agent import DownloadAgent
+    
+    AGENT_CLASSES = {
+        "nl_input": UnifiedNLInputAgent,
+        "ui_selection": UnifiedUISelectionAgent,
+        "parser": UnifiedParserAgent,
+        "component_decision": ComponentDecisionAgent,
+        "match_rate": MatchRateAgent,
+        "search": SearchAgent,
+        "generation": GenerationAgent,
+        "assembly": AssemblyAgent,
+        "download": DownloadAgent
+    }
+    AGENTS_AVAILABLE = True
+    print(f"✅ Loaded {len(AGENT_CLASSES)} unified agents directly")
+except ImportError as e:
+    print(f"⚠️ Failed to import unified agents: {e}")
+    # 동적 로딩으로 fallback
+    AGENT_CLASSES = {}
+
+def load_agent_class_dynamic(agent_name: str):
     """동적으로 에이전트 클래스 로딩 - 개선된 버전"""
     try:
         # Try unified directory first (where actual implementations are)
@@ -102,15 +133,16 @@ def load_agent_class(agent_name: str):
         traceback.print_exc()
         return None
 
-# 에이전트 클래스들 사전 로딩
-agent_names = ["nl_input", "ui_selection", "parser", "component_decision", 
-               "match_rate", "search", "generation", "assembly", "download"]
-
-for agent_name in agent_names:
-    agent_class = load_agent_class(agent_name)
-    if agent_class:
-        AGENT_CLASSES[agent_name] = agent_class
-        AGENTS_AVAILABLE = True
+# 동적 로딩이 필요한 경우에만 실행
+if not AGENTS_AVAILABLE:
+    agent_names = ["nl_input", "ui_selection", "parser", "component_decision", 
+                   "match_rate", "search", "generation", "assembly", "download"]
+    
+    for agent_name in agent_names:
+        agent_class = load_agent_class_dynamic(agent_name)
+        if agent_class:
+            AGENT_CLASSES[agent_name] = agent_class
+            AGENTS_AVAILABLE = True
 
 print(f"Loaded {len(AGENT_CLASSES)} real agents: {list(AGENT_CLASSES.keys())}")
 

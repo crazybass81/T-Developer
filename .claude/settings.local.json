@@ -164,7 +164,8 @@
       "Bash(pip install:*)",
       "Bash(pre-commit:*)",
       "Bash(git config:*)",
-      "Bash(python test:*)"
+      "Bash(python test:*)",
+      "Bash(PYTHONPATH=/home/ec2-user/T-DeveloperMVP/backend python3 src/main_api.py)"
     ],
     "deny": []
   }

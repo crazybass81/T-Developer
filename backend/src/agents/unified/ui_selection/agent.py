@@ -10,10 +10,20 @@ from dataclasses import dataclass, field
 # Unified base imports
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
 
-# Phase 2 imports
-from src.core.interfaces import AgentInput, ProcessingStatus
-from src.core.agent_models import UISelectionResult
-from src.core.event_bus import publish_agent_event, EventType
+# Phase 2 imports - optional
+try:
+    from src.core.interfaces import AgentInput, ProcessingStatus
+    from src.core.agent_models import UISelectionResult
+    from src.core.event_bus import publish_agent_event, EventType
+    CORE_IMPORTS_AVAILABLE = True
+except ImportError:
+    CORE_IMPORTS_AVAILABLE = False
+    # Define dummy classes if needed
+    class AgentInput: pass
+    class ProcessingStatus: pass
+    class UISelectionResult: pass
+    class EventType: pass
+    def publish_agent_event(*args, **kwargs): pass
 
 import logging
 logger = logging.getLogger(__name__)

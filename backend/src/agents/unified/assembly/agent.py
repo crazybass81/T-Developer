@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 import sys
 sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 
-from agents.unified.base_agent import UnifiedBaseAgent
+from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
 from agents.phase2_enhancements import Phase2AssemblyResult
 
 # Import specialized modules

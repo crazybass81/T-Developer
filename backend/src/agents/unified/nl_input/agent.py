@@ -13,11 +13,23 @@ from dataclasses import dataclass, field
 # Unified base imports
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
 
-# Phase 2 imports
-from src.core.interfaces import AgentInput, ProcessingStatus, ValidationResult
-from src.core.agent_models import NLInputResult
-from src.core.event_bus import publish_agent_event, EventType
-from src.core.security import InputValidator
+# Phase 2 imports - optional
+try:
+    from src.core.interfaces import AgentInput, ProcessingStatus, ValidationResult
+    from src.core.agent_models import NLInputResult
+    from src.core.event_bus import publish_agent_event, EventType
+    from src.core.security import InputValidator
+    CORE_IMPORTS_AVAILABLE = True
+except ImportError:
+    CORE_IMPORTS_AVAILABLE = False
+    # Define dummy classes if needed
+    class AgentInput: pass
+    class ProcessingStatus: pass
+    class ValidationResult: pass
+    class NLInputResult: pass
+    class EventType: pass
+    class InputValidator: pass
+    def publish_agent_event(*args, **kwargs): pass
 
 # Module imports
 from .modules import (
