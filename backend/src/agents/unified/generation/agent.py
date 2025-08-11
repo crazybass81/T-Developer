@@ -20,6 +20,14 @@ sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
 from src.agents.unified.data_wrapper import AgentInput, AgentContext, wrap_input, unwrap_result
 
+# Import AI service
+try:
+    from src.services.ai_service import ai_service
+    AI_SERVICE_AVAILABLE = True
+except ImportError:
+    AI_SERVICE_AVAILABLE = False
+    ai_service = None
+
 # from agents.phase2_enhancements import Phase2GenerationResult  # Commented out - module not available
 
 # Import all specialized modules
@@ -567,11 +575,18 @@ class GenerationAgent(UnifiedBaseAgent):
             description = data.get('description', data.get('query', ''))
             framework = data.get('framework', 'react')
             features = data.get('features', [])
+            requirements = data.get('requirements', [])
             
-            # Use OpenAI to generate complete project code
-            generated_files = await self._generate_project_with_gpt(
-                project_name, description, framework, features
-            )
+            # Use unified AI service if available
+            if AI_SERVICE_AVAILABLE and ai_service:
+                generated_files = await self._generate_project_with_ai_service(
+                    project_name, description, framework, features, requirements
+                )
+            else:
+                # Fallback to GPT if available
+                generated_files = await self._generate_project_with_gpt(
+                    project_name, description, framework, features
+                )
             
             # Create result
             result = EnhancedGenerationResult({
@@ -597,6 +612,114 @@ class GenerationAgent(UnifiedBaseAgent):
             await self.log_event("ai_generation_error", {"error": str(e)})
             # Fallback to template-based generation
             return await self._generate_with_templates(data)
+    
+    async def _generate_project_with_ai_service(
+        self,
+        project_name: str,
+        description: str,
+        framework: str,
+        features: List[str],
+        requirements: List[str]
+    ) -> Dict[str, str]:
+        """Generate complete project files using unified AI service"""
+        
+        generated_files = {}
+        
+        # Create comprehensive specification
+        specification = {
+            'project_name': project_name,
+            'description': description,
+            'framework': framework,
+            'features': features,
+            'requirements': requirements,
+            'project_type': 'web_app'
+        }
+        
+        # Generate main application file
+        app_prompt = f"""Create a complete {framework} application with these requirements:
+Project: {project_name}
+Description: {description}
+Features: {', '.join(features)}
+
+Generate the main application file (App.js for React, App.vue for Vue, etc.) with:
+1. All requested features implemented
+2. Proper component structure
+3. State management
+4. Error handling
+5. Responsive design
+6. Clean, production-ready code"""
+
+        app_code = await ai_service.generate(app_prompt)
+        
+        if framework == 'react':
+            generated_files['src/App.js'] = app_code
+            
+            # Generate index.js
+            index_code = await ai_service.generate(
+                f"Generate index.js entry point for React app {project_name}"
+            )
+            generated_files['src/index.js'] = index_code
+            
+            # Generate components for each feature
+            for feature in features[:5]:  # Limit to avoid too many API calls
+                component_prompt = f"Create a React component for: {feature}"
+                component_code = await ai_service.generate(component_prompt)
+                component_name = feature.replace(' ', '').replace('-', '')
+                generated_files[f'src/components/{component_name}.js'] = component_code
+        
+        elif framework == 'vue':
+            generated_files['src/App.vue'] = app_code
+            
+            # Generate main.js
+            main_code = await ai_service.generate(
+                f"Generate main.js entry point for Vue app {project_name}"
+            )
+            generated_files['src/main.js'] = main_code
+        
+        # Generate package.json
+        package_json = await self._generate_package_json_with_ai(
+            project_name, framework, features
+        )
+        generated_files['package.json'] = package_json
+        
+        # Generate README
+        readme = await ai_service.generate(
+            f"Generate a comprehensive README.md for {project_name}: {description}"
+        )
+        generated_files['README.md'] = readme
+        
+        # Generate CSS
+        css_code = await ai_service.generate(
+            f"Generate modern CSS styles for {project_name} with responsive design"
+        )
+        generated_files['src/styles.css'] = css_code
+        
+        return generated_files
+    
+    async def _generate_package_json_with_ai(
+        self,
+        project_name: str,
+        framework: str,
+        features: List[str]
+    ) -> str:
+        """Generate package.json using AI"""
+        
+        prompt = f"""Generate a complete package.json for {framework} project with:
+- Project name: {project_name}
+- Features: {', '.join(features)}
+- Include all necessary dependencies
+- Add useful scripts (start, build, test, lint)
+- Modern versions of packages"""
+        
+        package_json = await ai_service.generate(prompt)
+        
+        # Ensure it's valid JSON
+        try:
+            json.loads(package_json)
+            return package_json
+        except:
+            # Fallback to template
+            return self._get_default_package_json(project_name, framework)
     
     async def _generate_project_with_gpt(
         self, 

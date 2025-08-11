@@ -218,7 +218,7 @@ class ComponentDecisionAgent(UnifiedBaseAgent):
             ) = results
             
             # Make component decisions
-            component_decisions = self._make_component_decisions(
+            component_decisions = await self._make_component_decisions(
                 architecture,
                 components,
                 design_patterns,
@@ -294,7 +294,7 @@ class ComponentDecisionAgent(UnifiedBaseAgent):
         required_fields = ['requirements', 'specifications']
         return all(field in input_data for field in required_fields)
     
-    def _make_component_decisions(
+    async def _make_component_decisions(
         self,
         architecture: Dict,
         components: List[Dict],
@@ -302,8 +302,76 @@ class ComponentDecisionAgent(UnifiedBaseAgent):
         tech_stack: Dict,
         requirements: Dict
     ) -> Dict[str, Any]:
-        """Make final component decisions based on all analysis"""
+        """Make final component decisions based on all analysis using AI"""
         
+        # Use AI to enhance component decisions
+        try:
+            from src.services.ai_service import ai_service
+            
+            prompt = f"""Based on the following analysis, make optimal component architecture decisions:
+
+Requirements: {json.dumps(requirements, indent=2)}
+Architecture Type: {architecture.get('type', 'layered')}
+Technology Stack: {json.dumps(tech_stack, indent=2)}
+Design Patterns: {json.dumps(design_patterns, indent=2)}
+
+Generate a comprehensive component architecture with:
+1. Core components list with detailed specifications
+2. Component interactions and data flow
+3. Technology choices for each component
+4. Deployment configuration
+5. Scaling strategy
+6. Security considerations
+7. Monitoring requirements
+
+Return a JSON object with:
+- components: array of component specifications
+- interactions: array of component interactions
+- data_flow: description of data flow
+- deployment: deployment configuration
+- scaling: scaling strategy
+- security: security measures
+- monitoring: monitoring setup
+
+Each component should have: id, name, type, technology, responsibilities, interfaces, dependencies, resources, priority"""
+
+            response = await ai_service.generate(prompt)
+            
+            # Parse AI response
+            import re
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                ai_decisions = json.loads(json_match.group())
+                
+                # Merge AI decisions with existing analysis
+                decisions = {
+                    'components': ai_decisions.get('components', []),
+                    'architecture': architecture,
+                    'patterns': design_patterns,
+                    'technology': tech_stack,
+                    'interactions': ai_decisions.get('interactions', []),
+                    'data_flow': ai_decisions.get('data_flow', ''),
+                    'deployment': ai_decisions.get('deployment', {}),
+                    'scaling': ai_decisions.get('scaling', {}),
+                    'security': ai_decisions.get('security', {}),
+                    'monitoring': ai_decisions.get('monitoring', {})
+                }
+                
+                # Enhance components with templates
+                for component in decisions['components']:
+                    template = self.component_templates.get(component.get('type', ''), {})
+                    component.update({
+                        'interfaces': component.get('interfaces', template.get('interfaces', [])),
+                        'configuration': component.get('configuration', template.get('configuration', {})),
+                        'metrics': component.get('metrics', template.get('metrics', ['health', 'performance']))
+                    })
+                
+                return decisions
+                
+        except Exception as e:
+            self.log_warning(f"AI component decision failed: {e}")
+        
+        # Fallback to original logic
         decisions = {
             'components': [],
             'architecture': architecture,

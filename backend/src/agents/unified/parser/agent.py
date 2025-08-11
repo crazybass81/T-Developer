@@ -314,9 +314,44 @@ class UnifiedParserAgent(UnifiedBaseAgent):
         return ' '.join(text_parts)
     
     async def _process_nlp(self, text: str) -> Dict[str, Any]:
-        """Process text with NLP"""
+        """Process text with NLP using AI service"""
         if self.nlp_processor:
             return await self.nlp_processor.process(text)
+        
+        # Use AI service for advanced NLP
+        try:
+            from src.services.ai_service import ai_service
+            
+            prompt = f"""Analyze the following text for NLP processing:
+
+"{text}"
+
+Extract and return a JSON object with:
+- sentences: array of sentences
+- tokens: array of tokens (words)
+- entities: array of named entities (people, organizations, locations, etc.)
+- pos_tags: array of part-of-speech tags
+- key_phrases: array of important phrases
+- sentiment: overall sentiment (positive/neutral/negative)
+- language: detected language
+- intent: primary intent of the text
+
+Respond with only the JSON object."""
+
+            response = await ai_service.generate(prompt)
+            
+            # Try to parse AI response as JSON
+            import json
+            import re
+            
+            # Extract JSON from response
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                nlp_result = json.loads(json_match.group())
+                nlp_result['original'] = text
+                return nlp_result
+        except Exception as e:
+            self.log_warning(f"AI NLP processing failed: {e}")
         
         # Fallback processing
         sentences = text.split('.')
@@ -326,9 +361,12 @@ class UnifiedParserAgent(UnifiedBaseAgent):
             'original': text,
             'sentences': sentences,
             'tokens': tokens,
-            'pos_tags': [],  # Would be filled by NLP module
-            'entities': [],  # Would be filled by NLP module
-            'dependencies': []  # Would be filled by NLP module
+            'pos_tags': [],
+            'entities': [],
+            'dependencies': [],
+            'key_phrases': [],
+            'sentiment': 'neutral',
+            'intent': 'unknown'
         }
     
     async def _extract_entities(self, nlp_result: Dict) -> Dict[str, List]:
@@ -380,9 +418,52 @@ class UnifiedParserAgent(UnifiedBaseAgent):
         nlp_result: Dict,
         entities: Dict
     ) -> List[Dict]:
-        """Analyze requirements from text"""
+        """Analyze requirements from text using AI"""
         if self.requirement_analyzer:
             return await self.requirement_analyzer.analyze(nlp_result, entities)
+        
+        # Use AI service for requirement analysis
+        try:
+            from src.services.ai_service import ai_service
+            
+            prompt = f"""Analyze the following text to extract software requirements:
+
+Text: "{nlp_result['original']}"
+
+Identified Entities: {json.dumps(entities, indent=2)}
+
+Extract all requirements and return a JSON array where each requirement has:
+- text: the requirement statement
+- type: mandatory/recommended/optional/functional/non-functional
+- priority: critical/high/medium/low
+- category: feature/performance/security/usability/compatibility
+- actors: list of actors involved
+- preconditions: list of preconditions
+- postconditions: list of postconditions
+- acceptance_criteria: list of testable criteria
+- dependencies: list of other requirement dependencies
+- estimated_complexity: simple/medium/complex
+
+Focus on extracting actionable, specific requirements. 
+Respond with only the JSON array."""
+
+            response = await ai_service.generate(prompt)
+            
+            # Parse AI response
+            import json
+            import re
+            
+            json_match = re.search(r'\[.*\]', response, re.DOTALL)
+            if json_match:
+                requirements = json.loads(json_match.group())
+                
+                # Enhance with entity mappings
+                for req in requirements:
+                    req['entities'] = self._find_entities_in_text(req['text'], entities)
+                
+                return requirements
+        except Exception as e:
+            self.log_warning(f"AI requirement analysis failed: {e}")
         
         # Fallback analysis
         requirements = []
@@ -396,7 +477,14 @@ class UnifiedParserAgent(UnifiedBaseAgent):
                     'text': sentence.strip(),
                     'type': self._classify_requirement(sentence),
                     'priority': self._determine_priority(sentence),
-                    'entities': self._find_entities_in_text(sentence, entities)
+                    'entities': self._find_entities_in_text(sentence, entities),
+                    'category': 'feature',
+                    'actors': [],
+                    'preconditions': [],
+                    'postconditions': [],
+                    'acceptance_criteria': [],
+                    'dependencies': [],
+                    'estimated_complexity': 'medium'
                 })
         
         return requirements

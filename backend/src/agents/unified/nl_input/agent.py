@@ -60,6 +60,14 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
+# Import unified AI service
+try:
+    from src.services.ai_service import ai_service
+    AI_SERVICE_AVAILABLE = True
+except ImportError:
+    AI_SERVICE_AVAILABLE = False
+    ai_service = None
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -519,6 +527,12 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
             clarification_questions = await self.ambiguity_resolver.generate_questions(ambiguities)
         
         # Try AI enhancement if available
+        ai_enhanced_data = await self._enhance_with_ai(
+            enhanced_input,
+            project_type,
+            features,
+            tech_stack
+        )
         ai_provider = None
         if self.config.ecs_optimized and (self.anthropic_client or self.openai_client):
             try:
@@ -615,22 +629,61 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
     async def _enhance_with_ai(
         self,
         description: str,
-        context: Dict[str, Any],
-        project_type: str
+        project_type: str,
+        features: List[str],
+        tech_stack: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
-        """Enhance analysis with AI providers"""
+        """Enhance analysis with AI providers using unified AI service"""
         
-        # Try Claude first
+        # Use unified AI service if available
+        if AI_SERVICE_AVAILABLE and ai_service:
+            try:
+                # Analyze requirements using AI
+                ai_analysis = await ai_service.analyze_code_requirements(description)
+                
+                # Enhance with additional context
+                enhanced_prompt = f"""Analyze this {project_type} project with these details:
+Description: {description}
+Detected Features: {features}
+Suggested Tech Stack: {json.dumps(tech_stack, indent=2)}
+
+Please provide a comprehensive analysis including:
+1. Additional functional requirements
+2. Non-functional requirements (performance, security, scalability)
+3. Potential technical challenges
+4. Recommended architecture patterns
+5. Estimated complexity and effort
+
+Format as JSON."""
+                
+                detailed_analysis = await ai_service.generate(enhanced_prompt)
+                
+                # Try to parse JSON response
+                try:
+                    if detailed_analysis:
+                        # Extract JSON from response if needed
+                        import re
+                        json_match = re.search(r'\{.*\}', detailed_analysis, re.DOTALL)
+                        if json_match:
+                            return json.loads(json_match.group())
+                except:
+                    pass
+                
+                return ai_analysis
+                
+            except Exception as e:
+                self.logger.warning(f"AI service enhancement failed: {e}")
+        
+        # Fallback to existing AI clients
         if self.anthropic_client:
             try:
-                return await self._process_with_claude(description, context, project_type)
+                return await self._process_with_claude(description, {"project_type": project_type}, project_type)
             except Exception as e:
                 self.logger.warning(f"Claude processing failed: {e}")
         
-        # Fallback to GPT
         if self.openai_client:
             try:
-                return await self._process_with_gpt(description, context, project_type)
+                return await self._process_with_gpt(description, {"project_type": project_type}, project_type)
             except Exception as e:
                 self.logger.warning(f"GPT processing failed: {e}")
         
