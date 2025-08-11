@@ -163,7 +163,8 @@
       "Bash(export ENVIRONMENT=development)",
       "Bash(pip install:*)",
       "Bash(pre-commit:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(python test:*)"
     ],
     "deny": []
   }
