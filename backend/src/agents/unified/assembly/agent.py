@@ -21,7 +21,7 @@ import sys
 sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
-from agents.phase2_enhancements import Phase2AssemblyResult
+# from agents.phase2_enhancements import Phase2AssemblyResult  # Commented out - module not available
 
 # Import specialized modules
 from .modules.file_organizer import FileOrganizer
@@ -73,11 +73,12 @@ class AssemblyMetrics:
     compression_ratio: float
 
 
-class EnhancedAssemblyResult(Phase2AssemblyResult):
+class EnhancedAssemblyResult:
     """Enhanced assembly result with production features"""
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, data: Dict[str, Any]):
+        self.data = data
+        self.success = data.get("success", False)
         self.assembly_manifest: AssemblyManifest = None
         self.assembly_metrics: AssemblyMetrics = None
         self.package_path: str = ""

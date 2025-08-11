@@ -3,7 +3,7 @@ Index Manager Module
 Manages search indexes for efficient component retrieval
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 import json
 from datetime import datetime
 

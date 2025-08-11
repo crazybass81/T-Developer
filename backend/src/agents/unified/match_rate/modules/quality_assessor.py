@@ -30,7 +30,7 @@ class QualityAssessor:
             }
             
             # Calculate overall quality score
-            scores = [v for k, v in quality_metrics.items() if k \!= 'quality_score']
+            scores = [v for k, v in quality_metrics.items() if k != 'quality_score']
             quality_metrics['quality_score'] = sum(scores) / len(scores)
             
             quality_results[component_id] = quality_metrics

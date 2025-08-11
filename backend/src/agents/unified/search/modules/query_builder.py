@@ -96,7 +96,7 @@ class QueryBuilder:
             for synonym_group in self.synonyms:
                 if term.lower() in synonym_group:
                     for synonym in synonym_group:
-                        if synonym \!= term.lower() and synonym not in expanded:
+                        if synonym != term.lower() and synonym not in expanded:
                             expanded.append(synonym)
         
         return expanded

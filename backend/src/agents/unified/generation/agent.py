@@ -17,7 +17,7 @@ import sys
 sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
-from agents.phase2_enhancements import Phase2GenerationResult
+# from agents.phase2_enhancements import Phase2GenerationResult  # Commented out - module not available
 
 # Import all specialized modules
 from .modules.code_generator import CodeGenerator
@@ -34,11 +34,12 @@ from .modules.optimization_engine import OptimizationEngine
 from .modules.version_manager import VersionManager
 
 
-class EnhancedGenerationResult(Phase2GenerationResult):
+class EnhancedGenerationResult:
     """Enhanced result with ECS and production features"""
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, data: Dict[str, Any]):
+        self.data = data
+        self.success = data.get("success", False)
         self.generated_files = {}
         self.project_structure = {}
         self.dependencies = {}

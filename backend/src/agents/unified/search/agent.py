@@ -15,7 +15,7 @@ import sys
 sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
-from agents.phase2_enhancements import Phase2SearchResult
+# from agents.phase2_enhancements import Phase2SearchResult  # Commented out - module not available
 
 # Import all specialized modules
 from .modules.query_builder import QueryBuilder
@@ -32,11 +32,12 @@ from .modules.autocomplete_engine import AutocompleteEngine
 from .modules.search_optimizer import SearchOptimizer
 
 
-class EnhancedSearchResult(Phase2SearchResult):
+class EnhancedSearchResult:
     """Enhanced result with ECS and production features"""
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, data: Dict[str, Any]):
+        self.data = data
+        self.success = data.get("success", False)
         self.search_results = []
         self.faceted_results = {}
         self.semantic_matches = []

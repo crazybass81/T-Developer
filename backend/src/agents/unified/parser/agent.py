@@ -8,9 +8,15 @@ from datetime import datetime
 import json
 import re
 
-from src.agents.unified.base import UnifiedBaseAgent, AgentConfig
-from ...phase2.agents.parser import ParserAgent as Phase2Parser, ParserResult
+from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentResult
+# from ...phase2.agents.parser import ParserAgent as Phase2Parser, ParserResult  # Commented out - module not available
 
+# Define ParserResult locally since phase2 is not available
+class ParserResult:
+    def __init__(self, data: Dict[str, Any]):
+        self.data = data
+        self.success = data.get('success', False)
+        self.parsed_requirements = data.get('parsed_requirements', {})
 
 class EnhancedParserResult(ParserResult):
     """Enhanced result from Parser Agent"""

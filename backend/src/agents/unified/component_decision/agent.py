@@ -14,7 +14,7 @@ import sys
 sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
-from agents.phase2_enhancements import Phase2ComponentDecisionResult
+# from agents.phase2_enhancements import Phase2ComponentDecisionResult  # Commented out - module not available
 
 # Import all specialized modules
 from .modules.architecture_selector import ArchitectureSelector
@@ -31,11 +31,12 @@ from .modules.infrastructure_planner import InfrastructurePlanner
 from .modules.cost_optimizer import CostOptimizer
 
 
-class EnhancedComponentDecisionResult(Phase2ComponentDecisionResult):
+class EnhancedComponentDecisionResult:
     """Enhanced result with ECS and production features"""
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, data: Dict[str, Any]):
+        self.data = data
+        self.success = data.get("success", False)
         self.architecture_decisions = {}
         self.component_map = {}
         self.technology_stack = {}

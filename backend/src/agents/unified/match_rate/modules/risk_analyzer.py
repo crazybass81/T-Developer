@@ -31,7 +31,7 @@ class RiskAnalyzer:
             }
             
             # Calculate overall risk (lower is better)
-            risks = [v for k, v in risk_analysis.items() if k \!= 'overall_risk']
+            risks = [v for k, v in risk_analysis.items() if k != 'overall_risk']
             risk_analysis['overall_risk'] = sum(risks) / len(risks)
             
             risk_results[component_id] = risk_analysis

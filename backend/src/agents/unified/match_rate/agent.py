@@ -15,7 +15,7 @@ import sys
 sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
-from agents.phase2_enhancements import Phase2MatchRateResult
+# from agents.phase2_enhancements import Phase2MatchRateResult  # Commented out - module not available
 
 # Import all specialized modules
 from .modules.similarity_calculator import SimilarityCalculator
@@ -32,11 +32,12 @@ from .modules.risk_analyzer import RiskAnalyzer
 from .modules.recommendation_engine import RecommendationEngine
 
 
-class EnhancedMatchRateResult(Phase2MatchRateResult):
+class EnhancedMatchRateResult:
     """Enhanced result with ECS and production features"""
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, data: Dict[str, Any]):
+        self.data = data
+        self.success = data.get("success", False)
         self.match_scores = {}
         self.detailed_analysis = {}
         self.ranking = []
