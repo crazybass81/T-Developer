@@ -16,6 +16,8 @@ class AgentContext:
     user_id: Optional[str] = None
     session_id: Optional[str] = None
     start_time: float = None
+    timestamp: Optional[str] = None
+    project_id: Optional[str] = None
     
     def __post_init__(self):
         if not self.pipeline_id:

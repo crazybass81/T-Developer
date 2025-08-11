@@ -273,20 +273,41 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
         """Process natural language input - Phase 2 interface"""
         
         try:
+            # Handle multiple input formats
+            if hasattr(input_data, 'data'):
+                # AgentInput object
+                data = input_data.data
+                context = input_data.context if hasattr(input_data, 'context') else AgentContext()
+            elif isinstance(input_data, dict) and 'data' in input_data:
+                # Wrapped dict from pipeline
+                data = input_data['data']
+                # Create context safely without unpacking kwargs
+                context_data = input_data.get('context', {})
+                context = AgentContext()
+                # Manually set known attributes
+                if isinstance(context_data, dict):
+                    if 'pipeline_id' in context_data:
+                        context.pipeline_id = context_data['pipeline_id']
+                    if 'project_id' in context_data:
+                        context.project_id = context_data['project_id']
+                    if 'timestamp' in context_data:
+                        context.timestamp = context_data['timestamp']
+            else:
+                # Direct dict
+                data = input_data if isinstance(input_data, dict) else {'query': str(input_data)}
+                context = AgentContext()
+            
             # Extract and sanitize query
             query = InputValidator.sanitize_string(
-                input_data.data.get('query', 
-                    input_data.data.get('description', 
-                    input_data.data.get('user_input', ''))),
+                data.get('query', 
+                    data.get('description', 
+                    data.get('user_input', ''))),
                 max_length=1000
             )
             
             # Get additional context
-            user_context = input_data.data.get('context', {})
-            preferred_language = input_data.data.get('language', 'auto')
-            
-            # Use existing context from input_data
-            context = input_data.context
+            user_context = data.get('context', {})
+            preferred_language = data.get('language', 'auto')
             
             # Process with unified logic
             result = await self._process_unified(

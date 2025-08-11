@@ -10,6 +10,7 @@ import re
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentResult
 from src.agents.unified.data_wrapper import AgentInput, AgentContext, wrap_input, unwrap_result
+from src.agents.unified.input_handler import unwrap_input
 
 # from ...phase2.agents.parser import ParserAgent as Phase2Parser, ParserResult  # Commented out - module not available
 
@@ -190,13 +191,8 @@ class UnifiedParserAgent(UnifiedBaseAgent):
         self.log_info(f"Processing parser request")
         
         try:
-            # Handle both AgentInput wrapper and direct dict
-            if hasattr(input_data, 'data'):
-                data = input_data.data
-            elif isinstance(input_data, dict):
-                data = input_data
-            else:
-                data = {'text': str(input_data)}
+            # Use common input handler
+            data, context = unwrap_input(input_data)
             
             # Extract text from input
             text = self._extract_text(data)

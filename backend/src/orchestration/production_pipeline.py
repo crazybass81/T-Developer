@@ -291,6 +291,15 @@ class ProductionECSPipeline:
                         # 에이전트 설정 생성 - unified agents는 config 필요 없음
                         self.agents[agent_name] = AGENT_CLASSES[agent_name]()
                         logger.info(f"✅ Real agent loaded: {agent_name}")
+                    except TypeError as e:
+                        # 초기화 파라미터 문제 시 다시 시도
+                        try:
+                            self.agents[agent_name] = AGENT_CLASSES[agent_name](config=None)
+                            logger.info(f"✅ Real agent loaded with config=None: {agent_name}")
+                        except Exception as e2:
+                            logger.warning(f"Failed to initialize real agent {agent_name}: {e2}")
+                            # 폴백으로 프록시 사용
+                            self.agent_proxies[agent_name] = self._create_agent_proxy(agent_name)
                     except Exception as e:
                         logger.warning(f"Failed to initialize real agent {agent_name}: {e}")
                         # 폴백으로 프록시 사용
@@ -705,8 +714,10 @@ build/
         if not self.initialized:
             await self.initialize()
         
-        # 프로젝트 ID 생성
-        project_id = f"prod_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(user_input) % 10000:04d}"
+        # 프로젝트 ID 생성 (dict를 문자열로 변환하여 hash)
+        import json
+        hash_input = json.dumps(user_input, sort_keys=True) if isinstance(user_input, dict) else str(user_input)
+        project_id = f"prod_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(hash_input) % 10000:04d}"
         
         logger.info(f"🚀 Starting production pipeline: {project_id}")
         
@@ -1027,11 +1038,19 @@ build/
                     }
                 }
                 
-                # process 메서드 호출
-                result = await asyncio.wait_for(
-                    agent_instance.process(wrapped_data),
-                    timeout=timeout
-                )
+                # process 메서드 호출 with fallback handling
+                try:
+                    from src.agents.unified.fallback_wrapper import safe_agent_execute
+                    result = await asyncio.wait_for(
+                        safe_agent_execute(agent_instance, wrapped_data),
+                        timeout=timeout
+                    )
+                except ImportError:
+                    # Fallback to direct call if wrapper not available
+                    result = await asyncio.wait_for(
+                        agent_instance.process(wrapped_data),
+                        timeout=timeout
+                    )
                 
                 execution_time = time.time() - start_time
                 
