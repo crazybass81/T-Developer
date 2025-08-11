@@ -199,6 +199,40 @@ class GenerationAgent(UnifiedBaseAgent):
                     agent_result
                 )
                 
+                # Save files to workspace
+                import os
+                import json
+                from pathlib import Path
+                
+                # Create workspace directory
+                project_id = data.get('project_id', f"todo_app_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+                workspace_path = Path(f"/tmp/generated_projects/{project_id}")
+                workspace_path.mkdir(parents=True, exist_ok=True)
+                
+                # Write all generated files
+                for file_path, content in generated_files.items():
+                    full_path = workspace_path / file_path
+                    full_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    with open(full_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
+                
+                # Create project metadata
+                metadata = {
+                    'project_id': project_id,
+                    'framework': data.get('framework', 'react'),
+                    'agents_created': agent_result['agents_created'],
+                    'agent_names': agent_result['agent_names'],
+                    'files': list(generated_files.keys()),
+                    'generation_time': (datetime.now() - start_time).total_seconds(),
+                    'is_todo_app': True,
+                    'dynamic_agents': True
+                }
+                
+                # Save metadata
+                with open(workspace_path / 'project_metadata.json', 'w') as f:
+                    json.dump(metadata, f, indent=2)
+                
                 # Create result
                 result_data = {
                     'success': True,
@@ -207,11 +241,9 @@ class GenerationAgent(UnifiedBaseAgent):
                     'framework': data.get('framework', 'react'),
                     'agents_created': agent_result['agents_created'],
                     'agent_names': agent_result['agent_names'],
-                    'metadata': {
-                        'generation_time': (datetime.now() - start_time).total_seconds(),
-                        'is_todo_app': True,
-                        'dynamic_agents': True
-                    }
+                    'workspace_path': str(workspace_path),
+                    'project_id': project_id,
+                    'metadata': metadata
                 }
                 
                 return EnhancedGenerationResult(result_data)
