@@ -1,0 +1,17 @@
+{
+  "name": "TestCRUDAgent",
+  "type": "data_manager",
+  "version": "1.0.0",
+  "tags": [
+    "test",
+    "crud",
+    "todo"
+  ],
+  "config": {
+    "entity": "TestItem",
+    "fields": {
+      "id": "string",
+      "name": "string"
+    }
+  }
+}

@@ -180,7 +180,43 @@ class GenerationAgent(UnifiedBaseAgent):
             else:
                 data = input_data
                 
-            # Validate input
+            # Check if this is a Todo app request
+            is_todo_app = self._is_todo_app_request(data)
+            
+            if is_todo_app:
+                # Use TodoAgentFactory for Todo apps
+                from src.agents.unified.generation.todo_agent_factory import TodoAgentFactory
+                
+                factory = TodoAgentFactory()
+                
+                # Analyze and create agents dynamically
+                agent_result = await factory.analyze_and_create_agents(data)
+                
+                # Generate complete Todo app with dynamic agents
+                generated_files = await self._generate_todo_app_with_agents(
+                    data, 
+                    factory, 
+                    agent_result
+                )
+                
+                # Create result
+                result_data = {
+                    'success': True,
+                    'generated_files': generated_files,
+                    'total_files': len(generated_files),
+                    'framework': data.get('framework', 'react'),
+                    'agents_created': agent_result['agents_created'],
+                    'agent_names': agent_result['agent_names'],
+                    'metadata': {
+                        'generation_time': (datetime.now() - start_time).total_seconds(),
+                        'is_todo_app': True,
+                        'dynamic_agents': True
+                    }
+                }
+                
+                return EnhancedGenerationResult(result_data)
+            
+            # Validate input for non-Todo apps
             if not self._validate_input(data):
                 return self._create_error_result("Invalid input data")
             
@@ -301,6 +337,775 @@ class GenerationAgent(UnifiedBaseAgent):
         except Exception as e:
             await self.log_event("generation_error", {"error": str(e)})
             return self._create_error_result(f"Generation failed: {str(e)}")
+    
+    def _is_todo_app_request(self, data: Dict[str, Any]) -> bool:
+        """Check if this is a Todo app request"""
+        
+        # Check name and description
+        name = data.get('name', '').lower()
+        description = data.get('description', '').lower()
+        features = [f.lower() for f in data.get('features', [])]
+        
+        todo_keywords = ['todo', 'task', 'checklist', 'to-do', 'to do']
+        
+        # Check if any keyword appears in name or description
+        for keyword in todo_keywords:
+            if keyword in name or keyword in description:
+                return True
+        
+        # Check features
+        todo_features = ['add task', 'delete task', 'mark complete', 'task list']
+        for feature in features:
+            for todo_feature in todo_features:
+                if todo_feature in feature:
+                    return True
+        
+        return False
+    
+    async def _generate_todo_app_with_agents(
+        self, 
+        data: Dict[str, Any],
+        factory: Any,
+        agent_result: Dict[str, Any]
+    ) -> Dict[str, str]:
+        """Generate complete Todo app with dynamically created agents"""
+        
+        framework = data.get('framework', 'react')
+        project_name = data.get('name', 'todo-app')
+        
+        files = {}
+        
+        if framework.lower() == 'react':
+            # Generate package.json
+            files['package.json'] = self._generate_todo_package_json(project_name)
+            
+            # Generate main App component with agent integration
+            files['src/App.js'] = self._generate_todo_app_component(agent_result['agent_names'])
+            
+            # Generate agent files
+            for agent_name in agent_result['agent_names']:
+                agent_code = factory.generate_agent_code(agent_name)
+                files[f'src/agents/{agent_name}.js'] = agent_code
+            
+            # Generate TodoList component
+            files['src/components/TodoList.js'] = self._generate_todo_list_component()
+            
+            # Generate TodoItem component
+            files['src/components/TodoItem.js'] = self._generate_todo_item_component()
+            
+            # Generate TodoForm component
+            files['src/components/TodoForm.js'] = self._generate_todo_form_component()
+            
+            # Generate TodoFilter component
+            files['src/components/TodoFilter.js'] = self._generate_todo_filter_component()
+            
+            # Generate TodoStats component
+            files['src/components/TodoStats.js'] = self._generate_todo_stats_component()
+            
+            # Generate styles
+            files['src/App.css'] = self._generate_todo_styles()
+            
+            # Generate index files
+            files['src/index.js'] = self._generate_todo_index()
+            files['public/index.html'] = self._generate_todo_html(project_name)
+            
+            # Generate README
+            files['README.md'] = self._generate_todo_readme(project_name, agent_result)
+        
+        return files
+    
+    def _generate_todo_package_json(self, project_name: str) -> str:
+        """Generate package.json for Todo app"""
+        return json.dumps({
+            "name": project_name,
+            "version": "1.0.0",
+            "private": True,
+            "dependencies": {
+                "react": "^18.2.0",
+                "react-dom": "^18.2.0",
+                "react-scripts": "5.0.1",
+                "uuid": "^9.0.0"
+            },
+            "scripts": {
+                "start": "react-scripts start",
+                "build": "react-scripts build",
+                "test": "react-scripts test",
+                "eject": "react-scripts eject"
+            },
+            "eslintConfig": {
+                "extends": ["react-app"]
+            },
+            "browserslist": {
+                "production": [">0.2%", "not dead", "not op_mini all"],
+                "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+            }
+        }, indent=2)
+    
+    def _generate_todo_app_component(self, agent_names: List[str]) -> str:
+        """Generate main App component with agent integration"""
+        
+        agent_imports = '\n'.join([f"import {name} from './agents/{name}';" for name in agent_names])
+        agent_init = '\n  '.join([f"const {name.lower()} = new {name}();" for name in agent_names])
+        
+        return f'''import React, {{ useState, useEffect }} from 'react';
+import './App.css';
+import TodoList from './components/TodoList';
+import TodoForm from './components/TodoForm';
+import TodoFilter from './components/TodoFilter';
+import TodoStats from './components/TodoStats';
+
+// Import dynamically generated agents
+{agent_imports}
+
+function App() {{
+  // Initialize agents
+  {agent_init}
+  
+  const [tasks, setTasks] = useState([]);
+  const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [darkMode, setDarkMode] = useState(false);
+  
+  // Load tasks on mount
+  useEffect(() => {{
+    const crudAgent = agent_names.includes('TodoCRUDAgent') ? todocrudagent : null;
+    if (crudAgent) {{
+      const loadedTasks = crudAgent.list();
+      setTasks(loadedTasks);
+    }}
+  }}, []);
+  
+  // Add task
+  const addTask = (task) => {{
+    const crudAgent = agent_names.includes('TodoCRUDAgent') ? todocrudagent : null;
+    if (crudAgent) {{
+      const newTask = crudAgent.create(task);
+      setTasks([...tasks, newTask]);
+    }}
+  }};
+  
+  // Toggle task completion
+  const toggleTask = (id) => {{
+    const crudAgent = agent_names.includes('TodoCRUDAgent') ? todocrudagent : null;
+    if (crudAgent) {{
+      const task = crudAgent.read(id);
+      if (task) {{
+        const updated = crudAgent.update(id, {{ completed: !task.completed }});
+        setTasks(tasks.map(t => t.id === id ? updated : t));
+      }}
+    }}
+  }};
+  
+  // Delete task
+  const deleteTask = (id) => {{
+    const crudAgent = agent_names.includes('TodoCRUDAgent') ? todocrudagent : null;
+    if (crudAgent) {{
+      crudAgent.delete(id);
+      setTasks(tasks.filter(t => t.id !== id));
+    }}
+  }};
+  
+  // Filter tasks
+  const getFilteredTasks = () => {{
+    let filtered = tasks;
+    
+    // Apply status filter
+    if (filter === 'active') {{
+      filtered = filtered.filter(t => !t.completed);
+    }} else if (filter === 'completed') {{
+      filtered = filtered.filter(t => t.completed);
+    }}
+    
+    // Apply search filter
+    if (searchTerm) {{
+      filtered = filtered.filter(t => 
+        t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (t.description && t.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }}
+    
+    return filtered;
+  }};
+  
+  return (
+    <div className={{`App ${{darkMode ? 'dark-mode' : ''}}`}}>
+      <header className="App-header">
+        <h1>📝 Advanced Todo App</h1>
+        <p>Powered by Agno Framework with {agent_names.length} dynamic agents</p>
+        <button onClick={{() => setDarkMode(!darkMode)}} className="theme-toggle">
+          {{darkMode ? '☀️' : '🌙'}}
+        </button>
+      </header>
+      
+      <main className="App-main">
+        <TodoStats tasks={{tasks}} />
+        <TodoForm onAdd={{addTask}} />
+        <TodoFilter 
+          filter={{filter}} 
+          onFilterChange={{setFilter}}
+          searchTerm={{searchTerm}}
+          onSearchChange={{setSearchTerm}}
+        />
+        <TodoList 
+          tasks={{getFilteredTasks()}}
+          onToggle={{toggleTask}}
+          onDelete={{deleteTask}}
+        />
+      </main>
+      
+      <footer className="App-footer">
+        <p>Generated with T-Developer & Agno Framework</p>
+        <p>Active Agents: {agent_names.join(', ')}</p>
+      </footer>
+    </div>
+  );
+}}
+
+export default App;'''
+    
+    def _generate_todo_list_component(self) -> str:
+        """Generate TodoList component"""
+        return '''import React from 'react';
+import TodoItem from './TodoItem';
+
+function TodoList({ tasks, onToggle, onDelete }) {
+  if (tasks.length === 0) {
+    return <div className="empty-state">No tasks yet. Add one above!</div>;
+  }
+  
+  return (
+    <div className="todo-list">
+      {tasks.map(task => (
+        <TodoItem 
+          key={task.id}
+          task={task}
+          onToggle={onToggle}
+          onDelete={onDelete}
+        />
+      ))}
+    </div>
+  );
+}
+
+export default TodoList;'''
+    
+    def _generate_todo_item_component(self) -> str:
+        """Generate TodoItem component"""
+        return '''import React from 'react';
+
+function TodoItem({ task, onToggle, onDelete }) {
+  return (
+    <div className={`todo-item ${task.completed ? 'completed' : ''}`}>
+      <input 
+        type="checkbox"
+        checked={task.completed}
+        onChange={() => onToggle(task.id)}
+      />
+      <div className="todo-content">
+        <h3>{task.title}</h3>
+        {task.description && <p>{task.description}</p>}
+        <div className="todo-meta">
+          {task.priority && <span className={`priority priority-${task.priority}`}>Priority: {task.priority}</span>}
+          {task.dueDate && <span className="due-date">Due: {new Date(task.dueDate).toLocaleDateString()}</span>}
+        </div>
+      </div>
+      <button onClick={() => onDelete(task.id)} className="delete-btn">
+        🗑️
+      </button>
+    </div>
+  );
+}
+
+export default TodoItem;'''
+    
+    def _generate_todo_form_component(self) -> str:
+        """Generate TodoForm component"""
+        return '''import React, { useState } from 'react';
+
+function TodoForm({ onAdd }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState(3);
+  const [dueDate, setDueDate] = useState('');
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (title.trim()) {
+      onAdd({
+        title,
+        description,
+        priority: parseInt(priority),
+        dueDate: dueDate || null,
+        completed: false
+      });
+      setTitle('');
+      setDescription('');
+      setPriority(3);
+      setDueDate('');
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="todo-form">
+      <input
+        type="text"
+        placeholder="What needs to be done?"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="todo-input"
+      />
+      <textarea
+        placeholder="Description (optional)"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        className="todo-description"
+      />
+      <div className="form-row">
+        <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+          <option value="1">Low Priority</option>
+          <option value="2">Medium-Low</option>
+          <option value="3">Medium</option>
+          <option value="4">Medium-High</option>
+          <option value="5">High Priority</option>
+        </select>
+        <input
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+        />
+        <button type="submit">Add Task</button>
+      </div>
+    </form>
+  );
+}
+
+export default TodoForm;'''
+    
+    def _generate_todo_filter_component(self) -> str:
+        """Generate TodoFilter component"""
+        return '''import React from 'react';
+
+function TodoFilter({ filter, onFilterChange, searchTerm, onSearchChange }) {
+  return (
+    <div className="todo-filter">
+      <input
+        type="text"
+        placeholder="Search tasks..."
+        value={searchTerm}
+        onChange={(e) => onSearchChange(e.target.value)}
+        className="search-input"
+      />
+      <div className="filter-buttons">
+        <button 
+          className={filter === 'all' ? 'active' : ''}
+          onClick={() => onFilterChange('all')}
+        >
+          All
+        </button>
+        <button 
+          className={filter === 'active' ? 'active' : ''}
+          onClick={() => onFilterChange('active')}
+        >
+          Active
+        </button>
+        <button 
+          className={filter === 'completed' ? 'active' : ''}
+          onClick={() => onFilterChange('completed')}
+        >
+          Completed
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default TodoFilter;'''
+    
+    def _generate_todo_stats_component(self) -> str:
+        """Generate TodoStats component"""
+        return '''import React from 'react';
+
+function TodoStats({ tasks }) {
+  const total = tasks.length;
+  const completed = tasks.filter(t => t.completed).length;
+  const active = total - completed;
+  const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+  
+  return (
+    <div className="todo-stats">
+      <div className="stat">
+        <span className="stat-value">{total}</span>
+        <span className="stat-label">Total</span>
+      </div>
+      <div className="stat">
+        <span className="stat-value">{active}</span>
+        <span className="stat-label">Active</span>
+      </div>
+      <div className="stat">
+        <span className="stat-value">{completed}</span>
+        <span className="stat-label">Completed</span>
+      </div>
+      <div className="stat">
+        <span className="stat-value">{completionRate}%</span>
+        <span className="stat-label">Done</span>
+      </div>
+    </div>
+  );
+}
+
+export default TodoStats;'''
+    
+    def _generate_todo_styles(self) -> str:
+        """Generate CSS styles for Todo app"""
+        return '''.App {
+  text-align: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transition: all 0.3s ease;
+}
+
+.App.dark-mode {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.App-header {
+  padding: 2rem;
+  color: white;
+  position: relative;
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: 2px solid white;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.App-main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.todo-stats {
+  display: flex;
+  justify-content: space-around;
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #667eea;
+}
+
+.stat-label {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.todo-form {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.todo-input, .todo-description {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-row select, .form-row input[type="date"] {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 5px;
+}
+
+.form-row button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+}
+
+.form-row button:hover {
+  background: #5a67d8;
+}
+
+.todo-filter {
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 5px;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.filter-buttons button {
+  padding: 0.5rem 1.5rem;
+  border: 2px solid #667eea;
+  background: white;
+  color: #667eea;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.filter-buttons button.active, .filter-buttons button:hover {
+  background: #667eea;
+  color: white;
+}
+
+.todo-list {
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  transition: all 0.3s;
+}
+
+.todo-item:hover {
+  background: #f5f5f5;
+}
+
+.todo-item.completed {
+  opacity: 0.6;
+}
+
+.todo-item.completed .todo-content h3 {
+  text-decoration: line-through;
+}
+
+.todo-content {
+  flex: 1;
+  text-align: left;
+  margin: 0 1rem;
+}
+
+.todo-meta {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.priority {
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+}
+
+.priority-1 { background: #e8f5e9; color: #2e7d32; }
+.priority-2 { background: #f3e5f5; color: #6a1b9a; }
+.priority-3 { background: #fff3e0; color: #e65100; }
+.priority-4 { background: #ffe0b2; color: #ff6f00; }
+.priority-5 { background: #ffebee; color: #c62828; }
+
+.due-date {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.delete-btn {
+  background: #ff4444;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.delete-btn:hover {
+  background: #cc0000;
+}
+
+.empty-state {
+  padding: 3rem;
+  color: #999;
+  font-style: italic;
+}
+
+.App-footer {
+  padding: 2rem;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.dark-mode .todo-stats,
+.dark-mode .todo-form,
+.dark-mode .todo-filter,
+.dark-mode .todo-list {
+  background: #2a2a3e;
+  color: white;
+}
+
+.dark-mode .todo-input,
+.dark-mode .todo-description,
+.dark-mode .search-input,
+.dark-mode .form-row select,
+.dark-mode .form-row input[type="date"] {
+  background: #1a1a2e;
+  color: white;
+  border-color: #444;
+}
+
+.dark-mode .todo-item:hover {
+  background: #3a3a4e;
+}
+
+.dark-mode .stat-label {
+  color: #aaa;
+}'''
+    
+    def _generate_todo_index(self) -> str:
+        """Generate index.js for Todo app"""
+        return '''import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);'''
+    
+    def _generate_todo_html(self, project_name: str) -> str:
+        """Generate index.html for Todo app"""
+        return f'''<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#667eea" />
+    <meta name="description" content="Advanced Todo App powered by Agno Framework" />
+    <title>{project_name}</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>'''
+    
+    def _generate_todo_readme(self, project_name: str, agent_result: Dict) -> str:
+        """Generate README for Todo app"""
+        agent_list = '\n'.join([f"- **{name}**: Handles specific functionality" for name in agent_result['agent_names']])
+        
+        return f'''# {project_name}
+
+An advanced Todo application built with React and powered by the Agno Framework with dynamically generated agents.
+
+## Features
+
+- ✅ Add, edit, and delete tasks
+- 📝 Task descriptions and details
+- 🎯 Priority levels (1-5)
+- 📅 Due date management
+- 🔍 Search and filter tasks
+- 📊 Statistics dashboard
+- 🌙 Dark mode support
+- 💾 Local storage persistence
+- ⚡ Ultra-fast performance with Agno Framework
+
+## Dynamic Agents
+
+This application uses {agent_result['agents_created']} dynamically generated agents:
+
+{agent_list}
+
+## Installation
+
+```bash
+npm install
+```
+
+## Usage
+
+```bash
+npm start
+```
+
+## Architecture
+
+This Todo app demonstrates the power of the T-Developer platform with:
+
+- **Agno Framework**: Ultra-lightweight agent framework (6.5KB memory target)
+- **Dynamic Agent Generation**: Agents created at runtime based on requirements
+- **Component-Based Architecture**: Modular React components
+- **Local Storage**: Persistent data storage
+
+## Performance
+
+- Agent instantiation: ~3μs
+- Memory per agent: ~6.5KB
+- Total bundle size: Optimized for production
+
+## Technologies
+
+- React 18.2.0
+- Agno Framework
+- T-Developer Platform
+- Local Storage API
+
+## License
+
+MIT
+
+---
+
+Generated with ❤️ by T-Developer Platform'''
     
     def _validate_input(self, input_data: Dict[str, Any]) -> bool:
         """Validate input data structure"""

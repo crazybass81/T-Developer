@@ -1,0 +1,32 @@
+{
+  "agent_id": "d50924f0f916843f",
+  "name": "TestCRUDAgent",
+  "type": "data_manager",
+  "version": "1.0.0",
+  "created_at": "2025-08-11T21:26:01.986668",
+  "updated_at": "2025-08-11T21:26:01.986669",
+  "blueprint": {
+    "name": "TestCRUDAgent",
+    "type": "data_manager",
+    "version": "1.0.0",
+    "tags": [
+      "test",
+      "crud",
+      "todo"
+    ],
+    "config": {
+      "entity": "TestItem",
+      "fields": {
+        "id": "string",
+        "name": "string"
+      }
+    }
+  },
+  "tags": [
+    "test",
+    "crud",
+    "todo"
+  ],
+  "usage_count": 0,
+  "performance_metrics": {}
+}
