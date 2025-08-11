@@ -400,78 +400,263 @@ class ProductionECSPipeline:
                 "best_practices": ["folder-structure", "component-patterns"]
             }
         elif agent_name == "generation":
-            # Use enhanced code generator for production-ready code
-            try:
-                from ..services.enhanced_code_generator import EnhancedCodeGenerator
-                project_name = input_data.get("project_name", "my-app")
-                description = input_data.get("user_input", "A modern web application")
-                features = input_data.get("features", [])
-                project_type = input_data.get("project_type", "react")
-                
-                # Generate comprehensive project files
-                generated_files = EnhancedCodeGenerator.generate_project_files(
-                    project_type=project_type,
-                    project_name=project_name,
-                    description=description,
-                    features=features
-                )
-                
-                return {
-                    "files": generated_files,
-                    "total_files": len(generated_files),
-                    "framework": "react",
-                    "features": features
-                }
-            except Exception as e:
-                logger.warning(f"Enhanced generator failed: {e}, using basic template")
-                # Fallback to basic template
-                project_name = input_data.get("project_name", "my-app")
-                return {
-                    "files": {
-                        "src/App.js": f"""// Generated React App for {project_name}
-import React from 'react';
-import './App.css';
+            # Generate actual project files
+            project_name = input_data.get("project_name", "my-app")
+            description = input_data.get("user_input", "A modern web application")
+            features = input_data.get("features", [])
+            project_type = input_data.get("project_type", "react")
+            framework = input_data.get("framework", "react")
+            
+            # Generate comprehensive project files based on framework
+            generated_files = {}
+            
+            if framework in ["react", "vue", "nextjs"]:
+                # React/Vue/Next.js project structure
+                generated_files = {
+                    "package.json": json.dumps({
+                        "name": project_name,
+                        "version": "1.0.0",
+                        "description": description[:100],
+                        "dependencies": {
+                            "react": "^18.2.0" if framework == "react" else None,
+                            "react-dom": "^18.2.0" if framework == "react" else None,
+                            "vue": "^3.3.0" if framework == "vue" else None,
+                            "next": "^14.0.0" if framework == "nextjs" else None,
+                            "axios": "^1.6.0",
+                            "react-router-dom": "^6.20.0" if framework == "react" and "routing" in str(features) else None
+                        },
+                        "scripts": {
+                            "start": "react-scripts start" if framework == "react" else "vue-cli-service serve" if framework == "vue" else "next dev",
+                            "build": "react-scripts build" if framework == "react" else "vue-cli-service build" if framework == "vue" else "next build",
+                            "test": "jest"
+                        }
+                    }, indent=2),
+                    
+                    "src/App.js" if framework != "vue" else "src/App.vue": f"""// Generated {framework.upper()} App for {project_name}
+{"import React from 'react';" if framework == "react" else ""}
+{"import './App.css';" if framework != "vue" else ""}
 
-function App() {{
-  return (
+{"function App() {" if framework == "react" else "<template>" if framework == "vue" else "export default function Home() {"}
+  {"return (" if framework == "react" else "  <div>" if framework == "vue" else "  return ("}
     <div className="App">
       <header className="App-header">
         <h1>{project_name}</h1>
-        <p>{input_data.get("user_input", "Welcome to your app!")[:100]}</p>
+        <p>{description[:100]}</p>
+        {"<nav>" if "routing" in str(features) else ""}
+        {"  <a href='/'>Home</a> | <a href='/about'>About</a>" if "routing" in str(features) else ""}
+        {"</nav>" if "routing" in str(features) else ""}
       </header>
+      <main>
+        <h2>Features</h2>
+        <ul>
+          {chr(10).join(f"          <li>{feature}</li>" for feature in features[:5]) if features else "          <li>Basic setup</li>"}
+        </ul>
+      </main>
     </div>
-  );
-}}
+  {");" if framework == "react" else "</div>" if framework == "vue" else ");"}
+{"}" if framework == "react" else "</template>" if framework == "vue" else "}"}
 
-export default App;""",
-                        "package.json": json.dumps({
-                            "name": project_name,
-                            "version": "1.0.0",
-                            "dependencies": {
-                                "react": "^18.0.0",
-                                "react-dom": "^18.0.0"
-                            },
-                            "scripts": {
-                                "start": "react-scripts start",
-                                "build": "react-scripts build"
-                            }
-                        }, indent=2),
-                        "README.md": f"# {project_name}\n\n{input_data.get('user_input', '')}\n\nGenerated by T-Developer Production Pipeline"
+{"export default App;" if framework == "react" else ""}
+""",
+                    
+                    "src/index.js" if framework != "vue" else "src/main.js": f"""// Entry point for {project_name}
+{"import React from 'react';" if framework == "react" else ""}
+{"import ReactDOM from 'react-dom/client';" if framework == "react" else "import { createApp } from 'vue';" if framework == "vue" else ""}
+{"import App from './App';" if framework != "nextjs" else ""}
+{"import './index.css';" if framework == "react" else ""}
+
+{"const root = ReactDOM.createRoot(document.getElementById('root'));" if framework == "react" else ""}
+{"root.render(<App />);" if framework == "react" else "createApp(App).mount('#app');" if framework == "vue" else ""}
+""",
+                    
+                    "src/index.css" if framework == "react" else "src/styles.css": """/* Global styles */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+""",
+                    
+                    "public/index.html": f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{project_name}</title>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="{"root" if framework == "react" else "app"}"></div>
+</body>
+</html>
+""",
+                    
+                    "README.md": f"""# {project_name}
+
+{description}
+
+## Features
+{chr(10).join(f"- {feature}" for feature in features) if features else "- Basic setup"}
+
+## Getting Started
+
+\`\`\`bash
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Build for production
+npm run build
+\`\`\`
+
+## Technology Stack
+- Framework: {framework.upper()}
+- Package Manager: npm
+- Build Tool: {"Create React App" if framework == "react" else "Vue CLI" if framework == "vue" else "Next.js"}
+
+Generated by T-Developer Production Pipeline
+""",
+                    
+                    ".gitignore": """node_modules/
+.env
+.env.local
+dist/
+build/
+.DS_Store
+*.log
+.idea/
+.vscode/
+"""
+                }
+                
+                # Remove None values from package.json dependencies
+                if generated_files.get("package.json"):
+                    package_data = json.loads(generated_files["package.json"])
+                    package_data["dependencies"] = {k: v for k, v in package_data["dependencies"].items() if v is not None}
+                    generated_files["package.json"] = json.dumps(package_data, indent=2)
+            
+            return {
+                "generated_files": generated_files,
+                "files": generated_files,  # Backward compatibility
+                "total_files": len(generated_files),
+                "framework": framework,
+                "features": features,
+                "project_name": project_name
+            }
+        elif agent_name == "assembly":
+            import zipfile
+            import tempfile
+            from pathlib import Path
+            
+            # Get generated files from previous stage
+            generated_files = input_data.get("generated_files", {})
+            project_id = input_data.get("project_id", "unknown")
+            project_name = input_data.get("project_name", "my-app")
+            
+            if generated_files:
+                # Create temporary directory for project files
+                temp_dir = Path(tempfile.mkdtemp())
+                project_dir = temp_dir / project_name
+                project_dir.mkdir(exist_ok=True)
+                
+                # Write all generated files to disk
+                for file_path, content in generated_files.items():
+                    full_path = project_dir / file_path
+                    full_path.parent.mkdir(parents=True, exist_ok=True)
+                    full_path.write_text(content)
+                
+                # Create ZIP file
+                zip_path = Path("/home/ec2-user/T-DeveloperMVP/backend/downloads") / f"{project_id}.zip"
+                zip_path.parent.mkdir(exist_ok=True, parents=True)
+                
+                with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    for file_path in project_dir.rglob('*'):
+                        if file_path.is_file():
+                            arcname = file_path.relative_to(temp_dir)
+                            zipf.write(file_path, arcname)
+                
+                # Clean up temp directory
+                shutil.rmtree(temp_dir)
+                
+                return {
+                    "assembled_project": str(zip_path),
+                    "package_path": str(zip_path),
+                    "project_structure": "validated",
+                    "dependencies_resolved": True,
+                    "build_config": "optimized",
+                    "zip_created": True,
+                    "zip_size_bytes": zip_path.stat().st_size if zip_path.exists() else 0
+                }
+            else:
+                # No files to assemble
+                return {
+                    "assembled_project": None,
+                    "package_path": None,
+                    "project_structure": "no_files",
+                    "dependencies_resolved": False,
+                    "build_config": "none",
+                    "error": "No generated files to assemble"
+                }
+        elif agent_name == "download":
+            from pathlib import Path
+            
+            project_id = input_data.get("project_id", "unknown")
+            package_path = input_data.get("package_path", None)
+            
+            # Check if package exists
+            if package_path and Path(package_path).exists():
+                zip_size = Path(package_path).stat().st_size
+                size_mb = round(zip_size / (1024 * 1024), 2)
+                
+                return {
+                    "download_path": package_path,
+                    "download_url": f"/api/v1/download/{project_id}",
+                    "download_id": project_id,
+                    "size_mb": size_mb,
+                    "size_bytes": zip_size,
+                    "url": f"/api/v1/download/{project_id}",
+                    "success": True,
+                    "processed_data": {
+                        "download_url": f"/api/v1/download/{project_id}",
+                        "download_id": project_id,
+                        "size_mb": size_mb
                     }
                 }
-        elif agent_name == "assembly":
-            return {
-                "project_structure": "validated",
-                "dependencies_resolved": True,
-                "build_config": "optimized"
-            }
-        elif agent_name == "download":
-            project_id = input_data.get("project_id", "unknown")
-            return {
-                "download_path": f"/tmp/{project_id}.zip",
-                "size_mb": 0.5,
-                "url": f"/api/v1/download/{project_id}"
-            }
+            else:
+                # Fallback if no package path
+                return {
+                    "download_path": f"/home/ec2-user/T-DeveloperMVP/backend/downloads/{project_id}.zip",
+                    "download_url": f"/api/v1/download/{project_id}",
+                    "download_id": project_id,
+                    "size_mb": 0,
+                    "url": f"/api/v1/download/{project_id}",
+                    "success": False,
+                    "error": "Package not found or not created"
+                }
         else:
             return {"status": "processed", "agent": agent_name}
 
@@ -567,25 +752,52 @@ export default App;""",
                 stage_time = time.time() - stage_start
                 
                 if result.success:
-                    # 성공시 데이터 업데이트
+                    # 성공시 데이터 업데이트 - 모든 결과를 pipeline_data에 통합
                     pipeline_data[f"{agent_name}_result"] = result.output_data
                     
-                    # 특별 처리: Assembly와 Download Agent의 결과를 pipeline_data에 추가
-                    if agent_name == "assembly" and result.output_data:
-                        # Assembly Agent의 결과를 다음 에이전트에 전달
-                        if "processed_data" in result.output_data:
-                            pipeline_data.update(result.output_data["processed_data"])
-                    elif agent_name == "download" and result.output_data:
-                        # Download Agent의 결과를 최종 결과에 포함
-                        if "processed_data" in result.output_data:
-                            download_info = result.output_data["processed_data"]
-                            pipeline_data["download_url"] = download_info.get("download_url")
-                            pipeline_data["download_id"] = download_info.get("download_id")
-                            pipeline_data["generated_code"] = {
-                                "status": "packaged",
-                                "download_url": download_info.get("download_url"),
-                                "size_mb": download_info.get("size_mb", 0)
-                            }
+                    # 결과 데이터를 pipeline_data에 직접 병합 (다음 에이전트가 사용할 수 있도록)
+                    if result.output_data and isinstance(result.output_data, dict):
+                        # 특정 키들을 최상위로 올림
+                        if agent_name == "nl_input":
+                            # NL Input의 주요 데이터를 최상위로
+                            for key in ["requirements", "project_type", "intent", "features"]:
+                                if key in result.output_data:
+                                    pipeline_data[key] = result.output_data[key]
+                        
+                        elif agent_name == "ui_selection":
+                            # UI Selection의 프레임워크 정보를 최상위로
+                            for key in ["framework", "ui_library", "components"]:
+                                if key in result.output_data:
+                                    pipeline_data[key] = result.output_data[key]
+                        
+                        elif agent_name == "generation":
+                            # Generation의 생성된 파일들을 최상위로
+                            if "files" in result.output_data:
+                                pipeline_data["generated_files"] = result.output_data["files"]
+                            if "generated_files" in result.output_data:
+                                pipeline_data["generated_files"] = result.output_data["generated_files"]
+                        
+                        elif agent_name == "assembly":
+                            # Assembly의 패키지 경로를 최상위로
+                            if "package_path" in result.output_data:
+                                pipeline_data["package_path"] = result.output_data["package_path"]
+                            if "assembled_project" in result.output_data:
+                                pipeline_data["assembled_project"] = result.output_data["assembled_project"]
+                        
+                        elif agent_name == "download":
+                            # Download의 다운로드 정보를 최상위로
+                            if "download_url" in result.output_data:
+                                pipeline_data["download_url"] = result.output_data["download_url"]
+                                pipeline_data["download_id"] = result.output_data.get("download_id", "")
+                            if "processed_data" in result.output_data:
+                                download_info = result.output_data["processed_data"]
+                                pipeline_data["download_url"] = download_info.get("download_url")
+                                pipeline_data["download_id"] = download_info.get("download_id")
+                                pipeline_data["generated_code"] = {
+                                    "status": "packaged",
+                                    "download_url": download_info.get("download_url"),
+                                    "size_mb": download_info.get("size_mb", 0)
+                                }
                     
                     logger.info(f"✅ {agent_name} completed ({stage_time:.2f}s)")
                     
