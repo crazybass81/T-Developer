@@ -95,7 +95,7 @@ class ComponentDecisionAgent(UnifiedBaseAgent):
 
 
     
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
         self.agent_name = "ComponentDecision"
         self.version = "3.0.0"
@@ -153,7 +153,7 @@ class ComponentDecisionAgent(UnifiedBaseAgent):
             }
         }
     
-    async def process(self, input_data: Dict[str, Any]) -> EnhancedComponentDecisionResult:
+    async def process(self, input_data) -> EnhancedComponentDecisionResult:
         """
         Main processing method for component decision
         
@@ -166,14 +166,22 @@ class ComponentDecisionAgent(UnifiedBaseAgent):
         start_time = datetime.now()
         
         try:
+            # Handle both AgentInput wrapper and direct dict
+            if isinstance(input_data, dict):
+                data = input_data
+            elif hasattr(input_data, 'data'):
+                data = input_data.data
+            else:
+                data = {'data': input_data}
+            
             # Validate input
-            if not self._validate_input(input_data):
+            if not self._validate_input(data):
                 return self._create_error_result("Invalid input data")
             
             # Extract requirements
-            requirements = input_data.get('requirements', {})
-            specifications = input_data.get('specifications', {})
-            constraints = input_data.get('constraints', {})
+            requirements = data.get('requirements', {})
+            specifications = data.get('specifications', {})
+            constraints = data.get('constraints', {})
             
             # Run all analysis modules in parallel
             analysis_tasks = [

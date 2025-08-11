@@ -172,7 +172,10 @@
       "Bash(PYTHONPATH=/home/ec2-user/T-DeveloperMVP/backend uvicorn src.main_api:app --reload --host 0.0.0.0 --port 8000)",
       "Bash(PYTHONPATH=/home/ec2-user/T-DeveloperMVP/backend python -m uvicorn src.main_api:app --reload --host 0.0.0.0 --port 8000)",
       "Bash(PYTHONPATH=/home/ec2-user/T-DeveloperMVP/backend python3 -m uvicorn src.main_api:app --reload --host 0.0.0.0 --port 8000)",
-      "Bash(uv pip install:*)"
+      "Bash(uv pip install:*)",
+      "Bash(for dir in nl_input ui_selection parser component_decision match_rate search generation assembly download)",
+      "Bash(do echo \"=== $dir ===\")",
+      "Bash(test:*)"
     ],
     "deny": []
   }

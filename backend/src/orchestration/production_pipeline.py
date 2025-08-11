@@ -1016,39 +1016,11 @@ build/
             
             # 에이전트 실행 (다양한 인터페이스 지원)
             if hasattr(agent_instance, 'process'):
-                # 새로운 BaseAgent 인터페이스
-                try:
-                    # 절대 경로로 import 시도
-                    import sys
-                    agents_path = str(Path(__file__).parent.parent / "agents" / "ecs-integrated")
-                    if agents_path not in sys.path:
-                        sys.path.insert(0, agents_path)
-                    from base_agent import AgentContext
-                except ImportError:
-                    # 폴백: 간단한 context 생성
-                    class AgentContext:
-                        def __init__(self, trace_id):
-                            self.trace_id = trace_id
-                            self.start_time = time.time()
-                
-                # Import wrap_input from data_wrapper
-                try:
-                    from src.agents.unified.data_wrapper import wrap_input
-                    # Wrap the dictionary data into AgentInput format
-                    wrapped_input = wrap_input(data)
-                    
-                    # Unified agents expect AgentInput object
-                    result = await asyncio.wait_for(
-                        agent_instance.process(wrapped_input),
-                        timeout=timeout
-                    )
-                except ImportError:
-                    # Fallback: try passing dictionary directly
-                    logger.warning("Could not import wrap_input, passing dict directly")
-                    result = await asyncio.wait_for(
-                        agent_instance.process(data),
-                        timeout=timeout
-                    )
+                # 모든 에이전트에 dict 직접 전달 (래핑 제거)
+                result = await asyncio.wait_for(
+                    agent_instance.process(data),
+                    timeout=timeout
+                )
                 
                 execution_time = time.time() - start_time
                 

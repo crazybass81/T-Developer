@@ -97,7 +97,7 @@ class GenerationAgent(UnifiedBaseAgent):
 
 
     
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
         self.agent_name = "Generation"
         self.version = "3.0.0"

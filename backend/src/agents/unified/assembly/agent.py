@@ -131,7 +131,7 @@ class AssemblyAgent(UnifiedBaseAgent):
 
 
     
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
         self.agent_name = "Assembly"
         self.version = "3.0.0"
@@ -181,7 +181,7 @@ class AssemblyAgent(UnifiedBaseAgent):
             'final_validation'
         ]
     
-    async def process(self, input_data: Dict[str, Any]) -> EnhancedAssemblyResult:
+    async def process(self, input_data) -> EnhancedAssemblyResult:
         """
         Main assembly processing method
         
@@ -194,8 +194,16 @@ class AssemblyAgent(UnifiedBaseAgent):
         start_time = datetime.now()
         
         try:
+            # Handle both AgentInput wrapper and direct dict
+            if isinstance(input_data, dict):
+                data = input_data
+            elif hasattr(input_data, 'data'):
+                data = input_data.data
+            else:
+                data = {'data': input_data}
+            
             # Validate input data
-            if not self._validate_input(input_data):
+            if not self._validate_input(data):
                 return self._create_error_result("Invalid input data for assembly")
             
             # Initialize assembly context

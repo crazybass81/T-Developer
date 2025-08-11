@@ -66,7 +66,8 @@ class UnifiedUISelectionAgent(UnifiedBaseAgent):
     Analyzes requirements and selects appropriate UI components and patterns
     """
     
-    def __init__(self, config: Optional[AgentConfig] = None):
+    def __init__(self, config: Optional[AgentConfig] = None, **kwargs):
+        # Ignore extra kwargs that might come from pipeline
         if not config:
             config = AgentConfig(
                 name="ui_selection",
@@ -244,17 +245,25 @@ class UnifiedUISelectionAgent(UnifiedBaseAgent):
         """Initialize UI Selection specific resources"""
         self.logger.info("UI Selection Agent initialization complete")
     
-    async def process(self, input_data: AgentInput[Dict]) -> AgentResult[EnhancedUISelectionResult]:
-        """Process UI selection - Phase 2 interface"""
+    async def process(self, input_data) -> AgentResult[EnhancedUISelectionResult]:
+        """Process UI selection - accepts dict or AgentInput"""
         
         try:
+            # Handle both dict and AgentInput
+            if isinstance(input_data, dict):
+                data = input_data
+            elif hasattr(input_data, 'data'):
+                data = input_data.data
+            else:
+                data = {'data': input_data}
+            
             # Extract NL analysis result
-            nl_result = input_data.data.get('nl_result', {})
-            project_type = nl_result.get('project_type', 'web_application')
-            features = nl_result.get('features', [])
-            preferences = nl_result.get('preferences', {})
-            constraints = nl_result.get('constraints', [])
-            complexity = nl_result.get('complexity', 'medium')
+            nl_result = data.get('nl_result', {})
+            project_type = nl_result.get('project_type', data.get('project_type', 'web_application'))
+            features = nl_result.get('features', data.get('features', []))
+            preferences = nl_result.get('preferences', data.get('preferences', {}))
+            constraints = nl_result.get('constraints', data.get('constraints', []))
+            complexity = nl_result.get('complexity', data.get('complexity', 'medium'))
             
             # Process UI selection
             result = await self._select_ui_components(

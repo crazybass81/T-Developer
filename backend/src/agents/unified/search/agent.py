@@ -93,7 +93,7 @@ class SearchAgent(UnifiedBaseAgent):
 
 
     
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
         self.agent_name = "Search"
         self.version = "3.0.0"
@@ -136,7 +136,7 @@ class SearchAgent(UnifiedBaseAgent):
         # Component library (in production, this would be a database)
         self.component_library = self._initialize_component_library()
         
-    async def process(self, input_data: Dict[str, Any]) -> EnhancedSearchResult:
+    async def process(self, input_data) -> EnhancedSearchResult:
         """
         Main processing method for component search
         
@@ -149,15 +149,23 @@ class SearchAgent(UnifiedBaseAgent):
         start_time = datetime.now()
         
         try:
+            # Handle both AgentInput wrapper and direct dict
+            if isinstance(input_data, dict):
+                data = input_data
+            elif hasattr(input_data, 'data'):
+                data = input_data.data
+            else:
+                data = {'data': input_data}
+            
             # Validate input
-            if not self._validate_input(input_data):
+            if not self._validate_input(data):
                 return self._create_error_result("Invalid input data")
             
             # Extract search parameters
-            query = input_data.get('query', '')
-            filters = input_data.get('filters', {})
-            search_type = input_data.get('search_type', 'hybrid')
-            requirements = input_data.get('requirements', {})
+            query = data.get('query', '')
+            filters = data.get('filters', {})
+            search_type = data.get('search_type', 'hybrid')
+            requirements = data.get('requirements', {})
             
             # Build and optimize query
             built_query = await self.query_builder.build(query, requirements, filters)

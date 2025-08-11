@@ -28,7 +28,7 @@ class DownloadResult:
 class DownloadAgent:
     """Advanced download management system"""
     
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.version = "1.0.0"
         self.agent_type = "download"
         

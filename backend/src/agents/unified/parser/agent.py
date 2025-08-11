@@ -65,7 +65,7 @@ class UnifiedParserAgent(UnifiedBaseAgent):
     Combines Phase 2 structured parsing with advanced NLP capabilities
     """
     
-    def __init__(self, config: Optional[AgentConfig] = None):
+    def __init__(self, config: Optional[AgentConfig] = None, **kwargs):
         if not config:
             config = AgentConfig(
                 name="parser",

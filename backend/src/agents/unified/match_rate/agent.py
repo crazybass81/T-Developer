@@ -98,7 +98,7 @@ class MatchRateAgent(UnifiedBaseAgent):
 
 
     
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
         self.agent_name = "MatchRate"
         self.version = "3.0.0"
@@ -141,7 +141,7 @@ class MatchRateAgent(UnifiedBaseAgent):
             'confidence_level': 0.95
         }
     
-    async def process(self, input_data: Dict[str, Any]) -> EnhancedMatchRateResult:
+    async def process(self, input_data) -> EnhancedMatchRateResult:
         """
         Main processing method for match rate calculation
         
@@ -154,14 +154,22 @@ class MatchRateAgent(UnifiedBaseAgent):
         start_time = datetime.now()
         
         try:
+            # Handle both AgentInput wrapper and direct dict
+            if isinstance(input_data, dict):
+                data = input_data
+            elif hasattr(input_data, 'data'):
+                data = input_data.data
+            else:
+                data = {'data': input_data}
+            
             # Validate input
-            if not self._validate_input(input_data):
+            if not self._validate_input(data):
                 return self._create_error_result("Invalid input data")
             
             # Extract data
-            components = input_data.get('components', [])
-            requirements = input_data.get('requirements', {})
-            context = input_data.get('context', {})
+            components = data.get('components', [])
+            requirements = data.get('requirements', {})
+            context = data.get('context', {})
             
             # Run all analysis modules in parallel
             analysis_tasks = [
