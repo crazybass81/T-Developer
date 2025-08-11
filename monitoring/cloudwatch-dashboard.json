@@ -1,0 +1,201 @@
+{
+    "widgets": [
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ECS", "CPUUtilization", "ServiceName", "t-developer-service-production", "ClusterName", "t-developer-cluster-production" ],
+                    [ ".", "MemoryUtilization", ".", ".", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "ECS Service Resource Utilization",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 0,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ECS", "RunningTaskCount", "ServiceName", "t-developer-service-production", "ClusterName", "t-developer-cluster-production" ],
+                    [ ".", "PendingTaskCount", ".", ".", ".", "." ],
+                    [ ".", "DesiredCount", ".", ".", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "ECS Task Counts",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 6,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/t-developer-alb-production/1234567890123456" ],
+                    [ ".", "TargetResponseTime", ".", "." ],
+                    [ ".", "HTTPCode_Target_2XX_Count", ".", "." ],
+                    [ ".", "HTTPCode_Target_4XX_Count", ".", "." ],
+                    [ ".", "HTTPCode_Target_5XX_Count", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "Application Load Balancer Metrics",
+                "period": 300,
+                "stat": "Sum"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 6,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "targetgroup/t-developer-tg-production/1234567890123456", "LoadBalancer", "app/t-developer-alb-production/1234567890123456" ],
+                    [ ".", "UnHealthyHostCount", ".", ".", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "Target Health",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "log",
+            "x": 0,
+            "y": 12,
+            "width": 24,
+            "height": 6,
+            "properties": {
+                "query": "SOURCE '/ecs/t-developer-production'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 100",
+                "region": "us-east-1",
+                "title": "Recent Error Logs",
+                "view": "table"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 18,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/S3", "BucketSizeBytes", "BucketName", "t-developer-projects-production", "StorageType", "StandardStorage" ],
+                    [ ".", "NumberOfObjects", ".", ".", ".", "AllStorageTypes" ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "S3 Bucket Metrics",
+                "period": 86400,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 8,
+            "y": 18,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "t-developer-metadata-production" ],
+                    [ ".", "ConsumedWriteCapacityUnits", ".", "." ],
+                    [ ".", "ThrottledRequests", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "DynamoDB Metrics",
+                "period": 300,
+                "stat": "Sum"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 16,
+            "y": 18,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "T-Developer/Pipeline", "GenerationRequests", { "stat": "Sum" } ],
+                    [ ".", "GenerationSuccess", { "stat": "Sum" } ],
+                    [ ".", "GenerationFailures", { "stat": "Sum" } ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "Pipeline Metrics",
+                "period": 300,
+                "stat": "Sum"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 24,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "T-Developer/Pipeline", "NLInputExecutionTime", { "stat": "Average" } ],
+                    [ ".", "UISelectionExecutionTime", { "stat": "Average" } ],
+                    [ ".", "ParserExecutionTime", { "stat": "Average" } ],
+                    [ ".", "ComponentDecisionExecutionTime", { "stat": "Average" } ],
+                    [ ".", "MatchRateExecutionTime", { "stat": "Average" } ],
+                    [ ".", "SearchExecutionTime", { "stat": "Average" } ],
+                    [ ".", "GenerationExecutionTime", { "stat": "Average" } ],
+                    [ ".", "AssemblyExecutionTime", { "stat": "Average" } ],
+                    [ ".", "DownloadExecutionTime", { "stat": "Average" } ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "Agent Execution Times",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 24,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "T-Developer/Cache", "CacheHitRate", { "stat": "Average" } ],
+                    [ ".", "CacheMissRate", { "stat": "Average" } ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "Cache Performance",
+                "period": 300,
+                "stat": "Average"
+            }
+        }
+    ]
+}
