@@ -34,35 +34,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # backend 디렉�
 AGENTS_AVAILABLE = False
 AGENT_CLASSES = {}
 
-# Unified agents 직접 import
+# Import agent loader
 try:
-    from src.agents.unified.nl_input.agent import UnifiedNLInputAgent
-    from src.agents.unified.ui_selection.agent import UnifiedUISelectionAgent
-    from src.agents.unified.parser.agent import UnifiedParserAgent
-    from src.agents.unified.component_decision.agent import ComponentDecisionAgent
-    from src.agents.unified.match_rate.agent import MatchRateAgent
-    from src.agents.unified.search.agent import SearchAgent
-    from src.agents.unified.generation.agent import GenerationAgent
-    from src.agents.unified.assembly.agent import AssemblyAgent
-    from src.agents.unified.download.agent import DownloadAgent
-    
-    AGENT_CLASSES = {
-        "nl_input": UnifiedNLInputAgent,
-        "ui_selection": UnifiedUISelectionAgent,
-        "parser": UnifiedParserAgent,
-        "component_decision": ComponentDecisionAgent,
-        "match_rate": MatchRateAgent,
-        "search": SearchAgent,
-        "generation": GenerationAgent,
-        "assembly": AssemblyAgent,
-        "download": DownloadAgent
-    }
-    AGENTS_AVAILABLE = True
-    print(f"✅ Loaded {len(AGENT_CLASSES)} unified agents directly")
+    from src.orchestration.agent_loader import AGENT_CLASSES
+    AGENTS_AVAILABLE = len(AGENT_CLASSES) > 0
+    if AGENTS_AVAILABLE:
+        print(f"✅ Using {len(AGENT_CLASSES)} agents from agent_loader")
 except ImportError as e:
-    print(f"⚠️ Failed to import unified agents: {e}")
-    # 동적 로딩으로 fallback
+    print(f"⚠️ Failed to import agent_loader: {e}")
     AGENT_CLASSES = {}
+    AGENTS_AVAILABLE = False
 
 def load_agent_class_dynamic(agent_name: str):
     """동적으로 에이전트 클래스 로딩 - 개선된 버전"""
@@ -99,16 +80,21 @@ def load_agent_class_dynamic(agent_name: str):
                 print(f"Neither agent.py nor main.py found in {agent_path}")
                 return None
             
+        # sys.path에 backend 디렉토리 추가
+        backend_path = str(Path(__file__).parent.parent.parent)
+        if backend_path not in sys.path:
+            sys.path.insert(0, backend_path)
+            
         spec = importlib.util.spec_from_file_location(
-            f"{agent_name}_main", 
-            agent_file
+            f"src.agents.unified.{agent_name}.agent", 
+            agent_file,
+            submodule_search_locations=[str(agent_path)]
         )
         if spec and spec.loader:
             module = importlib.util.module_from_spec(spec)
             
-            # 모듈을 sys.modules에 등록 (고유 이름으로)
-            unique_name = f"agent_{agent_name}_main_{id(module)}"
-            sys.modules[unique_name] = module
+            # 모듈을 sys.modules에 등록 (정확한 패키지 경로로)
+            sys.modules[f"src.agents.unified.{agent_name}.agent"] = module
             
             # 모듈 실행
             spec.loader.exec_module(module)
@@ -193,6 +179,27 @@ class ProductionPipelineResult:
     execution_time: float
     aws_resources: Optional[Dict[str, Any]] = None
     monitoring_data: Optional[Dict[str, Any]] = None
+    
+    def get(self, key: str, default=None):
+        """Dict-like interface for compatibility"""
+        if hasattr(self, key):
+            return getattr(self, key)
+        elif key in self.metadata:
+            return self.metadata[key]
+        return default
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary"""
+        return {
+            'success': self.success,
+            'project_id': self.project_id,
+            'project_path': self.project_path,
+            'metadata': self.metadata,
+            'errors': self.errors,
+            'execution_time': self.execution_time,
+            'aws_resources': self.aws_resources,
+            'monitoring_data': self.monitoring_data
+        }
 
 @dataclass
 class AgentExecutionResult:
@@ -281,14 +288,8 @@ class ProductionECSPipeline:
                 if agent_name in AGENT_CLASSES:
                     # 실제 에이전트 사용
                     try:
-                        # 에이전트 설정 생성
-                        from ..agents.ecs_integrated.base_agent import AgentConfig
-                        config = AgentConfig(
-                            name=agent_name,
-                            version="1.0.0",
-                            aws_region=os.getenv('AWS_REGION', 'us-east-1')
-                        )
-                        self.agents[agent_name] = AGENT_CLASSES[agent_name](config)
+                        # 에이전트 설정 생성 - unified agents는 config 필요 없음
+                        self.agents[agent_name] = AGENT_CLASSES[agent_name]()
                         logger.info(f"✅ Real agent loaded: {agent_name}")
                     except Exception as e:
                         logger.warning(f"Failed to initialize real agent {agent_name}: {e}")
@@ -818,19 +819,53 @@ export default App;""",
                             self.trace_id = trace_id
                             self.start_time = time.time()
                 
-                agent_context = AgentContext(trace_id=f"{agent_name}-{int(time.time())}")
-                result = await asyncio.wait_for(
-                    agent_instance.process(data, agent_context),
-                    timeout=timeout
-                )
+                # Import wrap_input from data_wrapper
+                try:
+                    from src.agents.unified.data_wrapper import wrap_input
+                    # Wrap the dictionary data into AgentInput format
+                    wrapped_input = wrap_input(data)
+                    
+                    # Unified agents expect AgentInput object
+                    result = await asyncio.wait_for(
+                        agent_instance.process(wrapped_input),
+                        timeout=timeout
+                    )
+                except ImportError:
+                    # Fallback: try passing dictionary directly
+                    logger.warning("Could not import wrap_input, passing dict directly")
+                    result = await asyncio.wait_for(
+                        agent_instance.process(data),
+                        timeout=timeout
+                    )
                 
                 execution_time = time.time() - start_time
+                
+                # Handle different result formats
+                success = getattr(result, 'success', True)
+                
+                # Extract output data from various result formats
+                if hasattr(result, 'data'):
+                    output_data = result.data
+                elif hasattr(result, 'output_data'):
+                    output_data = result.output_data
+                elif hasattr(result, '__dict__') and not hasattr(result, 'data'):
+                    # If it's an object without data attribute, use its dict
+                    output_data = {k: v for k, v in result.__dict__.items() 
+                                   if not k.startswith('_')}
+                elif isinstance(result, dict):
+                    output_data = result
+                else:
+                    output_data = {'result': str(result)}
+                
+                # Extract error if present
+                error = getattr(result, 'error', None)
+                
                 return AgentExecutionResult(
                     agent_name=agent_name,
-                    success=result.success,
+                    success=success,
                     execution_time=execution_time,
-                    output_data=result.data if result.success else None,
-                    error=result.error if not result.success else None
+                    output_data=output_data if success else None,
+                    error=error if not success else None
                 )
                 
             elif hasattr(agent_instance, 'execute'):

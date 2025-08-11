@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 
 # Unified base imports
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
+from src.agents.unified.data_wrapper import AgentInput, AgentContext, wrap_input, unwrap_result
+
 
 # Phase 2 imports - optional
 try:
@@ -32,7 +34,7 @@ except ImportError:
     def publish_agent_event(*args, **kwargs): pass
 
 # Module imports
-from .modules import (
+from src.agents.unified.nl_input.modules import (
     ContextEnhancer,
     RequirementValidator,
     ProjectTypeClassifier,
@@ -76,6 +78,7 @@ class EnhancedNLInputResult(NLInputResult):
     clarification_questions: List[str] = field(default_factory=list)
     template_used: Optional[str] = None
     ai_provider: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 class UnifiedNLInputAgent(UnifiedBaseAgent):
@@ -186,6 +189,28 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
             'complex': ['complex', 'advanced', 'sophisticated', 'enterprise', '복잡한', '고급', '정교한', '엔터프라이즈']
         }
     
+
+    def log_info(self, message: str):
+        """Log info message"""
+        if hasattr(self, 'logger'):
+            self.logger.info(message)
+        else:
+            print(f"INFO: {message}")
+    
+    def log_error(self, message: str):
+        """Log error message"""
+        if hasattr(self, 'logger'):
+            self.logger.error(message)
+        else:
+            print(f"ERROR: {message}")
+    
+    def log_warning(self, message: str):
+        """Log warning message"""
+        if hasattr(self, 'logger'):
+            self.logger.warning(message)
+        else:
+            print(f"WARNING: {message}")
+
     async def _custom_initialize(self):
         """Initialize NL Input specific resources"""
         
@@ -252,12 +277,8 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
             user_context = input_data.data.get('context', {})
             preferred_language = input_data.data.get('language', 'auto')
             
-            # Create context for processing
-            context = AgentContext(
-                trace_id=input_data.context.pipeline_id,
-                pipeline_context=input_data.context,
-                metadata={"query_length": len(query)}
-            )
+            # Use existing context from input_data
+            context = input_data.context
             
             # Process with unified logic
             result = await self._process_unified(
@@ -330,11 +351,11 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
             self.logger.info(f"Processing NL input: {len(query)} chars")
             
             # Publish start event
-            if context.pipeline_context:
+            if context:
                 await publish_agent_event(
                     EventType.AGENT_STARTED,
                     self.config.name,
-                    context.pipeline_context.pipeline_id,
+                    context.pipeline_id,
                     {"query_length": len(query)}
                 )
             
@@ -405,11 +426,11 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
                 self.metrics.set_gauge("nl_input.confidence", result_data.intent_confidence)
             
             # Publish completion event
-            if context.pipeline_context:
+            if context:
                 await publish_agent_event(
                     EventType.AGENT_COMPLETED,
                     self.config.name,
-                    context.pipeline_context.pipeline_id,
+                    context.pipeline_id,
                     {
                         "project_type": result_data.project_type,
                         "features_count": len(result_data.features),
@@ -540,8 +561,7 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
             use_scenarios=self._extract_use_scenarios(enhanced_input, project_type),
             clarification_questions=clarification_questions,
             template_used=None,
-            ai_provider=ai_provider,
-            metadata={"intent": intent_analysis}
+            ai_provider=ai_provider
         )
     
     async def _process_template_match(

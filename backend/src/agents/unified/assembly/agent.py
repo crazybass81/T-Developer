@@ -21,21 +21,23 @@ import sys
 sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
+from src.agents.unified.data_wrapper import AgentInput, AgentContext, wrap_input, unwrap_result
+
 # from agents.phase2_enhancements import Phase2AssemblyResult  # Commented out - module not available
 
 # Import specialized modules
-from .modules.file_organizer import FileOrganizer
-from .modules.conflict_resolver import ConflictResolver
-from .modules.dependency_consolidator import DependencyConsolidator
-from .modules.build_orchestrator import BuildOrchestrator
-from .modules.package_creator import PackageCreator
-from .modules.validation_engine import ValidationEngine
-from .modules.asset_optimizer import AssetOptimizer
-from .modules.metadata_generator import MetadataGenerator
-from .modules.integrity_checker import IntegrityChecker
-from .modules.compatibility_validator import CompatibilityValidator
-from .modules.performance_analyzer import PerformanceAnalyzer
-from .modules.security_scanner import SecurityScanner
+from src.agents.unified.assembly.modules.file_organizer import FileOrganizer
+from src.agents.unified.assembly.modules.conflict_resolver import ConflictResolver
+from src.agents.unified.assembly.modules.dependency_consolidator import DependencyConsolidator
+from src.agents.unified.assembly.modules.build_orchestrator import BuildOrchestrator
+from src.agents.unified.assembly.modules.package_creator import PackageCreator
+from src.agents.unified.assembly.modules.validation_engine import ValidationEngine
+from src.agents.unified.assembly.modules.asset_optimizer import AssetOptimizer
+from src.agents.unified.assembly.modules.metadata_generator import MetadataGenerator
+from src.agents.unified.assembly.modules.integrity_checker import IntegrityChecker
+from src.agents.unified.assembly.modules.compatibility_validator import CompatibilityValidator
+from src.agents.unified.assembly.modules.performance_analyzer import PerformanceAnalyzer
+from src.agents.unified.assembly.modules.security_scanner import SecurityScanner
 
 
 @dataclass
@@ -90,11 +92,44 @@ class EnhancedAssemblyResult:
         self.license_content: str = ""
 
 
+
+    def log_info(self, message: str):
+        """Log info message"""
+        if hasattr(self, 'logger'):
+            self.logger.info(message)
+        else:
+            print(f"INFO: {message}")
+    
+    def log_error(self, message: str):
+        """Log error message"""
+        if hasattr(self, 'logger'):
+            self.logger.error(message)
+        else:
+            print(f"ERROR: {message}")
+    
+    def log_warning(self, message: str):
+        """Log warning message"""
+        if hasattr(self, 'logger'):
+            self.logger.warning(message)
+        else:
+            print(f"WARNING: {message}")
+
 class AssemblyAgent(UnifiedBaseAgent):
     """
     Production-ready Assembly Agent
     Assembles and packages complete projects with advanced validation
     """
+
+    async def _custom_initialize(self):
+        """Custom initialization"""
+        pass
+    
+    async def _process_internal(self, input_data, context):
+        """Internal processing method - delegates to main process"""
+        result = await self.process(input_data)
+        return result.data if hasattr(result, 'data') else result
+
+
     
     def __init__(self):
         super().__init__()

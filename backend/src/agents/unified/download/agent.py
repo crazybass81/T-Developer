@@ -44,11 +44,34 @@ class DownloadAgent:
         # Initialize download directory
         os.makedirs(self.download_config['base_download_path'], exist_ok=True)
     
-    async def process(self, input_data: Dict[str, Any]) -> DownloadResult:
-        """
-        Main download processing method
-        Prepares final package for secure download
-        """
+
+    def log_info(self, message: str):
+        """Log info message"""
+        if hasattr(self, 'logger'):
+            self.logger.info(message)
+        else:
+            print(f"INFO: {message}")
+    
+    def log_error(self, message: str):
+        """Log error message"""
+        if hasattr(self, 'logger'):
+            self.logger.error(message)
+        else:
+            print(f"ERROR: {message}")
+    
+    def log_warning(self, message: str):
+        """Log warning message"""
+        if hasattr(self, 'logger'):
+            self.logger.warning(message)
+        else:
+            print(f"WARNING: {message}")
+
+    async def process(self, input_data: Any) -> Any:
+        """Process input through the agent"""
+        # Ensure input is wrapped properly
+        if not isinstance(input_data, AgentInput):
+            from src.agents.unified.data_wrapper import wrap_input
+            input_data = wrap_input(input_data if isinstance(input_data, dict) else {'data': input_data})
         
         start_time = datetime.now()
         

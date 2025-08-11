@@ -15,21 +15,23 @@ import sys
 sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
+from src.agents.unified.data_wrapper import AgentInput, AgentContext, wrap_input, unwrap_result
+
 # from agents.phase2_enhancements import Phase2SearchResult  # Commented out - module not available
 
 # Import all specialized modules
-from .modules.query_builder import QueryBuilder
-from .modules.index_manager import IndexManager
-from .modules.search_engine import SearchEngine
-from .modules.result_ranker import ResultRanker
-from .modules.filter_manager import FilterManager
-from .modules.faceted_search import FacetedSearch
-from .modules.semantic_search import SemanticSearch
-from .modules.recommendation_search import RecommendationSearch
-from .modules.cache_manager import CacheManager
-from .modules.search_analytics import SearchAnalytics
-from .modules.autocomplete_engine import AutocompleteEngine
-from .modules.search_optimizer import SearchOptimizer
+from src.agents.unified.search.modules.query_builder import QueryBuilder
+from src.agents.unified.search.modules.index_manager import IndexManager
+from src.agents.unified.search.modules.search_engine import SearchEngine
+from src.agents.unified.search.modules.result_ranker import ResultRanker
+from src.agents.unified.search.modules.filter_manager import FilterManager
+from src.agents.unified.search.modules.faceted_search import FacetedSearch
+from src.agents.unified.search.modules.semantic_search import SemanticSearch
+from src.agents.unified.search.modules.recommendation_search import RecommendationSearch
+from src.agents.unified.search.modules.cache_manager import CacheManager
+from src.agents.unified.search.modules.search_analytics import SearchAnalytics
+from src.agents.unified.search.modules.autocomplete_engine import AutocompleteEngine
+from src.agents.unified.search.modules.search_optimizer import SearchOptimizer
 
 
 class EnhancedSearchResult:
@@ -52,11 +54,44 @@ class EnhancedSearchResult:
         self.cache_info = {}
 
 
+
+    def log_info(self, message: str):
+        """Log info message"""
+        if hasattr(self, 'logger'):
+            self.logger.info(message)
+        else:
+            print(f"INFO: {message}")
+    
+    def log_error(self, message: str):
+        """Log error message"""
+        if hasattr(self, 'logger'):
+            self.logger.error(message)
+        else:
+            print(f"ERROR: {message}")
+    
+    def log_warning(self, message: str):
+        """Log warning message"""
+        if hasattr(self, 'logger'):
+            self.logger.warning(message)
+        else:
+            print(f"WARNING: {message}")
+
 class SearchAgent(UnifiedBaseAgent):
     """
     Production-ready Search Agent
     Performs comprehensive component search with advanced features
     """
+
+    async def _custom_initialize(self):
+        """Custom initialization"""
+        pass
+    
+    async def _process_internal(self, input_data, context):
+        """Internal processing method - delegates to main process"""
+        result = await self.process(input_data)
+        return result.data if hasattr(result, 'data') else result
+
+
     
     def __init__(self):
         super().__init__()

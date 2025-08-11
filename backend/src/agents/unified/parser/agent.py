@@ -9,6 +9,8 @@ import json
 import re
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentResult
+from src.agents.unified.data_wrapper import AgentInput, AgentContext, wrap_input, unwrap_result
+
 # from ...phase2.agents.parser import ParserAgent as Phase2Parser, ParserResult  # Commented out - module not available
 
 # Define ParserResult locally since phase2 is not available
@@ -17,6 +19,28 @@ class ParserResult:
         self.data = data
         self.success = data.get('success', False)
         self.parsed_requirements = data.get('parsed_requirements', {})
+
+
+    def log_info(self, message: str):
+        """Log info message"""
+        if hasattr(self, 'logger'):
+            self.logger.info(message)
+        else:
+            print(f"INFO: {message}")
+    
+    def log_error(self, message: str):
+        """Log error message"""
+        if hasattr(self, 'logger'):
+            self.logger.error(message)
+        else:
+            print(f"ERROR: {message}")
+    
+    def log_warning(self, message: str):
+        """Log warning message"""
+        if hasattr(self, 'logger'):
+            self.logger.warning(message)
+        else:
+            print(f"WARNING: {message}")
 
 class EnhancedParserResult(ParserResult):
     """Enhanced result from Parser Agent"""
@@ -52,7 +76,8 @@ class UnifiedParserAgent(UnifiedBaseAgent):
             )
         
         super().__init__(config)
-        self.phase2_parser = Phase2Parser()
+        # Phase2Parser not available - commented out
+        # self.phase2_parser = Phase2Parser()
         
         # Initialize parsing modules (will be created separately)
         self._init_modules()
@@ -76,10 +101,41 @@ class UnifiedParserAgent(UnifiedBaseAgent):
             'integration': ['api', 'webhook', 'service', 'endpoint', 'external']
         }
     
+    def log_info(self, message: str):
+        """Log info message"""
+        if hasattr(self, 'logger'):
+            self.logger.info(message)
+        else:
+            print(f"INFO: {message}")
+    
+    def log_error(self, message: str):
+        """Log error message"""
+        if hasattr(self, 'logger'):
+            self.logger.error(message)
+        else:
+            print(f"ERROR: {message}")
+    
+    def log_warning(self, message: str):
+        """Log warning message"""
+        if hasattr(self, 'logger'):
+            self.logger.warning(message)
+        else:
+            print(f"WARNING: {message}")
+    
+    async def _custom_initialize(self):
+        """Custom initialization for Parser agent"""
+        pass
+    
+    async def _process_internal(self, input_data: Dict[str, Any], context: Any) -> Dict[str, Any]:
+        """Internal processing method"""
+        # Call the main process method
+        result = await self.process(input_data)
+        return result.data if hasattr(result, 'data') else result
+    
     def _init_modules(self):
         """Initialize parsing modules"""
         try:
-            from .modules import (
+            from src.agents.unified.parser.modules import (
                 NLPProcessor,
                 EntityExtractor,
                 RequirementAnalyzer,
@@ -121,7 +177,7 @@ class UnifiedParserAgent(UnifiedBaseAgent):
             self.business_rule_extractor = None
             self.technical_analyzer = None
     
-    async def process(self, input_data: Dict[str, Any]) -> EnhancedParserResult:
+    async def process(self, input_data: Any) -> EnhancedParserResult:
         """
         Process input through the Parser agent
         
@@ -134,8 +190,16 @@ class UnifiedParserAgent(UnifiedBaseAgent):
         self.log_info(f"Processing parser request")
         
         try:
+            # Handle both AgentInput wrapper and direct dict
+            if hasattr(input_data, 'data'):
+                data = input_data.data
+            elif isinstance(input_data, dict):
+                data = input_data
+            else:
+                data = {'text': str(input_data)}
+            
             # Extract text from input
-            text = self._extract_text(input_data)
+            text = self._extract_text(data)
             
             # Process with NLP
             nlp_result = await self._process_nlp(text)
@@ -219,25 +283,33 @@ class UnifiedParserAgent(UnifiedBaseAgent):
                 'error': str(e)
             })
     
-    def _extract_text(self, input_data: Dict[str, Any]) -> str:
+    def _extract_text(self, input_data: Any) -> str:
         """Extract text from input data"""
-        if isinstance(input_data, str):
-            return input_data
+        # Handle AgentInput wrapper
+        if hasattr(input_data, 'data'):
+            data = input_data.data
+        elif isinstance(input_data, dict):
+            data = input_data
+        else:
+            return str(input_data)
+        
+        if isinstance(data, str):
+            return data
         
         text_parts = []
         
         # Extract from various fields
-        if 'query' in input_data:
-            text_parts.append(input_data['query'])
-        if 'requirements' in input_data:
-            if isinstance(input_data['requirements'], list):
-                text_parts.extend(input_data['requirements'])
+        if 'query' in data:
+            text_parts.append(data['query'])
+        if 'requirements' in data:
+            if isinstance(data['requirements'], list):
+                text_parts.extend(data['requirements'])
             else:
-                text_parts.append(str(input_data['requirements']))
-        if 'description' in input_data:
-            text_parts.append(input_data['description'])
-        if 'text' in input_data:
-            text_parts.append(input_data['text'])
+                text_parts.append(str(data['requirements']))
+        if 'description' in data:
+            text_parts.append(data['description'])
+        if 'text' in data:
+            text_parts.append(data['text'])
         
         return ' '.join(text_parts)
     

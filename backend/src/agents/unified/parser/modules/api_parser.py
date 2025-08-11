@@ -612,7 +612,7 @@ class APIParser:
         
         # Generate ID
         if path_parts:
-            return f"{method}_{}_'.join(path_parts)}"
+            return f"{method}_{'_'.join(path_parts)}"
         
         return f"{method}_root"
     

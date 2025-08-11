@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 
 # Unified base imports
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
+from src.agents.unified.data_wrapper import AgentInput, AgentContext, wrap_input, unwrap_result
+
 
 # Phase 2 imports - optional
 try:
@@ -20,8 +22,20 @@ except ImportError:
     CORE_IMPORTS_AVAILABLE = False
     # Define dummy classes if needed
     class AgentInput: pass
-    class ProcessingStatus: pass
-    class UISelectionResult: pass
+    class ProcessingStatus:
+        COMPLETED = "completed"
+        FAILED = "failed"
+        PROCESSING = "processing"
+    @dataclass
+    class UISelectionResult:
+        components: List[str] = field(default_factory=list)
+        styles: Dict[str, Any] = field(default_factory=dict)
+        layout_structure: str = ""
+        theme_config: Dict[str, Any] = field(default_factory=dict)
+        responsive_config: Dict[str, Any] = field(default_factory=dict)
+        accessibility_config: Dict[str, Any] = field(default_factory=dict)
+        performance_considerations: List[str] = field(default_factory=list)
+        confidence_score: float = 0.0
     class EventType: pass
     def publish_agent_event(*args, **kwargs): pass
 
@@ -204,6 +218,28 @@ class UnifiedUISelectionAgent(UnifiedBaseAgent):
             }
         }
     
+
+    def log_info(self, message: str):
+        """Log info message"""
+        if hasattr(self, 'logger'):
+            self.logger.info(message)
+        else:
+            print(f"INFO: {message}")
+    
+    def log_error(self, message: str):
+        """Log error message"""
+        if hasattr(self, 'logger'):
+            self.logger.error(message)
+        else:
+            print(f"ERROR: {message}")
+    
+    def log_warning(self, message: str):
+        """Log warning message"""
+        if hasattr(self, 'logger'):
+            self.logger.warning(message)
+        else:
+            print(f"WARNING: {message}")
+
     async def _custom_initialize(self):
         """Initialize UI Selection specific resources"""
         self.logger.info("UI Selection Agent initialization complete")
@@ -229,17 +265,22 @@ class UnifiedUISelectionAgent(UnifiedBaseAgent):
                 complexity
             )
             
-            # Publish event
-            await publish_agent_event(
-                EventType.AGENT_COMPLETED,
-                self.config.name,
-                input_data.context.pipeline_id,
-                {
-                    "components_selected": len(result.components),
-                    "layout_type": result.layout_type,
-                    "design_system": result.design_system
-                }
-            )
+            # Publish event (optional - may not be available)
+            try:
+                if hasattr(input_data, 'context') and input_data.context:
+                    await publish_agent_event(
+                        EventType.AGENT_COMPLETED,
+                        self.config.name,
+                        input_data.context.pipeline_id if hasattr(input_data.context, 'pipeline_id') else 'unknown',
+                        {
+                            "components_selected": len(result.components),
+                            "layout_type": result.layout_type,
+                            "design_system": result.design_system
+                        }
+                    )
+            except Exception as e:
+                # Event publishing is optional, don't fail the agent
+                logger.debug(f"Could not publish event: {e}")
             
             return AgentResult(
                 success=True,
@@ -247,11 +288,7 @@ class UnifiedUISelectionAgent(UnifiedBaseAgent):
                 status=ProcessingStatus.COMPLETED,
                 agent_name=self.config.name,
                 agent_version=self.config.version,
-                confidence=result.confidence_score,
-                metadata={
-                    "components_count": len(result.components),
-                    "library": result.component_library
-                }
+                confidence=result.confidence_score
             )
             
         except Exception as e:

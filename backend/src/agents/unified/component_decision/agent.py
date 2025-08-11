@@ -14,21 +14,23 @@ import sys
 sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
+from src.agents.unified.data_wrapper import AgentInput, AgentContext, wrap_input, unwrap_result
+
 # from agents.phase2_enhancements import Phase2ComponentDecisionResult  # Commented out - module not available
 
 # Import all specialized modules
-from .modules.architecture_selector import ArchitectureSelector
-from .modules.component_analyzer import ComponentAnalyzer
-from .modules.design_pattern_selector import DesignPatternSelector
-from .modules.technology_stack_builder import TechnologyStackBuilder
-from .modules.dependency_resolver import DependencyResolver
-from .modules.integration_mapper import IntegrationMapper
-from .modules.scalability_analyzer import ScalabilityAnalyzer
-from .modules.security_architect import SecurityArchitect
-from .modules.database_designer import DatabaseDesigner
-from .modules.api_architect import APIArchitect
-from .modules.infrastructure_planner import InfrastructurePlanner
-from .modules.cost_optimizer import CostOptimizer
+from src.agents.unified.component_decision.modules.architecture_selector import ArchitectureSelector
+from src.agents.unified.component_decision.modules.component_analyzer import ComponentAnalyzer
+from src.agents.unified.component_decision.modules.design_pattern_selector import DesignPatternSelector
+from src.agents.unified.component_decision.modules.technology_stack_builder import TechnologyStackBuilder
+from src.agents.unified.component_decision.modules.dependency_resolver import DependencyResolver
+from src.agents.unified.component_decision.modules.integration_mapper import IntegrationMapper
+from src.agents.unified.component_decision.modules.scalability_analyzer import ScalabilityAnalyzer
+from src.agents.unified.component_decision.modules.security_architect import SecurityArchitect
+from src.agents.unified.component_decision.modules.database_designer import DatabaseDesigner
+from src.agents.unified.component_decision.modules.api_architect import APIArchitect
+from src.agents.unified.component_decision.modules.infrastructure_planner import InfrastructurePlanner
+from src.agents.unified.component_decision.modules.cost_optimizer import CostOptimizer
 
 
 class EnhancedComponentDecisionResult:
@@ -54,11 +56,44 @@ class EnhancedComponentDecisionResult:
         self.optimization_recommendations = []
 
 
+
+    def log_info(self, message: str):
+        """Log info message"""
+        if hasattr(self, 'logger'):
+            self.logger.info(message)
+        else:
+            print(f"INFO: {message}")
+    
+    def log_error(self, message: str):
+        """Log error message"""
+        if hasattr(self, 'logger'):
+            self.logger.error(message)
+        else:
+            print(f"ERROR: {message}")
+    
+    def log_warning(self, message: str):
+        """Log warning message"""
+        if hasattr(self, 'logger'):
+            self.logger.warning(message)
+        else:
+            print(f"WARNING: {message}")
+
 class ComponentDecisionAgent(UnifiedBaseAgent):
     """
     Production-ready Component Decision Agent
     Analyzes requirements and decides on architecture, components, and technology stack
     """
+
+    async def _custom_initialize(self):
+        """Custom initialization"""
+        pass
+    
+    async def _process_internal(self, input_data, context):
+        """Internal processing method - delegates to main process"""
+        result = await self.process(input_data)
+        return result.data if hasattr(result, 'data') else result
+
+
     
     def __init__(self):
         super().__init__()

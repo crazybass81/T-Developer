@@ -15,21 +15,23 @@ import sys
 sys.path.append('/home/ec2-user/T-DeveloperMVP/backend/src')
 
 from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentContext, AgentResult
+from src.agents.unified.data_wrapper import AgentInput, AgentContext, wrap_input, unwrap_result
+
 # from agents.phase2_enhancements import Phase2MatchRateResult  # Commented out - module not available
 
 # Import all specialized modules
-from .modules.similarity_calculator import SimilarityCalculator
-from .modules.semantic_matcher import SemanticMatcher
-from .modules.functional_scorer import FunctionalScorer
-from .modules.technical_compatibility import TechnicalCompatibility
-from .modules.performance_matcher import PerformanceMatcher
-from .modules.security_compliance import SecurityCompliance
-from .modules.cost_efficiency import CostEfficiency
-from .modules.maintenance_score import MaintenanceScore
-from .modules.popularity_metrics import PopularityMetrics
-from .modules.quality_assessor import QualityAssessor
-from .modules.risk_analyzer import RiskAnalyzer
-from .modules.recommendation_engine import RecommendationEngine
+from src.agents.unified.match_rate.modules.similarity_calculator import SimilarityCalculator
+from src.agents.unified.match_rate.modules.semantic_matcher import SemanticMatcher
+from src.agents.unified.match_rate.modules.functional_scorer import FunctionalScorer
+from src.agents.unified.match_rate.modules.technical_compatibility import TechnicalCompatibility
+from src.agents.unified.match_rate.modules.performance_matcher import PerformanceMatcher
+from src.agents.unified.match_rate.modules.security_compliance import SecurityCompliance
+from src.agents.unified.match_rate.modules.cost_efficiency import CostEfficiency
+from src.agents.unified.match_rate.modules.maintenance_score import MaintenanceScore
+from src.agents.unified.match_rate.modules.popularity_metrics import PopularityMetrics
+from src.agents.unified.match_rate.modules.quality_assessor import QualityAssessor
+from src.agents.unified.match_rate.modules.risk_analyzer import RiskAnalyzer
+from src.agents.unified.match_rate.modules.recommendation_engine import RecommendationEngine
 
 
 class EnhancedMatchRateResult:
@@ -57,11 +59,44 @@ class EnhancedMatchRateResult:
         self.weighted_scores = {}
 
 
+
+    def log_info(self, message: str):
+        """Log info message"""
+        if hasattr(self, 'logger'):
+            self.logger.info(message)
+        else:
+            print(f"INFO: {message}")
+    
+    def log_error(self, message: str):
+        """Log error message"""
+        if hasattr(self, 'logger'):
+            self.logger.error(message)
+        else:
+            print(f"ERROR: {message}")
+    
+    def log_warning(self, message: str):
+        """Log warning message"""
+        if hasattr(self, 'logger'):
+            self.logger.warning(message)
+        else:
+            print(f"WARNING: {message}")
+
 class MatchRateAgent(UnifiedBaseAgent):
     """
     Production-ready Match Rate Agent
     Calculates comprehensive match rates between components and requirements
     """
+
+    async def _custom_initialize(self):
+        """Custom initialization"""
+        pass
+    
+    async def _process_internal(self, input_data, context):
+        """Internal processing method - delegates to main process"""
+        result = await self.process(input_data)
+        return result.data if hasattr(result, 'data') else result
+
+
     
     def __init__(self):
         super().__init__()
