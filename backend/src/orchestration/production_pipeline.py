@@ -36,13 +36,17 @@ AGENT_CLASSES = {}
 def load_agent_class(agent_name: str):
     """동적으로 에이전트 클래스 로딩 - 개선된 버전"""
     try:
-        agent_path = Path(__file__).parent.parent / "agents" / "ecs-integrated" / agent_name
+        # Try unified directory first (where actual implementations are)
+        agent_path = Path(__file__).parent.parent / "agents" / "unified" / agent_name
         if not agent_path.exists():
-            # Fallback to implementations directory
-            agent_path = Path(__file__).parent.parent / "agents" / "implementations"
+            # Fallback to ecs-integrated directory
+            agent_path = Path(__file__).parent.parent / "agents" / "ecs-integrated" / agent_name
             if not agent_path.exists():
-                print(f"Agent path does not exist: {agent_path}")
-                return None
+                # Fallback to implementations directory
+                agent_path = Path(__file__).parent.parent / "agents" / "implementations"
+                if not agent_path.exists():
+                    print(f"Agent path does not exist: {agent_path}")
+                    return None
         
         # sys.path에 에이전트 디렉토리 추가
         agent_str_path = str(agent_path.parent)
@@ -56,14 +60,17 @@ def load_agent_class(agent_name: str):
         
         # 동적 import
         import importlib.util
-        main_file = agent_path / "main.py"
-        if not main_file.exists():
-            print(f"main.py not found in {agent_path}")
-            return None
+        # Try agent.py first (unified agents), then main.py (old format)
+        agent_file = agent_path / "agent.py"
+        if not agent_file.exists():
+            agent_file = agent_path / "main.py"
+            if not agent_file.exists():
+                print(f"Neither agent.py nor main.py found in {agent_path}")
+                return None
             
         spec = importlib.util.spec_from_file_location(
             f"{agent_name}_main", 
-            main_file
+            agent_file
         )
         if spec and spec.loader:
             module = importlib.util.module_from_spec(spec)
