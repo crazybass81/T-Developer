@@ -1016,9 +1016,20 @@ build/
             
             # 에이전트 실행 (다양한 인터페이스 지원)
             if hasattr(agent_instance, 'process'):
-                # 모든 에이전트에 dict 직접 전달 (래핑 제거)
+                # 에이전트가 기대하는 형식으로 데이터 준비
+                # 간단한 래퍼로 context 추가 (필수 속성)
+                wrapped_data = {
+                    'data': data,
+                    'context': {
+                        'pipeline_id': context.get('pipeline_id', f"pipeline_{int(time.time())}"),
+                        'project_id': data.get('project_id', 'unknown'),
+                        'timestamp': datetime.now().isoformat()
+                    }
+                }
+                
+                # process 메서드 호출
                 result = await asyncio.wait_for(
-                    agent_instance.process(data),
+                    agent_instance.process(wrapped_data),
                     timeout=timeout
                 )
                 
