@@ -179,7 +179,8 @@
       "Bash(PYTHONPATH=/home/ec2-user/T-DeveloperMVP/backend timeout 10s python3 -m uvicorn src.main_api:app --reload --host 0.0.0.0 --port 8000)",
       "Bash(sqlite3:*)",
       "Bash(PORT=3001 npm start)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(python -m pytest tests/test_ai_capability_analyzer.py -v --tb=short)"
     ],
     "deny": []
   }
