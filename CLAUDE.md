@@ -47,7 +47,123 @@ Testing            → Python (pytest), TypeScript (Jest/Playwright)
 
 ## 🚨 CRITICAL RULES - MUST FOLLOW
 
-### 1. 🔄 GIT COMMIT & PUSH RULES - 필수 준수
+### 1. 🔑 ENVIRONMENT VARIABLES RULE - 즉시 요구
+**환경변수가 필요한 순간 즉시 사용자에게 요구**
+- **즉시 확인**: 코드 실행 전 필요한 환경변수 체크
+- **명확한 요구**: 어떤 환경변수가 왜 필요한지 설명
+- **대안 제시**: 기본값이나 테스트값 제안
+- **설정 가이드**: 환경변수 설정 방법 안내
+
+#### 환경변수 체크리스트
+```bash
+# 필수 환경변수 (없으면 즉시 요구)
+- OPENAI_API_KEY         # OpenAI API 사용시
+- ANTHROPIC_API_KEY      # Claude API 사용시  
+- AWS_ACCESS_KEY_ID      # AWS 서비스 사용시
+- AWS_SECRET_ACCESS_KEY  # AWS 서비스 사용시
+- AWS_REGION            # AWS 리전 설정
+- DATABASE_URL          # 데이터베이스 연결
+- REDIS_URL            # Redis 캐시 사용시
+- JWT_SECRET           # 인증 토큰 생성시
+```
+
+#### 요구 템플릿
+```
+⚠️ 환경변수 필요!
+
+다음 환경변수가 설정되지 않았습니다:
+- {ENV_VAR_NAME}: {용도 설명}
+
+설정 방법:
+1. .env 파일에 추가: {ENV_VAR_NAME}=your_value_here
+2. 또는 export {ENV_VAR_NAME}=your_value_here
+3. 테스트용 임시값: {기본값 제안}
+
+지금 설정하시겠습니까? (제공해주시면 .env에 추가합니다)
+```
+
+#### 환경변수 관리 전략
+- **개발**: `.env` 파일 사용
+- **스테이징**: AWS Parameter Store
+- **프로덕션**: AWS Secrets Manager
+- **절대 금지**: 코드에 하드코딩 ❌
+
+#### 환경변수 체크 코드 예시
+```python
+# Python 예시 - 실행 전 체크
+import os
+import sys
+
+def check_required_env_vars():
+    """필수 환경변수 체크 및 요구"""
+    required_vars = {
+        'OPENAI_API_KEY': 'OpenAI API 호출을 위해 필요',
+        'AWS_REGION': 'AWS 서비스 리전 설정 (기본값: us-east-1)',
+        'DATABASE_URL': '데이터베이스 연결 (예: postgresql://...)'
+    }
+    
+    missing_vars = []
+    for var, description in required_vars.items():
+        if not os.getenv(var):
+            missing_vars.append(f"- {var}: {description}")
+    
+    if missing_vars:
+        print("⚠️ 환경변수 필요!\n")
+        print("다음 환경변수가 설정되지 않았습니다:")
+        print("\n".join(missing_vars))
+        print("\n설정 방법:")
+        print("1. .env 파일에 추가")
+        print("2. export VAR_NAME=value")
+        sys.exit(1)
+
+# 코드 시작 전 항상 체크
+check_required_env_vars()
+```
+
+```typescript
+// TypeScript 예시
+function checkEnvVars(): void {
+    const required = [
+        { name: 'OPENAI_API_KEY', desc: 'OpenAI API 사용' },
+        { name: 'DATABASE_URL', desc: 'DB 연결' }
+    ];
+    
+    const missing = required.filter(v => !process.env[v.name]);
+    
+    if (missing.length > 0) {
+        console.error('⚠️ 환경변수 필요!');
+        missing.forEach(v => {
+            console.error(`- ${v.name}: ${v.desc}`);
+        });
+        process.exit(1);
+    }
+}
+
+// 앱 시작시 체크
+checkEnvVars();
+```
+
+#### 사용자 대화 예시
+```
+Claude: API를 실행하려는데 환경변수가 필요합니다.
+
+⚠️ 환경변수 필요!
+
+다음 환경변수가 설정되지 않았습니다:
+- OPENAI_API_KEY: GPT-4 모델 사용을 위해 필요
+
+설정 방법:
+1. .env 파일에 추가: OPENAI_API_KEY=sk-...
+2. 또는 export OPENAI_API_KEY=sk-...
+3. 테스트용 임시값: OPENAI_API_KEY=test_key_development
+
+OpenAI API 키를 제공해주시면 .env 파일에 추가해드리겠습니다.
+없으시면 https://platform.openai.com/api-keys 에서 생성 가능합니다.
+
+키를 입력해주세요 (또는 'skip'으로 건너뛰기):
+```
+
+### 2. 🔄 GIT COMMIT & PUSH RULES - 필수 준수
 **모든 단위 작업 완료 시 즉시 커밋 & 푸시**
 - **단위 작업 정의**: 
   - 하나의 기능 구현 완료
