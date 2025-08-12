@@ -187,14 +187,10 @@ class GenerationAgent(UnifiedBaseAgent):
             else:
                 data = input_data
                 
-            # Check if this is a Todo app request
-            is_todo_app = self._is_todo_app_request(data)
+            # Use Universal Agent Factory for ALL requests
+            from src.agents.unified.generation.universal_agent_factory import UniversalAgentFactory
             
-            if is_todo_app:
-                # Use TodoAgentFactory for Todo apps
-                from src.agents.unified.generation.todo_agent_factory import TodoAgentFactory
-                
-                factory = TodoAgentFactory()
+            factory = UniversalAgentFactory()
                 
                 # Analyze and create agents dynamically
                 agent_result = await factory.analyze_and_create_agents(data)
@@ -1956,11 +1952,13 @@ yarn-error.log*
     def _create_error_result(self, error_message: str) -> EnhancedGenerationResult:
         """Create error result"""
         
-        result = EnhancedGenerationResult(
-            success=False,
-            data={},
-            error=error_message
-        )
+        result = EnhancedGenerationResult({
+            'success': False,
+            'data': {},
+            'error': error_message,
+            'generated_files': {},
+            'total_files': 0
+        })
         
         return result
     
