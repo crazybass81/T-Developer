@@ -414,7 +414,68 @@ CI/CD with ECS:
 - [ ] Staging environment tested
 - [ ] Monitoring alerts configured
 
+## 🤖 CLAUDE CODE SETTINGS
+
+### 설정 파일 구조 (3단계 우선순위)
+```
+1. Global 설정 (~/.claude/settings.json) - 모든 프로젝트
+2. Project 설정 (.claude/settings.json) - 팀과 공유, Git 커밋
+3. Local 설정 (.claude/settings.local.json) - 개인용, Git 제외
+```
+
+### 우선순위
+Local > Project > Global (Local이 최우선)
+
+### 실행 모드
+```bash
+# 일반 모드 (확인 필요)
+claude "작업 내용"
+
+# Yes Mode (도구 사용 자동 승인)
+claude --yes "작업 내용"
+
+# Brave Mode (모든 작업 자동 승인, 적극적 실행)
+claude --brave "작업 내용"
+
+# Brave Mode + 상세 로그
+claude --brave --verbose "작업 내용"
+
+# Brave Mode + 비용 제한
+claude --brave --max-cost 5 "작업 내용"
+```
+
+### Brave Mode 특징
+- ✅ 모든 도구 자동 승인
+- ✅ 더 큰 범위의 변경 허용
+- ✅ 복잡한 다단계 작업 연속 실행
+- ✅ 더 적극적인 문제 해결
+- ✅ 긴 작업도 중단 없이 진행
+
+### 현재 프로젝트 설정 (.claude/settings.json)
+```json
+{
+  "brave": true,              // Brave Mode 기본 활성화 설정
+  "auto_approval": {
+    "enabled": true,
+    "patterns": ["*"]         // 모든 도구 허용
+  },
+  "permissions": {
+    "allow": ["*"],           // 모든 명령 허용
+    "deny": []
+  }
+}
+```
+
+**주의**: 설정 파일의 `"brave": true`는 기본값일 뿐, 실제 Brave Mode 실행은 `--brave` 플래그 필요
+
+### 권장 사용법
+- 일반 작업: `claude "작업"`
+- 간단한 자동화: `claude --yes "작업"`  
+- 복잡한 작업: `claude --brave "작업"`
+- 대규모 리팩토링: `claude --brave --verbose "작업"`
+
 ## REMEMBER:
 **Every line of code should be production-ready. No exceptions.**
 **Every explanation should be beginner-friendly. No assumptions.**
 **Follow .amazonq/rules/ as the source of truth.**
+**Use --brave flag for autonomous execution mode.**
