@@ -1,0 +1,46 @@
+{
+  "agent_id": "dbede2cc6a0b61b6",
+  "name": "TodoCRUDAgent",
+  "type": "data_manager",
+  "version": "1.0.0",
+  "created_at": "2025-08-12T00:03:36.516258",
+  "updated_at": "2025-08-12T00:03:36.516260",
+  "blueprint": {
+    "name": "TodoCRUDAgent",
+    "type": "data_manager",
+    "config": {
+      "entity": "Task",
+      "operations": [
+        "create",
+        "read",
+        "update",
+        "delete",
+        "list"
+      ],
+      "fields": {
+        "id": "string",
+        "title": "string",
+        "description": "string",
+        "completed": "boolean",
+        "priority": "number",
+        "dueDate": "date",
+        "category": "string",
+        "tags": "array"
+      },
+      "validation_rules": {
+        "title": {
+          "required": true,
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "priority": {
+          "min": 1,
+          "max": 5
+        }
+      }
+    }
+  },
+  "tags": [],
+  "usage_count": 0,
+  "performance_metrics": {}
+}

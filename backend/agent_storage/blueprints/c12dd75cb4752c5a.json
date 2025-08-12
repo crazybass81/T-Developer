@@ -1,0 +1,28 @@
+{
+  "name": "TaskStatisticsAgent",
+  "type": "analytics",
+  "config": {
+    "metrics": {
+      "completionRate": "percentage",
+      "averageCompletionTime": "duration",
+      "overdueTasks": "count",
+      "tasksByCategory": "distribution",
+      "productivityTrend": "timeseries"
+    },
+    "reports": {
+      "daily": [
+        "completed",
+        "added",
+        "overdue"
+      ],
+      "weekly": [
+        "productivity",
+        "categories"
+      ],
+      "monthly": [
+        "trends",
+        "achievements"
+      ]
+    }
+  }
+}

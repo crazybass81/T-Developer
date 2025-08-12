@@ -1,0 +1,46 @@
+{
+  "agent_id": "169dbb9e28a622cf",
+  "name": "TaskFilterAgent",
+  "type": "query_processor",
+  "version": "1.0.0",
+  "created_at": "2025-08-11T22:04:42.967714",
+  "updated_at": "2025-08-11T22:04:42.967715",
+  "blueprint": {
+    "name": "TaskFilterAgent",
+    "type": "query_processor",
+    "config": {
+      "filters": {
+        "status": [
+          "all",
+          "active",
+          "completed"
+        ],
+        "priority": [
+          "high",
+          "medium",
+          "low"
+        ],
+        "category": "dynamic",
+        "dateRange": "custom"
+      },
+      "search": {
+        "fields": [
+          "title",
+          "description",
+          "tags"
+        ],
+        "fuzzy": true,
+        "highlighting": true
+      },
+      "sort_options": [
+        "priority",
+        "dueDate",
+        "createdAt",
+        "title"
+      ]
+    }
+  },
+  "tags": [],
+  "usage_count": 0,
+  "performance_metrics": {}
+}

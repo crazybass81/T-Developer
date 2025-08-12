@@ -1,0 +1,49 @@
+{
+  "agent_id": "b13013a3c566e8ad",
+  "name": "TaskPriorityAgent",
+  "type": "business_logic",
+  "version": "1.0.0",
+  "created_at": "2025-08-11T22:05:03.599355",
+  "updated_at": "2025-08-11T22:05:03.599356",
+  "blueprint": {
+    "name": "TaskPriorityAgent",
+    "type": "business_logic",
+    "config": {
+      "methods": {
+        "setPriority": {
+          "params": [
+            "taskId",
+            "priority"
+          ]
+        },
+        "sortByPriority": {
+          "params": [
+            "tasks",
+            "order"
+          ]
+        },
+        "getHighPriorityTasks": {
+          "params": [
+            "threshold"
+          ]
+        },
+        "autoAssignPriority": {
+          "params": [
+            "task",
+            "rules"
+          ]
+        }
+      },
+      "priority_levels": {
+        "critical": 5,
+        "high": 4,
+        "medium": 3,
+        "low": 2,
+        "minimal": 1
+      }
+    }
+  },
+  "tags": [],
+  "usage_count": 0,
+  "performance_metrics": {}
+}

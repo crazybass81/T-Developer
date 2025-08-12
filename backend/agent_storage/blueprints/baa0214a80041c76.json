@@ -1,0 +1,38 @@
+{
+  "name": "TaskPriorityAgent",
+  "type": "business_logic",
+  "config": {
+    "methods": {
+      "setPriority": {
+        "params": [
+          "taskId",
+          "priority"
+        ]
+      },
+      "sortByPriority": {
+        "params": [
+          "tasks",
+          "order"
+        ]
+      },
+      "getHighPriorityTasks": {
+        "params": [
+          "threshold"
+        ]
+      },
+      "autoAssignPriority": {
+        "params": [
+          "task",
+          "rules"
+        ]
+      }
+    },
+    "priority_levels": {
+      "critical": 5,
+      "high": 4,
+      "medium": 3,
+      "low": 2,
+      "minimal": 1
+    }
+  }
+}

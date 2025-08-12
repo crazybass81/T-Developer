@@ -51,7 +51,14 @@ class EnhancedGenerationResult:
     def __init__(self, data: Dict[str, Any]):
         self.data = data
         self.success = data.get("success", False)
-        self.generated_files = {}
+        self.generated_files = data.get("generated_files", {})
+        self.total_files = data.get("total_files", 0)
+        self.agents_created = data.get("agents_created", 0)
+        self.agent_names = data.get("agent_names", [])
+        self.workspace_path = data.get("workspace_path", "")
+        self.project_id = data.get("project_id", "")
+        self.metadata = data.get("metadata", {})
+        self.error = data.get("error", None)
         self.project_structure = {}
         self.dependencies = {}
         self.configurations = {}
@@ -367,7 +374,11 @@ class GenerationAgent(UnifiedBaseAgent):
             return result
             
         except Exception as e:
-            await self.log_event("generation_error", {"error": str(e)})
+            # Log error if log_event method exists
+            if hasattr(self, 'log_event'):
+                await self.log_event("generation_error", {"error": str(e)})
+            else:
+                print(f"Generation error: {e}")
             return self._create_error_result(f"Generation failed: {str(e)}")
     
     def _is_todo_app_request(self, data: Dict[str, Any]) -> bool:
@@ -563,7 +574,7 @@ function App() {{
     <div className={{`App ${{darkMode ? 'dark-mode' : ''}}`}}>
       <header className="App-header">
         <h1>📝 Advanced Todo App</h1>
-        <p>Powered by Agno Framework with {agent_names.length} dynamic agents</p>
+        <p>Powered by Agno Framework with {len(agent_names)} dynamic agents</p>
         <button onClick={{() => setDarkMode(!darkMode)}} className="theme-toggle">
           {{darkMode ? '☀️' : '🌙'}}
         </button>
@@ -587,7 +598,7 @@ function App() {{
       
       <footer className="App-footer">
         <p>Generated with T-Developer & Agno Framework</p>
-        <p>Active Agents: {agent_names.join(', ')}</p>
+        <p>Active Agents: {', '.join(agent_names)}</p>
       </footer>
     </div>
   );

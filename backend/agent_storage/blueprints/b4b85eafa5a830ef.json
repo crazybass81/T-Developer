@@ -1,0 +1,30 @@
+{
+  "name": "TaskPersistenceAgent",
+  "type": "storage_manager",
+  "config": {
+    "storage_type": "localStorage",
+    "backup": "indexedDB",
+    "methods": {
+      "save": {
+        "debounce": 500
+      },
+      "load": {
+        "cache": true
+      },
+      "export": {
+        "formats": [
+          "json",
+          "csv"
+        ]
+      },
+      "import": {
+        "validation": true
+      },
+      "sync": {
+        "interval": 30000
+      }
+    },
+    "encryption": false,
+    "compression": true
+  }
+}

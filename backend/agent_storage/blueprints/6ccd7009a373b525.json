@@ -1,0 +1,29 @@
+{
+  "name": "TaskUIAgent",
+  "type": "ui_controller",
+  "config": {
+    "themes": {
+      "light": "default",
+      "dark": "enabled",
+      "auto": "system"
+    },
+    "views": {
+      "list": "default",
+      "grid": "optional",
+      "calendar": "optional",
+      "kanban": "optional"
+    },
+    "animations": {
+      "enabled": true,
+      "duration": 300,
+      "easing": "ease-in-out"
+    },
+    "shortcuts": {
+      "n": "new_task",
+      "d": "delete_task",
+      "e": "edit_task",
+      "/": "search",
+      "space": "toggle_complete"
+    }
+  }
+}
