@@ -21,6 +21,17 @@ T-Developer is an **enterprise-ready platform** that uses **11 specialized AI ag
 - **📊 Observable**: OpenTelemetry, distributed tracing, Prometheus metrics
 - **🧪 Quality First**: 85%+ test coverage, security scanning, type safety
 
+## 🧬 AI-Driven Evolution
+
+T-Developer features an **AI-Native 자율진화 시스템** where AI drives 85% of system evolution:
+
+- **🤖 AI-Powered Agent Generation**: AI automatically creates new agents based on requirements
+- **🧪 Genetic Evolution**: AI-guided mutation and crossover for continuous improvement  
+- **📈 Self-Learning**: Meta-learning system that improves its own learning strategies
+- **🔧 Self-Healing**: AI detects and fixes issues autonomously
+
+👉 [**Read the full AI-Driven Evolution Plan**](./AI-DRIVEN-EVOLUTION.md)
+
 ## 🏗️ Architecture Overview
 
 ```mermaid
