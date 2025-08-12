@@ -1015,7 +1015,7 @@ build/
         context: Dict[str, Any], 
         timeout: int
     ) -> AgentExecutionResult:
-        """실제 에이전트 실행"""
+        """실제 에이전트 실행 with Data Transformer"""
         
         start_time = time.time()
         
@@ -1038,19 +1038,75 @@ build/
                     }
                 }
                 
-                # process 메서드 호출 with fallback handling
+                # Data Transformer를 사용해서 데이터 형식 자동 변환
+                input_data = wrapped_data  # 기본값
+                transformer_available = False
+                
                 try:
-                    from src.agents.unified.fallback_wrapper import safe_agent_execute
+                    from src.agents.data_transformer.agent import data_transformer
+                    transformer_available = True
+                    logger.info(f"🔄 Data Transformer loaded for {agent_name}")
+                    
+                    # 먼저 데이터 변환 시도
+                    transform_result = await data_transformer.transform_for_agent(
+                        wrapped_data,
+                        agent_name
+                    )
+                    
+                    if transform_result.success:
+                        # 변환된 데이터로 에이전트 실행
+                        input_data = transform_result.transformed_data
+                        logger.info(f"✨ Data transformed for {agent_name}: {transform_result.original_format} → {transform_result.target_format}")
+                    else:
+                        # 변환 실패 시 원본 데이터 사용
+                        input_data = wrapped_data
+                        logger.warning(f"⚠️ Data transformation failed for {agent_name}, using original")
+                except ImportError as import_err:
+                    logger.warning(f"⚠️ Data Transformer not available: {import_err}")
+                    transformer_available = False
+                except Exception as e:
+                    logger.error(f"❌ Data Transformer error for {agent_name}: {e}")
+                    transformer_available = False
+                
+                # 에이전트 실행
+                try:
                     result = await asyncio.wait_for(
-                        safe_agent_execute(agent_instance, wrapped_data),
+                        agent_instance.process(input_data),
                         timeout=timeout
                     )
-                except ImportError:
-                    # Fallback to direct call if wrapper not available
-                    result = await asyncio.wait_for(
-                        agent_instance.process(wrapped_data),
-                        timeout=timeout
-                    )
+                except AttributeError as attr_error:
+                    # 속성 에러 발생 시 auto_fix 시도
+                    logger.warning(f"AttributeError in {agent_name}: {attr_error}")
+                    
+                    if transformer_available:
+                        fixed_data = await data_transformer.auto_fix(attr_error, input_data, agent_name)
+                        
+                        if fixed_data:
+                            logger.info(f"🔧 Auto-fixed data format for {agent_name}")
+                            result = await asyncio.wait_for(
+                                agent_instance.process(fixed_data),
+                                timeout=timeout
+                            )
+                        else:
+                            # auto_fix도 실패하면 fallback wrapper 사용
+                            try:
+                                from src.agents.unified.fallback_wrapper import safe_agent_execute
+                                result = await asyncio.wait_for(
+                                    safe_agent_execute(agent_instance, wrapped_data),
+                                    timeout=timeout
+                                )
+                            except ImportError:
+                                raise attr_error  # 원래 에러 재발생
+                    else:
+                        # Data Transformer 없으면 fallback wrapper 사용
+                        try:
+                            from src.agents.unified.fallback_wrapper import safe_agent_execute
+                            result = await asyncio.wait_for(
+                                safe_agent_execute(agent_instance, wrapped_data),
+                                timeout=timeout
+                            )
+                        except ImportError:
+                            raise attr_error  # 원래 에러 재발생
                 
                 execution_time = time.time() - start_time
                 
