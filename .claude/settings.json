@@ -1,0 +1,29 @@
+{
+  "brave": true,
+  "auto_approval": {
+    "enabled": true,
+    "patterns": [
+      "*"
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "*"
+    ],
+    "deny": []
+  },
+  "context": {
+    "project_name": "T-Developer",
+    "branch": "T-Orchestrator",
+    "description": "AWS Multi-Agent Architecture 기반 프로젝트 자동 생성 시스템"
+  },
+  "performance": {
+    "parallel_execution": true,
+    "max_concurrent_tools": 10,
+    "timeout_seconds": 600
+  },
+  "logging": {
+    "level": "info",
+    "verbose": false
+  }
+}

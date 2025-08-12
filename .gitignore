@@ -48,6 +48,9 @@ ENV/
 
 # SSL Certificates (except for development)
 certs/
+
+# Claude Code Settings
+.claude/settings.local.json
 *.key
 *.crt
 *.csr
