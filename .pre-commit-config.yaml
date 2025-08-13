@@ -1,0 +1,47 @@
+repos:
+  # Basic Python formatting
+  - repo: https://github.com/psf/black
+    rev: 23.12.0
+    hooks:
+      - id: black
+        language_version: python3.9
+
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        exclude: |
+          (?x)^(
+            .*cloudformation.*\.yaml|
+            .*cloudformation.*\.yml|
+            .*-stack\.yaml|
+            .*-stack\.yml|
+            infrastructure/.*\.yaml|
+            infrastructure/.*\.yml
+          )$
+      - id: check-json
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+# Configuration
+default_language_version:
+  python: python3.9
+
+exclude: |
+  (?x)^(
+    .*\.egg-info/.*|
+    \.git/.*|
+    \.tox/.*|
+    \.venv/.*|
+    build/.*|
+    dist/.*|
+    docs/.*|
+    migrations/.*
+  )$
+
+fail_fast: false

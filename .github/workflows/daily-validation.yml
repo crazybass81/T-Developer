@@ -22,23 +22,23 @@ on:
 jobs:
   validate-daily-work:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
     - name: Install dependencies
       run: |
         pip install pyyaml
-    
+
     - name: Calculate day number
       id: day
       run: |
@@ -49,29 +49,29 @@ jobs:
           START_DATE="2024-11-14"
           CURRENT_DATE=$(date +%Y-%m-%d)
           DAYS_DIFF=$(( ($(date -d "$CURRENT_DATE" +%s) - $(date -d "$START_DATE" +%s)) / 86400 + 1 ))
-          
+
           # 최대 80일로 제한
           if [ $DAYS_DIFF -gt 80 ]; then
             DAYS_DIFF=80
           elif [ $DAYS_DIFF -lt 1 ]; then
             DAYS_DIFF=1
           fi
-          
+
           echo "DAY_NUMBER=$DAYS_DIFF" >> $GITHUB_ENV
         fi
-    
+
     - name: Run daily validation
       run: |
         echo "🚀 Running validation for Day ${{ env.DAY_NUMBER }}"
         python backend/scripts/daily_workflow.py --day ${{ env.DAY_NUMBER }} --auto-fix
-    
+
     - name: Upload validation report
       uses: actions/upload-artifact@v3
       if: always()
       with:
         name: day-${{ env.DAY_NUMBER }}-report
         path: docs/00_planning/reports/day*.json
-    
+
     - name: Create issue for incomplete tasks
       if: failure()
       uses: actions/github-script@v6
@@ -80,14 +80,14 @@ jobs:
           const fs = require('fs');
           const dayNumber = process.env.DAY_NUMBER;
           const reportPath = `docs/00_planning/reports/day${dayNumber.padStart(2, '0')}_report.json`;
-          
+
           try {
             const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-            
+
             if (report.missing_tasks.length > 0) {
               const issueBody = `
 ## Day ${dayNumber} Validation Failed
-              
+
 ### ❌ Missing Tasks
 ${report.missing_tasks.map(task => `- [ ] ${task}`).join('\n')}
 
@@ -98,7 +98,7 @@ ${report.files_missing.map(file => `- ${file}`).join('\n')}
 
 Please complete these tasks to reach 100% completion.
               `;
-              
+
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -110,7 +110,7 @@ Please complete these tasks to reach 100% completion.
           } catch (error) {
             console.error('Failed to create issue:', error);
           }
-    
+
     - name: Post to Slack (optional)
       if: always()
       env:
@@ -118,7 +118,7 @@ Please complete these tasks to reach 100% completion.
       run: |
         if [ ! -z "$SLACK_WEBHOOK" ]; then
           COMPLETION_RATE=$(python -c "import json; report = json.load(open('docs/00_planning/reports/day$(printf '%02d' ${{ env.DAY_NUMBER }})_report.json')); print(f\"{report['completion_rate']:.1f}\")")
-          
+
           if [ $(echo "$COMPLETION_RATE >= 90" | bc -l) -eq 1 ]; then
             STATUS_EMOJI=":white_check_mark:"
             STATUS_TEXT="Passed"
@@ -126,7 +126,7 @@ Please complete these tasks to reach 100% completion.
             STATUS_EMOJI=":warning:"
             STATUS_TEXT="Needs Improvement"
           fi
-          
+
           curl -X POST -H 'Content-type: application/json' \
             --data "{\"text\":\"Day ${{ env.DAY_NUMBER }} Validation: $STATUS_TEXT ($COMPLETION_RATE% completed) $STATUS_EMOJI\"}" \
             $SLACK_WEBHOOK

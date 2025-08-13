@@ -137,4 +137,5 @@ class SecretsManager:
         try:
             response = self.sm_client.create_secret(
                 Name=f't-developer/{secret_name}',
-                Description=description or f'
+                Description=description or f'Secret for {secret_name}'
+            )

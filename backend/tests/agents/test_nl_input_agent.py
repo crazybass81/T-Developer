@@ -10,15 +10,15 @@ from datetime import datetime
 
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.lambda.agents.nl_input_agent import (
+from src.agents.unified.nl_input.agent import (
     NLInputAgent,
     ProjectType,
     ProjectRequirements,
     ExtractedEntities,
     TechnologyPreferences,
-    lambda_handler
 )
 
 
@@ -28,19 +28,25 @@ class TestNLInputAgent:
     @pytest.fixture
     def agent(self):
         """테스트용 에이전트 인스턴스"""
-        with patch('src.lambda.agents.nl_input_agent.ssm') as mock_ssm:
+        with patch("src.lambda.agents.nl_input_agent.ssm") as mock_ssm:
             mock_ssm.get_parameters_by_path.return_value = {
-                'Parameters': [
-                    {'Name': '/t-developer/test/nl-input-agent/max_input_length', 'Value': '5000'},
-                    {'Name': '/t-developer/test/nl-input-agent/min_confidence_score', 'Value': '0.3'}
+                "Parameters": [
+                    {
+                        "Name": "/t-developer/test/nl-input-agent/max_input_length",
+                        "Value": "5000",
+                    },
+                    {
+                        "Name": "/t-developer/test/nl-input-agent/min_confidence_score",
+                        "Value": "0.3",
+                    },
                 ]
             }
-            return NLInputAgent('test')
+            return NLInputAgent("test")
 
     def test_init(self, agent):
         """초기화 테스트"""
-        assert agent.environment == 'test'
-        assert agent.config['max_input_length'] == '5000'
+        assert agent.environment == "test"
+        assert agent.config["max_input_length"] == "5000"
         assert len(agent.project_patterns) > 0
         assert len(agent.feature_patterns) > 0
 
@@ -64,7 +70,7 @@ class TestNLInputAgent:
             "<script>alert('xss')</script>",
             "DROP TABLE users;",
             "javascript:alert(1)",
-            "onclick='malicious()'"
+            "onclick='malicious()'",
         ]
 
         for dangerous in dangerous_inputs:
@@ -73,12 +79,7 @@ class TestNLInputAgent:
 
     def test_detect_project_type_web(self, agent):
         """웹 프로젝트 타입 감지 테스트"""
-        queries = [
-            "웹사이트를 만들어줘",
-            "홈페이지 제작이 필요해",
-            "React web application",
-            "프론트엔드 개발"
-        ]
+        queries = ["웹사이트를 만들어줘", "홈페이지 제작이 필요해", "React web application", "프론트엔드 개발"]
 
         for query in queries:
             result = agent._detect_project_type(query)
@@ -86,12 +87,7 @@ class TestNLInputAgent:
 
     def test_detect_project_type_mobile(self, agent):
         """모바일 프로젝트 타입 감지 테스트"""
-        queries = [
-            "모바일 앱을 만들어줘",
-            "iOS 앱 개발",
-            "Android application",
-            "React Native 앱"
-        ]
+        queries = ["모바일 앱을 만들어줘", "iOS 앱 개발", "Android application", "React Native 앱"]
 
         for query in queries:
             result = agent._detect_project_type(query)
@@ -181,7 +177,7 @@ class TestNLInputAgent:
             actions=[],
             data_models=[],
             apis=[],
-            features=[]
+            features=[],
         )
         tech_prefs = TechnologyPreferences()
 
@@ -197,12 +193,10 @@ class TestNLInputAgent:
             actions=["생성", "조회", "수정", "삭제"],
             data_models=["사용자", "상품", "주문"],
             apis=["GET", "POST"],
-            features=["authentication", "payment", "realtime"]
+            features=["authentication", "payment", "realtime"],
         )
         tech_prefs = TechnologyPreferences(
-            framework="react",
-            database="postgresql",
-            authentication="oauth2"
+            framework="react", database="postgresql", authentication="oauth2"
         )
 
         complexity = agent._evaluate_complexity(functional_reqs, entities, tech_prefs)
@@ -220,16 +214,14 @@ class TestNLInputAgent:
                 actions=[],
                 data_models=["모델1"],
                 apis=[],
-                features=["feature1", "feature2"]
-            )
+                features=["feature1", "feature2"],
+            ),
         )
         assert high_confidence > 0.5
 
         # 낮은 신뢰도
         low_confidence = agent._calculate_confidence_score(
-            ProjectType.UNKNOWN,
-            [],
-            ExtractedEntities([], [], [], [], [], [])
+            ProjectType.UNKNOWN, [], ExtractedEntities([], [], [], [], [], [])
         )
         assert low_confidence < 0.5
 
@@ -237,7 +229,7 @@ class TestNLInputAgent:
         """전체 처리 성공 테스트"""
         query = "React로 Todo 앱을 만들어줘. 로그인 기능과 데이터베이스가 필요해."
 
-        with patch.object(agent, '_validate_input'):
+        with patch.object(agent, "_validate_input"):
             result = agent.process_input(query)
 
         assert isinstance(result, ProjectRequirements)
@@ -251,19 +243,19 @@ class TestNLInputAgent:
         """프레임워크 지정 처리 테스트"""
         query = "웹사이트를 만들어줘"
 
-        with patch.object(agent, '_validate_input'):
+        with patch.object(agent, "_validate_input"):
             result = agent.process_input(query, framework="vue")
 
         assert result.technology_preferences.framework == "vue"
 
-    @patch('src.lambda.agents.nl_input_agent.time.time')
+    @patch("src.lambda.agents.nl_input_agent.time.time")
     def test_process_input_metrics(self, mock_time, agent):
         """메트릭 기록 테스트"""
         mock_time.side_effect = [0, 1, 1]  # start, end, metadata
 
         query = "간단한 웹사이트"
 
-        with patch.object(agent, '_validate_input'):
+        with patch.object(agent, "_validate_input"):
             result = agent.process_input(query)
 
         assert len(agent.processing_times) == 1
@@ -274,7 +266,9 @@ class TestNLInputAgent:
         with pytest.raises(ValueError):
             agent.process_input("")
 
-        with patch.object(agent, '_detect_project_type', side_effect=Exception("Test error")):
+        with patch.object(
+            agent, "_detect_project_type", side_effect=Exception("Test error")
+        ):
             with pytest.raises(Exception):
                 agent.process_input("정상 쿼리")
 
@@ -282,7 +276,7 @@ class TestNLInputAgent:
 class TestLambdaHandler:
     """Lambda 핸들러 테스트"""
 
-    @patch('src.lambda.agents.nl_input_agent.NLInputAgent')
+    @patch("src.lambda.agents.nl_input_agent.NLInputAgent")
     def test_lambda_handler_success(self, mock_agent_class):
         """Lambda 핸들러 성공 테스트"""
         mock_agent = Mock()
@@ -296,75 +290,67 @@ class TestLambdaHandler:
             extracted_entities=ExtractedEntities([], [], [], [], [], []),
             confidence_score=0.8,
             estimated_complexity="medium",
-            metadata={}
+            metadata={},
         )
         mock_agent_class.return_value = mock_agent
 
-        event = {
-            'body': json.dumps({
-                'query': 'Test query',
-                'framework': 'react'
-            })
-        }
+        event = {"body": json.dumps({"query": "Test query", "framework": "react"})}
 
         response = lambda_handler(event, None)
 
-        assert response['statusCode'] == 200
-        assert 'body' in response
-        body = json.loads(response['body'])
-        assert body['project_type'] == 'web-application'
-        assert body['confidence_score'] == 0.8
+        assert response["statusCode"] == 200
+        assert "body" in response
+        body = json.loads(response["body"])
+        assert body["project_type"] == "web-application"
+        assert body["confidence_score"] == 0.8
 
-    @patch('src.lambda.agents.nl_input_agent.NLInputAgent')
+    @patch("src.lambda.agents.nl_input_agent.NLInputAgent")
     def test_lambda_handler_validation_error(self, mock_agent_class):
         """Lambda 핸들러 검증 에러 테스트"""
         mock_agent = Mock()
         mock_agent.process_input.side_effect = ValueError("Invalid input")
         mock_agent_class.return_value = mock_agent
 
-        event = {
-            'body': json.dumps({
-                'query': ''
-            })
-        }
+        event = {"body": json.dumps({"query": ""})}
 
         response = lambda_handler(event, None)
 
-        assert response['statusCode'] == 400
-        body = json.loads(response['body'])
-        assert 'error' in body
-        assert body['error']['code'] == 'VALIDATION_ERROR'
+        assert response["statusCode"] == 400
+        body = json.loads(response["body"])
+        assert "error" in body
+        assert body["error"]["code"] == "VALIDATION_ERROR"
 
-    @patch('src.lambda.agents.nl_input_agent.NLInputAgent')
+    @patch("src.lambda.agents.nl_input_agent.NLInputAgent")
     def test_lambda_handler_internal_error(self, mock_agent_class):
         """Lambda 핸들러 내부 에러 테스트"""
         mock_agent = Mock()
         mock_agent.process_input.side_effect = Exception("Unexpected error")
         mock_agent_class.return_value = mock_agent
 
-        event = {
-            'body': json.dumps({
-                'query': 'Test query'
-            })
-        }
+        event = {"body": json.dumps({"query": "Test query"})}
 
         response = lambda_handler(event, None)
 
-        assert response['statusCode'] == 500
-        body = json.loads(response['body'])
-        assert 'error' in body
-        assert body['error']['code'] == 'INTERNAL_ERROR'
+        assert response["statusCode"] == 500
+        body = json.loads(response["body"])
+        assert "error" in body
+        assert body["error"]["code"] == "INTERNAL_ERROR"
 
     def test_lambda_handler_malformed_event(self):
         """잘못된 이벤트 처리 테스트"""
-        event = {
-            'body': 'not json'
-        }
+        event = {"body": "not json"}
 
         response = lambda_handler(event, None)
 
-        assert response['statusCode'] == 500
+        assert response["statusCode"] == 500
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--cov=src.lambda.agents.nl_input_agent", "--cov-report=term-missing"])
+    pytest.main(
+        [
+            __file__,
+            "-v",
+            "--cov=src.lambda.agents.nl_input_agent",
+            "--cov-report=term-missing",
+        ]
+    )

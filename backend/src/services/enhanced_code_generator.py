@@ -124,7 +124,7 @@ function App() {{
         </header>
 
         <div className="{f"bg-white rounded-lg shadow-lg p-6" if use_tailwind else "todo-container"}">
-          {/* Input Section */}
+          {{/* Input Section */}}
           <div className="{f"flex gap-2 mb-6" if use_tailwind else "input-section"}">
             <input
               type="text"
@@ -159,7 +159,7 @@ function App() {{
             ))}}
           </div>
 
-          {/* Todo List */}
+          {{/* Todo List */}}
           <ul className="{f"space-y-2 mb-4" if use_tailwind else "todo-list"}">
             {{filteredTodos.map(todo => (
               <li
