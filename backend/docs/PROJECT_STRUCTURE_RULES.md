@@ -1,23 +1,55 @@
 # 📋 Backend 프로젝트 구조 규칙
 
 ## 🎯 목적
-프로젝트의 일관성과 유지보수성을 위한 파일 정리 규칙
+정리된 프로젝트 구조 및 유지보수성을 위한 가이드
 
-## 📁 폴더 구조 규칙
+## 📁 현재 프로젝트 구조
 
 ### 1. 📚 문서 (Documentation)
 **위치**: `/backend/docs/`
 ```
 docs/
-├── architecture/      # 아키텍처 설계 문서
-├── api/              # API 문서
-├── deployment/       # 배포 가이드
-├── development/      # 개발 가이드
-└── roadmap/          # 로드맵 및 계획
+├── deployment/       # 배포 가이드 (IAM, AWS 설정)
+├── frontend/         # 프론트엔드 설계 문서
+├── roadmap/          # DynamoDB 로드맵
+└── PROJECT_STRUCTURE_RULES.md
 ```
 
-**규칙**:
-- 모든 `.md` 문서는 `docs/` 폴더에 위치
+### 2. 🔧 소스 코드 (Source Code)
+**위치**: `/backend/src/`
+```
+src/
+├── api/              # API 엔드포인트
+│   └── v1/           # API v1 (agent registration)
+├── core/             # 핵심 컴포넌트
+│   ├── models/       # 데이터베이스 모델
+│   ├── registry/     # 에이전트 레지스트리
+│   ├── validation/   # 코드 검증
+│   └── workflow/     # DAG 워크플로우 엔진
+├── agents/           # 에이전트 구현체
+└── [기타 모듈들]
+```
+
+### 3. 🧪 테스트 (Tests)
+**위치**: `/backend/tests/`
+```
+tests/
+├── agents/           # 에이전트별 테스트
+├── e2e/             # E2E 테스트
+├── integration/     # 통합 테스트
+├── unit/            # 단위 테스트
+└── [핵심 테스트들]
+```
+
+### 4. 🚀 스크립트 (Scripts)
+**위치**: `/backend/scripts/`
+```
+scripts/
+├── deploy/          # 배포 스크립트
+├── setup/           # 환경 설정
+├── utils/           # 유틸리티
+└── validation/      # 검증 스크립트
+```
 - README.md는 예외 (루트에 유지)
 - 카테고리별 하위 폴더 구성
 - 파일명은 kebab-case 사용 (예: dynamodb-roadmap.md)

@@ -1,31 +1,25 @@
-# T-Developer Backend - Enterprise-Grade AI Code Generation Platform
+# T-Developer Backend - AI Agent Platform
 
 ## 🚀 Overview
 
-T-Developer Backend is an enterprise-grade, AI-powered code generation platform that transforms natural language requirements into complete, production-ready software projects. Built with modern Python architecture and integrated with AWS services, it features a sophisticated 9-agent pipeline powered by three core frameworks.
+T-Developer Backend is an AI-powered agent platform featuring agent registry, workflow orchestration, and code validation systems. Built with modern Python architecture and AWS integration for production-ready AI agent management.
 
 ## 🏗️ Architecture
 
-### Three Core Frameworks
+### Core Components
 
-1. **AWS Agent Squad** - Orchestration framework for managing multi-agent workflows
-2. **Agno Framework** - Ultra-fast agent instantiation (3μs) and lifecycle management  
-3. **AWS Bedrock AgentCore** - Runtime environment with Claude 3 Sonnet integration
+1. **Agent Registry** - Registration, validation, and management of AI agents
+2. **Workflow Engine** - DAG-based orchestration for agent execution
+3. **Code Validator** - Security checks and quality assessment
+4. **AWS Integration** - Secrets Manager, Parameter Store, CloudWatch
 
-### 9-Agent Pipeline
+### Key Features
 
-```
-📝 NL Input → 🎨 UI Selection → 📋 Parser → 🔧 Component Decision 
-    ↓
-🎯 Match Rate → 🔍 Search → ⚡ Generation → 🔧 Assembly → 📦 Download
-```
-
-Each agent is production-ready with advanced features:
-- **Real-time processing** with < 3s response time
-- **Advanced error handling** and recovery mechanisms
-- **Comprehensive logging** and monitoring
-- **Security validation** at every step
-- **Scalable architecture** supporting 10,000+ concurrent agents
+- **Agent Registration API** - RESTful endpoints for agent CRUD operations
+- **Code Security Validation** - Comprehensive security pattern detection
+- **AI Capability Analysis** - Automated agent capability assessment
+- **DAG Workflow Execution** - Parallel, sequential, and priority-based execution
+- **Production-Ready** - Error handling, logging, and monitoring
 
 ## 🛠️ Enterprise Features
 

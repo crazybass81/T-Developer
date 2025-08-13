@@ -1,25 +1,23 @@
-# T-Developer Enterprise Platform
+# T-Developer MVP
 
-🚀 **Enterprise-grade AI-powered multi-agent development platform** that transforms natural language into production-ready code.
+🚀 **AI-powered multi-agent development platform** that transforms natural language into production-ready code.
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](./CHANGELOG.md)
-[![Python](https://img.shields.io/badge/python-3.11+-green)](https://www.python.org/)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue)](./backend/CHANGELOG.md)
+[![Python](https://img.shields.io/badge/python-3.9+-green)](https://www.python.org/)
 [![AWS](https://img.shields.io/badge/AWS-Bedrock%20|%20ECS%20|%20Lambda-orange)](https://aws.amazon.com/)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)](./docs/development/testing-guide.md)
-[![Security](https://img.shields.io/badge/security-A+-success)](./docs/security/)
+[![Coverage](https://img.shields.io/badge/coverage-80%25-brightgreen)](./backend/tests/)
 
-## 🎯 What is T-Developer?
+## 🎯 What is T-Developer MVP?
 
-T-Developer is an **enterprise-ready platform** that uses **11 specialized AI agents** to automatically generate complete, production-quality applications from natural language descriptions. Built on AWS Bedrock, Agno Framework, and AWS Agent Squad, it delivers **3μs agent instantiation** and **6.5KB memory footprint** per agent.
+T-Developer MVP is a **streamlined development platform** that uses **AI agents** to automatically generate complete applications from natural language descriptions. Features agent registry, workflow orchestration, and code validation systems.
 
 ### ✨ Key Features
 
-- **🤖 11 AI Agents**: 9 core agents + Security & Test agents
-- **⚡ Ultra-Fast**: 3μs agent creation, < 200ms API response
-- **🔒 Enterprise Security**: JWT, RBAC, API keys, OWASP scanning
-- **☁️ AWS Native**: Bedrock, ECS/Lambda, Step Functions, CloudWatch
-- **📊 Observable**: OpenTelemetry, distributed tracing, Prometheus metrics
-- **🧪 Quality First**: 85%+ test coverage, security scanning, type safety
+- **🤖 AI Agent Registry**: Registration, validation, and capability analysis
+- **🔗 Workflow Engine**: DAG-based agent orchestration
+- **🔒 Code Validation**: Security checks and quality assessment
+- **☁️ AWS Integration**: Secrets Manager, Parameter Store, CloudWatch
+- **🧪 Production Ready**: Comprehensive testing and error handling
 
 ## 🧬 AI-Driven Evolution
 
