@@ -1,13 +1,5 @@
 {
   "permissions": {
-    "deny": [
-      "Bash(pip:*)",
-      "Bash(pip3:*)",
-      "Bash(python -m pip:*)",
-      "Bash(python3 -m pip:*)",
-      "Bash(pip install:*)",
-      "Bash(pip3 install:*)"
-    ],
     "allow": [
       "Bash(chmod:*)",
       "Bash(npm install:*)",
@@ -193,7 +185,8 @@
       "Bash(sqlite3:*)",
       "Bash(PORT=3001 npm start)",
       "Bash(git checkout:*)",
-      "Bash(python -m pytest tests/test_ai_capability_analyzer.py -v --tb=short)"
+      "Bash(python -m pytest tests/test_ai_capability_analyzer.py -v --tb=short)",
+      "Bash(tree:*)"
     ],
     "deny": []
   }
