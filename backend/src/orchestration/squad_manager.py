@@ -68,9 +68,18 @@ class SquadManager:
 
     async def execute_squad(self) -> Dict[str, Any]:
         """Execute all tasks with squad coordination"""
-        results = {"success": [], "failed": [], "skipped": []}
+        results = {"success": [], "failed": [], "skipped": [], "timeout": []}
+        start_time = time.time()
+        global_timeout = self.timeout * 10  # Global timeout for entire execution
 
         while self.tasks:
+            # Check global timeout
+            if time.time() - start_time > global_timeout:
+                # Timeout - mark remaining tasks as skipped
+                for task_id, task in self.tasks.items():
+                    if task.status == "pending":
+                        results["skipped"].append(task_id)
+                break
             # Get ready tasks
             ready_tasks = self._get_ready_tasks()
 
@@ -81,16 +90,22 @@ class SquadManager:
                     results["failed"].extend(pending)
                     break
 
-            # Start ready tasks
+            # Start ready tasks with individual timeouts
             tasks_to_run = []
             for task_id in ready_tasks:
                 task = self.tasks[task_id]
                 task.status = "running"
                 self.running_tasks.add(task_id)
-                tasks_to_run.append(self._execute_task(task))
+                # Wrap task execution with timeout
+                tasks_to_run.append(
+                    asyncio.wait_for(
+                        self._execute_task(task),
+                        timeout=self.timeout
+                    )
+                )
 
             if tasks_to_run:
-                # Execute in parallel
+                # Execute in parallel with timeout handling
                 task_results = await asyncio.gather(*tasks_to_run, return_exceptions=True)
 
                 # Process results
@@ -99,9 +114,14 @@ class SquadManager:
                     task = self.tasks[task_id]
 
                     if isinstance(result, Exception):
-                        task.status = "failed"
-                        task.error = str(result)
-                        results["failed"].append(task_id)
+                        if isinstance(result, asyncio.TimeoutError):
+                            task.status = "timeout"
+                            task.error = f"Task timed out after {self.timeout}s"
+                            results["timeout"].append(task_id)
+                        else:
+                            task.status = "failed"
+                            task.error = str(result)
+                            results["failed"].append(task_id)
                     else:
                         task.status = "completed"
                         task.result = result
@@ -122,8 +142,9 @@ class SquadManager:
             "execution_time": time.time(),
         }
 
-    async def _execute_task(self, task: AgentTask) -> Dict[str, Any]:
-        """Execute single task"""
+    async def _execute_task(self, task: AgentTask, retry_count: int = 0) -> Dict[str, Any]:
+        """Execute single task with retry logic"""
+        max_retries = 3
         try:
             # Get agent for task
             agent = self.agents.get(task.agent_name)
@@ -135,6 +156,7 @@ class SquadManager:
             agent["last_active"] = time.time()
 
             # Simulate agent execution (replace with actual agent call)
+            # In production, this would be the actual agent API call
             await asyncio.sleep(0.1)  # Simulated work
 
             # Update agent metrics
@@ -148,9 +170,20 @@ class SquadManager:
                 "data": {"processed": True},
             }
 
+        except asyncio.CancelledError:
+            # Don't retry on cancellation
+            if task.agent_name in self.agents:
+                self.agents[task.agent_name]["status"] = "ready"
+            raise
         except Exception as e:
             if task.agent_name in self.agents:
                 self.agents[task.agent_name]["status"] = "ready"
+            
+            # Retry logic with exponential backoff
+            if retry_count < max_retries:
+                await asyncio.sleep(2 ** retry_count)  # Exponential backoff
+                return await self._execute_task(task, retry_count + 1)
+            
             raise e
 
     def get_squad_status(self) -> Dict[str, Any]:
