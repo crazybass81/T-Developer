@@ -38,27 +38,27 @@ warning() {
 # Check prerequisites
 check_prereqs() {
     log "Checking prerequisites..."
-    
+
     # Check Python
     if ! command -v python3 &> /dev/null; then
         error "Python3 is required but not installed"
     fi
-    
+
     # Check AWS CLI
     if ! command -v aws &> /dev/null; then
         error "AWS CLI is required but not installed"
     fi
-    
+
     # Check environment variables
     if [[ -z "$BEDROCK_AGENT_ID" ]]; then
         error "BEDROCK_AGENT_ID environment variable is required"
     fi
-    
+
     # Check AWS credentials
     if ! aws sts get-caller-identity &> /dev/null; then
         error "AWS credentials not configured or invalid"
     fi
-    
+
     success "Prerequisites check passed"
 }
 
@@ -66,15 +66,15 @@ check_prereqs() {
 deploy_agent() {
     local agent_file=$1
     local agent_name=$(basename "$agent_file" .py)
-    
+
     log "Deploying agent: $agent_name"
-    
+
     # Check agent size constraint
     local file_size=$(stat -c%s "$agent_file" 2>/dev/null || stat -f%z "$agent_file" 2>/dev/null)
     if [[ $file_size -gt 6656 ]]; then  # 6.5KB in bytes
         error "Agent $agent_name exceeds 6.5KB limit: ${file_size} bytes"
     fi
-    
+
     # Create deployment spec
     local temp_spec=$(mktemp)
     cat > "$temp_spec" << EOF
@@ -85,7 +85,7 @@ deploy_agent() {
     "description": "T-Developer auto-deployed agent: $agent_name"
 }
 EOF
-    
+
     # Deploy using Python deployer
     local deploy_result=$(PYTHONPATH="$PYTHONPATH" python3 -c "
 import asyncio
@@ -96,24 +96,24 @@ from src.deployment.agentcore_deployer import AgentCoreDeployer, AgentSpec
 async def deploy():
     with open('$temp_spec') as f:
         spec_data = json.load(f)
-    
+
     spec = AgentSpec(
         name=spec_data['name'],
         code=spec_data['code'],
         version=spec_data['version'],
         description=spec_data['description']
     )
-    
+
     deployer = AgentCoreDeployer()
     result = await deployer.deploy_agent(spec)
     print(json.dumps(result))
 
 asyncio.run(deploy())
 ")
-    
+
     # Check deployment result
     local deployment_status=$(echo "$deploy_result" | jq -r '.status' 2>/dev/null || echo "failed")
-    
+
     if [[ "$deployment_status" == "deployed" ]]; then
         local duration=$(echo "$deploy_result" | jq -r '.duration' 2>/dev/null || echo "0")
         success "Agent $agent_name deployed successfully in ${duration}s"
@@ -121,7 +121,7 @@ asyncio.run(deploy())
         local error_msg=$(echo "$deploy_result" | jq -r '.error' 2>/dev/null || echo "Unknown error")
         error "Failed to deploy agent $agent_name: $error_msg"
     fi
-    
+
     # Cleanup
     rm -f "$temp_spec"
 }
@@ -129,21 +129,21 @@ asyncio.run(deploy())
 # Deploy all agents in directory
 deploy_directory() {
     local agent_dir=$1
-    
+
     if [[ ! -d "$agent_dir" ]]; then
         error "Agent directory not found: $agent_dir"
     fi
-    
+
     log "Deploying all agents from: $agent_dir"
     local count=0
-    
+
     for agent_file in "$agent_dir"/*.py; do
         if [[ -f "$agent_file" && ! "$(basename "$agent_file")" == "__init__.py" ]]; then
             deploy_agent "$agent_file"
             ((count++))
         fi
     done
-    
+
     if [[ $count -eq 0 ]]; then
         warning "No agent files found in $agent_dir"
     else
@@ -154,9 +154,9 @@ deploy_directory() {
 # Test deployment
 test_deployment() {
     local deployment_id=$1
-    
+
     log "Testing deployment: $deployment_id"
-    
+
     local test_result=$(PYTHONPATH="$PYTHONPATH" python3 -c "
 import asyncio
 from src.deployment.agentcore_deployer import AgentCoreDeployer
@@ -168,7 +168,7 @@ async def test():
 
 asyncio.run(test())
 ")
-    
+
     if [[ "$test_result" == "success" ]]; then
         success "Deployment test passed for $deployment_id"
     else
@@ -180,9 +180,9 @@ asyncio.run(test())
 rollback_deployment() {
     local deployment_id=$1
     local reason=${2:-"manual"}
-    
+
     log "Rolling back deployment: $deployment_id"
-    
+
     PYTHONPATH="$PYTHONPATH" python3 -c "
 import asyncio
 from src.deployment.rollback_manager import RollbackManager, RollbackSpec, RollbackReason
@@ -191,7 +191,7 @@ async def rollback():
     manager = RollbackManager()
     spec = RollbackSpec('$deployment_id', RollbackReason.MANUAL)
     result = await manager.initiate_rollback(spec)
-    
+
     if result['status'] == 'completed':
         print('Rollback completed successfully')
     else:
@@ -200,14 +200,14 @@ async def rollback():
 
 asyncio.run(rollback())
 "
-    
+
     success "Rollback completed for $deployment_id"
 }
 
 # Main function
 main() {
     local command=${1:-"help"}
-    
+
     case "$command" in
         "deploy")
             check_prereqs
