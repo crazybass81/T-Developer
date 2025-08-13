@@ -193,7 +193,8 @@
       "Bash(python -m pytest tests/evolution/test_registry.py::TestAgentRegistry::test_agent_creation -v)",
       "Bash(python -m pytest tests/evolution/ -v --tb=short)",
       "Bash(python -m pytest tests/evolution/test_engine.py::TestEvolutionEngine::test_crossover_operation tests/evolution/test_safety.py::TestEvolutionSafety::test_pattern_extraction tests/evolution/test_registry.py::TestAgentRegistry::test_persistence -v)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(pip install:*)"
     ],
     "deny": []
   }
