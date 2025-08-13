@@ -15,9 +15,9 @@ Use `--brave` flag for autonomous execution. The system should operate with mini
 
 ## Primary Documents
 1. `/AI-DRIVEN-EVOLUTION.md` - Master 80-day implementation plan
-2. `/docs/planning/AGENT_EVOLUTION_PLAN.md` - Detailed evolution specifications
-3. `/docs/architecture/architecture.md` - System architecture
-4. `/.amazonq/rules/00-AI-autonomous-evolution-architecture.md` - Architecture rules
+2. `/docs/00_planning/AGENT_EVOLUTION_PLAN.md` - Detailed evolution specifications
+3. `/docs/01_architecture/system/architecture.md` - System architecture
+4. `/docs/01_architecture/system/00-evolution-architecture.md` - Evolution architecture rules
 
 ## Development Priority
 1. Evolution System Implementation

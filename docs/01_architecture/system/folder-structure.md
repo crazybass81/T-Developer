@@ -5,8 +5,9 @@
 ```
 T-Developer-Evolution/
 ├── AI-DRIVEN-EVOLUTION.md       # 80-day implementation plan
-├── .amazonq/                    # Architecture rules
-│   └── rules/                   # System design rules
+├── .claude/                     # Claude Code configuration
+│   ├── settings.json           # Evolution settings
+│   └── instructions.md         # AI instructions
 ├── backend/                     # Python-only backend
 ├── docs/                        # System documentation
 ├── infrastructure/              # AWS infrastructure
