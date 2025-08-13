@@ -63,14 +63,16 @@ jobs:
         cd backend
         uv venv
         source .venv/bin/activate
+        export PATH="$PWD/.venv/bin:$PATH"
         uv pip install -r requirements.txt
         uv pip install -r requirements-dev.txt || echo "No requirements-dev.txt found"
-        uv pip install flake8 black mypy pytest pytest-cov
+        uv pip install flake8 black mypy pytest pytest-cov bandit safety
 
     - name: Lint with flake8
       run: |
         cd backend
         source .venv/bin/activate
+        export PATH="$PWD/.venv/bin:$PATH"
         flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 src/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
@@ -78,31 +80,35 @@ jobs:
       run: |
         cd backend
         source .venv/bin/activate
+        export PATH="$PWD/.venv/bin:$PATH"
         black --check src/ tests/
 
     - name: Type check with mypy
       run: |
         cd backend
         source .venv/bin/activate
+        export PATH="$PWD/.venv/bin:$PATH"
         mypy src/
 
     - name: Run unit tests
       run: |
         cd backend
         source .venv/bin/activate
+        export PATH="$PWD/.venv/bin:$PATH"
         python -m pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=html || echo "Unit tests not found or failed"
 
     - name: Run integration tests
       run: |
         cd backend
         source .venv/bin/activate
+        export PATH="$PWD/.venv/bin:$PATH"
         python -m pytest tests/integration/ -v || echo "Integration tests not found or failed"
 
     - name: Run security tests
       run: |
         cd backend
         source .venv/bin/activate
-        uv pip install bandit safety
+        export PATH="$PWD/.venv/bin:$PATH"
         bandit -r src/ -f json -o bandit-report.json || echo "Bandit scan failed"
         safety check -r requirements.txt || echo "Safety check failed"
 
