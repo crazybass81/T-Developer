@@ -1,0 +1,275 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  AWS_REGION: us-east-1
+  
+jobs:
+  determine-environment:
+    name: Determine Deployment Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.determine.outputs.environment }}
+      
+    steps:
+    - name: Determine environment
+      id: determine
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          echo "environment=staging" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          echo "environment=prod" >> $GITHUB_OUTPUT
+        else
+          echo "environment=dev" >> $GITHUB_OUTPUT
+        fi
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: determine-environment
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0
+    
+    - name: Terraform Init
+      working-directory: ./infrastructure/terraform
+      run: |
+        terraform init \
+          -backend-config="bucket=t-developer-terraform-state" \
+          -backend-config="key=${{ needs.determine-environment.outputs.environment }}/terraform.tfstate" \
+          -backend-config="region=${{ env.AWS_REGION }}"
+    
+    - name: Terraform Plan
+      working-directory: ./infrastructure/terraform
+      run: |
+        terraform plan \
+          -var="environment=${{ needs.determine-environment.outputs.environment }}" \
+          -out=tfplan
+    
+    - name: Terraform Apply
+      if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      working-directory: ./infrastructure/terraform
+      run: |
+        terraform apply -auto-approve tfplan
+
+  deploy-database:
+    name: Deploy Database Migrations
+    runs-on: ubuntu-latest
+    needs: [determine-environment, deploy-infrastructure]
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Get database credentials
+      id: db-creds
+      run: |
+        DB_SECRET=$(aws secretsmanager get-secret-value \
+          --secret-id /t-developer/${{ needs.determine-environment.outputs.environment }}/db/connection \
+          --query SecretString --output text)
+        
+        echo "DB_HOST=$(echo $DB_SECRET | jq -r .host)" >> $GITHUB_OUTPUT
+        echo "DB_PORT=$(echo $DB_SECRET | jq -r .port)" >> $GITHUB_OUTPUT
+        echo "DB_NAME=$(echo $DB_SECRET | jq -r .database)" >> $GITHUB_OUTPUT
+        echo "DB_USER=$(echo $DB_SECRET | jq -r .username)" >> $GITHUB_OUTPUT
+        echo "::add-mask::$(echo $DB_SECRET | jq -r .password)"
+        echo "DB_PASSWORD=$(echo $DB_SECRET | jq -r .password)" >> $GITHUB_OUTPUT
+    
+    - name: Run database migrations
+      env:
+        PGPASSWORD: ${{ steps.db-creds.outputs.DB_PASSWORD }}
+      run: |
+        # Install PostgreSQL client
+        sudo apt-get update && sudo apt-get install -y postgresql-client
+        
+        # Run migrations
+        for migration in backend/migrations/*.sql; do
+          echo "Running migration: $migration"
+          psql -h ${{ steps.db-creds.outputs.DB_HOST }} \
+               -p ${{ steps.db-creds.outputs.DB_PORT }} \
+               -U ${{ steps.db-creds.outputs.DB_USER }} \
+               -d ${{ steps.db-creds.outputs.DB_NAME }} \
+               -f $migration
+        done
+
+  deploy-backend:
+    name: Deploy Backend Services
+    runs-on: ubuntu-latest
+    needs: [determine-environment, deploy-database]
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    
+    - name: Build and push Docker image
+      run: |
+        cd backend
+        docker build -t t-developer-backend:${{ github.sha }} .
+        docker tag t-developer-backend:${{ github.sha }} \
+          ${{ steps.login-ecr.outputs.registry }}/t-developer-backend:${{ github.sha }}
+        docker tag t-developer-backend:${{ github.sha }} \
+          ${{ steps.login-ecr.outputs.registry }}/t-developer-backend:${{ needs.determine-environment.outputs.environment }}
+        
+        docker push ${{ steps.login-ecr.outputs.registry }}/t-developer-backend:${{ github.sha }}
+        docker push ${{ steps.login-ecr.outputs.registry }}/t-developer-backend:${{ needs.determine-environment.outputs.environment }}
+    
+    - name: Update ECS service
+      run: |
+        # Register new task definition
+        aws ecs register-task-definition \
+          --family t-developer-${{ needs.determine-environment.outputs.environment }} \
+          --cli-input-json file://infrastructure/ecs/task-definition-${{ needs.determine-environment.outputs.environment }}.json
+        
+        # Update service with new task definition
+        aws ecs update-service \
+          --cluster t-developer-${{ needs.determine-environment.outputs.environment }} \
+          --service t-developer-backend \
+          --task-definition t-developer-${{ needs.determine-environment.outputs.environment }} \
+          --force-new-deployment
+        
+        # Wait for service to stabilize
+        aws ecs wait services-stable \
+          --cluster t-developer-${{ needs.determine-environment.outputs.environment }} \
+          --services t-developer-backend
+
+  run-smoke-tests:
+    name: Run Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [determine-environment, deploy-backend]
+    environment: ${{ needs.determine-environment.outputs.environment }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install test dependencies
+      run: |
+        pip install pytest requests boto3
+    
+    - name: Get API endpoint
+      id: api-endpoint
+      run: |
+        # Get ALB DNS name
+        ALB_DNS=$(aws elbv2 describe-load-balancers \
+          --names t-developer-${{ needs.determine-environment.outputs.environment }}-alb \
+          --query 'LoadBalancers[0].DNSName' \
+          --output text)
+        
+        echo "API_ENDPOINT=https://$ALB_DNS" >> $GITHUB_OUTPUT
+    
+    - name: Run smoke tests
+      env:
+        API_ENDPOINT: ${{ steps.api-endpoint.outputs.API_ENDPOINT }}
+        ENVIRONMENT: ${{ needs.determine-environment.outputs.environment }}
+      run: |
+        python -m pytest tests/smoke/ -v --tb=short
+    
+    - name: Health check verification
+      run: |
+        # Verify health endpoint
+        curl -f ${{ steps.api-endpoint.outputs.API_ENDPOINT }}/health || exit 1
+        
+        # Verify metrics endpoint
+        curl -f ${{ steps.api-endpoint.outputs.API_ENDPOINT }}/metrics || exit 1
+
+  notify-deployment:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [determine-environment, run-smoke-tests]
+    if: always()
+    
+    steps:
+    - name: Send Slack notification
+      uses: slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "Deployment to ${{ needs.determine-environment.outputs.environment }} ${{ needs.run-smoke-tests.result }}",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Deployment Status*\n*Environment:* ${{ needs.determine-environment.outputs.environment }}\n*Status:* ${{ needs.run-smoke-tests.result }}\n*Commit:* ${{ github.sha }}\n*Actor:* ${{ github.actor }}"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    
+    - name: Create deployment record
+      if: needs.run-smoke-tests.result == 'success'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.repos.createDeployment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: context.sha,
+            environment: '${{ needs.determine-environment.outputs.environment }}',
+            description: 'Automated deployment from CD pipeline',
+            auto_merge: false,
+            required_contexts: [],
+            payload: {
+              actor: context.actor,
+              workflow: context.workflow
+            }
+          });
