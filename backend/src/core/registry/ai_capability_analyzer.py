@@ -1,13 +1,36 @@
 """
-AI Capability Analyzer
-AI가 에이전트 코드를 분석하여 능력을 자동 추론하는 모듈
+AI Capability Analyzer for Agent Registration
+Analyzes agent code using multiple AI models to assess capabilities and quality
 """
 
-import os
-import json
 import asyncio
-from typing import Dict, List, Any, Optional
+import json
+import time
+from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
+import hashlib
+import logging
+from dataclasses import dataclass, asdict
+import ast
+import re
+
+# AI Model imports
+try:
+    from openai import AsyncOpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+
+try:
+    from anthropic import AsyncAnthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+
+import boto3
+from botocore.exceptions import ClientError
+
+logger = logging.getLogger(__name__)
 import hashlib
 from dataclasses import dataclass
 from enum import Enum
