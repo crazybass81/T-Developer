@@ -1,6 +1,9 @@
 # 🚀 T-Developer 자율진화 시스템 - 80일 엔터프라이즈 구현 계획 (보완 버전)
 
-> **Note**: This is the master reference. Full documentation available at `/docs/00_planning/master-evolution-plan.md`
+> **📍 문서 위치**: 
+> - **현재 파일**: 프로젝트 루트의 마스터 계획서 (메인 참조용)
+> - **문서 복사본**: `/docs/00_planning/master-evolution-plan.md` (문서 체계 내 위치)
+> - **관련 문서**: `/docs/00_planning/AGENT_EVOLUTION_PLAN.md` (상세 진화 사양)
 
 ## 시스템 아키텍처 개요
 ```yaml

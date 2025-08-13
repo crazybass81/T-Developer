@@ -35,12 +35,26 @@ T-Developer는 **완전한 AI 자율진화 시스템**입니다. AI가 스스로
 
 ## 📚 Key Documentation
 
-- 📖 [**AI-Driven Evolution Plan**](./AI-DRIVEN-EVOLUTION.md) - 80일 자율진화 구현 로드맵
-- 🛡️ [AI Security Framework](./docs/security/ai-security-framework.md)
-- 🧬 [Evolution Safety Framework](./docs/security/evolution-safety-framework.md)
-- ⚡ [Performance Optimization](./docs/architecture/performance-optimization-strategy.md)
-- 💰 [Cost Management](./docs/operations/cost-management-strategy.md)
-- 📊 [SLA/SLO Definitions](./docs/operations/sla-slo-definitions.md)
+### 🎯 Main Documents
+- 📖 [**AI-DRIVEN-EVOLUTION.md**](./AI-DRIVEN-EVOLUTION.md) - 80일 자율진화 구현 마스터 플랜
+- 🇰🇷 [**CLAUDE.md**](./CLAUDE.md) - 프로젝트 진입점 및 현황 (한국어)
+- 📑 [**Documentation Index**](./docs/INDEX.md) - 전체 문서 허브
+- 🚀 [**Quick Start Guide**](./docs/QUICKSTART.md) - 5분 시작 가이드
+
+### 📁 Documentation Structure
+- 📋 [Planning & Roadmaps](./docs/00_planning/) - 전략 계획 및 로드맵
+- 🏗️ [Architecture](./docs/01_architecture/) - 시스템 아키텍처
+- 💻 [Implementation](./docs/02_implementation/) - 구현 가이드
+- 🔌 [API Documentation](./docs/03_api/) - API 문서
+- 🧪 [Testing](./docs/04_testing/) - 테스트 전략
+- 🔧 [Operations](./docs/05_operations/) - 운영 및 보안
+
+### 🔗 Key Technical Documents
+- 🛡️ [AI Security Framework](./docs/05_operations/security/ai-security-framework.md)
+- 🧬 [Evolution Safety Framework](./docs/05_operations/security/evolution-safety-framework.md)
+- ⚡ [Performance Optimization](./docs/01_architecture/system/performance-optimization-strategy.md)
+- 💰 [Cost Management](./docs/05_operations/monitoring/cost-management-strategy.md)
+- 📊 [SLA/SLO Definitions](./docs/05_operations/monitoring/sla-slo-definitions.md)
 
 ## 🏗️ Evolution System Architecture
 
