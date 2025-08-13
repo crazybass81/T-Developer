@@ -19,6 +19,11 @@ on:
       - 'infrastructure/**'
       - 'docs/**'
 
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
 jobs:
   validate-daily-work:
     runs-on: ubuntu-latest

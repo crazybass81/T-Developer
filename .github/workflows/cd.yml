@@ -17,6 +17,11 @@ on:
           - staging
           - prod
 
+permissions:
+  contents: read
+  actions: read
+  id-token: write  # For AWS OIDC
+
 env:
   AWS_REGION: us-east-1
 

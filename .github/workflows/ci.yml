@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  actions: read
+  checks: write
+  pull-requests: write
+
 env:
   PYTHON_VERSION: '3.10'
   AWS_REGION: 'us-east-1'
