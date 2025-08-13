@@ -2,12 +2,13 @@
 AWS Service Clients Wrapper
 Provides unified interface for AWS services
 """
-import os
 import json
-import boto3
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
 import logging
+import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import boto3
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
@@ -63,9 +64,7 @@ class DynamoDBClient:
             logger.error(f"Error querying {table_name}: {e}")
             return []
 
-    def update_item(
-        self, table_name: str, key: Dict[str, Any], updates: Dict[str, Any]
-    ) -> bool:
+    def update_item(self, table_name: str, key: Dict[str, Any], updates: Dict[str, Any]) -> bool:
         """Update item in DynamoDB table"""
         try:
             table = self.resource.Table(table_name)
@@ -116,9 +115,7 @@ class S3Client:
             if metadata:
                 extra_args["Metadata"] = metadata
 
-            self.client.upload_file(
-                file_path, bucket_name, object_key, ExtraArgs=extra_args
-            )
+            self.client.upload_file(file_path, bucket_name, object_key, ExtraArgs=extra_args)
             return True
         except ClientError as e:
             logger.error(f"Error uploading file to S3: {e}")
@@ -219,9 +216,7 @@ class SecretsManagerClient:
     def create_secret(self, secret_name: str, secret_value: Dict) -> bool:
         """Create new secret"""
         try:
-            self.client.create_secret(
-                Name=secret_name, SecretString=json.dumps(secret_value)
-            )
+            self.client.create_secret(Name=secret_name, SecretString=json.dumps(secret_value))
             return True
         except ClientError as e:
             if e.response["Error"]["Code"] == "ResourceExistsException":
@@ -232,9 +227,7 @@ class SecretsManagerClient:
     def update_secret(self, secret_name: str, secret_value: Dict) -> bool:
         """Update existing secret"""
         try:
-            self.client.update_secret(
-                SecretId=secret_name, SecretString=json.dumps(secret_value)
-            )
+            self.client.update_secret(SecretId=secret_name, SecretString=json.dumps(secret_value))
             return True
         except ClientError as e:
             logger.error(f"Error updating secret {secret_name}: {e}")
@@ -248,9 +241,7 @@ class ParameterStoreClient:
         self.region_name = region_name or os.getenv("AWS_REGION", "us-east-1")
         self.client = boto3.client("ssm", region_name=self.region_name)
 
-    def get_parameter(
-        self, parameter_name: str, with_decryption: bool = True
-    ) -> Optional[str]:
+    def get_parameter(self, parameter_name: str, with_decryption: bool = True) -> Optional[str]:
         """Get parameter value"""
         try:
             response = self.client.get_parameter(
@@ -261,17 +252,13 @@ class ParameterStoreClient:
             logger.error(f"Error getting parameter {parameter_name}: {e}")
             return None
 
-    def get_parameters_by_path(
-        self, path: str, recursive: bool = True
-    ) -> Dict[str, str]:
+    def get_parameters_by_path(self, path: str, recursive: bool = True) -> Dict[str, str]:
         """Get all parameters under a path"""
         try:
             parameters = {}
             paginator = self.client.get_paginator("get_parameters_by_path")
 
-            for page in paginator.paginate(
-                Path=path, Recursive=recursive, WithDecryption=True
-            ):
+            for page in paginator.paginate(Path=path, Recursive=recursive, WithDecryption=True):
                 for param in page["Parameters"]:
                     # Extract parameter name without path
                     name = param["Name"].split("/")[-1]
@@ -308,16 +295,12 @@ class CloudWatchClient:
         self.logs_client = boto3.client("logs", region_name=self.region_name)
         self.metrics_client = boto3.client("cloudwatch", region_name=self.region_name)
 
-    def put_log_events(
-        self, log_group: str, log_stream: str, messages: List[str]
-    ) -> bool:
+    def put_log_events(self, log_group: str, log_stream: str, messages: List[str]) -> bool:
         """Put log events to CloudWatch"""
         try:
             # Create log stream if it doesn't exist
             try:
-                self.logs_client.create_log_stream(
-                    logGroupName=log_group, logStreamName=log_stream
-                )
+                self.logs_client.create_log_stream(logGroupName=log_group, logStreamName=log_stream)
             except ClientError:
                 pass  # Stream already exists
 
@@ -354,13 +337,9 @@ class CloudWatchClient:
             }
 
             if dimensions:
-                metric_data["Dimensions"] = [
-                    {"Name": k, "Value": v} for k, v in dimensions.items()
-                ]
+                metric_data["Dimensions"] = [{"Name": k, "Value": v} for k, v in dimensions.items()]
 
-            self.metrics_client.put_metric_data(
-                Namespace=namespace, MetricData=[metric_data]
-            )
+            self.metrics_client.put_metric_data(Namespace=namespace, MetricData=[metric_data])
             return True
         except ClientError as e:
             logger.error(f"Error putting metric: {e}")
@@ -388,9 +367,7 @@ class CloudWatchClient:
             }
 
             if dimensions:
-                kwargs["Dimensions"] = [
-                    {"Name": k, "Value": v} for k, v in dimensions.items()
-                ]
+                kwargs["Dimensions"] = [{"Name": k, "Value": v} for k, v in dimensions.items()]
 
             response = self.metrics_client.get_metric_statistics(**kwargs)
             return response.get("Datapoints", [])

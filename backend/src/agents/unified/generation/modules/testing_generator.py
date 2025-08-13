@@ -3,14 +3,14 @@ Testing Generator Module for Generation Agent
 Generates comprehensive test suites for generated projects
 """
 
-from typing import Dict, List, Any, Optional, Union, Tuple
 import asyncio
 import json
 import re
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 class TestType(Enum):
@@ -144,9 +144,7 @@ class TestingGenerator:
             TestFramework.UNITTEST: self._generate_unittest_config,
         }
 
-    async def generate_tests(
-        self, context: Dict[str, Any], output_path: str
-    ) -> TestingResult:
+    async def generate_tests(self, context: Dict[str, Any], output_path: str) -> TestingResult:
         """Generate comprehensive test suite"""
 
         start_time = datetime.now()
@@ -181,9 +179,7 @@ class TestingGenerator:
                             test_framework_enum, context
                         ),
                         coverage_target=self._get_coverage_target(test_type_enum),
-                        test_commands=self._get_test_commands(
-                            test_framework_enum, test_type_enum
-                        ),
+                        test_commands=self._get_test_commands(test_framework_enum, test_type_enum),
                     )
 
                     test_suites[test_type] = suite
@@ -198,9 +194,7 @@ class TestingGenerator:
 
             # Write test files
             if output_path:
-                await self._write_test_files(
-                    test_suites, configuration_files, output_path
-                )
+                await self._write_test_files(test_suites, configuration_files, output_path)
 
             processing_time = (datetime.now() - start_time).total_seconds()
 
@@ -241,9 +235,7 @@ class TestingGenerator:
         """Generate tests for specific test type"""
 
         if test_type in self.test_templates:
-            return await self.test_templates[test_type](
-                test_framework, components, context
-            )
+            return await self.test_templates[test_type](test_framework, components, context)
 
         return []
 
@@ -383,9 +375,7 @@ class TestingGenerator:
             return test_files
 
         api_components = [
-            c
-            for c in components
-            if c.get("category") == "api" or "api" in c.get("type", "")
+            c for c in components if c.get("category") == "api" or "api" in c.get("type", "")
         ]
 
         if framework == TestFramework.JEST:
@@ -429,9 +419,7 @@ class TestingGenerator:
         if app_framework not in ["react", "vue", "angular"]:
             return test_files
 
-        ui_components = [
-            c for c in components if c.get("category") in ["ui", "component", "form"]
-        ]
+        ui_components = [c for c in components if c.get("category") in ["ui", "component", "form"]]
 
         for component in ui_components:
             component_name = component.get("name", "Component")
@@ -533,9 +521,7 @@ class TestingGenerator:
         return test_files
 
     # Test content generators
-    def _generate_jest_unit_test(
-        self, component: Dict[str, Any], context: Dict[str, Any]
-    ) -> str:
+    def _generate_jest_unit_test(self, component: Dict[str, Any], context: Dict[str, Any]) -> str:
         """Generate Jest unit test content"""
 
         component_name = component.get("name", "Component")
@@ -608,9 +594,7 @@ describe('{component_name}Service', () => {{
   }});
 }});"""
 
-    def _generate_pytest_unit_test(
-        self, component: Dict[str, Any], context: Dict[str, Any]
-    ) -> str:
+    def _generate_pytest_unit_test(self, component: Dict[str, Any], context: Dict[str, Any]) -> str:
         """Generate pytest unit test content"""
 
         component_name = component.get("name", "Component")
@@ -999,9 +983,7 @@ async def client():
 
         return targets.get(test_type, 80.0)
 
-    def _get_test_commands(
-        self, framework: TestFramework, test_type: TestType
-    ) -> Dict[str, str]:
+    def _get_test_commands(self, framework: TestFramework, test_type: TestType) -> Dict[str, str]:
         """Get test commands for framework and type"""
 
         commands = {
@@ -1116,12 +1098,8 @@ async def client():
     async def _generate_cypress_config(self, context: Dict[str, Any]) -> Dict[str, str]:
         return {}
 
-    async def _generate_playwright_config(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, str]:
+    async def _generate_playwright_config(self, context: Dict[str, Any]) -> Dict[str, str]:
         return {}
 
-    async def _generate_unittest_config(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, str]:
+    async def _generate_unittest_config(self, context: Dict[str, Any]) -> Dict[str, str]:
         return {}

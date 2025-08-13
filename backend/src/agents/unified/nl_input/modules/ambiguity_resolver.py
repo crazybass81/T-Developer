@@ -3,8 +3,8 @@ Ambiguity Resolver Module
 Detects and resolves ambiguities in requirements
 """
 
-from typing import List, Dict, Any
 import re
+from typing import Any, Dict, List
 
 
 class AmbiguityResolver:
@@ -109,9 +109,7 @@ class AmbiguityResolver:
                     {
                         "type": "vague_requirement",
                         "term": vague_term,
-                        "suggestion": self._get_clarification_for_vague_term(
-                            vague_term
-                        ),
+                        "suggestion": self._get_clarification_for_vague_term(vague_term),
                     }
                 )
 
@@ -172,9 +170,7 @@ class AmbiguityResolver:
                         f"What specific performance metrics are you targeting (e.g., response time in ms)?"
                     )
                 elif category == "time":
-                    questions.append(
-                        f"What is your target timeline or deadline for this project?"
-                    )
+                    questions.append(f"What is your target timeline or deadline for this project?")
                 seen_categories.add(category)
 
             elif amb_type == "vague_requirement":
@@ -232,6 +228,4 @@ class AmbiguityResolver:
             "scalable": "What are your expected growth metrics (users, data, traffic)?",
         }
 
-        return clarifications.get(
-            term, f"Can you provide more specific details about '{term}'?"
-        )
+        return clarifications.get(term, f"Can you provide more specific details about '{term}'?")

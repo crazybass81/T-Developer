@@ -3,8 +3,8 @@ Integration Mapper Module
 Maps and configures integrations between components
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class IntegrationType(Enum):

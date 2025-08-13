@@ -4,14 +4,15 @@ Lambda Agent 배포 스크립트
 Production-ready Python 에이전트를 AWS Lambda에 배포
 """
 
-import os
-import sys
 import json
-import zipfile
-import tempfile
+import os
 import shutil
+import sys
+import tempfile
+import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -137,9 +138,7 @@ class LambdaAgentDeployer:
                 ]
 
                 for policy_arn in policies:
-                    iam_client.attach_role_policy(
-                        RoleName=role_name, PolicyArn=policy_arn
-                    )
+                    iam_client.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
 
                 # 커스텀 정책 생성 및 연결
                 custom_policy = {
@@ -195,9 +194,7 @@ class LambdaAgentDeployer:
             layer_dir.mkdir()
 
             # requirements.txt 복사
-            requirements_file = (
-                self.lambda_dir.parent.parent.parent / "requirements-lambda.txt"
-            )
+            requirements_file = self.lambda_dir.parent.parent.parent / "requirements-lambda.txt"
             if not requirements_file.exists():
                 # Lambda용 경량 requirements 생성
                 requirements_content = """
@@ -338,9 +335,7 @@ pydantic>=2.5.0
                     print(f"✅ Created function: {function_name}")
 
                 except Exception as create_error:
-                    print(
-                        f"❌ Failed to create function {function_name}: {create_error}"
-                    )
+                    print(f"❌ Failed to create function {function_name}: {create_error}")
             else:
                 print(f"❌ Error with function {function_name}: {e}")
 
@@ -384,9 +379,7 @@ pydantic>=2.5.0
 
         test_payloads = {
             "nl-input-agent": {
-                "body": json.dumps(
-                    {"query": "React로 Todo 앱을 만들어줘", "framework": "react"}
-                )
+                "body": json.dumps({"query": "React로 Todo 앱을 만들어줘", "framework": "react"})
             },
             "ui-selection-agent": {
                 "body": json.dumps(
@@ -414,9 +407,7 @@ pydantic>=2.5.0
                     if status_code == 200:
                         print(f"   ✅ {agent_config['name']}: Test passed")
                     else:
-                        print(
-                            f"   ❌ {agent_config['name']}: Test failed (status {status_code})"
-                        )
+                        print(f"   ❌ {agent_config['name']}: Test failed (status {status_code})")
 
                 except Exception as e:
                     print(f"   ❌ {agent_config['name']}: Test error - {e}")

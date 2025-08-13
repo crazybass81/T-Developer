@@ -3,9 +3,9 @@ Secrets Manager Structure and Configuration
 T-Developer Evolution System
 """
 
-import os
 import json
-from typing import Dict, Any
+import os
+from typing import Any, Dict
 
 # Secrets structure definition
 secrets_structure = {
@@ -61,9 +61,7 @@ secrets_structure = {
             "port": 5432,
             "database": "t_developer",
             "username": "postgres",
-            "password": os.environ.get(
-                "DB_PASSWORD", "ENCRYPTED_PASSWORD"
-            ),  # Will be encrypted
+            "password": os.environ.get("DB_PASSWORD", "ENCRYPTED_PASSWORD"),  # Will be encrypted
             "ssl_mode": "require",
             "connection_pool": {"min_size": 5, "max_size": 20},
         },

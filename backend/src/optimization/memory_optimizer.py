@@ -4,18 +4,19 @@ Memory Usage Optimization
 메모리 사용량 최적화 및 관리
 """
 
+import asyncio
 import gc
+import logging
 import sys
-import psutil
-from typing import Dict, Any, List, Optional, Callable
+import threading
+import tracemalloc
+import weakref
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
-import threading
-import weakref
-import tracemalloc
-import logging
-from contextlib import contextmanager
-import asyncio
+from typing import Any, Callable, Dict, List, Optional
+
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -108,10 +109,8 @@ class MemoryProfiler:
         """두 스냅샷 비교"""
         return {
             "time_diff": snapshot2.timestamp,
-            "process_memory_diff_mb": snapshot2.process_memory_mb
-            - snapshot1.process_memory_mb,
-            "system_memory_diff_mb": snapshot2.used_memory_mb
-            - snapshot1.used_memory_mb,
+            "process_memory_diff_mb": snapshot2.process_memory_mb - snapshot1.process_memory_mb,
+            "system_memory_diff_mb": snapshot2.used_memory_mb - snapshot1.used_memory_mb,
             "gc_objects_diff": {
                 gen: snapshot2.gc_stats.get(gen, 0) - snapshot1.gc_stats.get(gen, 0)
                 for gen in snapshot1.gc_stats.keys()
@@ -377,8 +376,7 @@ class MemoryOptimizer:
             diff = self.profiler.compare_snapshots(snapshot_before, snapshot_after)
 
             logger.info(
-                f"Memory usage for '{description}': "
-                f"{diff['process_memory_diff_mb']:.2f} MB"
+                f"Memory usage for '{description}': " f"{diff['process_memory_diff_mb']:.2f} MB"
             )
 
     def get_memory_report(self) -> Dict[str, Any]:

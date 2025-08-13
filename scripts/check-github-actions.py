@@ -4,12 +4,12 @@ GitHub Actions 로그 조회 스크립트
 GitHub CLI를 사용하여 최신 워크플로우 실행 상태와 로그를 확인합니다.
 """
 
-import subprocess
+import argparse
 import json
+import subprocess
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional
-import argparse
 
 
 class GitHubActionsMonitor:
@@ -93,9 +93,7 @@ class GitHubActionsMonitor:
                 return "작업 정보를 찾을 수 없습니다."
 
             # 실패한 작업 찾기
-            failed_jobs = [
-                job for job in details["jobs"] if job["conclusion"] == "failure"
-            ]
+            failed_jobs = [job for job in details["jobs"] if job["conclusion"] == "failure"]
 
             if job_name:
                 # 특정 작업 로그 가져오기
@@ -152,9 +150,7 @@ class GitHubActionsMonitor:
             return
 
         # 실패한 작업 찾기
-        failed_jobs = [
-            job for job in details.get("jobs", []) if job["conclusion"] == "failure"
-        ]
+        failed_jobs = [job for job in details.get("jobs", []) if job["conclusion"] == "failure"]
 
         if failed_jobs:
             print(f"\n❌ 실패한 작업들:")
@@ -163,9 +159,7 @@ class GitHubActionsMonitor:
 
                 # 실패한 단계 찾기
                 failed_steps = [
-                    step
-                    for step in job.get("steps", [])
-                    if step["conclusion"] == "failure"
+                    step for step in job.get("steps", []) if step["conclusion"] == "failure"
                 ]
 
                 if failed_steps:

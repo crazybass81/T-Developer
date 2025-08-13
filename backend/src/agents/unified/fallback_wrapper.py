@@ -25,11 +25,7 @@ async def safe_agent_execute(agent, input_data: Any) -> Dict[str, Any]:
 
     # Attempt 2: Just the data dict
     try:
-        data = (
-            input_data.get("data", input_data)
-            if isinstance(input_data, dict)
-            else input_data
-        )
+        data = input_data.get("data", input_data) if isinstance(input_data, dict) else input_data
         result = await agent.process(data)
         if result:
             return extract_result(result)

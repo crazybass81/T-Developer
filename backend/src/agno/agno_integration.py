@@ -5,11 +5,12 @@ Agno 프레임워크 통합 및 고성능 에이전트 관리
 """
 
 import asyncio
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
-import time
-import psutil
 import os
+import time
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+import psutil
 
 
 @dataclass
@@ -106,9 +107,7 @@ class AgnoFrameworkManager:
             "total_agents_in_pool": total_agents,
             "agent_types": list(self.agent_pool.keys()),
             "performance_targets": self.performance_targets,
-            "memory_usage_mb": psutil.Process(os.getpid()).memory_info().rss
-            / 1024
-            / 1024,
+            "memory_usage_mb": psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024,
         }
 
     async def benchmark_performance(self) -> Dict[str, Any]:
@@ -124,9 +123,7 @@ class AgnoFrameworkManager:
         creation_time = time.perf_counter() - start_time
 
         # 평균 인스턴스화 시간
-        avg_instantiation = sum(a.metrics.instantiation_time_us for a in agents) / len(
-            agents
-        )
+        avg_instantiation = sum(a.metrics.instantiation_time_us for a in agents) / len(agents)
 
         # 메모리 사용량
         total_memory = sum(a.metrics.memory_usage_kb for a in agents)

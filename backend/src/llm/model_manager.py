@@ -1,7 +1,8 @@
-from typing import Dict, List, Optional, Any
-from .model_provider_abstract import ModelProvider, ModelConfig, ModelProviderFactory
-from .providers.openai_provider import OpenAIProvider
+from typing import Any, Dict, List, Optional
+
+from .model_provider_abstract import ModelConfig, ModelProvider, ModelProviderFactory
 from .providers.bedrock_provider import BedrockProvider
+from .providers.openai_provider import OpenAIProvider
 
 
 class ModelManager:

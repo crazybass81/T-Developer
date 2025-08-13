@@ -3,7 +3,7 @@ Recommendation Engine Module
 Generates recommendations based on match analysis
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class RecommendationEngine:
@@ -28,9 +28,7 @@ class RecommendationEngine:
             recommendations.extend(component_recommendations)
 
         # Add general recommendations
-        general_recommendations = self._generate_general_recommendations(
-            components, requirements
-        )
+        general_recommendations = self._generate_general_recommendations(components, requirements)
         recommendations.extend(general_recommendations)
 
         # Sort by priority

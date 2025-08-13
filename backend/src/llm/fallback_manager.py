@@ -1,8 +1,9 @@
-from typing import Dict, List, Any, Optional
 import asyncio
-from datetime import datetime, timedelta
 from collections import defaultdict
-from .providers import ModelProviderFactory, ModelConfig, ModelResponse
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+from .providers import ModelConfig, ModelProviderFactory, ModelResponse
 
 
 class ModelFallbackManager:
@@ -54,9 +55,7 @@ class ModelFallbackManager:
 
                 continue
 
-        raise Exception(
-            f"All models in fallback chain failed. Last error: {last_error}"
-        )
+        raise Exception(f"All models in fallback chain failed. Last error: {last_error}")
 
     def _is_retryable_error(self, error: Exception) -> bool:
         retryable_errors = [
@@ -77,9 +76,7 @@ class ModelFallbackManager:
 
 class ModelHealthChecker:
     def __init__(self):
-        self.health_status = defaultdict(
-            lambda: {"healthy": True, "last_check": datetime.now()}
-        )
+        self.health_status = defaultdict(lambda: {"healthy": True, "last_check": datetime.now()})
 
     async def is_healthy(self, model: str) -> bool:
         status = self.health_status[model]

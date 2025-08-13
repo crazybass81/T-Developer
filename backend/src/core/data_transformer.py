@@ -2,28 +2,23 @@
 Data transformation layer for agent communication
 Handles data conversion between different agent formats
 """
-from typing import Dict, Any, List, Optional, Union
 import json
-from datetime import datetime
 from dataclasses import asdict, is_dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
 
-from src.core.interfaces import (
-    AgentInput,
-    AgentResult,
-    PipelineContext,
-    ProcessingStatus,
-)
 from src.core.agent_models import (
-    NLInputResult,
-    UISelectionResult,
-    ParserResult,
-    ComponentDecisionResult,
-    MatchRateResult,
-    SearchResult,
-    GenerationResult,
     AssemblyResult,
+    ComponentDecisionResult,
     DownloadResult,
+    GenerationResult,
+    MatchRateResult,
+    NLInputResult,
+    ParserResult,
+    SearchResult,
+    UISelectionResult,
 )
+from src.core.interfaces import AgentInput, AgentResult, PipelineContext, ProcessingStatus
 
 
 class DataTransformer:
@@ -96,9 +91,7 @@ class DataTransformer:
                 "project_type": nl_result.project_type,
                 "features": nl_result.features,
                 "framework": ui_result.framework.name,
-                "ui_library": ui_result.ui_library.name
-                if ui_result.ui_library
-                else None,
+                "ui_library": ui_result.ui_library.name if ui_result.ui_library else None,
                 "styling": ui_result.styling_solution.name,
                 "state_management": ui_result.state_management.name
                 if ui_result.state_management
@@ -119,17 +112,13 @@ class DataTransformer:
         """Transform Parser result to Component Decision input"""
         return AgentInput(
             data={
-                "file_structure": DataTransformer.serialize(
-                    parser_result.file_structure
-                ),
+                "file_structure": DataTransformer.serialize(parser_result.file_structure),
                 "api_endpoints": [
                     DataTransformer.serialize(ep) for ep in parser_result.api_endpoints
                 ],
                 "modules": parser_result.modules,
                 "framework": ui_result.framework.name,
-                "ui_patterns": ui_result.ui_library.name
-                if ui_result.ui_library
-                else "custom",
+                "ui_patterns": ui_result.ui_library.name if ui_result.ui_library else "custom",
             },
             context=context,
             previous_results=[],
@@ -147,13 +136,9 @@ class DataTransformer:
             data={
                 "project_type": nl_result.project_type,
                 "features": nl_result.features,
-                "components": [
-                    DataTransformer.serialize(c) for c in component_result.components
-                ],
+                "components": [DataTransformer.serialize(c) for c in component_result.components],
                 "architecture": component_result.architecture_pattern.value,
-                "file_structure": DataTransformer.serialize(
-                    parser_result.file_structure
-                ),
+                "file_structure": DataTransformer.serialize(parser_result.file_structure),
             },
             context=context,
             previous_results=[],
@@ -173,9 +158,7 @@ class DataTransformer:
                 "libraries_needed": [
                     ui_result.ui_library.name if ui_result.ui_library else None,
                     ui_result.styling_solution.name,
-                    ui_result.state_management.name
-                    if ui_result.state_management
-                    else None,
+                    ui_result.state_management.name if ui_result.state_management else None,
                     ui_result.bundler.name,
                     ui_result.testing_framework.name,
                 ],
@@ -200,16 +183,11 @@ class DataTransformer:
         """Transform Search result to Generation input"""
         return AgentInput(
             data={
-                "file_structure": DataTransformer.serialize(
-                    parser_result.file_structure
-                ),
-                "components": [
-                    DataTransformer.serialize(c) for c in component_result.components
-                ],
+                "file_structure": DataTransformer.serialize(parser_result.file_structure),
+                "components": [DataTransformer.serialize(c) for c in component_result.components],
                 "libraries": {lib.name: lib.version for lib in search_result.libraries},
                 "code_snippets": [
-                    DataTransformer.serialize(s)
-                    for s in search_result.code_snippets[:5]
+                    DataTransformer.serialize(s) for s in search_result.code_snippets[:5]
                 ],
                 "template": match_result.best_match.template_id
                 if match_result.best_match
@@ -235,12 +213,8 @@ class DataTransformer:
         """Transform Generation result to Assembly input"""
         return AgentInput(
             data={
-                "files": [
-                    DataTransformer.serialize(f) for f in generation_result.files
-                ],
-                "dependencies": {
-                    lib.name: lib.version for lib in search_result.libraries
-                },
+                "files": [DataTransformer.serialize(f) for f in generation_result.files],
+                "dependencies": {lib.name: lib.version for lib in search_result.libraries},
                 "dev_dependencies": parser_result.dev_dependencies,
                 "config_files": parser_result.config_files,
                 "environment_variables": parser_result.environment_variables,
@@ -264,9 +238,7 @@ class DataTransformer:
                 "project_path": assembly_result.project_path,
                 "project_name": nl_result.main_functionality.replace(" ", "-").lower(),
                 "framework": ui_result.framework.name,
-                "language": nl_result.technical_requirements.get(
-                    "language", "typescript"
-                ),
+                "language": nl_result.technical_requirements.get("language", "typescript"),
                 "total_files": generation_result.total_files,
                 "build_successful": assembly_result.build_result.success,
                 "tests_passed": assembly_result.test_result.passed_tests

@@ -1,6 +1,8 @@
-import httpx
 import os
-from typing import AsyncIterator, Dict, Any, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+import httpx
+
 from ..base import ModelProvider, ModelResponse
 
 
@@ -27,9 +29,7 @@ class HuggingFaceProvider(ModelProvider):
             },
         }
 
-        response = await self.client.post(
-            f"{self.base_url}/{self.config.name}", json=payload
-        )
+        response = await self.client.post(f"{self.base_url}/{self.config.name}", json=payload)
 
         result = response.json()
         if isinstance(result, list) and len(result) > 0:

@@ -3,8 +3,8 @@ Context Enhancer Module
 Enhances user input with additional context
 """
 
-from typing import Dict, Any
 import re
+from typing import Any, Dict
 
 
 class ContextEnhancer:
@@ -69,16 +69,12 @@ class ContextEnhancer:
 
         # Add implicit features based on keywords
         text_lower = text.lower()
-        for keyword, implications in self.enhancement_patterns[
-            "implicit_features"
-        ].items():
+        for keyword, implications in self.enhancement_patterns["implicit_features"].items():
             if keyword in text_lower:
                 enhanced += f" This implies: {', '.join(implications)}."
 
         # Add technical implications
-        for keyword, implications in self.enhancement_patterns[
-            "technical_implications"
-        ].items():
+        for keyword, implications in self.enhancement_patterns["technical_implications"].items():
             if keyword in text_lower:
                 enhanced += f" Technical requirements: {', '.join(implications)}."
 
@@ -90,9 +86,7 @@ class ContextEnhancer:
             enhanced += " This requires RESTful or GraphQL API design."
 
         if "secure" in text_lower or "security" in text_lower:
-            enhanced += (
-                " This requires authentication, authorization, and data encryption."
-            )
+            enhanced += " This requires authentication, authorization, and data encryption."
 
         return enhanced
 

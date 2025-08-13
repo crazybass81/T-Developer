@@ -3,11 +3,11 @@ Autocomplete Engine Module
 Advanced autocomplete and query suggestion system
 """
 
-from typing import Dict, List, Any, Optional, Tuple
-import re
-from collections import defaultdict, Counter
-from datetime import datetime, timedelta
 import math
+import re
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class AutocompleteEngine:
@@ -94,9 +94,7 @@ class AutocompleteEngine:
 
         # Deduplicate and rank suggestions
         unique_suggestions = self._deduplicate_suggestions(all_suggestions)
-        ranked_suggestions = self._rank_suggestions(
-            unique_suggestions, partial_query, context
-        )
+        ranked_suggestions = self._rank_suggestions(unique_suggestions, partial_query, context)
 
         # Format final suggestions
         final_suggestions = [
@@ -250,17 +248,13 @@ class AutocompleteEngine:
         # Project type suggestions
         project_type = context.get("project_type")
         if project_type:
-            project_suggestions = self._get_project_type_suggestions(
-                project_type, partial_query
-            )
+            project_suggestions = self._get_project_type_suggestions(project_type, partial_query)
             suggestions.extend(project_suggestions)
 
         # User preference suggestions
         user_prefs = context.get("user_preferences", {})
         if user_prefs:
-            pref_suggestions = self._get_preference_based_suggestions(
-                user_prefs, partial_query
-            )
+            pref_suggestions = self._get_preference_based_suggestions(user_prefs, partial_query)
             suggestions.extend(pref_suggestions)
 
         return suggestions[:5]
@@ -433,9 +427,7 @@ class AutocompleteEngine:
 
         return score
 
-    def _deduplicate_suggestions(
-        self, suggestions: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def _deduplicate_suggestions(self, suggestions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Remove duplicate suggestions, keeping the highest scored"""
 
         unique_suggestions = {}
@@ -478,11 +470,7 @@ class AutocompleteEngine:
             suggestion_text = suggestion["text"]
 
             # Extract first meaningful word
-            first_word = (
-                suggestion_text.split()[0]
-                if suggestion_text.split()
-                else suggestion_text
-            )
+            first_word = suggestion_text.split()[0] if suggestion_text.split() else suggestion_text
 
             # Skip if we already have too many suggestions with same prefix
             prefix_count = sum(1 for prefix in used_prefixes if prefix == first_word)
@@ -529,9 +517,7 @@ class AutocompleteEngine:
 
         return expansions
 
-    def _get_project_type_suggestions(
-        self, project_type: str, partial_query: str
-    ) -> List[str]:
+    def _get_project_type_suggestions(self, project_type: str, partial_query: str) -> List[str]:
         """Get suggestions based on project type"""
 
         project_suggestions = {
@@ -622,9 +608,7 @@ class AutocompleteEngine:
         else:
             return 0.4
 
-    def _calculate_context_relevance(
-        self, suggestion: str, context: Dict[str, Any]
-    ) -> float:
+    def _calculate_context_relevance(self, suggestion: str, context: Dict[str, Any]) -> float:
         """Calculate how relevant suggestion is to context"""
 
         relevance = 0.0
@@ -791,9 +775,7 @@ class AutocompleteEngine:
             self.trie.insert(suggestion.lower())
             self.popular_terms[suggestion.lower()] += 5  # Boost common terms
 
-    def _generate_cache_key(
-        self, partial_query: str, context: Optional[Dict[str, Any]]
-    ) -> str:
+    def _generate_cache_key(self, partial_query: str, context: Optional[Dict[str, Any]]) -> str:
         """Generate cache key for suggestions"""
 
         key_parts = [partial_query.lower()]
@@ -837,9 +819,7 @@ class AutocompleteEngine:
 
         # Keep only recent queries (last 30 days)
         cutoff_date = datetime.now() - timedelta(days=30)
-        self.query_history = [
-            q for q in self.query_history if q["timestamp"] > cutoff_date
-        ]
+        self.query_history = [q for q in self.query_history if q["timestamp"] > cutoff_date]
 
         # Keep only top 1000 queries to manage memory
         if len(self.query_history) > 1000:
@@ -917,9 +897,7 @@ class AutocompleteTrie:
             completions.append((current_word, node.frequency))
 
         for char, child_node in node.children.items():
-            self._collect_completions(
-                child_node, current_word + char, completions, limit
-            )
+            self._collect_completions(child_node, current_word + char, completions, limit)
 
 
 class TrieNode:

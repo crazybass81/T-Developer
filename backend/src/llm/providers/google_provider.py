@@ -1,6 +1,8 @@
-import google.generativeai as genai
 import os
-from typing import AsyncIterator, Dict, Any, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+import google.generativeai as genai
+
 from .base_provider import ModelProvider, ModelResponse
 
 

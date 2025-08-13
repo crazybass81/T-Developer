@@ -4,13 +4,14 @@ Unit Tests for Agent Registration API
 Tests the complete agent registration flow
 """
 
-import pytest
 import asyncio
 import json
-from datetime import datetime
-from unittest.mock import Mock, patch, AsyncMock
-import sys
 import os
+import sys
+from datetime import datetime
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 # Add backend to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
@@ -127,9 +128,7 @@ class MaliciousAgent:
         assert any("exec()" in error for error in result.errors)
         assert any("eval()" in error for error in result.errors)
         # os.system check is part of general subprocess check
-        assert any(
-            "System calls" in error or "os.system" in error for error in result.errors
-        )
+        assert any("System calls" in error or "os.system" in error for error in result.errors)
 
     def test_registration_request_validation(self):
         """Test registration request model validation"""
@@ -143,9 +142,7 @@ class MaliciousAgent:
 
         # Invalid name
         with pytest.raises(ValueError, match="alphanumeric"):
-            AgentRegistrationRequest(
-                agent_name="invalid@agent!", agent_code="class Agent: pass"
-            )
+            AgentRegistrationRequest(agent_name="invalid@agent!", agent_code="class Agent: pass")
 
         # Invalid version
         with pytest.raises(ValueError):
@@ -288,9 +285,7 @@ def process_data(data):
     print("   ✓ Valid code passed validation")
 
     print("\n2. Testing invalid code validation...")
-    result = loop.run_until_complete(
-        test.test_code_validator_invalid_code(invalid_code)
-    )
+    result = loop.run_until_complete(test.test_code_validator_invalid_code(invalid_code))
     print("   ✓ Invalid code detected correctly")
 
     print("\n3. Testing security checks...")

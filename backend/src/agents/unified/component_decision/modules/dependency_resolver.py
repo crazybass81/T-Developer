@@ -3,8 +3,9 @@ Dependency Resolver Module
 Resolves dependencies between components
 """
 
-from typing import Dict, List, Any, Optional, Set, Tuple
 from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
+
 import networkx as nx
 
 
@@ -206,10 +207,7 @@ class DependencyResolver:
             "total_components": self.dependency_graph.number_of_nodes(),
             "total_dependencies": self.dependency_graph.number_of_edges(),
             "max_depth": max(
-                (
-                    self._calculate_dependency_level(n)
-                    for n in self.dependency_graph.nodes()
-                ),
+                (self._calculate_dependency_level(n) for n in self.dependency_graph.nodes()),
                 default=0,
             ),
             "average_dependencies": (

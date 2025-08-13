@@ -2,10 +2,11 @@
 AWS Secrets Manager and Parameter Store integration
 Securely loads API keys and configuration from AWS services
 """
-import os
 import json
 import logging
-from typing import Optional, Dict, Any
+import os
+from typing import Any, Dict, Optional
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -94,9 +95,7 @@ class AWSSecretsManager:
 
         try:
             paginator = self.ssm_client.get_paginator("get_parameters_by_path")
-            pages = paginator.paginate(
-                Path=full_path, Recursive=True, WithDecryption=decrypt
-            )
+            pages = paginator.paginate(Path=full_path, Recursive=True, WithDecryption=decrypt)
 
             for page in pages:
                 for parameter in page["Parameters"]:
@@ -111,9 +110,7 @@ class AWSSecretsManager:
             logger.error(f"Error retrieving parameters by path {full_path}: {e}")
             return {}
 
-    def set_parameter(
-        self, parameter_name: str, value: str, secure: bool = True
-    ) -> bool:
+    def set_parameter(self, parameter_name: str, value: str, secure: bool = True) -> bool:
         """Set parameter in Parameter Store"""
 
         full_parameter_name = f"/t-developer/{self.environment}/{parameter_name}"

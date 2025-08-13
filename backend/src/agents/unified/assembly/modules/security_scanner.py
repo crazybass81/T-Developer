@@ -3,13 +3,13 @@ Security Scanner Module for Assembly Agent
 Scans for security vulnerabilities and compliance issues
 """
 
-from typing import Dict, List, Any, Optional
 import asyncio
-import re
-import json
 import hashlib
+import json
+import re
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -211,17 +211,13 @@ class SecurityScanner:
         try:
             # Scan for each security rule category
             for category, rules in self.security_rules.items():
-                category_vulns = await self._scan_category(
-                    analyzed_files, category, rules
-                )
+                category_vulns = await self._scan_category(analyzed_files, category, rules)
                 vulnerabilities.extend(category_vulns)
                 scans_completed += len(rules)
 
             # Additional context-specific scans
             framework = context.get("framework", "react")
-            framework_vulns = await self._scan_framework_specific(
-                analyzed_files, framework
-            )
+            framework_vulns = await self._scan_framework_specific(analyzed_files, framework)
             vulnerabilities.extend(framework_vulns)
             scans_completed += len(framework_vulns)
 
@@ -388,9 +384,7 @@ class SecurityScanner:
 
         return vulnerabilities
 
-    async def _scan_dependencies(
-        self, files: Dict[str, str]
-    ) -> List[SecurityVulnerability]:
+    async def _scan_dependencies(self, files: Dict[str, str]) -> List[SecurityVulnerability]:
         """Scan for known vulnerable dependencies"""
 
         vulnerabilities = []
@@ -430,9 +424,7 @@ class SecurityScanner:
                         vuln_info = vulnerable_packages[dep_name]
 
                         # Simplified version check (in production, use proper semver)
-                        is_vulnerable = self._is_version_vulnerable(
-                            version, vuln_info["versions"]
-                        )
+                        is_vulnerable = self._is_version_vulnerable(version, vuln_info["versions"])
 
                         if is_vulnerable:
                             vulnerability_id = self._generate_vulnerability_id(
@@ -459,18 +451,14 @@ class SecurityScanner:
 
         return vulnerabilities
 
-    def _generate_vulnerability_id(
-        self, file_path: str, line_number: int, title: str
-    ) -> str:
+    def _generate_vulnerability_id(self, file_path: str, line_number: int, title: str) -> str:
         """Generate unique vulnerability ID"""
 
         content = f"{file_path}:{line_number}:{title}"
         hash_obj = hashlib.md5(content.encode())
         return f"SEC-{hash_obj.hexdigest()[:8].upper()}"
 
-    def _calculate_security_score(
-        self, vulnerabilities: List[SecurityVulnerability]
-    ) -> float:
+    def _calculate_security_score(self, vulnerabilities: List[SecurityVulnerability]) -> float:
         """Calculate overall security score"""
 
         if not vulnerabilities:
@@ -486,9 +474,7 @@ class SecurityScanner:
         score = max(0, 100 - total_penalty)
         return score
 
-    def _check_compliance(
-        self, vulnerabilities: List[SecurityVulnerability]
-    ) -> Dict[str, bool]:
+    def _check_compliance(self, vulnerabilities: List[SecurityVulnerability]) -> Dict[str, bool]:
         """Check compliance with security standards"""
 
         compliance_status = {}
@@ -498,17 +484,14 @@ class SecurityScanner:
             critical_vulns = [
                 v
                 for v in vulnerabilities
-                if v.category in required_categories
-                and v.severity in ["critical", "high"]
+                if v.category in required_categories and v.severity in ["critical", "high"]
             ]
 
             compliance_status[standard] = len(critical_vulns) == 0
 
         return compliance_status
 
-    def _group_by_severity(
-        self, vulnerabilities: List[SecurityVulnerability]
-    ) -> Dict[str, int]:
+    def _group_by_severity(self, vulnerabilities: List[SecurityVulnerability]) -> Dict[str, int]:
         """Group vulnerabilities by severity"""
 
         severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
@@ -519,9 +502,7 @@ class SecurityScanner:
 
         return severity_counts
 
-    def _group_by_category(
-        self, vulnerabilities: List[SecurityVulnerability]
-    ) -> Dict[str, int]:
+    def _group_by_category(self, vulnerabilities: List[SecurityVulnerability]) -> Dict[str, int]:
         """Group vulnerabilities by category"""
 
         category_counts = {}
@@ -540,9 +521,7 @@ class SecurityScanner:
 
         # Sort by severity and get unique recommendations
         severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-        sorted_vulns = sorted(
-            vulnerabilities, key=lambda v: severity_order.get(v.severity, 4)
-        )
+        sorted_vulns = sorted(vulnerabilities, key=lambda v: severity_order.get(v.severity, 4))
 
         recommendations = []
         seen_recommendations = set()
@@ -557,9 +536,7 @@ class SecurityScanner:
 
         return recommendations
 
-    def _is_version_vulnerable(
-        self, version: str, vulnerable_versions: List[str]
-    ) -> bool:
+    def _is_version_vulnerable(self, version: str, vulnerable_versions: List[str]) -> bool:
         """Check if version matches vulnerable version patterns"""
 
         # Simplified vulnerability check (in production, use proper semver)

@@ -3,19 +3,16 @@ Agent Repository Implementation
 Database operations for agent storage and retrieval
 """
 
-from typing import Dict, List, Optional, Any
-from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_, or_
-from sqlalchemy.orm import selectinload
 import json
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from src.core.models.agent_models import (
-    AgentModel,
-    AgentVersionModel,
-    AgentExecutionModel,
-)
+from sqlalchemy import and_, delete, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from src.core.models.agent_models import AgentExecutionModel, AgentModel, AgentVersionModel
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +35,7 @@ class AgentRepository:
                 code_hash=agent_data["code_hash"],
                 ai_capabilities=agent_data.get("ai_capabilities", {}),
                 ai_quality_score=agent_data.get("ai_quality_score"),
-                ai_analysis_timestamp=agent_data.get(
-                    "ai_analysis_timestamp", datetime.utcnow()
-                ),
+                ai_analysis_timestamp=agent_data.get("ai_analysis_timestamp", datetime.utcnow()),
                 ai_model_used=agent_data.get("ai_model_used", "gpt-4-turbo"),
                 created_by=agent_data.get("created_by", "system"),
             )
@@ -180,9 +175,7 @@ class AgentRepository:
                         conditions.append(AgentModel.deprecated_at.isnot(None))
 
                 if "min_quality_score" in filters:
-                    conditions.append(
-                        AgentModel.ai_quality_score >= filters["min_quality_score"]
-                    )
+                    conditions.append(AgentModel.ai_quality_score >= filters["min_quality_score"])
 
                 if "created_after" in filters:
                     conditions.append(AgentModel.created_at >= filters["created_after"])
@@ -208,9 +201,7 @@ class AgentRepository:
             logger.error(f"Failed to list agents: {e}")
             return []
 
-    async def update_execution_metrics(
-        self, agent_id: str, execution_data: Dict[str, Any]
-    ) -> bool:
+    async def update_execution_metrics(self, agent_id: str, execution_data: Dict[str, Any]) -> bool:
         """Update agent execution metrics"""
         try:
             # Record execution
@@ -247,8 +238,7 @@ class AgentRepository:
                     + (1 if execution_data["status"] == "failed" else 0),
                     total_tokens_used=AgentModel.total_tokens_used
                     + (execution_data.get("tokens_used", 0)),
-                    total_cost_usd=AgentModel.total_cost_usd
-                    + (execution_data.get("cost_usd", 0)),
+                    total_cost_usd=AgentModel.total_cost_usd + (execution_data.get("cost_usd", 0)),
                     last_executed_at=datetime.utcnow(),
                 )
             )
@@ -280,9 +270,7 @@ class AgentRepository:
             logger.error(f"Failed to get agent versions: {e}")
             return []
 
-    async def get_agent_executions(
-        self, agent_id: str, limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    async def get_agent_executions(self, agent_id: str, limit: int = 100) -> List[Dict[str, Any]]:
         """Get recent executions of an agent"""
         try:
             result = await self.session.execute(
@@ -343,9 +331,7 @@ class AgentRepository:
             "code": model.code,
             "code_hash": model.code_hash,
             "ai_capabilities": model.ai_capabilities,
-            "ai_quality_score": float(model.ai_quality_score)
-            if model.ai_quality_score
-            else None,
+            "ai_quality_score": float(model.ai_quality_score) if model.ai_quality_score else None,
             "ai_analysis_timestamp": model.ai_analysis_timestamp.isoformat()
             if model.ai_analysis_timestamp
             else None,
@@ -361,18 +347,14 @@ class AgentRepository:
             if model.avg_execution_time_ms
             else None,
             "total_tokens_used": model.total_tokens_used,
-            "total_cost_usd": float(model.total_cost_usd)
-            if model.total_cost_usd
-            else None,
+            "total_cost_usd": float(model.total_cost_usd) if model.total_cost_usd else None,
             "created_at": model.created_at.isoformat(),
             "updated_at": model.updated_at.isoformat(),
             "created_by": model.created_by,
             "last_executed_at": model.last_executed_at.isoformat()
             if model.last_executed_at
             else None,
-            "deprecated_at": model.deprecated_at.isoformat()
-            if model.deprecated_at
-            else None,
+            "deprecated_at": model.deprecated_at.isoformat() if model.deprecated_at else None,
             "deprecation_reason": model.deprecation_reason,
         }
 
@@ -398,19 +380,13 @@ class AgentRepository:
             "agent_id": model.agent_id,
             "execution_id": model.execution_id,
             "started_at": model.started_at.isoformat(),
-            "completed_at": model.completed_at.isoformat()
-            if model.completed_at
-            else None,
+            "completed_at": model.completed_at.isoformat() if model.completed_at else None,
             "status": model.status,
             "execution_time_ms": model.execution_time_ms,
             "tokens_used": model.tokens_used,
             "cost_usd": float(model.cost_usd) if model.cost_usd else None,
-            "memory_used_mb": float(model.memory_used_mb)
-            if model.memory_used_mb
-            else None,
-            "cpu_used_percent": float(model.cpu_used_percent)
-            if model.cpu_used_percent
-            else None,
+            "memory_used_mb": float(model.memory_used_mb) if model.memory_used_mb else None,
+            "cpu_used_percent": float(model.cpu_used_percent) if model.cpu_used_percent else None,
             "error_message": model.error_message,
             "workflow_id": model.workflow_id,
             "user_id": model.user_id,

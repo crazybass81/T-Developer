@@ -3,11 +3,11 @@ Metadata Generator Module for Assembly Agent
 Generates comprehensive project metadata and documentation
 """
 
-from typing import Dict, List, Any, Optional
 import asyncio
 import json
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -190,9 +190,7 @@ SOFTWARE.
 
         return license_content
 
-    async def _generate_deployment_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _generate_deployment_configs(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Generate deployment configurations"""
 
         framework = context.get("framework", "react")
@@ -201,12 +199,8 @@ SOFTWARE.
         configs = {
             "docker": {
                 "enabled": True,
-                "port": 3000
-                if framework in ["react", "vue", "angular", "express"]
-                else 8000,
-                "environment": context.get(
-                    "target_environments", ["development", "production"]
-                ),
+                "port": 3000 if framework in ["react", "vue", "angular", "express"] else 8000,
+                "environment": context.get("target_environments", ["development", "production"]),
             },
             "ci_cd": {
                 "github_actions": True,
@@ -237,9 +231,7 @@ SOFTWARE.
             "created_at": datetime.now().isoformat(),
             "generated_by": "T-Developer",
             "generator_version": self.version,
-            "components": [
-                c.get("name", "") for c in context.get("selected_components", [])
-            ],
+            "components": [c.get("name", "") for c in context.get("selected_components", [])],
             "features": [
                 "Modern architecture",
                 "Production ready",
@@ -248,9 +240,7 @@ SOFTWARE.
                 "Docker support",
             ],
             "quality_metrics": {
-                "security_score": analysis_results.get("security", {}).get(
-                    "security_score", 85
-                ),
+                "security_score": analysis_results.get("security", {}).get("security_score", 85),
                 "performance_score": analysis_results.get("performance", {}).get(
                     "performance_score", 80
                 ),
@@ -258,9 +248,7 @@ SOFTWARE.
                     "passed_quality_gates", True
                 ),
             },
-            "deployment_targets": context.get(
-                "target_environments", ["development", "production"]
-            ),
+            "deployment_targets": context.get("target_environments", ["development", "production"]),
         }
 
         return manifest

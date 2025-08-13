@@ -4,20 +4,19 @@ GitHub Actions 로그 조회 스크립트 (API 버전)
 GitHub API를 직접 사용하여 워크플로우 실행 상태와 로그를 확인합니다.
 """
 
-import requests
+import argparse
 import json
-import sys
 import os
+import sys
+import time
 from datetime import datetime
 from typing import Dict, List, Optional
-import argparse
-import time
+
+import requests
 
 
 class GitHubActionsAPI:
-    def __init__(
-        self, repo: str = "crazybass81/T-DeveloperMVP", token: Optional[str] = None
-    ):
+    def __init__(self, repo: str = "crazybass81/T-DeveloperMVP", token: Optional[str] = None):
         """
         GitHub Actions API 클라이언트 초기화
 
@@ -156,9 +155,7 @@ class GitHubActionsAPI:
 
                 # 실패한 단계 찾기
                 failed_steps = [
-                    step
-                    for step in job.get("steps", [])
-                    if step["conclusion"] == "failure"
+                    step for step in job.get("steps", []) if step["conclusion"] == "failure"
                 ]
 
                 if failed_steps:
@@ -199,12 +196,8 @@ class GitHubActionsAPI:
                         print(f"\n  🔴 발견된 주요 에러 (최대 15줄):")
                         for line in error_lines[:15]:
                             # ANSI 색상 코드 제거
-                            clean_line = line.replace("\x1b[0m", "").replace(
-                                "\x1b[91m", ""
-                            )
-                            clean_line = clean_line.replace("\x1b[31m", "").replace(
-                                "\x1b[32m", ""
-                            )
+                            clean_line = line.replace("\x1b[0m", "").replace("\x1b[91m", "")
+                            clean_line = clean_line.replace("\x1b[31m", "").replace("\x1b[32m", "")
                             print(f"    {clean_line[:200]}")
                 else:
                     print("\n  ℹ️ 로그를 보려면 GITHUB_TOKEN 환경변수를 설정하세요.")

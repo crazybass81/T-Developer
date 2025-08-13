@@ -4,16 +4,16 @@ T-Developer Agent Orchestrator
 Manages the execution of 9 core agents in proper sequence for project generation.
 """
 
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
 import asyncio
-import time
 import logging
+import time
+from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from .agent_squad_core import AgentSquadOrchestrator, TaskStatus
-from ..agents.framework.core.base_agent import BaseAgent
 from ..agents.framework.core.agent_types import AgentType
+from ..agents.framework.core.base_agent import BaseAgent
+from .agent_squad_core import AgentSquadOrchestrator, TaskStatus
 
 logger = logging.getLogger(__name__)
 
@@ -74,17 +74,15 @@ class AgentOrchestrator:
 
     async def _initialize_agents(self) -> None:
         """Initialize all 9 core agents"""
-        from ..agents.ecs_integrated.nl_input.main import NLInputAgent
-        from ..agents.ecs_integrated.ui_selection.main import UISelectionAgent
-        from ..agents.ecs_integrated.parser.main import ParserAgent
-        from ..agents.ecs_integrated.component_decision.main import (
-            ComponentDecisionAgent,
-        )
-        from ..agents.ecs_integrated.match_rate.main import MatchRateAgent
-        from ..agents.ecs_integrated.search.main import SearchAgent
-        from ..agents.ecs_integrated.generation.main import GenerationAgent
         from ..agents.ecs_integrated.assembly.main import AssemblyAgent
+        from ..agents.ecs_integrated.component_decision.main import ComponentDecisionAgent
         from ..agents.ecs_integrated.download.main import DownloadAgent
+        from ..agents.ecs_integrated.generation.main import GenerationAgent
+        from ..agents.ecs_integrated.match_rate.main import MatchRateAgent
+        from ..agents.ecs_integrated.nl_input.main import NLInputAgent
+        from ..agents.ecs_integrated.parser.main import ParserAgent
+        from ..agents.ecs_integrated.search.main import SearchAgent
+        from ..agents.ecs_integrated.ui_selection.main import UISelectionAgent
 
         agent_classes = {
             AgentType.NL_INPUT: NLInputAgent,
@@ -152,9 +150,7 @@ class AgentOrchestrator:
                 {
                     "requirements": nl_result.get("requirements"),
                     "framework": ui_result.get("selected_framework"),
-                    "existing_components": parse_result.get("components")
-                    if parse_result
-                    else None,
+                    "existing_components": parse_result.get("components") if parse_result else None,
                 },
             )
 
@@ -222,13 +218,9 @@ class AgentOrchestrator:
 
         except Exception as error:
             logger.error(f"Project processing failed: {error}")
-            return ProjectResult(
-                success=False, project_id=project_request.id, error=str(error)
-            )
+            return ProjectResult(success=False, project_id=project_request.id, error=str(error))
 
-    async def _execute_agent(
-        self, agent_name: str, input_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _execute_agent(self, agent_name: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a specific agent with input data"""
         agent = self.agents.get(agent_name)
         if not agent:
@@ -241,9 +233,7 @@ class AgentOrchestrator:
         logger.info(f"Agent {agent_name} executed in {duration:.2f}s")
 
         if not result.get("success", False):
-            raise RuntimeError(
-                f"Agent {agent_name} failed: {result.get('error', 'Unknown error')}"
-            )
+            raise RuntimeError(f"Agent {agent_name} failed: {result.get('error', 'Unknown error')}")
 
         return result.get("data", {})
 

@@ -3,13 +3,14 @@ Database Base Configuration
 SQLAlchemy 엔진 및 세션 설정
 """
 
+import logging
 import os
 from typing import Generator
-from sqlalchemy import create_engine, MetaData, event, pool
+
+from sqlalchemy import MetaData, create_engine, event, pool
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool, QueuePool
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -143,11 +144,7 @@ def get_db() -> Generator[Session, None, None]:
 
 # Async session support (for future)
 try:
-    from sqlalchemy.ext.asyncio import (
-        create_async_engine,
-        AsyncSession,
-        async_sessionmaker,
-    )
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
     async_engine = create_async_engine(
         ASYNC_DATABASE_URL,

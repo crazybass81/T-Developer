@@ -3,10 +3,10 @@ AI Provider Configuration
 Manages OpenAI, Anthropic, and AWS Bedrock settings
 Integrated with AWS Secrets Manager and Parameter Store
 """
-import os
-from typing import Optional, Dict, Any
-from dataclasses import dataclass
 import logging
+import os
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 # Import AWS Secrets Manager (this will load credentials on import)
 try:
@@ -101,9 +101,7 @@ class AIConfig:
             return False
 
         if self.preferred_provider not in available:
-            logger.warning(
-                f"Preferred provider {self.preferred_provider} not available"
-            )
+            logger.warning(f"Preferred provider {self.preferred_provider} not available")
             if self.fallback_provider and self.fallback_provider in available:
                 logger.info(f"Using fallback provider: {self.fallback_provider}")
                 self.preferred_provider = self.fallback_provider

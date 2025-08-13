@@ -1,10 +1,10 @@
 # backend/src/agents/framework/data_sharing.py
-from typing import Dict, Any, Optional, List, Set
 import asyncio
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any, Dict, List, Optional, Set
 
 
 class ShareScope(Enum):
@@ -77,9 +77,7 @@ class DataSharingManager:
 
         return data_id
 
-    async def get_shared_data(
-        self, data_id: str, requester_id: str
-    ) -> Optional[Dict[str, Any]]:
+    async def get_shared_data(self, data_id: str, requester_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve shared data with access control"""
         async with self._lock:
             data = self.shared_data.get(data_id)
@@ -190,9 +188,7 @@ class AgentDataSharingMixin:
         self, result: Dict[str, Any], scope: ShareScope = ShareScope.PROJECT
     ) -> str:
         """Share execution result"""
-        return await self.data_manager.share_data(
-            self.agent_id, DataType.RESULT, result, scope
-        )
+        return await self.data_manager.share_data(self.agent_id, DataType.RESULT, result, scope)
 
     async def get_shared_state(self, data_id: str) -> Optional[Dict[str, Any]]:
         """Get shared state from another agent"""

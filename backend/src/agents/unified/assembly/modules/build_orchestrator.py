@@ -2,12 +2,12 @@
 Orchestrates build processes across different frameworks and environments
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import asyncio
-import subprocess
 import os
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -73,9 +73,7 @@ class BuildOrchestrator:
                     f.write(content)
 
             # Execute build commands
-            commands = self.build_commands.get(
-                framework, ['echo "No build commands defined"']
-            )
+            commands = self.build_commands.get(framework, ['echo "No build commands defined"'])
 
             for command in commands:
                 build_logs.append(f"Executing: {command}")

@@ -1,11 +1,11 @@
 # backend/src/agents/framework/event_bus.py
-from typing import Dict, Any, List, Callable, Optional
-from dataclasses import dataclass
-from enum import Enum
 import asyncio
 import json
-from datetime import datetime
 import weakref
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 
 class EventPriority(Enum):
@@ -76,9 +76,7 @@ class EventBus:
             if subscription.filter_func and not subscription.filter_func(event):
                 continue
 
-            task = asyncio.create_task(
-                self._safe_call_handler(subscription.handler, event)
-            )
+            task = asyncio.create_task(self._safe_call_handler(subscription.handler, event))
             tasks.append(task)
 
         if tasks:
@@ -93,9 +91,7 @@ class EventBus:
         except Exception as e:
             print(f"Event handler error: {e}")
 
-    def get_event_history(
-        self, event_type: Optional[str] = None, limit: int = 100
-    ) -> List[Event]:
+    def get_event_history(self, event_type: Optional[str] = None, limit: int = 100) -> List[Event]:
         events = self.event_history
         if event_type:
             events = [e for e in events if e.type == event_type]

@@ -3,11 +3,13 @@ Authentication Tests
 JWT 및 인증 시스템 테스트
 """
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+
 from src.auth.jwt_handler import JWTHandler, create_access_token, verify_token
-from src.auth.models import User, UserRole, Permission
-from src.auth.permissions import has_permission, has_all_permissions
+from src.auth.models import Permission, User, UserRole
+from src.auth.permissions import has_all_permissions, has_permission
 
 
 class TestJWTHandler:
@@ -32,9 +34,7 @@ class TestJWTHandler:
         """유효한 토큰 검증 테스트"""
         handler = JWTHandler()
 
-        token = handler.create_access_token(
-            user_id="test-user-id", email="test@example.com"
-        )
+        token = handler.create_access_token(user_id="test-user-id", email="test@example.com")
 
         payload = handler.verify_token(token, token_type="access")
 
@@ -48,9 +48,7 @@ class TestJWTHandler:
         handler = JWTHandler()
         handler.access_token_expire = -1  # Set to expire immediately
 
-        token = handler.create_access_token(
-            user_id="test-user-id", email="test@example.com"
-        )
+        token = handler.create_access_token(user_id="test-user-id", email="test@example.com")
 
         with pytest.raises(ValueError, match="Token has expired"):
             handler.verify_token(token, token_type="access")
@@ -66,9 +64,7 @@ class TestJWTHandler:
         """Refresh token 생성 테스트"""
         handler = JWTHandler()
 
-        token = handler.create_refresh_token(
-            user_id="test-user-id", email="test@example.com"
-        )
+        token = handler.create_refresh_token(user_id="test-user-id", email="test@example.com")
 
         payload = handler.verify_token(token, token_type="refresh")
 
@@ -81,9 +77,7 @@ class TestJWTHandler:
         handler = JWTHandler()
         handler.redis_client = mock_redis
 
-        token = handler.create_access_token(
-            user_id="test-user-id", email="test@example.com"
-        )
+        token = handler.create_access_token(user_id="test-user-id", email="test@example.com")
 
         result = handler.revoke_token(token)
         assert result is True
@@ -183,11 +177,7 @@ class TestPermissions:
         )
 
         # Should have all these permissions
-        assert has_all_permissions(
-            user, [Permission.PROJECT_CREATE, Permission.PROJECT_READ]
-        )
+        assert has_all_permissions(user, [Permission.PROJECT_CREATE, Permission.PROJECT_READ])
 
         # Should not have all these permissions
-        assert not has_all_permissions(
-            user, [Permission.PROJECT_CREATE, Permission.ADMIN_ACCESS]
-        )
+        assert not has_all_permissions(user, [Permission.PROJECT_CREATE, Permission.ADMIN_ACCESS])

@@ -5,13 +5,13 @@ T-Developer Complete Service
 """
 
 import asyncio
-import sys
-import os
 import json
+import logging
+import os
+import sys
 import time
 from datetime import datetime
-from typing import Dict, Any, Optional
-import logging
+from typing import Any, Dict, Optional
 
 # 경로 설정
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -20,16 +20,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from agents.unified.assembly.agent import AssemblyAgent
+from agents.unified.component_decision.agent import ComponentDecisionAgent
+from agents.unified.download.agent import DownloadAgent
+from agents.unified.generation.agent import GenerationAgent
+from agents.unified.match_rate.agent import MatchRateAgent
+
 # 실제 Python 에이전트들 import (unified 경로에서)
 from agents.unified.nl_input.agent import NLInputAgent
-from agents.unified.ui_selection.agent import UISelectionAgent
 from agents.unified.parser.agent import ParserAgent
-from agents.unified.component_decision.agent import ComponentDecisionAgent
-from agents.unified.match_rate.agent import MatchRateAgent
 from agents.unified.search.agent import SearchAgent
-from agents.unified.generation.agent import GenerationAgent
-from agents.unified.assembly.agent import AssemblyAgent
-from agents.unified.download.agent import DownloadAgent
+from agents.unified.ui_selection.agent import UISelectionAgent
 
 
 class CompleteOrchestrator:
@@ -100,9 +101,7 @@ class CompleteOrchestrator:
                 elif agent_name == "parser":
                     result = await self._execute_parser(agent, pipeline_data)
                 elif agent_name == "component_decision":
-                    result = await self._execute_component_decision(
-                        agent, pipeline_data
-                    )
+                    result = await self._execute_component_decision(agent, pipeline_data)
                 elif agent_name == "match_rate":
                     result = await self._execute_match_rate(agent, pipeline_data)
                 elif agent_name == "search":
@@ -187,9 +186,7 @@ class CompleteOrchestrator:
 
         # 실제 프로젝트 구조 파싱
         structure = agent.generate_structure(framework, components)
-        dependencies = agent.extract_dependencies(
-            framework, data.get("requirements", [])
-        )
+        dependencies = agent.extract_dependencies(framework, data.get("requirements", []))
 
         return {
             "project_structure": structure,
@@ -295,9 +292,7 @@ class CompleteOrchestrator:
     def _log_stage_results(self, stage: str, result: Dict):
         """스테이지 결과 로깅"""
         if stage == "nl_input":
-            logger.info(
-                f"   📋 Requirements: {len(result.get('requirements', []))} extracted"
-            )
+            logger.info(f"   📋 Requirements: {len(result.get('requirements', []))} extracted")
         elif stage == "ui_selection":
             logger.info(f"   🎨 Framework: {result.get('framework', 'N/A')}")
         elif stage == "generation":
@@ -307,11 +302,12 @@ class CompleteOrchestrator:
             logger.info(f"   📦 Download URL: {result.get('download_url', 'N/A')}")
 
 
+import uvicorn
+
 # FastAPI 통합
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
-import uvicorn
 
 app = FastAPI(title="T-Developer Complete Service")
 

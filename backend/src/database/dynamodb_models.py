@@ -3,9 +3,10 @@ DynamoDB Models
 DynamoDB 테이블에 대한 데이터 모델 정의
 """
 
-from typing import Dict, Any, Optional, List
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -87,9 +88,7 @@ class SessionModel(BaseModel):
     project_id: Optional[str] = None
     started_at: int = Field(default_factory=lambda: int(datetime.now().timestamp()))
     last_activity: int = Field(default_factory=lambda: int(datetime.now().timestamp()))
-    ttl: int = Field(
-        default_factory=lambda: int(datetime.now().timestamp()) + 3600
-    )  # 1 hour TTL
+    ttl: int = Field(default_factory=lambda: int(datetime.now().timestamp()) + 3600)  # 1 hour TTL
     context: Dict[str, Any] = {}
 
     def to_dynamodb_item(self) -> Dict[str, Any]:

@@ -3,8 +3,8 @@ Requirement Validator Module
 Validates extracted requirements for completeness and consistency
 """
 
-from typing import Any, Dict, List
 from dataclasses import dataclass
+from typing import Any, Dict, List
 
 
 @dataclass
@@ -55,9 +55,7 @@ class RequirementValidator:
             if feature_count < self.validation_rules["min_features"]:
                 issues.append("At least one feature must be specified")
             elif feature_count > self.validation_rules["max_features"]:
-                warnings.append(
-                    f"Too many features ({feature_count}). Consider prioritizing."
-                )
+                warnings.append(f"Too many features ({feature_count}). Consider prioritizing.")
 
         # Validate description length
         if hasattr(requirements, "description"):
@@ -70,16 +68,9 @@ class RequirementValidator:
         # Check for conflicting requirements
         if hasattr(requirements, "constraints"):
             constraints = requirements.constraints
-            if "No backend required" in constraints and hasattr(
-                requirements, "features"
-            ):
-                if (
-                    "api" in requirements.features
-                    or "database" in requirements.features
-                ):
-                    issues.append(
-                        "Conflict: No backend constraint with API/database features"
-                    )
+            if "No backend required" in constraints and hasattr(requirements, "features"):
+                if "api" in requirements.features or "database" in requirements.features:
+                    issues.append("Conflict: No backend constraint with API/database features")
 
         # Validate technical requirements
         if hasattr(requirements, "technical_requirements"):
@@ -98,18 +89,13 @@ class RequirementValidator:
                         )
 
                     if not backend and hasattr(requirements, "features"):
-                        if (
-                            "auth" in requirements.features
-                            or "database" in requirements.features
-                        ):
+                        if "auth" in requirements.features or "database" in requirements.features:
                             warnings.append(
                                 "Backend required for authentication and database features"
                             )
 
         # Check complexity vs effort estimation
-        if hasattr(requirements, "complexity") and hasattr(
-            requirements, "estimated_effort_hours"
-        ):
+        if hasattr(requirements, "complexity") and hasattr(requirements, "estimated_effort_hours"):
             complexity = requirements.complexity
             effort = requirements.estimated_effort_hours
 
@@ -122,13 +108,9 @@ class RequirementValidator:
             if complexity in expected_ranges:
                 min_effort, max_effort = expected_ranges[complexity]
                 if effort < min_effort:
-                    warnings.append(
-                        f"Effort estimate seems low for {complexity} project"
-                    )
+                    warnings.append(f"Effort estimate seems low for {complexity} project")
                 elif effort > max_effort:
-                    warnings.append(
-                        f"Effort estimate seems high for {complexity} project"
-                    )
+                    warnings.append(f"Effort estimate seems high for {complexity} project")
 
         # Provide suggestions based on project type
         if hasattr(requirements, "project_type"):

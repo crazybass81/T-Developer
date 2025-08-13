@@ -3,26 +3,27 @@ Agent Registration API Endpoints
 FastAPI routes for agent registration and management
 """
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Dict, Optional, List, Any
-from datetime import datetime
-from uuid import uuid4
-import structlog
 import hashlib
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
-from src.core.database import get_db
-from src.core.registry.base_registry import BaseAgentRegistry
-from src.core.registry.agent_repository import AgentRepository
-from src.core.registry.ai_capability_analyzer import AICapabilityAnalyzer
+import structlog
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.api.v1.models.agent_models import (
+    AgentDetailResponse,
+    AgentListResponse,
     AgentRegistrationRequest,
     AgentRegistrationResponse,
     AgentUpdateRequest,
-    AgentListResponse,
-    AgentDetailResponse,
 )
-from src.core.auth.dependencies import get_current_user, User
+from src.core.auth.dependencies import User, get_current_user
+from src.core.database import get_db
+from src.core.registry.agent_repository import AgentRepository
+from src.core.registry.ai_capability_analyzer import AICapabilityAnalyzer
+from src.core.registry.base_registry import BaseAgentRegistry
 from src.core.validation.code_validator import CodeValidator
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agent-registration"])
@@ -127,9 +128,7 @@ async def register_agent(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(
-            f"Agent registration failed", error=str(e), user=current_user.username
-        )
+        logger.error("Agent registration failed", error=str(e), user=current_user.username)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}",
@@ -173,9 +172,7 @@ async def get_agent(
             name=agent["name"],
             version=agent["version"],
             description=agent.get("description"),
-            code=agent["code"]
-            if current_user.has_permission("agent:code:read")
-            else None,
+            code=agent["code"] if current_user.has_permission("agent:code:read") else None,
             ai_capabilities=agent.get("ai_capabilities", {}),
             ai_quality_score=agent.get("ai_quality_score"),
             execution_count=agent.get("execution_count", 0),
@@ -351,16 +348,12 @@ async def list_agents(
 
         # Get agents from repository
         repository = AgentRepository(db)
-        agents = await repository.list_agents(
-            filters=filters, limit=limit, offset=offset
-        )
+        agents = await repository.list_agents(filters=filters, limit=limit, offset=offset)
 
         # Get total count
         total_count = len(agents)  # In production, use a separate count query
 
-        return AgentListResponse(
-            agents=agents, total_count=total_count, limit=limit, offset=offset
-        )
+        return AgentListResponse(agents=agents, total_count=total_count, limit=limit, offset=offset)
 
     except HTTPException:
         raise
@@ -468,9 +461,7 @@ async def analyze_agent_with_ai(
         # await notify_user(user_id, agent_id, "analysis_complete")
 
     except Exception as e:
-        logger.error(
-            f"AI analysis failed for agent {agent_id}", task_id=task_id, error=str(e)
-        )
+        logger.error(f"AI analysis failed for agent {agent_id}", task_id=task_id, error=str(e))
 
         # Update agent status to indicate analysis failure
         try:
@@ -479,7 +470,7 @@ async def analyze_agent_with_ai(
                 agent_id,
                 {"status": "analysis_failed", "ai_suggestions": {"error": str(e)}},
             )
-        except:
+        except Exception:
             pass
 
 

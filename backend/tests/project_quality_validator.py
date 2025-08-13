@@ -4,18 +4,18 @@ Project Quality Validator
 생성된 프로젝트의 품질을 검증하는 시스템
 """
 
+import ast
 import asyncio
 import json
+import logging
+import re
 import subprocess
 import tempfile
 import zipfile
-from pathlib import Path
-from typing import Dict, Any, List, Optional
-import re
-import ast
 from dataclasses import dataclass
 from datetime import datetime
-import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -119,12 +119,8 @@ class ProjectQualityValidator:
         score = 100.0
 
         # JavaScript/TypeScript 파일들 검사
-        js_files = list(self.project_path.rglob("*.js")) + list(
-            self.project_path.rglob("*.jsx")
-        )
-        ts_files = list(self.project_path.rglob("*.ts")) + list(
-            self.project_path.rglob("*.tsx")
-        )
+        js_files = list(self.project_path.rglob("*.js")) + list(self.project_path.rglob("*.jsx"))
+        ts_files = list(self.project_path.rglob("*.ts")) + list(self.project_path.rglob("*.tsx"))
 
         all_files = js_files + ts_files
 
@@ -155,15 +151,10 @@ class ProjectQualityValidator:
                 # 기본 React 패턴 검사
                 if file_path.suffix in [".jsx", ".tsx"]:
                     if "export default" not in content:
-                        issues.append(
-                            f"No default export in React component: {file_path.name}"
-                        )
+                        issues.append(f"No default export in React component: {file_path.name}")
                         score -= 3
 
-                    if (
-                        "import React" not in content
-                        and "import * as React" not in content
-                    ):
+                    if "import React" not in content and "import * as React" not in content:
                         # React 17+ 에서는 필요없을 수 있지만 권장
                         recommendations.append(
                             f"Consider explicit React import in {file_path.name}"
@@ -171,9 +162,7 @@ class ProjectQualityValidator:
 
                 # 함수 복잡도 간단 검사
                 function_count = len(
-                    re.findall(
-                        r"function\s+\w+|const\s+\w+\s*=\s*\([^)]*\)\s*=>", content
-                    )
+                    re.findall(r"function\s+\w+|const\s+\w+\s*=\s*\([^)]*\)\s*=>", content)
                 )
                 if function_count > 10:
                     recommendations.append(
@@ -228,9 +217,7 @@ class ProjectQualityValidator:
                     issues.append("React found but react-dom missing")
 
                 if not package_data.get("dependencies", {}).get("react-scripts"):
-                    recommendations.append(
-                        "Consider using react-scripts for easier build setup"
-                    )
+                    recommendations.append("Consider using react-scripts for easier build setup")
 
             # 스크립트 검증
             scripts = package_data.get("scripts", {})
@@ -302,9 +289,7 @@ class ProjectQualityValidator:
             recommendations.append("ESLint configuration detected - good practice")
 
         # 코드 스타일 간단 검사
-        js_files = list(self.project_path.rglob("*.js")) + list(
-            self.project_path.rglob("*.jsx")
-        )
+        js_files = list(self.project_path.rglob("*.js")) + list(self.project_path.rglob("*.jsx"))
 
         for file_path in js_files:
             try:
@@ -401,9 +386,7 @@ class ProjectQualityValidator:
                         f"Consider pinning version for {dep_name} for better security"
                     )
                 elif version == "*" or version == "latest":
-                    issues.append(
-                        f"Unsafe version specification for {dep_name}: {version}"
-                    )
+                    issues.append(f"Unsafe version specification for {dep_name}: {version}")
                     score -= 15
 
             # 의존성 개수 검사
@@ -481,9 +464,7 @@ class ProjectQualityValidator:
         src_dir = self.project_path / "src"
         if src_dir.exists():
             src_files = list(src_dir.rglob("*"))
-            js_files = [
-                f for f in src_files if f.suffix in [".js", ".jsx", ".ts", ".tsx"]
-            ]
+            js_files = [f for f in src_files if f.suffix in [".js", ".jsx", ".ts", ".tsx"]]
 
             if len(js_files) < 2:
                 issues.append("Very few source files - project may be incomplete")
@@ -492,9 +473,7 @@ class ProjectQualityValidator:
             # 컴포넌트 조직화 확인
             components_dir = src_dir / "components"
             if len(js_files) > 5 and not components_dir.exists():
-                recommendations.append(
-                    "Consider organizing components in a components/ directory"
-                )
+                recommendations.append("Consider organizing components in a components/ directory")
 
         return {
             "score": max(0, score),
@@ -533,17 +512,13 @@ class ProjectQualityValidator:
             required_sections = ["install", "start", "run", "setup"]
 
             readme_lower = readme_content.lower()
-            found_sections = sum(
-                1 for section in required_sections if section in readme_lower
-            )
+            found_sections = sum(1 for section in required_sections if section in readme_lower)
 
             if found_sections == 0:
                 issues.append("README.md lacks setup/installation instructions")
                 score -= 20
             elif found_sections < 2:
-                recommendations.append(
-                    "Add more detailed setup instructions to README.md"
-                )
+                recommendations.append("Add more detailed setup instructions to README.md")
 
             # 코드 블록 확인
             if "```" not in readme_content and "`" not in readme_content:
@@ -596,8 +571,7 @@ class QualityReportGenerator:
             "overall_assessment": {
                 "score": metrics.overall_score,
                 "grade": get_grade(metrics.overall_score),
-                "production_ready": metrics.overall_score >= 80
-                and metrics.build_success,
+                "production_ready": metrics.overall_score >= 80 and metrics.build_success,
             },
             "detailed_scores": {
                 "code_quality": {

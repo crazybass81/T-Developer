@@ -2,10 +2,10 @@
 """
 Python 가상 환경 설정 스크립트
 """
+import os
 import subprocess
 import sys
 import venv
-import os
 
 
 def create_virtual_env():

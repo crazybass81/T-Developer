@@ -3,10 +3,11 @@ Authentication Models
 사용자 및 권한 모델
 """
 
-from typing import List, Optional
-from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserRole(str, Enum):

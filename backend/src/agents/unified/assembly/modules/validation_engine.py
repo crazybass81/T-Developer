@@ -2,12 +2,12 @@
 Validates project integrity and quality gates
 """
 
-from typing import Dict, List, Any, Optional
 import asyncio
-import os
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -71,9 +71,7 @@ class ValidationEngine:
             framework = context.get("framework", "react")
 
             # Required files validation
-            required_files_issues = await self._validate_required_files(
-                optimized_files, framework
-            )
+            required_files_issues = await self._validate_required_files(optimized_files, framework)
             issues.extend(required_files_issues)
 
             # Code quality validation
@@ -85,9 +83,7 @@ class ValidationEngine:
             issues.extend(security_issues)
 
             # Performance validation
-            performance_issues = await self._validate_performance(
-                optimized_files, context
-            )
+            performance_issues = await self._validate_performance(optimized_files, context)
             issues.extend(performance_issues)
 
             # Check if quality gates are passed

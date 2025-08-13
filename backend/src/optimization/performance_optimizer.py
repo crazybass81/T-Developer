@@ -4,17 +4,18 @@ Handles caching, profiling, resource optimization and bottleneck identification
 """
 
 import asyncio
+import json
 import logging
-import time
-import psutil
+import pickle
 import threading
-from typing import Dict, List, Any, Optional, Callable, Tuple
+import time
+from collections import defaultdict, deque
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from collections import defaultdict, deque
-import json
-import pickle
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import psutil
 
 logger = logging.getLogger(__name__)
 
@@ -78,9 +79,7 @@ class MemoryCache:
         with self.lock:
             # Evict oldest if at capacity
             if len(self.cache) >= self.max_size:
-                oldest_key = min(
-                    self.access_times.keys(), key=lambda k: self.access_times[k]
-                )
+                oldest_key = min(self.access_times.keys(), key=lambda k: self.access_times[k])
                 del self.cache[oldest_key]
                 del self.access_times[oldest_key]
 
@@ -99,8 +98,7 @@ class MemoryCache:
             return {
                 "size": len(self.cache),
                 "max_size": self.max_size,
-                "hit_rate": getattr(self, "_hit_count", 0)
-                / getattr(self, "_access_count", 1),
+                "hit_rate": getattr(self, "_hit_count", 0) / getattr(self, "_access_count", 1),
                 "ttl_seconds": self.ttl_seconds,
             }
 
@@ -108,9 +106,7 @@ class MemoryCache:
 class PersistentCache:
     """Disk-based persistent cache for large objects"""
 
-    def __init__(
-        self, cache_dir: str = "/tmp/t_developer_cache", max_size_mb: int = 500
-    ):
+    def __init__(self, cache_dir: str = "/tmp/t_developer_cache", max_size_mb: int = 500):
         self.cache_dir = cache_dir
         self.max_size_mb = max_size_mb
         self.index_file = f"{cache_dir}/index.json"
@@ -236,22 +232,18 @@ class PerformanceProfiler:
 
     def __init__(self, window_size: int = 100):
         self.window_size = window_size
-        self.metrics_history: Dict[str, deque] = defaultdict(
-            lambda: deque(maxlen=window_size)
-        )
+        self.metrics_history: Dict[str, deque] = defaultdict(lambda: deque(maxlen=window_size))
         self.resource_history: deque = deque(maxlen=window_size)
         self.bottlenecks: Dict[str, float] = {}
 
-    def record_stage_metrics(
-        self, stage_name: str, metrics: PerformanceMetrics
-    ) -> None:
+    def record_stage_metrics(self, stage_name: str, metrics: PerformanceMetrics) -> None:
         """Record performance metrics for a stage"""
         self.metrics_history[stage_name].append(metrics)
 
         # Update bottleneck analysis
-        avg_time = sum(
-            m.execution_time for m in self.metrics_history[stage_name]
-        ) / len(self.metrics_history[stage_name])
+        avg_time = sum(m.execution_time for m in self.metrics_history[stage_name]) / len(
+            self.metrics_history[stage_name]
+        )
         self.bottlenecks[stage_name] = avg_time
 
     def record_resource_usage(self) -> None:
@@ -282,9 +274,7 @@ class PerformanceProfiler:
         except Exception as e:
             logger.warning(f"Failed to record resource usage: {e}")
 
-    def get_bottlenecks(
-        self, threshold_percentile: float = 0.9
-    ) -> List[Tuple[str, float]]:
+    def get_bottlenecks(self, threshold_percentile: float = 0.9) -> List[Tuple[str, float]]:
         """Identify performance bottlenecks"""
         if not self.bottlenecks:
             return []
@@ -296,9 +286,7 @@ class PerformanceProfiler:
 
         # Find stages above threshold
         bottlenecks = [
-            (stage, time)
-            for stage, time in self.bottlenecks.items()
-            if time >= threshold
+            (stage, time) for stage, time in self.bottlenecks.items() if time >= threshold
         ]
 
         return sorted(bottlenecks, key=lambda x: x[1], reverse=True)
@@ -311,35 +299,25 @@ class PerformanceProfiler:
         bottlenecks = self.get_bottlenecks()
         if bottlenecks:
             slowest_stage, time = bottlenecks[0]
-            recommendations.append(
-                f"Optimize {slowest_stage} - slowest stage ({time:.2f}s avg)"
-            )
+            recommendations.append(f"Optimize {slowest_stage} - slowest stage ({time:.2f}s avg)")
 
         # Analyze resource usage
         if self.resource_history:
-            avg_cpu = sum(r.cpu_percent for r in self.resource_history) / len(
-                self.resource_history
-            )
+            avg_cpu = sum(r.cpu_percent for r in self.resource_history) / len(self.resource_history)
             avg_memory = sum(r.memory_percent for r in self.resource_history) / len(
                 self.resource_history
             )
 
             if avg_cpu > 80:
-                recommendations.append(
-                    "High CPU usage detected - consider parallel processing"
-                )
+                recommendations.append("High CPU usage detected - consider parallel processing")
 
             if avg_memory > 80:
-                recommendations.append(
-                    "High memory usage - implement memory optimization"
-                )
+                recommendations.append("High memory usage - implement memory optimization")
 
             # Check for resource spikes
             cpu_spikes = [r for r in self.resource_history if r.cpu_percent > 90]
             if len(cpu_spikes) > len(self.resource_history) * 0.1:
-                recommendations.append(
-                    "Frequent CPU spikes - review algorithm complexity"
-                )
+                recommendations.append("Frequent CPU spikes - review algorithm complexity")
 
         return recommendations
 
@@ -367,9 +345,7 @@ class PerformanceOptimizer:
         )
 
         # Initialize profiler
-        self.profiler = (
-            PerformanceProfiler() if self.config["enable_profiling"] else None
-        )
+        self.profiler = PerformanceProfiler() if self.config["enable_profiling"] else None
 
         # Optimization state
         self.optimization_history: List[Dict[str, Any]] = []
@@ -434,9 +410,7 @@ class PerformanceOptimizer:
                     return cached_result, metrics
 
             # Determine execution strategy
-            execution_strategy = await self._determine_execution_strategy(
-                stage_name, input_data
-            )
+            execution_strategy = await self._determine_execution_strategy(stage_name, input_data)
 
             # Execute with chosen strategy
             if execution_strategy == "parallel":
@@ -504,9 +478,7 @@ class PerformanceOptimizer:
         # Check historical performance
         if self.profiler and stage_name in self.profiler.metrics_history:
             recent_metrics = list(self.profiler.metrics_history[stage_name])[-10:]
-            avg_time = sum(m.execution_time for m in recent_metrics) / len(
-                recent_metrics
-            )
+            avg_time = sum(m.execution_time for m in recent_metrics) / len(recent_metrics)
 
             # Use parallel execution for slow stages
             if avg_time > self.config["parallel_execution_threshold"]:
@@ -519,9 +491,7 @@ class PerformanceOptimizer:
 
         return "sync"
 
-    async def _execute_parallel(
-        self, func: Callable, input_data: Dict[str, Any]
-    ) -> Any:
+    async def _execute_parallel(self, func: Callable, input_data: Dict[str, Any]) -> Any:
         """Execute function in parallel (for CPU-bound tasks)"""
 
         loop = asyncio.get_event_loop()
@@ -596,9 +566,7 @@ class PerformanceOptimizer:
 
         # Check if optimization is needed
         recent_resources = list(self.profiler.resource_history)[-10:]
-        avg_memory = sum(r.memory_percent for r in recent_resources) / len(
-            recent_resources
-        )
+        avg_memory = sum(r.memory_percent for r in recent_resources) / len(recent_resources)
 
         optimization_actions = []
 
@@ -607,9 +575,7 @@ class PerformanceOptimizer:
             if self.memory_cache:
                 old_size = len(self.memory_cache.cache)
                 self.memory_cache.clear()
-                optimization_actions.append(
-                    f"Cleared memory cache ({old_size} entries)"
-                )
+                optimization_actions.append(f"Cleared memory cache ({old_size} entries)")
 
         # Cache optimization
         if self.persistent_cache:
@@ -637,9 +603,7 @@ class PerformanceOptimizer:
             "resource_usage": {},
             "bottlenecks": [],
             "recommendations": [],
-            "optimization_history": self.optimization_history[
-                -10:
-            ],  # Last 10 optimizations
+            "optimization_history": self.optimization_history[-10:],  # Last 10 optimizations
         }
 
         # Cache statistics
@@ -654,8 +618,7 @@ class PerformanceOptimizer:
                 / len(recent_resources),
                 "avg_memory_percent": sum(r.memory_percent for r in recent_resources)
                 / len(recent_resources),
-                "avg_threads": sum(r.threads for r in recent_resources)
-                / len(recent_resources),
+                "avg_threads": sum(r.threads for r in recent_resources) / len(recent_resources),
             }
 
         # Bottlenecks and recommendations

@@ -4,14 +4,15 @@ T-Developer Agent Communication System - Unified Implementation
 Combines communication.py and communication_manager.py functionality
 """
 
-from typing import Dict, List, Set, Any, Optional, Callable
-from abc import ABC, abstractmethod
 import asyncio
 import logging
-from dataclasses import dataclass
-from enum import Enum
 import uuid
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Set
+
 from ..core.base_agent import AgentMessage
 
 logger = logging.getLogger(__name__)
@@ -172,9 +173,7 @@ class AgentRPC:
         self.communication_manager = communication_manager
         self.pending_calls: Dict[str, RPCCall] = {}
 
-    async def call(
-        self, target_agent: str, method: str, params: Any, timeout: float = 30.0
-    ) -> Any:
+    async def call(self, target_agent: str, method: str, params: Any, timeout: float = 30.0) -> Any:
         """Make RPC call to target agent"""
         call_id = f"rpc-{asyncio.get_event_loop().time()}-{id(self)}"
 
@@ -198,12 +197,8 @@ class AgentRPC:
         timeout_handle = asyncio.get_event_loop().call_later(timeout, timeout_callback)
 
         self.pending_calls[call_id] = RPCCall(
-            resolve=lambda result: future.set_result(result)
-            if not future.done()
-            else None,
-            reject=lambda error: future.set_exception(error)
-            if not future.done()
-            else None,
+            resolve=lambda result: future.set_result(result) if not future.done() else None,
+            reject=lambda error: future.set_exception(error) if not future.done() else None,
             timeout_handle=timeout_handle,
         )
 

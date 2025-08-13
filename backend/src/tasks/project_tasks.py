@@ -3,19 +3,20 @@ Project-related Async Tasks
 프로젝트 관련 비동기 작업
 """
 
-from celery import current_task
-from typing import Dict, Any, Optional
+import asyncio
+import json
 import os
 import shutil
 import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
-import json
-import asyncio
+from typing import Any, Dict, Optional
 
-from .celery_app import celery_app
-from ..database.models import Project, AgentExecution, AgentStatus
+from celery import current_task
+
 from ..database.base import SessionLocal
+from ..database.models import AgentExecution, AgentStatus, Project
+from .celery_app import celery_app
 
 
 @celery_app.task(bind=True, name="generate_project_async", queue="projects")
@@ -76,9 +77,7 @@ def generate_project_async(
         zip_path = create_project_zip(project_path, project_id)
 
         # Stage 7: Update database (100%)
-        current_task.update_state(
-            state="PROCESSING", meta={"stage": "finalizing", "progress": 95}
-        )
+        current_task.update_state(state="PROCESSING", meta={"stage": "finalizing", "progress": 95})
 
         project.status = "completed"
         project.file_path = str(zip_path)

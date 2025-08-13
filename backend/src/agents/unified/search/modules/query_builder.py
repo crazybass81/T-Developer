@@ -3,9 +3,9 @@ Query Builder Module
 Builds optimized search queries from user input
 """
 
-from typing import Dict, List, Any, Optional
 import re
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 class QueryBuilder:

@@ -3,17 +3,18 @@ Template Engine Module for Generation Agent
 Advanced template processing system with dynamic content generation
 """
 
-from typing import Dict, List, Any, Optional, Callable, Union
 import asyncio
 import json
-import re
 import os
+import re
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Union
+
 import yaml
-from jinja2 import Environment, BaseLoader, meta, select_autoescape
+from jinja2 import BaseLoader, Environment, meta, select_autoescape
 from jinja2.exceptions import TemplateError, TemplateSyntaxError
 
 
@@ -290,9 +291,7 @@ class TemplateEngine:
                 error=str(e),
             )
 
-    async def _build_context(
-        self, base_context: Dict[str, Any], framework: str
-    ) -> Dict[str, Any]:
+    async def _build_context(self, base_context: Dict[str, Any], framework: str) -> Dict[str, Any]:
         """Build complete template context"""
 
         # Start with base context
@@ -318,24 +317,16 @@ class TemplateEngine:
 
         # Add framework-specific utilities
         if framework == "react":
-            full_context["utils"]["componentName"] = lambda name: self._to_pascal_case(
-                name
-            )
-            full_context["utils"][
-                "hookName"
-            ] = lambda name: f"use{self._to_pascal_case(name)}"
+            full_context["utils"]["componentName"] = lambda name: self._to_pascal_case(name)
+            full_context["utils"]["hookName"] = lambda name: f"use{self._to_pascal_case(name)}"
         elif framework == "vue":
-            full_context["utils"]["componentName"] = lambda name: self._to_pascal_case(
-                name
-            )
+            full_context["utils"]["componentName"] = lambda name: self._to_pascal_case(name)
             full_context["utils"][
                 "composableName"
             ] = lambda name: f"use{self._to_pascal_case(name)}"
         elif framework in ["fastapi", "django", "flask"]:
             full_context["utils"]["className"] = lambda name: self._to_pascal_case(name)
-            full_context["utils"]["functionName"] = lambda name: self._to_snake_case(
-                name
-            )
+            full_context["utils"]["functionName"] = lambda name: self._to_snake_case(name)
 
         # Process context processors
         for processor in self.context_processors:
@@ -452,9 +443,7 @@ class TemplateEngine:
                     variables.append(var_name)
             return variables
 
-    def _filter_context(
-        self, context: Dict[str, Any], template_vars: List[str]
-    ) -> Dict[str, Any]:
+    def _filter_context(self, context: Dict[str, Any], template_vars: List[str]) -> Dict[str, Any]:
         """Filter context to include only relevant variables"""
 
         filtered = {}
@@ -503,15 +492,11 @@ class TemplateEngine:
 
         # Fix indentation for specific content types
         if template.content_type == ContentType.SOURCE_CODE:
-            processed_content = self._fix_code_indentation(
-                processed_content, template.language
-            )
+            processed_content = self._fix_code_indentation(processed_content, template.language)
 
         # Add file headers if needed
         if template.content_type in [ContentType.SOURCE_CODE, ContentType.TEST_FILE]:
-            processed_content = self._add_file_header(
-                processed_content, template, context
-            )
+            processed_content = self._add_file_header(processed_content, template, context)
 
         # Format code if possible
         if template.language in ["javascript", "typescript"]:
@@ -550,9 +535,7 @@ class TemplateEngine:
 
         return "\n".join(lines)
 
-    def _add_file_header(
-        self, content: str, template: Template, context: Dict[str, Any]
-    ) -> str:
+    def _add_file_header(self, content: str, template: Template, context: Dict[str, Any]) -> str:
         """Add file header comments"""
 
         if template.language in ["javascript", "typescript"]:
@@ -588,10 +571,7 @@ Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         for line in lines:
             stripped = line.rstrip()
             if stripped and not stripped.endswith((";", "{", "}", ")", ",", ":", "//")):
-                if any(
-                    keyword in stripped
-                    for keyword in ["const ", "let ", "var ", "return "]
-                ):
+                if any(keyword in stripped for keyword in ["const ", "let ", "var ", "return "]):
                     if not stripped.endswith(","):
                         stripped += ";"
             formatted_lines.append(stripped)
@@ -643,9 +623,7 @@ Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             return text
 
         components = re.split(r"[_\-\s]+", str(text))
-        return components[0].lower() + "".join(
-            word.capitalize() for word in components[1:]
-        )
+        return components[0].lower() + "".join(word.capitalize() for word in components[1:])
 
     def _to_snake_case(self, text: str) -> str:
         """Convert to snake_case"""

@@ -8,13 +8,13 @@ T-Developer Security Configuration
 """
 
 import os
-from typing import Optional, Dict, Any
 from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 try:
-    from .secrets_client import ClientConfig, CacheConfig
+    from .secrets_client import CacheConfig, ClientConfig
 except ImportError:
-    from secrets_client import ClientConfig, CacheConfig
+    from secrets_client import CacheConfig, ClientConfig
 
 
 @dataclass
@@ -52,20 +52,17 @@ class SecurityConfig:
             project_name=os.getenv("PROJECT_NAME", "t-developer"),
             environment=os.getenv("ENVIRONMENT", "development"),
             aws_region=os.getenv("AWS_REGION", "us-east-1"),
-            secrets_cache_enabled=os.getenv("SECRETS_CACHE_ENABLED", "true").lower()
-            == "true",
+            secrets_cache_enabled=os.getenv("SECRETS_CACHE_ENABLED", "true").lower() == "true",
             secrets_cache_ttl=int(os.getenv("SECRETS_CACHE_TTL", "300")),
             secrets_cache_max_size=int(os.getenv("SECRETS_CACHE_MAX_SIZE", "100")),
             secrets_retry_attempts=int(os.getenv("SECRETS_RETRY_ATTEMPTS", "3")),
             secrets_timeout=int(os.getenv("SECRETS_TIMEOUT", "30")),
             redis_url=os.getenv("REDIS_URL"),
             redis_enabled=os.getenv("REDIS_ENABLED", "false").lower() == "true",
-            audit_logging_enabled=os.getenv("AUDIT_LOGGING_ENABLED", "true").lower()
-            == "true",
+            audit_logging_enabled=os.getenv("AUDIT_LOGGING_ENABLED", "true").lower() == "true",
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             strict_tls=os.getenv("STRICT_TLS", "true").lower() == "true",
-            certificate_validation=os.getenv("CERT_VALIDATION", "true").lower()
-            == "true",
+            certificate_validation=os.getenv("CERT_VALIDATION", "true").lower() == "true",
         )
 
     def to_secrets_client_config(self) -> ClientConfig:

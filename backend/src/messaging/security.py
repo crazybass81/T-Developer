@@ -12,7 +12,7 @@ import hmac
 import json
 import time
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
@@ -372,3 +372,81 @@ class SecureMessageQueue:
                 return {"status": "rejected", "reason": "decryption_failed", "error": str(e)}
 
         return {"status": "accepted", "message": signed_message, "was_encrypted": False}
+
+
+class MessageSecurityManager:
+    """Unified message security manager for API Gateway integration"""
+
+    def __init__(self, config: Optional[Dict] = None):
+        self.config = config or {}
+        self.enable_encryption = self.config.get("enable_encryption", True)
+
+        # Initialize security components
+        encryption_key = self.config.get("encryption_key", "default-encryption-key")
+        hmac_key = self.config.get("hmac_key", "default-hmac-key")
+
+        self.encryptor = MessageEncryption(encryption_key)
+        self.authenticator = MessageAuthenticator(hmac_key)
+        self.validator = MessageValidator()
+
+        # Rate limiting config
+        rate_limit_config = self.config.get(
+            "rate_limit", {"max_messages": 100, "time_window": 3600}
+        )
+        self.rate_limiter = MessageRateLimiter(
+            rate_limit_config["max_messages"], rate_limit_config["time_window"]
+        )
+
+    def initialize(self):
+        """Initialize the security manager"""
+        # Perform any necessary initialization
+        pass
+
+    def encrypt_message(self, message: Dict) -> Dict:
+        """Encrypt message if encryption is enabled"""
+        if self.enable_encryption:
+            return self.encryptor.encrypt_message(message)
+        return message
+
+    def decrypt_message(self, message: Dict) -> Dict:
+        """Decrypt message if it's encrypted"""
+        if message.get("encrypted"):
+            return self.encryptor.decrypt_message(message)
+        return message
+
+    def validate_message_security(self, message: Dict, agent_id: str) -> Dict:
+        """Validate message security aspects"""
+        # Validate message structure
+        validation_result = self.validator.validate_message(message)
+        if not validation_result["valid"]:
+            return {
+                "valid": False,
+                "reason": "validation_failed",
+                "errors": validation_result["errors"],
+            }
+
+        # Check rate limits
+        if not self.rate_limiter.check_rate_limit(agent_id):
+            return {
+                "valid": False,
+                "reason": "rate_limited",
+                "rate_limit_status": self.rate_limiter.get_rate_limit_status(agent_id),
+            }
+
+        return {"valid": True, "warnings": validation_result.get("warnings", [])}
+
+    def sign_message(self, message: Dict) -> Dict:
+        """Sign message for authentication"""
+        return self.authenticator.sign_message(message)
+
+    def verify_message(self, signed_message: Dict) -> bool:
+        """Verify message signature"""
+        return self.authenticator.verify_message(signed_message)
+
+    def get_security_stats(self) -> Dict:
+        """Get security statistics"""
+        return {
+            "encryption_enabled": self.enable_encryption,
+            "rate_limiting_stats": self.rate_limiter.get_global_statistics(),
+            "timestamp": datetime.utcnow().isoformat(),
+        }

@@ -3,9 +3,9 @@ Result Ranker Module
 Advanced ranking algorithms for search results
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import math
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class ResultRanker:
@@ -53,9 +53,7 @@ class ResultRanker:
 
         # Apply ranking algorithm
         if algorithm in self.ranking_algorithms:
-            ranked_results = await self.ranking_algorithms[algorithm](
-                results, query, requirements
-            )
+            ranked_results = await self.ranking_algorithms[algorithm](results, query, requirements)
         else:
             ranked_results = await self._rank_by_hybrid(results, query, requirements)
 
@@ -110,9 +108,7 @@ class ResultRanker:
             quality_score = self._calculate_quality_score(result)
             result["quality_rank_score"] = quality_score
 
-        sorted_results = sorted(
-            results, key=lambda x: x.get("quality_rank_score", 0), reverse=True
-        )
+        sorted_results = sorted(results, key=lambda x: x.get("quality_rank_score", 0), reverse=True)
 
         return sorted_results
 
@@ -128,9 +124,7 @@ class ResultRanker:
             recency_score = self._calculate_recency_score(result)
             result["recency_rank_score"] = recency_score
 
-        sorted_results = sorted(
-            results, key=lambda x: x.get("recency_rank_score", 0), reverse=True
-        )
+        sorted_results = sorted(results, key=lambda x: x.get("recency_rank_score", 0), reverse=True)
 
         return sorted_results
 
@@ -148,9 +142,7 @@ class ResultRanker:
             popularity_score = self._calculate_popularity_score(result)
             quality_score = self._calculate_quality_score(result)
             recency_score = self._calculate_recency_score(result)
-            requirement_score = self._calculate_requirement_match_score(
-                result, requirements
-            )
+            requirement_score = self._calculate_requirement_match_score(result, requirements)
             diversity_score = self._calculate_diversity_score(result, results)
 
             # Normalize scores to 0-1 range
@@ -185,9 +177,7 @@ class ResultRanker:
                 "category_boost": category_boost,
             }
 
-        sorted_results = sorted(
-            results, key=lambda x: x.get("hybrid_rank_score", 0), reverse=True
-        )
+        sorted_results = sorted(results, key=lambda x: x.get("hybrid_rank_score", 0), reverse=True)
 
         return sorted_results
 
@@ -205,9 +195,7 @@ class ResultRanker:
             result["ml_rank_score"] = ml_score
             result["feature_vector"] = feature_vector
 
-        sorted_results = sorted(
-            results, key=lambda x: x.get("ml_rank_score", 0), reverse=True
-        )
+        sorted_results = sorted(results, key=lambda x: x.get("ml_rank_score", 0), reverse=True)
 
         return sorted_results
 
@@ -238,11 +226,7 @@ class ResultRanker:
         activity_score = self._calculate_activity_score(result)  # Max 1 point
 
         total_score = (
-            stars_score
-            + downloads_score
-            + community_score
-            + contributor_score
-            + activity_score
+            stars_score + downloads_score + community_score + contributor_score + activity_score
         )
         return min(total_score, 10.0)
 
@@ -281,9 +265,7 @@ class ResultRanker:
 
         try:
             if isinstance(last_updated, str):
-                update_date = datetime.fromisoformat(
-                    last_updated.replace("Z", "+00:00")
-                )
+                update_date = datetime.fromisoformat(last_updated.replace("Z", "+00:00"))
             else:
                 update_date = last_updated
 
@@ -383,15 +365,11 @@ class ResultRanker:
 
         # Count similar results
         similar_category_count = sum(
-            1
-            for r in all_results
-            if r.get("category") == result_category and r != result
+            1 for r in all_results if r.get("category") == result_category and r != result
         )
 
         similar_tech_count = sum(
-            1
-            for r in all_results
-            if r.get("technology") == result_technology and r != result
+            1 for r in all_results if r.get("technology") == result_technology and r != result
         )
 
         # Penalize overrepresented categories/technologies
@@ -401,9 +379,7 @@ class ResultRanker:
         diversity_score = 1.0 - category_penalty - tech_penalty
         return max(diversity_score, 0.1)  # Minimum score
 
-    def _get_category_boost(
-        self, result: Dict[str, Any], requirements: Dict[str, Any]
-    ) -> float:
+    def _get_category_boost(self, result: Dict[str, Any], requirements: Dict[str, Any]) -> float:
         """Get category-specific boost based on requirements"""
 
         category = result.get("category", "").lower().replace(" ", "_")
@@ -459,12 +435,8 @@ class ResultRanker:
             features.append(1.0 if cat == category else 0.0)
 
         # Numerical features (log-scaled and normalized)
-        features.append(
-            self._normalize_score(math.log10(result.get("github_stars", 1)), 0, 6)
-        )
-        features.append(
-            self._normalize_score(math.log10(result.get("npm_downloads", 1)), 0, 8)
-        )
+        features.append(self._normalize_score(math.log10(result.get("github_stars", 1)), 0, 6))
+        features.append(self._normalize_score(math.log10(result.get("npm_downloads", 1)), 0, 8))
 
         return features
 
@@ -521,9 +493,7 @@ class ResultRanker:
         normalized = (value - min_val) / (max_val - min_val)
         return max(0, min(normalized, 1))
 
-    async def get_ranking_explanation(
-        self, result: Dict[str, Any], rank: int
-    ) -> Dict[str, Any]:
+    async def get_ranking_explanation(self, result: Dict[str, Any], rank: int) -> Dict[str, Any]:
         """Get explanation for why a result was ranked at its position"""
 
         explanation = {

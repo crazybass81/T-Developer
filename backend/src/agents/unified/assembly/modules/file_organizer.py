@@ -3,16 +3,16 @@ File Organizer Module for Assembly Agent
 Organizes and structures project files for optimal assembly
 """
 
-from typing import Dict, List, Any, Optional, Tuple, Set
 import asyncio
+import json
+import mimetypes
 import os
 import shutil
-from pathlib import Path
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
-import mimetypes
-import json
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 class FileCategory(Enum):
@@ -342,19 +342,13 @@ class FileOrganizer:
                 await self._write_organized_file(organized_path, file_content)
 
             # Generate directory structure map
-            directory_structure = await self._generate_directory_structure(
-                organized_files
-            )
+            directory_structure = await self._generate_directory_structure(organized_files)
 
             # Calculate categories distribution
-            categories_distribution = self._calculate_categories_distribution(
-                organized_files
-            )
+            categories_distribution = self._calculate_categories_distribution(organized_files)
 
             # Create organization summary
-            await self._create_organization_summary(
-                project_path, organized_files, context
-            )
+            await self._create_organization_summary(project_path, organized_files, context)
 
             processing_time = (datetime.now() - start_time).total_seconds()
 
@@ -383,9 +377,7 @@ class FileOrganizer:
     async def _create_directory_structure(self, project_path: str, framework: str):
         """Create standard directory structure for framework"""
 
-        structure = self.framework_structures.get(
-            framework, self.framework_structures["react"]
-        )
+        structure = self.framework_structures.get(framework, self.framework_structures["react"])
 
         for directory, subdirs in structure.items():
             dir_path = os.path.join(project_path, directory)
@@ -397,9 +389,7 @@ class FileOrganizer:
                         subdir_path = os.path.join(dir_path, subdir.rstrip("/"))
                         os.makedirs(subdir_path, exist_ok=True)
 
-    async def _categorize_files(
-        self, generated_files: Dict[str, str]
-    ) -> Dict[str, FileCategory]:
+    async def _categorize_files(self, generated_files: Dict[str, str]) -> Dict[str, FileCategory]:
         """Categorize files based on patterns and extensions"""
 
         categorized = {}
@@ -430,14 +420,8 @@ class FileOrganizer:
                 for ext in rules["extensions"]:
                     if file_lower.endswith(ext.lower()):
                         # Check exclude patterns for source code
-                        if (
-                            category == FileCategory.SOURCE_CODE
-                            and "exclude_patterns" in rules
-                        ):
-                            if any(
-                                pattern in file_lower
-                                for pattern in rules["exclude_patterns"]
-                            ):
+                        if category == FileCategory.SOURCE_CODE and "exclude_patterns" in rules:
+                            if any(pattern in file_lower for pattern in rules["exclude_patterns"]):
                                 continue
                         return category
 
@@ -478,10 +462,7 @@ class FileOrganizer:
         # Framework-specific adjustments
         if framework == "angular" and category == FileCategory.ASSETS:
             base_path = "src/assets"
-        elif (
-            framework in ["fastapi", "django", "flask"]
-            and category == FileCategory.ASSETS
-        ):
+        elif framework in ["fastapi", "django", "flask"] and category == FileCategory.ASSETS:
             base_path = "static" if framework == "django" else "src/static"
 
         # Handle special files
@@ -494,9 +475,7 @@ class FileOrganizer:
             base_path = ""  # Root
         elif file_name.startswith(".env"):
             base_path = ""  # Root
-        elif (
-            "config" in original_path.lower() and category == FileCategory.CONFIGURATION
-        ):
+        elif "config" in original_path.lower() and category == FileCategory.CONFIGURATION:
             base_path = "config"
 
         # Construct full organized path
@@ -512,17 +491,13 @@ class FileOrganizer:
             subdirs = self._extract_meaningful_subdirs(original_dir, category)
             if subdirs:
                 if base_path:
-                    organized_path = os.path.join(
-                        project_path, base_path, subdirs, file_name
-                    )
+                    organized_path = os.path.join(project_path, base_path, subdirs, file_name)
                 else:
                     organized_path = os.path.join(project_path, subdirs, file_name)
 
         return organized_path
 
-    def _extract_meaningful_subdirs(
-        self, original_dir: str, category: FileCategory
-    ) -> str:
+    def _extract_meaningful_subdirs(self, original_dir: str, category: FileCategory) -> str:
         """Extract meaningful subdirectory structure"""
 
         # Remove common prefixes that aren't meaningful in organized structure

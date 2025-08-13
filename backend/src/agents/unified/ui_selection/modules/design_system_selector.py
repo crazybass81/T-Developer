@@ -3,7 +3,7 @@ Design System Selector Module
 Selects and configures appropriate design systems
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class DesignSystemSelector:
@@ -110,9 +110,7 @@ class DesignSystemSelector:
         brand = requirements.get("brand", {})
 
         # Evaluate each design system
-        scores = self._evaluate_systems(
-            project_type, features, preferences, constraints
-        )
+        scores = self._evaluate_systems(project_type, features, preferences, constraints)
 
         # Select best match
         selected_name = max(scores, key=scores.get)
@@ -199,9 +197,7 @@ class DesignSystemSelector:
 
         return supported / total
 
-    def _customize_system(
-        self, system: Dict, requirements: Dict, brand: Dict
-    ) -> Dict[str, Any]:
+    def _customize_system(self, system: Dict, requirements: Dict, brand: Dict) -> Dict[str, Any]:
         """Customize design system for project"""
         customized = system.copy()
 
@@ -220,9 +216,7 @@ class DesignSystemSelector:
 
         return customized
 
-    def _generate_implementation(
-        self, system: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _generate_implementation(self, system: Dict, requirements: Dict) -> Dict[str, Any]:
         """Generate implementation guide"""
         return {
             "setup": self._get_setup_steps(system),
@@ -453,9 +447,7 @@ class DesignSystemSelector:
             "Test and validate",
         ]
 
-    def _find_component_match(
-        self, required: str, system_components: List[str]
-    ) -> Optional[str]:
+    def _find_component_match(self, required: str, system_components: List[str]) -> Optional[str]:
         """Find matching component in system"""
         # Direct match
         if required in system_components:
@@ -464,10 +456,7 @@ class DesignSystemSelector:
         # Fuzzy match
         required_lower = required.lower()
         for component in system_components:
-            if (
-                required_lower in component.lower()
-                or component.lower() in required_lower
-            ):
+            if required_lower in component.lower() or component.lower() in required_lower:
                 return component
 
         return None

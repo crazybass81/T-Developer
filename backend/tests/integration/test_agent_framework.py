@@ -1,18 +1,19 @@
 """
 Test script for T-Developer Agent Framework
 """
-import sys
 import os
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "backend/src"))
 
 import asyncio
-from typing import Dict, Any
-from agents.framework.base_agent import BaseAgent, AgentStatus
+from typing import Any, Dict
+
 from agents.framework.agent_factory import AgentFactory
-from agents.framework.capabilities import Capability, CapabilityType, CapabilityMixin
-from agents.framework.lifecycle import LifecycleStateMachine, LifecycleEvent
+from agents.framework.base_agent import AgentStatus, BaseAgent
+from agents.framework.capabilities import Capability, CapabilityMixin, CapabilityType
 from agents.framework.initialization import AgentInitializer, InitializationConfig
+from agents.framework.lifecycle import LifecycleEvent, LifecycleStateMachine
 from agents.framework.state_store import MemoryStateStore, StateManager
 
 
@@ -114,9 +115,7 @@ async def test_framework():
     capabilities = agent.get_capabilities()
     print(f"✅ Agent has {len(capabilities)} capabilities")
 
-    cap_result = await agent.execute_capability(
-        "test_process", {"data": "capability test"}
-    )
+    cap_result = await agent.execute_capability("test_process", {"data": "capability test"})
     print(f"✅ Capability result: {cap_result['result']}")
 
     # Test 5: State Management
@@ -137,9 +136,7 @@ async def test_framework():
 
     # Cleanup
     await agent.cleanup()
-    print(
-        f"✅ Agent cleaned up, final state: {agent.lifecycle.get_current_state().value}"
-    )
+    print(f"✅ Agent cleaned up, final state: {agent.lifecycle.get_current_state().value}")
 
     print("\n🎉 All framework tests passed!")
 

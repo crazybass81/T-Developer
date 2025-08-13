@@ -3,18 +3,18 @@ Compression Optimizer Module
 Optimizes file compression for faster downloads
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import asyncio
-import os
-import zipfile
-import tarfile
-import gzip
 import bz2
+import gzip
 import lzma
+import os
 import shutil
+import tarfile
+import tempfile
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime
-import tempfile
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -118,9 +118,7 @@ class CompressionOptimizer:
                     os.remove(compressed_path)
 
                 # Just copy original file
-                output_path = os.path.join(
-                    target_directory, os.path.basename(source_path)
-                )
+                output_path = os.path.join(target_directory, os.path.basename(source_path))
                 shutil.copy2(source_path, output_path)
 
                 return CompressionResult(
@@ -172,8 +170,7 @@ class CompressionOptimizer:
         if self.compression_config["parallel_processing"]:
             # Process files in parallel
             tasks = [
-                self.optimize_compression(path, target_directory, context)
-                for path in source_paths
+                self.optimize_compression(path, target_directory, context) for path in source_paths
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -202,9 +199,7 @@ class CompressionOptimizer:
             # Process files sequentially
             results = []
             for source_path in source_paths:
-                result = await self.optimize_compression(
-                    source_path, target_directory, context
-                )
+                result = await self.optimize_compression(source_path, target_directory, context)
                 results.append(result)
             return results
 
@@ -238,9 +233,7 @@ class CompressionOptimizer:
 
         method_config = self.compression_config["available_methods"][method]
         base_name = os.path.splitext(os.path.basename(source_path))[0]
-        output_path = os.path.join(
-            target_directory, base_name + method_config["extension"]
-        )
+        output_path = os.path.join(target_directory, base_name + method_config["extension"])
 
         if method == "zip":
             return await self._compress_zip(source_path, output_path, method_config)
@@ -446,9 +439,7 @@ class CompressionOptimizer:
         if len(self.optimization_history) > 1000:
             self.optimization_history = self.optimization_history[-1000:]
 
-    async def benchmark_methods(
-        self, test_file_path: str
-    ) -> Dict[str, CompressionResult]:
+    async def benchmark_methods(self, test_file_path: str) -> Dict[str, CompressionResult]:
         """Benchmark all compression methods on a test file"""
 
         results = {}
@@ -489,9 +480,7 @@ class CompressionOptimizer:
             )
 
         files_processed = len(self.optimization_history)
-        total_original_size = sum(
-            record["file_size"] for record in self.optimization_history
-        )
+        total_original_size = sum(record["file_size"] for record in self.optimization_history)
         total_compressed_size = sum(
             int(record["file_size"] * record["compression_ratio"])
             for record in self.optimization_history
@@ -536,9 +525,7 @@ class CompressionOptimizer:
 
         size = file_characteristics.get("size", 0)
         file_types = file_characteristics.get("types", [])
-        priority = file_characteristics.get(
-            "priority", "balanced"
-        )  # speed, size, balanced
+        priority = file_characteristics.get("priority", "balanced")  # speed, size, balanced
 
         # Priority-based suggestions
         if priority == "speed":

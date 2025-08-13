@@ -3,8 +3,8 @@ Component Analyzer Module
 Analyzes project requirements to determine needed UI components
 """
 
-from typing import Dict, List, Any, Set
 import re
+from typing import Any, Dict, List, Set
 
 
 class ComponentAnalyzer:
@@ -257,9 +257,7 @@ class ComponentAnalyzer:
         needed_categories = self._identify_categories(text_content, features)
 
         # Select components for each category
-        selected_components = self._select_components(
-            needed_categories, complexity, features
-        )
+        selected_components = self._select_components(needed_categories, complexity, features)
 
         # Add dependencies
         all_components = self._add_dependencies(selected_components)
@@ -366,9 +364,7 @@ class ComponentAnalyzer:
             "bundle_size_estimate": self._estimate_bundle_size(components),
         }
 
-    def _generate_hierarchy(
-        self, components: List[str], project_type: str
-    ) -> Dict[str, Any]:
+    def _generate_hierarchy(self, components: List[str], project_type: str) -> Dict[str, Any]:
         """Generate component hierarchy"""
         hierarchy = {
             "root": "App",
@@ -395,9 +391,7 @@ class ComponentAnalyzer:
 
         return hierarchy
 
-    def _optimize_selection(
-        self, components: List[str], requirements: Dict[str, Any]
-    ) -> List[str]:
+    def _optimize_selection(self, components: List[str], requirements: Dict[str, Any]) -> List[str]:
         """Optimize component selection"""
         optimized = components.copy()
 
@@ -445,9 +439,7 @@ class ComponentAnalyzer:
             recommendations.append("Consider using lazy loading for better performance")
 
         if "Chart" in str(components):
-            recommendations.append(
-                "Use a specialized charting library like Recharts or D3"
-            )
+            recommendations.append("Use a specialized charting library like Recharts or D3")
 
         return recommendations
 
@@ -475,9 +467,7 @@ class ComponentAnalyzer:
         # Rough estimates in KB
         size_map = {"basic": 5, "intermediate": 15, "advanced": 30}
 
-        total_kb = sum(
-            size_map.get(self._get_complexity_level(c), 10) for c in components
-        )
+        total_kb = sum(size_map.get(self._get_complexity_level(c), 10) for c in components)
 
         if total_kb < 100:
             return "Small (<100KB)"

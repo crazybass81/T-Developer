@@ -3,8 +3,8 @@ Infrastructure Planner Module
 Plans infrastructure architecture and deployment
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class InfrastructureType(Enum):
@@ -48,9 +48,7 @@ class InfrastructurePlanner:
         cicd = self._design_cicd_pipeline(requirements, constraints)
 
         # Calculate costs
-        cost_estimate = self._estimate_infrastructure_costs(
-            compute, storage, networking
-        )
+        cost_estimate = self._estimate_infrastructure_costs(compute, storage, networking)
 
         return {
             "type": infra_type.value,
@@ -81,9 +79,7 @@ class InfrastructurePlanner:
         else:
             return InfrastructureType.CLOUD_NATIVE
 
-    def _design_compute_resources(
-        self, requirements: Dict, infra_type: InfrastructureType
-    ) -> Dict:
+    def _design_compute_resources(self, requirements: Dict, infra_type: InfrastructureType) -> Dict:
         """Design compute resources"""
 
         if infra_type == InfrastructureType.SERVERLESS:
@@ -165,9 +161,7 @@ class InfrastructurePlanner:
             },
         }
 
-    def _design_networking(
-        self, requirements: Dict, infra_type: InfrastructureType
-    ) -> Dict:
+    def _design_networking(self, requirements: Dict, infra_type: InfrastructureType) -> Dict:
         """Design networking architecture"""
 
         return {

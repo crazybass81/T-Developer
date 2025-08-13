@@ -3,56 +3,42 @@ Assembly Agent - Production Implementation
 Assembles all generated components into a complete, deployable project
 """
 
-from typing import Dict, List, Any, Optional, Tuple, Set
 import asyncio
+import hashlib
 import json
 import os
 import shutil
-import zipfile
-import tarfile
-from datetime import datetime
-from pathlib import Path
-import tempfile
-import hashlib
-from dataclasses import dataclass, field
 
 # Import base classes
 import sys
+import tarfile
+import tempfile
+import zipfile
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 sys.path.append("/home/ec2-user/T-DeveloperMVP/backend/src")
 
-from src.agents.unified.base import (
-    UnifiedBaseAgent,
-    AgentConfig,
-    AgentContext,
-    AgentResult,
-)
-from src.agents.unified.data_wrapper import (
-    AgentInput,
-    AgentContext,
-    wrap_input,
-    unwrap_result,
-)
-
-# from agents.phase2_enhancements import Phase2AssemblyResult  # Commented out - module not available
+from src.agents.unified.assembly.modules.asset_optimizer import AssetOptimizer
+from src.agents.unified.assembly.modules.build_orchestrator import BuildOrchestrator
+from src.agents.unified.assembly.modules.compatibility_validator import CompatibilityValidator
+from src.agents.unified.assembly.modules.conflict_resolver import ConflictResolver
+from src.agents.unified.assembly.modules.dependency_consolidator import DependencyConsolidator
 
 # Import specialized modules
 from src.agents.unified.assembly.modules.file_organizer import FileOrganizer
-from src.agents.unified.assembly.modules.conflict_resolver import ConflictResolver
-from src.agents.unified.assembly.modules.dependency_consolidator import (
-    DependencyConsolidator,
-)
-from src.agents.unified.assembly.modules.build_orchestrator import BuildOrchestrator
-from src.agents.unified.assembly.modules.package_creator import PackageCreator
-from src.agents.unified.assembly.modules.validation_engine import ValidationEngine
-from src.agents.unified.assembly.modules.asset_optimizer import AssetOptimizer
-from src.agents.unified.assembly.modules.metadata_generator import MetadataGenerator
 from src.agents.unified.assembly.modules.integrity_checker import IntegrityChecker
-from src.agents.unified.assembly.modules.compatibility_validator import (
-    CompatibilityValidator,
-)
+from src.agents.unified.assembly.modules.metadata_generator import MetadataGenerator
+from src.agents.unified.assembly.modules.package_creator import PackageCreator
 from src.agents.unified.assembly.modules.performance_analyzer import PerformanceAnalyzer
 from src.agents.unified.assembly.modules.security_scanner import SecurityScanner
+from src.agents.unified.assembly.modules.validation_engine import ValidationEngine
+from src.agents.unified.base import AgentConfig, AgentContext, AgentResult, UnifiedBaseAgent
+from src.agents.unified.data_wrapper import AgentContext, AgentInput, unwrap_result, wrap_input
+
+# from agents.phase2_enhancements import Phase2AssemblyResult  # Commented out - module not available
 
 
 @dataclass
@@ -249,10 +235,8 @@ class AssemblyAgent(UnifiedBaseAgent):
 
             # Phase 3: Dependency Consolidation
             await self.log_event("dependency_consolidation_start", {})
-            dependency_result = (
-                await self.dependency_consolidator.consolidate_dependencies(
-                    input_data.get("dependencies", {}), assembly_context
-                )
+            dependency_result = await self.dependency_consolidator.consolidate_dependencies(
+                input_data.get("dependencies", {}), assembly_context
             )
 
             # Phase 4: Asset Optimization
@@ -268,12 +252,8 @@ class AssemblyAgent(UnifiedBaseAgent):
             )
 
             if not validation_result.passed_quality_gates:
-                await self.log_event(
-                    "validation_failed", {"issues": validation_result.issues}
-                )
-                return self._create_error_result(
-                    "Project validation failed quality gates"
-                )
+                await self.log_event("validation_failed", {"issues": validation_result.issues})
+                return self._create_error_result("Project validation failed quality gates")
 
             # Phase 6: Build Orchestration
             await self.log_event("build_orchestration_start", {})
@@ -357,9 +337,7 @@ class AssemblyAgent(UnifiedBaseAgent):
                     "processing_time": processing_time,
                     "workspace_path": workspace_path,
                     "package_format": assembly_context.get("output_format", "zip"),
-                    "project_name": assembly_context.get(
-                        "project_name", "generated-project"
-                    ),
+                    "project_name": assembly_context.get("project_name", "generated-project"),
                     "total_files": assembly_manifest.total_files,
                     "package_size": assembly_manifest.total_size,
                 },
@@ -414,9 +392,7 @@ class AssemblyAgent(UnifiedBaseAgent):
 
         return True
 
-    def _initialize_assembly_context(
-        self, input_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _initialize_assembly_context(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Initialize assembly context"""
 
         context = {
@@ -528,15 +504,11 @@ class AssemblyAgent(UnifiedBaseAgent):
             version=context["version"],
             framework=context["framework"],
             language=context["language"],
-            total_files=package_result.total_files
-            if hasattr(package_result, "total_files")
-            else 0,
+            total_files=package_result.total_files if hasattr(package_result, "total_files") else 0,
             total_size=package_result.package_size
             if hasattr(package_result, "package_size")
             else 0,
-            components_used=[
-                c.get("name", "") for c in context.get("selected_components", [])
-            ],
+            components_used=[c.get("name", "") for c in context.get("selected_components", [])],
             dependencies=context.get("dependencies", {}),
             build_commands=self._get_build_commands(context["framework"]),
             test_commands=self._get_test_commands(context["framework"]),
@@ -557,12 +529,8 @@ class AssemblyAgent(UnifiedBaseAgent):
     ) -> AssemblyMetrics:
         """Calculate assembly process metrics"""
 
-        total_files = sum(
-            getattr(result, "files_processed", 0) for result in phase_results
-        )
-        total_conflicts = sum(
-            getattr(result, "conflicts_resolved", 0) for result in phase_results
-        )
+        total_files = sum(getattr(result, "files_processed", 0) for result in phase_results)
+        total_conflicts = sum(getattr(result, "conflicts_resolved", 0) for result in phase_results)
         total_optimizations = sum(
             getattr(result, "optimizations_applied", 0) for result in phase_results
         )
@@ -583,9 +551,7 @@ class AssemblyAgent(UnifiedBaseAgent):
             if len(phase_results) > 6
             else 0,
             build_time=build_time,
-            package_size=getattr(phase_results[-1], "package_size", 0)
-            if phase_results
-            else 0,
+            package_size=getattr(phase_results[-1], "package_size", 0) if phase_results else 0,
             compression_ratio=0.7,  # Estimated compression ratio
         )
 
@@ -593,9 +559,7 @@ class AssemblyAgent(UnifiedBaseAgent):
         """Generate unique assembly identifier"""
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        random_suffix = hashlib.md5(
-            str(datetime.now().timestamp()).encode()
-        ).hexdigest()[:8]
+        random_suffix = hashlib.md5(str(datetime.now().timestamp()).encode()).hexdigest()[:8]
 
         return f"assembly_{timestamp}_{random_suffix}"
 
@@ -688,9 +652,7 @@ class AssemblyAgent(UnifiedBaseAgent):
             },
         }
 
-        return compatibility.get(
-            framework, {"platforms": ["Windows", "macOS", "Linux"]}
-        )
+        return compatibility.get(framework, {"platforms": ["Windows", "macOS", "Linux"]})
 
     def _create_error_result(self, error_message: str) -> EnhancedAssemblyResult:
         """Create error result"""
@@ -772,9 +734,7 @@ class AssemblyAgent(UnifiedBaseAgent):
             },
         }
 
-    async def estimate_assembly_time(
-        self, input_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def estimate_assembly_time(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Estimate assembly processing time"""
 
         files_count = len(input_data.get("generated_files", {}))

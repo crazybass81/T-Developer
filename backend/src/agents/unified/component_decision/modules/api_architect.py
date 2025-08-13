@@ -3,8 +3,8 @@ API Architect Module
 Designs API architecture and specifications
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class APIStyle(Enum):
@@ -196,9 +196,7 @@ class APIArchitect:
 
         subscriptions = []
         for resource in specs.get("resources", []):
-            subscriptions.append(
-                {"name": f"{resource.lower()}Updated", "returns": resource}
-            )
+            subscriptions.append({"name": f"{resource.lower()}Updated", "returns": resource})
         return subscriptions
 
     def _design_authentication(self, specs: Dict) -> Dict:

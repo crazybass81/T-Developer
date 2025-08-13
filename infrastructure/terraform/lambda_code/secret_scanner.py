@@ -13,16 +13,17 @@ Environment Variables:
 - DISCOVERY_PREFIX: 발견된 비밀 저장 프리픽스
 """
 
-import json
-import re
-import os
-import boto3
-import logging
-from datetime import datetime
-from typing import Dict, List, Tuple, Any, Optional
-from urllib.parse import unquote_plus
 import base64
 import hashlib
+import json
+import logging
+import os
+import re
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import unquote_plus
+
+import boto3
 
 # 로깅 설정
 logger = logging.getLogger()
@@ -108,9 +109,7 @@ class SecretScanner:
     def _load_detection_patterns(self) -> List[SecretPattern]:
         """Parameter Store에서 탐지 패턴 로드"""
         try:
-            param_name = (
-                f"/{PROJECT_NAME}/{ENVIRONMENT}/security/secret-detection-rules"
-            )
+            param_name = f"/{PROJECT_NAME}/{ENVIRONMENT}/security/secret-detection-rules"
             response = ssm_client.get_parameter(Name=param_name, WithDecryption=True)
             rules = json.loads(response["Parameter"]["Value"])
 
@@ -131,8 +130,7 @@ class SecretScanner:
 
             # 제외 패턴 설정
             self.excluded_patterns = [
-                re.compile(pattern, re.IGNORECASE)
-                for pattern in rules.get("excluded_patterns", [])
+                re.compile(pattern, re.IGNORECASE) for pattern in rules.get("excluded_patterns", [])
             ]
 
             logger.info(f"Loaded {len(patterns)} detection patterns")
@@ -220,9 +218,7 @@ class SecretScanner:
             for match in matches:
                 if not self._is_excluded(content, match):
                     # 매치된 비밀 정보 해시화 (보안상)
-                    secret_hash = hashlib.sha256(match["match"].encode()).hexdigest()[
-                        :16
-                    ]
+                    secret_hash = hashlib.sha256(match["match"].encode()).hexdigest()[:16]
 
                     finding = {
                         "id": f"{pattern.name}_{secret_hash}",
@@ -293,9 +289,7 @@ def quarantine_secret(bucket: str, key: str, finding: Dict[str, Any]) -> bool:
     try:
         quarantine_bucket = f"{PROJECT_NAME}-discovered-secrets-{ENVIRONMENT}"
         timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-        quarantine_key = (
-            f"quarantine/{timestamp}/{finding['severity']}/{finding['id']}/{key}"
-        )
+        quarantine_key = f"quarantine/{timestamp}/{finding['severity']}/{finding['id']}/{key}"
 
         # 원본 파일을 격리 버킷으로 복사
         copy_source = {"Bucket": bucket, "Key": key}
@@ -338,9 +332,7 @@ def send_alert(scan_result: Dict[str, Any]) -> None:
             "summary": summary,
             "timestamp": scan_result["timestamp"],
             "action_required": True,
-            "findings": [
-                f for f in scan_result["findings"] if f["severity"] == "CRITICAL"
-            ],
+            "findings": [f for f in scan_result["findings"] if f["severity"] == "CRITICAL"],
         }
 
         sns_client.publish(
@@ -404,9 +396,7 @@ def lambda_handler(event, context):
 
                         # 중요한 비밀은 자동 격리
                         critical_findings = [
-                            f
-                            for f in scan_result["findings"]
-                            if f["severity"] == "CRITICAL"
+                            f for f in scan_result["findings"] if f["severity"] == "CRITICAL"
                         ]
 
                         for finding in critical_findings:
@@ -437,9 +427,7 @@ def lambda_handler(event, context):
 
                             # Lambda 실행 시간 제한 고려 (4분 50초에서 중단)
                             if context.get_remaining_time_in_millis() < 10000:
-                                logger.warning(
-                                    "Lambda timeout approaching, stopping scan"
-                                )
+                                logger.warning("Lambda timeout approaching, stopping scan")
                                 break
 
         # 응답 구성
@@ -454,9 +442,7 @@ def lambda_handler(event, context):
             },
         }
 
-        logger.info(
-            f"Scan completed. Processed: {processed}, Findings: {findings_total}"
-        )
+        logger.info(f"Scan completed. Processed: {processed}, Findings: {findings_total}")
         return response
 
     except Exception as e:

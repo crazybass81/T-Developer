@@ -8,14 +8,14 @@ phases:
       - echo "🚀 T-Developer Evolution System Build Starting..."
       - echo "Build started on `date`"
       - echo "Checking Evolution constraints..."
-      
+
       # AWS ECR 로그인
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-      
+
       # 환경변수 설정
       - export REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
       - export IMAGE_TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}
-      
+
       # Evolution 제약 검증
       - |
         echo "🔍 Checking agent size constraints..."
@@ -27,12 +27,12 @@ phases:
           fi
         done
         echo "✅ All agents meet size constraints"
-  
+
   build:
     commands:
       - echo "🔨 Building backend..."
       - cd backend
-      
+
       # Python 환경 설정 (UV 사용)
       - |
         if ! command -v uv &> /dev/null; then
@@ -40,31 +40,31 @@ phases:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           export PATH="$HOME/.cargo/bin:$PATH"
         fi
-      
+
       # 의존성 설치
       - uv venv
       - source .venv/bin/activate
       - uv pip install -r requirements.txt
-      
+
       # 테스트 실행
       - |
         echo "🧪 Running tests..."
         pytest tests/unit/ -v --tb=short || true
         pytest tests/evolution/ -v --tb=short || true
-      
+
       # Evolution Safety 체크
       - |
         echo "🛡️ Running Evolution Safety checks..."
         if [ -f "src/evolution/safety.py" ]; then
           python src/evolution/safety.py --check || true
         fi
-      
+
       # Docker 이미지 빌드
       - echo "🐳 Building Docker image..."
       - cd ..
       - docker build -t $REPOSITORY_URI:latest -f backend/Dockerfile backend/
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
-      
+
       # 이미지 크기 검증
       - |
         IMAGE_SIZE=$(docker image inspect $REPOSITORY_URI:latest --format='{{.Size}}')
@@ -73,13 +73,13 @@ phases:
         if [ $IMAGE_SIZE_MB -gt 500 ]; then
           echo "⚠️ Warning: Image size exceeds 500MB"
         fi
-  
+
   post_build:
     commands:
       - echo "📤 Pushing to ECR..."
       - docker push $REPOSITORY_URI:latest
       - docker push $REPOSITORY_URI:$IMAGE_TAG
-      
+
       # ECS 태스크 정의 업데이트
       - |
         echo "🔄 Updating ECS task definition..."
@@ -91,7 +91,7 @@ phases:
           }
         ]
         EOF
-      
+
       # Evolution 메트릭 수집
       - |
         echo "📊 Collecting Evolution metrics..."
@@ -109,10 +109,10 @@ phases:
           }
         }
         EOF
-      
+
       # S3에 메트릭 업로드
       - aws s3 cp evolution-metrics.json s3://t-developer-evolution-development-e7f02f38/metrics/build-$CODEBUILD_BUILD_ID.json
-      
+
       - echo "✅ Build completed successfully on `date`"
 
 artifacts:

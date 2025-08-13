@@ -1,6 +1,8 @@
-import cohere
 import os
-from typing import AsyncIterator, Dict, Any, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+import cohere
+
 from ..base import ModelProvider, ModelResponse
 
 

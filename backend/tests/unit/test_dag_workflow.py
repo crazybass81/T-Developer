@@ -4,21 +4,22 @@ Unit Tests for DAG Workflow Engine
 Tests the workflow orchestration and execution
 """
 
-import pytest
 import asyncio
-import sys
 import os
+import sys
 from datetime import datetime
+
+import pytest
 
 # Add backend to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 from src.core.workflow.dag_engine import (
     DAGWorkflowEngine,
-    WorkflowNode,
-    NodeStatus,
     ExecutionStrategy,
+    NodeStatus,
     WorkflowExecution,
+    WorkflowNode,
 )
 
 
@@ -28,9 +29,7 @@ class TestDAGWorkflow:
     @pytest.fixture
     def engine(self):
         """Create workflow engine instance"""
-        return DAGWorkflowEngine(
-            max_parallel_nodes=5, max_retries=2, default_timeout=10
-        )
+        return DAGWorkflowEngine(max_parallel_nodes=5, max_retries=2, default_timeout=10)
 
     @pytest.fixture
     def simple_workflow_nodes(self):
@@ -115,14 +114,10 @@ class TestDAGWorkflow:
             WorkflowNode("node1", "agent1", "Node 1", dependencies=[]),
             WorkflowNode("node2", "agent2", "Node 2", dependencies=["node1"]),
             WorkflowNode("node3", "agent3", "Node 3", dependencies=["node2"]),
-            WorkflowNode(
-                "node1", "agent1", "Node 1", dependencies=["node3"]
-            ),  # Creates cycle
+            WorkflowNode("node1", "agent1", "Node 1", dependencies=["node3"]),  # Creates cycle
         ]
 
-        success = engine.create_workflow(
-            workflow_id="cyclic_workflow", nodes=cyclic_nodes
-        )
+        success = engine.create_workflow(workflow_id="cyclic_workflow", nodes=cyclic_nodes)
 
         assert success == False
 
@@ -133,9 +128,7 @@ class TestDAGWorkflow:
             WorkflowNode("node2", "agent2", "Node 2", dependencies=["non_existent"]),
         ]
 
-        success = engine.create_workflow(
-            workflow_id="invalid_workflow", nodes=invalid_nodes
-        )
+        success = engine.create_workflow(workflow_id="invalid_workflow", nodes=invalid_nodes)
 
         assert success == False
 
@@ -143,9 +136,7 @@ class TestDAGWorkflow:
     async def test_sequential_execution(self, engine, simple_workflow_nodes):
         """Test sequential workflow execution"""
         # Create workflow
-        engine.create_workflow(
-            workflow_id="sequential_test", nodes=simple_workflow_nodes
-        )
+        engine.create_workflow(workflow_id="sequential_test", nodes=simple_workflow_nodes)
 
         # Execute workflow
         execution = await engine.execute_workflow(
@@ -171,9 +162,7 @@ class TestDAGWorkflow:
     async def test_parallel_execution(self, engine, complex_workflow_nodes):
         """Test parallel workflow execution"""
         # Create workflow
-        engine.create_workflow(
-            workflow_id="parallel_test", nodes=complex_workflow_nodes
-        )
+        engine.create_workflow(workflow_id="parallel_test", nodes=complex_workflow_nodes)
 
         # Execute workflow
         execution = await engine.execute_workflow(
@@ -202,9 +191,7 @@ class TestDAGWorkflow:
     async def test_priority_execution(self, engine, complex_workflow_nodes):
         """Test priority-based execution"""
         # Create workflow
-        engine.create_workflow(
-            workflow_id="priority_test", nodes=complex_workflow_nodes
-        )
+        engine.create_workflow(workflow_id="priority_test", nodes=complex_workflow_nodes)
 
         # Execute with priority strategy
         execution = await engine.execute_workflow(
@@ -260,9 +247,7 @@ class TestDAGWorkflow:
     async def test_conditional_execution(self, engine):
         """Test conditional node execution"""
         nodes = [
-            WorkflowNode(
-                node_id="start", agent_id="agent_start", name="Start", dependencies=[]
-            ),
+            WorkflowNode(node_id="start", agent_id="agent_start", name="Start", dependencies=[]),
             WorkflowNode(
                 node_id="conditional",
                 agent_id="agent_cond",

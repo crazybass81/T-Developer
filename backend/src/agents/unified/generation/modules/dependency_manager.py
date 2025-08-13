@@ -3,14 +3,15 @@ Dependency Manager Module for Generation Agent
 Manages project dependencies, version resolution, and compatibility checking
 """
 
-from typing import Dict, List, Any, Optional, Tuple, Set
 import asyncio
 import json
 import re
-import semver
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+import semver
 
 
 class DependencyType(Enum):
@@ -284,9 +285,7 @@ class DependencyManager:
             vulnerabilities = await self._check_vulnerabilities(resolved_deps)
 
             # Generate package files
-            package_files = await self._generate_package_files(
-                resolved_deps, framework, language
-            )
+            package_files = await self._generate_package_files(resolved_deps, framework, language)
 
             # Calculate total size
             total_size = await self._calculate_total_size(resolved_deps)
@@ -322,9 +321,7 @@ class DependencyManager:
                 error=str(e),
             )
 
-    def _get_base_dependencies(
-        self, framework: str, language: str
-    ) -> Dict[str, Dict[str, Any]]:
+    def _get_base_dependencies(self, framework: str, language: str) -> Dict[str, Dict[str, Any]]:
         """Get base dependencies for framework and language"""
 
         if framework in self.framework_dependencies:
@@ -379,9 +376,7 @@ class DependencyManager:
                     if framework in category_deps:
                         for dep_name in category_deps[framework]:
                             # Get latest version (simplified)
-                            latest_version = await self._get_latest_version(
-                                dep_name, language
-                            )
+                            latest_version = await self._get_latest_version(dep_name, language)
 
                             component_deps[dep_name] = {
                                 "version": latest_version,
@@ -577,9 +572,7 @@ class DependencyManager:
             package_files["requirements.txt"] = requirements_txt
 
             # Generate pyproject.toml (modern Python)
-            pyproject_toml = await self._generate_pyproject_toml(
-                dependencies, framework
-            )
+            pyproject_toml = await self._generate_pyproject_toml(dependencies, framework)
             package_files["pyproject.toml"] = pyproject_toml
 
         elif language == "java":
@@ -619,9 +612,7 @@ class DependencyManager:
 
         return json.dumps(package_json, indent=2)
 
-    async def _generate_requirements_txt(
-        self, dependencies: Dict[str, Dict[str, Any]]
-    ) -> str:
+    async def _generate_requirements_txt(self, dependencies: Dict[str, Dict[str, Any]]) -> str:
         """Generate requirements.txt content"""
 
         requirements = []
@@ -727,9 +718,7 @@ profile = "black"
             },
         )
 
-    async def _calculate_total_size(
-        self, dependencies: Dict[str, Dict[str, Any]]
-    ) -> int:
+    async def _calculate_total_size(self, dependencies: Dict[str, Dict[str, Any]]) -> int:
         """Calculate estimated total size of dependencies"""
 
         # Simplified size estimation
@@ -769,31 +758,23 @@ profile = "black"
                 outdated_count += 1
 
         if outdated_count > 0:
-            recommendations.append(
-                f"Consider updating {outdated_count} outdated packages"
-            )
+            recommendations.append(f"Consider updating {outdated_count} outdated packages")
 
         # Check for alternatives to heavy packages
         heavy_packages = [
-            name
-            for name, dep_info in dependencies.items()
-            if self._is_package_heavy(name)
+            name for name, dep_info in dependencies.items() if self._is_package_heavy(name)
         ]
 
         if heavy_packages:
             for package in heavy_packages:
                 if package in self.package_alternatives:
                     alternatives = ", ".join(self.package_alternatives[package])
-                    recommendations.append(
-                        f"Consider alternatives to {package}: {alternatives}"
-                    )
+                    recommendations.append(f"Consider alternatives to {package}: {alternatives}")
 
         # Framework-specific recommendations
         if framework == "react" and "redux" in dependencies:
             if "@reduxjs/toolkit" not in dependencies:
-                recommendations.append(
-                    "Consider using Redux Toolkit for better Redux experience"
-                )
+                recommendations.append("Consider using Redux Toolkit for better Redux experience")
 
         if framework == "vue" and "vuex" in dependencies:
             if "pinia" not in dependencies:
@@ -802,20 +783,14 @@ profile = "black"
                 )
 
         # Security recommendations
-        vulnerable_count = len(
-            [name for name in dependencies if name in self.vulnerability_db]
-        )
+        vulnerable_count = len([name for name in dependencies if name in self.vulnerability_db])
         if vulnerable_count > 0:
-            recommendations.append(
-                f"Review {vulnerable_count} packages with known vulnerabilities"
-            )
+            recommendations.append(f"Review {vulnerable_count} packages with known vulnerabilities")
 
         # Bundle size recommendations
         total_size = await self._calculate_total_size(dependencies)
         if total_size > 50000000:  # 50MB
-            recommendations.append(
-                "Bundle size is large, consider code splitting or tree shaking"
-            )
+            recommendations.append("Bundle size is large, consider code splitting or tree shaking")
 
         return recommendations
 

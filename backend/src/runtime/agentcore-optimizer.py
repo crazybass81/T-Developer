@@ -1,8 +1,9 @@
-import boto3
-from typing import Dict, Any, List
+import asyncio
 import json
 from datetime import datetime, timedelta
-import asyncio
+from typing import Any, Dict, List
+
+import boto3
 
 
 class AgentCoreOptimizer:
@@ -177,9 +178,7 @@ class AgentCoreOptimizer:
             "new_capacity": new_capacity,
         }
 
-    async def _adjust_memory(
-        self, runtime_id: str, optimization: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _adjust_memory(self, runtime_id: str, optimization: Dict[str, Any]) -> Dict[str, Any]:
         """메모리 조정"""
 
         # 메모리 증가는 런타임 재시작이 필요하므로 권장사항만 반환

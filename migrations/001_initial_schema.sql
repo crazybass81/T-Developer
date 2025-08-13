@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS agents.agent_registry (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB DEFAULT '{}'::jsonb,
-    
+
     CONSTRAINT chk_size_kb CHECK (size_kb >= 0 AND size_kb <= 6.5),
     CONSTRAINT chk_instantiation_us CHECK (instantiation_us >= 0),
     CONSTRAINT chk_status CHECK (status IN ('active', 'inactive', 'deprecated', 'evolving'))
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS agents.agent_versions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100),
     is_current BOOLEAN DEFAULT false,
-    
+
     CONSTRAINT uk_agent_version UNIQUE(agent_id, version_number),
     CONSTRAINT chk_fitness_score CHECK (fitness_score >= 0 AND fitness_score <= 1)
 );
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS evolution.evolution_history (
     error_message TEXT,
     duration_ms INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
+
     CONSTRAINT chk_evolution_type CHECK (evolution_type IN ('mutation', 'crossover', 'optimization', 'refactor', 'merge'))
 );
 
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS evolution.evolution_rules (
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
+
     CONSTRAINT chk_rule_type CHECK (rule_type IN ('safety', 'optimization', 'constraint', 'trigger'))
 );
 
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS evolution.evolution_queue (
     max_retries INTEGER DEFAULT 3,
     error_message TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
+
     CONSTRAINT chk_queue_status CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled'))
 );
 
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS metrics.performance_metrics (
     constraint_met BOOLEAN,
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB DEFAULT '{}'::jsonb,
-    
+
     CONSTRAINT chk_metric_type CHECK (metric_type IN ('speed', 'memory', 'cpu', 'latency', 'throughput', 'error_rate', 'fitness'))
 );
 
@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS metrics.aggregated_metrics (
     p99_value DECIMAL(20,6),
     sample_count INTEGER,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
+
     CONSTRAINT chk_period CHECK (period IN ('minute', 'hour', 'day', 'week', 'month')),
     CONSTRAINT uk_aggregated_metrics UNIQUE(agent_id, metric_type, period, period_start)
 );
@@ -215,7 +215,7 @@ CREATE TABLE IF NOT EXISTS audit.audit_log (
     ip_address INET,
     user_agent TEXT,
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
+
     CONSTRAINT chk_operation CHECK (operation IN ('INSERT', 'UPDATE', 'DELETE', 'TRUNCATE'))
 );
 
@@ -240,7 +240,7 @@ $$ language 'plpgsql';
 -- Triggers for updated_at
 CREATE TRIGGER update_agent_registry_updated_at BEFORE UPDATE ON agents.agent_registry
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-    
+
 CREATE TRIGGER update_evolution_rules_updated_at BEFORE UPDATE ON evolution.evolution_rules
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -249,16 +249,16 @@ CREATE OR REPLACE FUNCTION maintain_current_version()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.is_current = true THEN
-        UPDATE agents.agent_versions 
-        SET is_current = false 
-        WHERE agent_id = NEW.agent_id 
+        UPDATE agents.agent_versions
+        SET is_current = false
+        WHERE agent_id = NEW.agent_id
         AND version_id != NEW.version_id;
     END IF;
     RETURN NEW;
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER maintain_current_version_trigger 
+CREATE TRIGGER maintain_current_version_trigger
     AFTER INSERT OR UPDATE OF is_current ON agents.agent_versions
     FOR EACH ROW EXECUTE FUNCTION maintain_current_version();
 
@@ -288,11 +288,11 @@ END;
 $$ language 'plpgsql';
 
 -- Apply audit triggers to critical tables
-CREATE TRIGGER audit_agent_registry 
+CREATE TRIGGER audit_agent_registry
     AFTER INSERT OR UPDATE OR DELETE ON agents.agent_registry
     FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
 
-CREATE TRIGGER audit_evolution_history 
+CREATE TRIGGER audit_evolution_history
     AFTER INSERT OR UPDATE OR DELETE ON evolution.evolution_history
     FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
 
@@ -302,7 +302,7 @@ CREATE TRIGGER audit_evolution_history
 
 -- Current agents view
 CREATE OR REPLACE VIEW agents.v_current_agents AS
-SELECT 
+SELECT
     ar.*,
     av.version_number,
     av.fitness_score,
@@ -315,7 +315,7 @@ WHERE av.is_current = true;
 -- Evolution lineage view
 CREATE OR REPLACE VIEW evolution.v_evolution_lineage AS
 WITH RECURSIVE lineage AS (
-    SELECT 
+    SELECT
         av.version_id,
         av.agent_id,
         av.parent_version_id,
@@ -324,10 +324,10 @@ WITH RECURSIVE lineage AS (
         1 as depth
     FROM agents.agent_versions av
     WHERE av.parent_version_id IS NULL
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         av.version_id,
         av.agent_id,
         av.parent_version_id,
@@ -341,7 +341,7 @@ SELECT * FROM lineage;
 
 -- Performance summary view
 CREATE OR REPLACE VIEW metrics.v_performance_summary AS
-SELECT 
+SELECT
     ar.agent_name,
     av.version_number,
     av.size_kb,
@@ -388,8 +388,8 @@ ANALYZE evolution.evolution_history;
 ANALYZE metrics.performance_metrics;
 
 -- Migration complete message
-DO $$ 
-BEGIN 
+DO $$
+BEGIN
     RAISE NOTICE 'T-Developer Evolution System database schema initialized successfully';
     RAISE NOTICE 'Version: 001_initial_schema';
     RAISE NOTICE 'Timestamp: %', CURRENT_TIMESTAMP;

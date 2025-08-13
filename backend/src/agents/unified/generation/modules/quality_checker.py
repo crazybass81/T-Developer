@@ -3,15 +3,15 @@ Quality Checker Module for Generation Agent
 Analyzes code quality, security, and performance metrics
 """
 
-from typing import Dict, List, Any, Optional, Tuple, Set
+import ast
 import asyncio
 import json
-import re
-import ast
-from dataclasses import dataclass
-from enum import Enum
-from datetime import datetime
 import math
+import re
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 class QualityMetric(Enum):
@@ -147,9 +147,7 @@ class QualityChecker:
             "flask": self._analyze_flask_quality,
         }
 
-    async def analyze_project(
-        self, project_path: str, context: Dict[str, Any]
-    ) -> QualityResult:
+    async def analyze_project(self, project_path: str, context: Dict[str, Any]) -> QualityResult:
         """Analyze project quality"""
 
         start_time = datetime.now()
@@ -179,9 +177,7 @@ class QualityChecker:
 
             # Analyze each file
             for file_path in files_to_analyze:
-                file_issues, file_metrics = await self._analyze_file(
-                    file_path, language, framework
-                )
+                file_issues, file_metrics = await self._analyze_file(file_path, language, framework)
 
                 issues.extend(file_issues)
                 metrics = self._aggregate_metrics(metrics, file_metrics)
@@ -191,9 +187,9 @@ class QualityChecker:
 
             # Framework-specific analysis
             if framework in self.framework_analyzers:
-                framework_issues, framework_metrics = await self.framework_analyzers[
-                    framework
-                ](project_path, context)
+                framework_issues, framework_metrics = await self.framework_analyzers[framework](
+                    project_path, context
+                )
                 issues.extend(framework_issues)
                 metrics = self._merge_framework_metrics(metrics, framework_metrics)
 
@@ -201,9 +197,7 @@ class QualityChecker:
             overall_score, grade = self._calculate_overall_score(metrics)
 
             # Generate recommendations
-            recommendations = await self._generate_recommendations(
-                metrics, issues, framework
-            )
+            recommendations = await self._generate_recommendations(metrics, issues, framework)
 
             processing_time = (datetime.now() - start_time).total_seconds()
 
@@ -220,9 +214,7 @@ class QualityChecker:
                     "language": language,
                     "files_analyzed": len(files_to_analyze),
                     "total_issues": len(issues),
-                    "critical_issues": len(
-                        [i for i in issues if i.severity == Severity.CRITICAL]
-                    ),
+                    "critical_issues": len([i for i in issues if i.severity == Severity.CRITICAL]),
                 },
             )
 
@@ -283,15 +275,11 @@ class QualityChecker:
         issues.extend(performance_issues)
 
         # Code smell detection
-        code_smell_issues = await self._analyze_code_smells(
-            file_content, file_path, language
-        )
+        code_smell_issues = await self._analyze_code_smells(file_content, file_path, language)
         issues.extend(code_smell_issues)
 
         # Calculate complexity
-        cyclomatic_complexity = self._calculate_cyclomatic_complexity(
-            file_content, language
-        )
+        cyclomatic_complexity = self._calculate_cyclomatic_complexity(file_content, language)
 
         file_metrics = {
             "lines_of_code": lines_of_code,
@@ -303,9 +291,7 @@ class QualityChecker:
 
         return issues, file_metrics
 
-    async def _analyze_security(
-        self, content: str, file_path: str
-    ) -> List[QualityIssue]:
+    async def _analyze_security(self, content: str, file_path: str) -> List[QualityIssue]:
         """Analyze security vulnerabilities"""
 
         issues = []
@@ -325,17 +311,13 @@ class QualityChecker:
                             file_path=file_path,
                             line_number=line_number,
                             rule_id=f"security.{vulnerability_type}",
-                            suggestion=self._get_security_suggestion(
-                                vulnerability_type
-                            ),
+                            suggestion=self._get_security_suggestion(vulnerability_type),
                         )
                     )
 
         return issues
 
-    async def _analyze_performance(
-        self, content: str, file_path: str
-    ) -> List[QualityIssue]:
+    async def _analyze_performance(self, content: str, file_path: str) -> List[QualityIssue]:
         """Analyze performance issues"""
 
         issues = []
@@ -413,9 +395,7 @@ class QualityChecker:
             if any(keyword in stripped for keyword in ["if", "for", "while", "try"]):
                 current_nesting += 1
                 max_nesting = max(max_nesting, current_nesting)
-            elif stripped.startswith("}") or (
-                language == "python" and not line.startswith(" ")
-            ):
+            elif stripped.startswith("}") or (language == "python" and not line.startswith(" ")):
                 current_nesting = max(0, current_nesting - 1)
 
         if max_nesting > self.code_smells["deep_nesting"]:
@@ -577,10 +557,7 @@ class QualityChecker:
             )
 
         # Complexity recommendations
-        if (
-            metrics.cyclomatic_complexity
-            > self.thresholds[QualityMetric.CYCLOMATIC_COMPLEXITY]
-        ):
+        if metrics.cyclomatic_complexity > self.thresholds[QualityMetric.CYCLOMATIC_COMPLEXITY]:
             recommendations.append(
                 f"Reduce cyclomatic complexity from {metrics.cyclomatic_complexity:.1f} to below {self.thresholds[QualityMetric.CYCLOMATIC_COMPLEXITY]}"
             )
@@ -593,9 +570,7 @@ class QualityChecker:
             )
 
         # Performance recommendations
-        performance_issues = [
-            i for i in issues if i.type in self.performance_patterns.keys()
-        ]
+        performance_issues = [i for i in issues if i.type in self.performance_patterns.keys()]
         if performance_issues:
             recommendations.append(
                 f"Address {len(performance_issues)} performance issues for better application speed"

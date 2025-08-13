@@ -115,41 +115,41 @@ resource "aws_security_group" "elasticache" {
 resource "aws_elasticache_replication_group" "t_developer" {
   replication_group_id       = "t-developer-cache-${var.environment}"
   replication_group_description = "Redis cache for T-Developer Evolution System"
-  
+
   # Redis configuration
   engine               = "redis"
   engine_version       = "7.0"
   port                 = 6379
   parameter_group_name = aws_elasticache_parameter_group.t_developer_redis7.name
   node_type           = var.cache_node_type
-  
+
   # Cluster configuration
   number_cache_clusters      = var.environment == "production" ? 3 : 2
   automatic_failover_enabled = var.environment == "production" ? true : false
   multi_az_enabled          = var.environment == "production" ? true : false
-  
+
   # Network configuration
   subnet_group_name  = aws_elasticache_subnet_group.t_developer.name
   security_group_ids = [aws_security_group.elasticache.id]
-  
+
   # Security
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
   auth_token                = random_password.redis_auth_token.result
   kms_key_id               = aws_kms_key.cache_kms.arn
-  
+
   # Backup configuration
   snapshot_retention_limit = var.environment == "production" ? 5 : 1
   snapshot_window         = "03:00-05:00"
   maintenance_window      = "sun:05:00-sun:07:00"
-  
+
   # Notifications
   notification_topic_arn = aws_sns_topic.alerts.arn
-  
+
   # Auto Minor Version Upgrade
   auto_minor_version_upgrade = var.environment != "production"
   apply_immediately         = var.environment != "production"
-  
+
   # Logging
   log_delivery_configuration {
     destination      = aws_cloudwatch_log_group.elasticache_slow_log.name
@@ -157,14 +157,14 @@ resource "aws_elasticache_replication_group" "t_developer" {
     log_format       = "json"
     log_type         = "slow-log"
   }
-  
+
   log_delivery_configuration {
     destination      = aws_cloudwatch_log_group.elasticache_engine_log.name
     destination_type = "cloudwatch-logs"
     log_format       = "json"
     log_type         = "engine-log"
   }
-  
+
   tags = merge(
     local.common_tags,
     {

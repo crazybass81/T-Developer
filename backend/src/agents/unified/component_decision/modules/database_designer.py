@@ -3,8 +3,8 @@ Database Designer Module
 Designs database schema and architecture
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class DatabaseType(Enum):

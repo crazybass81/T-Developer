@@ -13,16 +13,17 @@ T-Developer Secrets Manager Integration Example
 """
 
 import asyncio
-import logging
-from typing import Dict, Any, Optional
-from datetime import datetime
 import json
+import logging
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 try:
-    from .secrets_client import SecretsManagerClient, get_client, get_secret_value
     from .config import get_config, initialize_security
+    from .secrets_client import SecretsManagerClient, get_client, get_secret_value
 except ImportError:
     from secrets_client import SecretsManagerClient, get_client, get_secret_value
+
     from config import get_config, initialize_security
 
 # 로깅 설정
@@ -203,9 +204,7 @@ class AgentCommunicationSecurity:
 
         return base64.b64encode(encrypted_message).decode()
 
-    async def decrypt_message(
-        self, encrypted_message: str, sender_agent_id: str
-    ) -> str:
+    async def decrypt_message(self, encrypted_message: str, sender_agent_id: str) -> str:
         """메시지 복호화"""
         from cryptography.fernet import Fernet
 
@@ -236,9 +235,7 @@ class AgentCommunicationSecurity:
         if not fallback_key:
             # 임시 키 생성 (경고와 함께)
             fallback_key = secrets.token_urlsafe(32)
-            logger.warning(
-                "Using temporary agent communication key - not suitable for production"
-            )
+            logger.warning("Using temporary agent communication key - not suitable for production")
 
         return {
             "symmetric_key": fallback_key,
@@ -278,9 +275,7 @@ class SafetySystemSecurity:
             safety_secret = await self.secrets_client.get_secret_async(secret_name)
 
             if "parsed_secret" in safety_secret:
-                stored_key = safety_secret["parsed_secret"].get(
-                    "safety_override_key", ""
-                )
+                stored_key = safety_secret["parsed_secret"].get("safety_override_key", "")
                 return provided_key == stored_key
 
             return False
@@ -317,9 +312,7 @@ class EvolutionSystemIntegration:
             if openai_config:
                 initialization_results["configs_loaded"].append("openai")
             else:
-                initialization_results["warnings"].append(
-                    "OpenAI configuration not available"
-                )
+                initialization_results["warnings"].append("OpenAI configuration not available")
         except Exception as e:
             initialization_results["errors"].append(f"OpenAI config error: {e}")
 
@@ -329,9 +322,7 @@ class EvolutionSystemIntegration:
             if anthropic_config:
                 initialization_results["configs_loaded"].append("anthropic")
             else:
-                initialization_results["warnings"].append(
-                    "Anthropic configuration not available"
-                )
+                initialization_results["warnings"].append("Anthropic configuration not available")
         except Exception as e:
             initialization_results["errors"].append(f"Anthropic config error: {e}")
 
@@ -341,9 +332,7 @@ class EvolutionSystemIntegration:
             if db_config:
                 initialization_results["configs_loaded"].append("database")
             else:
-                initialization_results["errors"].append(
-                    "Database configuration not available"
-                )
+                initialization_results["errors"].append("Database configuration not available")
         except Exception as e:
             initialization_results["errors"].append(f"Database config error: {e}")
 
@@ -353,18 +342,14 @@ class EvolutionSystemIntegration:
             if agent_comm_key:
                 initialization_results["configs_loaded"].append("agent_communication")
             else:
-                initialization_results["errors"].append(
-                    "Agent communication key not available"
-                )
+                initialization_results["errors"].append("Agent communication key not available")
         except Exception as e:
             initialization_results["errors"].append(f"Agent communication error: {e}")
 
         # 시스템 성공 여부 결정
         if initialization_results["errors"]:
             initialization_results["success"] = False
-            logger.error(
-                f"System initialization failed: {initialization_results['errors']}"
-            )
+            logger.error(f"System initialization failed: {initialization_results['errors']}")
         else:
             logger.info(
                 f"System initialized successfully. Loaded configs: {initialization_results['configs_loaded']}"
@@ -394,12 +379,8 @@ class EvolutionSystemIntegration:
         # Agent 암호화 테스트
         try:
             test_message = "Test message for encryption"
-            encrypted = await self.agent_security.encrypt_message(
-                test_message, "test-agent"
-            )
-            decrypted = await self.agent_security.decrypt_message(
-                encrypted, "test-agent"
-            )
+            encrypted = await self.agent_security.encrypt_message(test_message, "test-agent")
+            decrypted = await self.agent_security.decrypt_message(encrypted, "test-agent")
 
             test_results["tests"]["agent_encryption"] = {
                 "success": decrypted == test_message,

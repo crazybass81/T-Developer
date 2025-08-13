@@ -2,10 +2,11 @@
 Claude AI Model Integration
 """
 
-import os
-import json
-from typing import Dict, Any, Optional, List
 import asyncio
+import json
+import os
+from typing import Any, Dict, List, Optional
+
 from .base_model import BaseAIModel, ModelResponse
 
 
@@ -83,9 +84,7 @@ class Claude3Opus(BaseAIModel):
         # 분석 작업은 더 긴 응답이 필요할 수 있음
         return await self.complete(prompt, temperature, max_tokens=2000)
 
-    async def chat(
-        self, messages: List[Dict[str, str]], temperature: float = 0.7, **kwargs
-    ) -> str:
+    async def chat(self, messages: List[Dict[str, str]], temperature: float = 0.7, **kwargs) -> str:
         """
         대화형 완성
 

@@ -4,17 +4,16 @@ Setup AWS Systems Manager Parameter Store parameters for T-Developer
 This script creates all necessary configuration parameters
 """
 
-import boto3
 import json
+import logging
 import sys
 from datetime import datetime
-from typing import Dict, Any, List
-import logging
+from typing import Any, Dict, List
+
+import boto3
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -311,9 +310,7 @@ class ParameterStoreManager:
             return True
 
         except Exception as e:
-            logger.error(
-                f"✗ Failed to create/update parameter {param_config['Name']}: {e}"
-            )
+            logger.error(f"✗ Failed to create/update parameter {param_config['Name']}: {e}")
             return False
 
     def setup_all_parameters(self) -> Dict[str, bool]:
@@ -335,9 +332,7 @@ class ParameterStoreManager:
 
         for param in parameters:
             try:
-                response = self.ssm_client.get_parameter(
-                    Name=param["Name"], WithDecryption=True
-                )
+                response = self.ssm_client.get_parameter(Name=param["Name"], WithDecryption=True)
                 results[param["Name"]] = True
                 logger.info(
                     f"✓ Verified parameter: {param['Name']} = {response['Parameter']['Value']}"
@@ -356,9 +351,7 @@ class ParameterStoreManager:
             # Export as environment variables
             lines = []
             for param in parameters:
-                env_name = (
-                    param["Name"].replace("/t-developer/", "").replace("/", "_").upper()
-                )
+                env_name = param["Name"].replace("/t-developer/", "").replace("/", "_").upper()
                 lines.append(f"export {env_name}={param['Value']}")
             return "\n".join(lines)
 
@@ -432,9 +425,7 @@ def main():
         results = psm.verify_parameters()
     else:
         # Setup parameters
-        logger.info(
-            f"Setting up parameters for {args.environment} environment in {args.region}..."
-        )
+        logger.info(f"Setting up parameters for {args.environment} environment in {args.region}...")
         results = psm.setup_all_parameters()
 
     if not args.export:

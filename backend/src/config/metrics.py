@@ -3,13 +3,14 @@
 CloudWatch 메트릭 통합
 """
 
+import os
 import time
-import boto3
-from typing import Dict, Any, Optional, List
+from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-import os
-from contextlib import contextmanager
+from typing import Any, Dict, List, Optional
+
+import boto3
 
 
 class MetricsCollector:
@@ -50,9 +51,7 @@ class MetricsCollector:
 
         if self.use_cloudwatch:
             try:
-                self.cloudwatch.put_metric_data(
-                    Namespace=self.namespace, MetricData=[metric_data]
-                )
+                self.cloudwatch.put_metric_data(Namespace=self.namespace, MetricData=[metric_data])
             except Exception as e:
                 print(f"메트릭 전송 실패: {e}")
                 self.metrics_buffer.append(metric_data)
@@ -94,9 +93,7 @@ class MetricsCollector:
         dimensions: Optional[Dict[str, str]] = None,
     ):
         """카운트 메트릭"""
-        self.put_metric(
-            metric_name=metric_name, value=value, unit="Count", dimensions=dimensions
-        )
+        self.put_metric(metric_name=metric_name, value=value, unit="Count", dimensions=dimensions)
 
     def gauge(
         self,
@@ -105,9 +102,7 @@ class MetricsCollector:
         dimensions: Optional[Dict[str, str]] = None,
     ):
         """게이지 메트릭"""
-        self.put_metric(
-            metric_name=metric_name, value=value, unit="None", dimensions=dimensions
-        )
+        self.put_metric(metric_name=metric_name, value=value, unit="None", dimensions=dimensions)
 
     def flush_buffer(self):
         """버퍼된 메트릭 전송"""
@@ -148,9 +143,7 @@ def track_error_rate(metric_name: str):
         def wrapper(*args, **kwargs):
             try:
                 result = func(*args, **kwargs)
-                metrics.count(
-                    f"{metric_name}_success", dimensions={"function": func.__name__}
-                )
+                metrics.count(f"{metric_name}_success", dimensions={"function": func.__name__})
                 return result
             except Exception as e:
                 metrics.count(

@@ -13,22 +13,23 @@ Features:
 - 자동 키 회전 감지
 """
 
-import json
 import asyncio
-import logging
-from datetime import datetime, timedelta, timezone
-from typing import Dict, Any, Optional, Union, List, Tuple
-from dataclasses import dataclass, asdict
-from threading import Lock, RLock
-from concurrent.futures import ThreadPoolExecutor
 import hashlib
-import time
+import json
+import logging
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta, timezone
+from functools import lru_cache, wraps
+from threading import Lock, RLock
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import boto3
-from botocore.exceptions import ClientError, NoCredentialsError
-from botocore.config import Config
 import redis
-from functools import wraps, lru_cache
+from botocore.config import Config
+from botocore.exceptions import ClientError, NoCredentialsError
 
 # 환경 설정
 PROJECT_NAME = os.environ.get("PROJECT_NAME", "t-developer")
@@ -142,13 +143,9 @@ class AuditLogger:
         if "/" in secret_name:
             parts = secret_name.split("/")
             # 마지막 부분만 마스킹
-            parts[-1] = (
-                f"{parts[-1][:3]}***{parts[-1][-3:]}" if len(parts[-1]) > 6 else "***"
-            )
+            parts[-1] = f"{parts[-1][:3]}***{parts[-1][-3:]}" if len(parts[-1]) > 6 else "***"
             return "/".join(parts)
-        return (
-            f"{secret_name[:3]}***{secret_name[-3:]}" if len(secret_name) > 6 else "***"
-        )
+        return f"{secret_name[:3]}***{secret_name[-3:]}" if len(secret_name) > 6 else "***"
 
 
 class SecretCache:
@@ -166,9 +163,7 @@ class SecretCache:
                 self._redis_client.ping()
                 logger.info("Connected to Redis cache")
             except Exception as e:
-                logger.warning(
-                    f"Redis connection failed, falling back to local cache: {e}"
-                )
+                logger.warning(f"Redis connection failed, falling back to local cache: {e}")
 
     def get(self, key: str) -> Optional[Any]:
         """캐시에서 값 조회"""
@@ -212,9 +207,7 @@ class SecretCache:
         if self._redis_client:
             try:
                 cache_data = {"value": value, "expires_at": expires_at.isoformat()}
-                self._redis_client.setex(
-                    self._hash_key(key), ttl, json.dumps(cache_data)
-                )
+                self._redis_client.setex(self._hash_key(key), ttl, json.dumps(cache_data))
             except Exception as e:
                 logger.warning(f"Redis set error: {e}")
 
@@ -223,9 +216,7 @@ class SecretCache:
             # 캐시 크기 제한
             if len(self._local_cache) >= self.config.max_size:
                 # 가장 오래된 항목 제거 (LRU 방식)
-                oldest_key = min(
-                    self._local_cache.keys(), key=lambda k: self._local_cache[k][1]
-                )
+                oldest_key = min(self._local_cache.keys(), key=lambda k: self._local_cache[k][1])
                 del self._local_cache[oldest_key]
 
             self._local_cache[key] = (value, expires_at)
@@ -277,9 +268,7 @@ def retry_on_exception(max_retries: int = 3, backoff_factor: float = 1.0):
                         break
 
                     # 재시도할 수 없는 오류들
-                    error_code = (
-                        getattr(e, "response", {}).get("Error", {}).get("Code", "")
-                    )
+                    error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
                     if error_code in [
                         "ResourceNotFoundException",
                         "AccessDeniedException",
@@ -288,9 +277,7 @@ def retry_on_exception(max_retries: int = 3, backoff_factor: float = 1.0):
 
                     # 백오프 대기
                     wait_time = backoff_factor * (2**attempt)
-                    logger.warning(
-                        f"Attempt {attempt + 1} failed, retrying in {wait_time}s: {e}"
-                    )
+                    logger.warning(f"Attempt {attempt + 1} failed, retrying in {wait_time}s: {e}")
                     time.sleep(wait_time)
 
             raise last_exception
@@ -371,9 +358,7 @@ class SecretsManagerClient:
             # JSON 파싱 시도
             if secret_data["secret_string"]:
                 try:
-                    secret_data["parsed_secret"] = json.loads(
-                        secret_data["secret_string"]
-                    )
+                    secret_data["parsed_secret"] = json.loads(secret_data["secret_string"])
                 except json.JSONDecodeError:
                     # JSON이 아닌 경우 그대로 유지
                     pass
@@ -401,9 +386,7 @@ class SecretsManagerClient:
 
             # 특정 에러 처리
             if error_code == "ResourceNotFoundException":
-                self._audit_logger.log_access(
-                    secret_name, "get_secret", False, error="not_found"
-                )
+                self._audit_logger.log_access(secret_name, "get_secret", False, error="not_found")
                 raise SecretNotFoundError(f"Secret not found: {secret_name}")
             elif error_code == "AccessDeniedException":
                 self._audit_logger.log_access(
@@ -411,21 +394,15 @@ class SecretsManagerClient:
                 )
                 raise AccessDeniedError(f"Access denied to secret: {secret_name}")
             else:
-                self._audit_logger.log_access(
-                    secret_name, "get_secret", False, error=error_code
-                )
+                self._audit_logger.log_access(secret_name, "get_secret", False, error=error_code)
                 raise SecretsManagerError(f"Error retrieving secret: {e}")
 
-    def get_secret_string(
-        self, secret_name: str, version_id: Optional[str] = None
-    ) -> str:
+    def get_secret_string(self, secret_name: str, version_id: Optional[str] = None) -> str:
         """비밀 문자열만 반환"""
         secret_data = self.get_secret(secret_name, version_id)
         return secret_data.get("secret_string", "")
 
-    def get_secret_json(
-        self, secret_name: str, version_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def get_secret_json(self, secret_name: str, version_id: Optional[str] = None) -> Dict[str, Any]:
         """JSON 형태의 비밀 반환"""
         secret_data = self.get_secret(secret_name, version_id)
         if "parsed_secret" in secret_data:
@@ -469,9 +446,7 @@ class SecretsManagerClient:
         results = {}
         for secret_name, future in futures.items():
             try:
-                results[secret_name] = future.result(
-                    timeout=self.config.timeout_seconds
-                )
+                results[secret_name] = future.result(timeout=self.config.timeout_seconds)
             except Exception as e:
                 logger.warning(f"Failed to get secret {secret_name}: {e}")
                 results[secret_name] = None
@@ -483,9 +458,7 @@ class SecretsManagerClient:
     ) -> Dict[str, Any]:
         """비동기 비밀 조회"""
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            self._executor, self.get_secret, secret_name, version_id
-        )
+        return await loop.run_in_executor(self._executor, self.get_secret, secret_name, version_id)
 
     @retry_on_exception(max_retries=2)
     def list_secrets(self, name_prefix: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -506,9 +479,7 @@ class SecretsManagerClient:
                         "description": secret.get("Description", ""),
                         "kms_key_id": secret.get("KmsKeyId"),
                         "rotation_enabled": secret.get("RotationEnabled", False),
-                        "last_changed_date": secret.get(
-                            "LastChangedDate", ""
-                        ).isoformat()
+                        "last_changed_date": secret.get("LastChangedDate", "").isoformat()
                         if secret.get("LastChangedDate")
                         else None,
                         "tags": secret.get("Tags", []),
@@ -534,18 +505,14 @@ class SecretsManagerClient:
 
         # OpenAI API Key
         try:
-            openai_secret = self.get_secret_json(
-                f"{PROJECT_NAME}/evolution/openai-api-key"
-            )
+            openai_secret = self.get_secret_json(f"{PROJECT_NAME}/evolution/openai-api-key")
             api_secrets["openai"] = openai_secret
         except SecretsManagerError:
             logger.warning("OpenAI API key not found")
 
         # Anthropic API Key
         try:
-            anthropic_secret = self.get_secret_json(
-                f"{PROJECT_NAME}/evolution/anthropic-api-key"
-            )
+            anthropic_secret = self.get_secret_json(f"{PROJECT_NAME}/evolution/anthropic-api-key")
             api_secrets["anthropic"] = anthropic_secret
         except SecretsManagerError:
             logger.warning("Anthropic API key not found")
@@ -573,9 +540,7 @@ class SecretsManagerClient:
         if secret_name:
             # 특정 비밀의 모든 버전 캐시 제거
             keys_to_remove = [
-                key
-                for key in self._cache._local_cache.keys()
-                if key.startswith(f"{secret_name}:")
+                key for key in self._cache._local_cache.keys() if key.startswith(f"{secret_name}:")
             ]
             for key in keys_to_remove:
                 self._cache.delete(key)

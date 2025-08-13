@@ -4,32 +4,21 @@ Combines the best features from all three implementations
 """
 
 import asyncio
-import re
 import json
-from typing import Dict, Any, List, Optional, Set
-from datetime import datetime
+import re
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Set
 
 # Unified base imports
-from src.agents.unified.base import (
-    UnifiedBaseAgent,
-    AgentConfig,
-    AgentContext,
-    AgentResult,
-)
-from src.agents.unified.data_wrapper import (
-    AgentInput,
-    AgentContext,
-    wrap_input,
-    unwrap_result,
-)
-
+from src.agents.unified.base import AgentConfig, AgentContext, AgentResult, UnifiedBaseAgent
+from src.agents.unified.data_wrapper import AgentContext, AgentInput, unwrap_result, wrap_input
 
 # Phase 2 imports - optional
 try:
-    from src.core.interfaces import AgentInput, ProcessingStatus, ValidationResult
     from src.core.agent_models import NLInputResult
-    from src.core.event_bus import publish_agent_event, EventType
+    from src.core.event_bus import EventType, publish_agent_event
+    from src.core.interfaces import AgentInput, ProcessingStatus, ValidationResult
     from src.core.security import InputValidator
 
     CORE_IMPORTS_AVAILABLE = True
@@ -61,15 +50,15 @@ except ImportError:
 
 # Module imports
 from src.agents.unified.nl_input.modules import (
-    ContextEnhancer,
-    RequirementValidator,
-    ProjectTypeClassifier,
-    TechStackAnalyzer,
-    RequirementExtractor,
-    EntityRecognizer,
-    MultilingualProcessor,
-    IntentAnalyzer,
     AmbiguityResolver,
+    ContextEnhancer,
+    EntityRecognizer,
+    IntentAnalyzer,
+    MultilingualProcessor,
+    ProjectTypeClassifier,
+    RequirementExtractor,
+    RequirementValidator,
+    TechStackAnalyzer,
     TemplateMatcher,
 )
 
@@ -455,9 +444,7 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
 
         return result
 
-    async def process(
-        self, input_data: AgentInput[Dict]
-    ) -> AgentResult[EnhancedNLInputResult]:
+    async def process(self, input_data: AgentInput[Dict]) -> AgentResult[EnhancedNLInputResult]:
         """Process natural language input - Phase 2 interface"""
 
         try:
@@ -465,11 +452,7 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
             if hasattr(input_data, "data"):
                 # AgentInput object
                 data = input_data.data
-                context = (
-                    input_data.context
-                    if hasattr(input_data, "context")
-                    else AgentContext()
-                )
+                context = input_data.context if hasattr(input_data, "context") else AgentContext()
             elif isinstance(input_data, dict) and "data" in input_data:
                 # Wrapped dict from pipeline
                 data = input_data["data"]
@@ -486,11 +469,7 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
                         context.timestamp = context_data["timestamp"]
             else:
                 # Direct dict
-                data = (
-                    input_data
-                    if isinstance(input_data, dict)
-                    else {"query": str(input_data)}
-                )
+                data = input_data if isinstance(input_data, dict) else {"query": str(input_data)}
                 context = AgentContext()
 
             # Extract and sanitize query
@@ -504,9 +483,7 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
             preferred_language = data.get("language", "auto")
 
             # Process with unified logic
-            result = await self._process_unified(
-                query, user_context, preferred_language, context
-            )
+            result = await self._process_unified(query, user_context, preferred_language, context)
 
             return result
 
@@ -540,9 +517,7 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
         preferred_language = input_data.get("language", "auto")
 
         # Process with unified logic
-        return await self._process_unified(
-            query, user_context, preferred_language, context
-        )
+        return await self._process_unified(query, user_context, preferred_language, context)
 
     async def _process_unified(
         self,
@@ -581,25 +556,19 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
             # Step 1: Language Detection and Translation
             language, translated_desc = await self.multilingual_processor.process(
                 query,
-                target_language="en"
-                if preferred_language == "auto"
-                else preferred_language,
+                target_language="en" if preferred_language == "auto" else preferred_language,
             )
             self.processed_languages.add(language)
 
             # Step 2: Context Enhancement
-            enhanced_input = await self.context_enhancer.enhance(
-                translated_desc, user_context
-            )
+            enhanced_input = await self.context_enhancer.enhance(translated_desc, user_context)
 
             # Step 3: Template Matching (fast path)
             template_match = await self.template_matcher.match(enhanced_input)
 
             if template_match and template_match.confidence > 0.8:
                 self.template_hits += 1
-                self.logger.info(
-                    f"Template match found: {template_match.template_name}"
-                )
+                self.logger.info(f"Template match found: {template_match.template_name}")
                 result_data = await self._process_template_match(
                     template_match, enhanced_input, query
                 )
@@ -641,12 +610,8 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
 
             if self.metrics:
                 self.metrics.increment_counter("nl_input.processed")
-                self.metrics.record_histogram(
-                    "nl_input.features_count", len(result_data.features)
-                )
-                self.metrics.set_gauge(
-                    "nl_input.confidence", result_data.intent_confidence
-                )
+                self.metrics.record_histogram("nl_input.features_count", len(result_data.features))
+                self.metrics.set_gauge("nl_input.confidence", result_data.intent_confidence)
 
             # Publish completion event
             if context:
@@ -702,9 +667,7 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
 
         # Core analysis using rule-based methods
         project_type = self._detect_project_type(enhanced_input)
-        main_functionality = self._extract_main_functionality(
-            enhanced_input, project_type
-        )
+        main_functionality = self._extract_main_functionality(enhanced_input, project_type)
         features = self._extract_features(enhanced_input)
         technical_reqs = self._analyze_technical_requirements(enhanced_input, features)
         constraints = self._extract_constraints(enhanced_input)
@@ -714,9 +677,7 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
 
         # Additional analysis
         sentiment = self._analyze_sentiment(enhanced_input)
-        clarity_score = self._calculate_clarity_score(
-            enhanced_input, project_type, features
-        )
+        clarity_score = self._calculate_clarity_score(enhanced_input, project_type, features)
         estimated_effort = self._estimate_effort(complexity, len(features))
 
         # Intent Analysis
@@ -735,17 +696,13 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
             functional,
             non_functional,
             technical,
-        ) = await self.requirement_extractor.extract(
-            enhanced_input, project_type, entities
-        )
+        ) = await self.requirement_extractor.extract(enhanced_input, project_type, entities)
 
         # Ambiguity Resolution
         ambiguities = await self.ambiguity_resolver.detect_from_text(enhanced_input)
         clarification_questions = []
         if ambiguities:
-            clarification_questions = await self.ambiguity_resolver.generate_questions(
-                ambiguities
-            )
+            clarification_questions = await self.ambiguity_resolver.generate_questions(ambiguities)
 
         # Try AI enhancement if available
         ai_enhanced_data = await self._enhance_with_ai(
@@ -754,15 +711,11 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
         ai_provider = None
         if self.config.ecs_optimized and (self.anthropic_client or self.openai_client):
             try:
-                ai_result = await self._enhance_with_ai(
-                    enhanced_input, user_context, project_type
-                )
+                ai_result = await self._enhance_with_ai(enhanced_input, user_context, project_type)
                 if ai_result:
                     # Merge AI insights
                     functional.extend(ai_result.get("functional_requirements", []))
-                    non_functional.extend(
-                        ai_result.get("non_functional_requirements", [])
-                    )
+                    non_functional.extend(ai_result.get("non_functional_requirements", []))
                     ai_provider = ai_result.get("provider")
                     self.ai_fallbacks += 1
             except Exception as e:
@@ -802,9 +755,7 @@ class UnifiedNLInputAgent(UnifiedBaseAgent):
         """Process using matched template"""
 
         # Customize template based on input
-        customizations = await self.template_matcher.customize(
-            template_match, enhanced_input
-        )
+        customizations = await self.template_matcher.customize(template_match, enhanced_input)
 
         # Extract additional details
         features = template_match.features[:]
@@ -1047,9 +998,7 @@ Respond in JSON format."""
                     feature_scores[feature] += score
 
         # Sort by score and take features
-        sorted_features = sorted(
-            feature_scores.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_features = sorted(feature_scores.items(), key=lambda x: x[1], reverse=True)
         features = [f[0] for f in sorted_features]
 
         # Add implicit features
@@ -1064,9 +1013,7 @@ Respond in JSON format."""
 
         return features
 
-    def _analyze_technical_requirements(
-        self, text: str, features: List[str]
-    ) -> Dict[str, Any]:
+    def _analyze_technical_requirements(self, text: str, features: List[str]) -> Dict[str, Any]:
         """Comprehensive technical requirements analysis"""
         text_lower = text.lower()
 
@@ -1131,26 +1078,18 @@ Respond in JSON format."""
 
         # Performance requirements
         if any(
-            word in text_lower
-            for word in ["fast", "performance", "optimize", "빠른", "성능", "최적화"]
+            word in text_lower for word in ["fast", "performance", "optimize", "빠른", "성능", "최적화"]
         ):
             tech_reqs["performance"] = "optimized"
-        elif any(
-            word in text_lower for word in ["enterprise", "scale", "엔터프라이즈", "대규모"]
-        ):
+        elif any(word in text_lower for word in ["enterprise", "scale", "엔터프라이즈", "대규모"]):
             tech_reqs["performance"] = "enterprise"
 
         # Security requirements
-        if any(
-            word in text_lower
-            for word in ["secure", "security", "encryption", "보안", "암호화"]
-        ):
+        if any(word in text_lower for word in ["secure", "security", "encryption", "보안", "암호화"]):
             tech_reqs["security"] = "enhanced"
 
         # Scalability requirements
-        if any(
-            word in text_lower for word in ["scalable", "scale", "million", "확장", "백만"]
-        ):
+        if any(word in text_lower for word in ["scalable", "scale", "million", "확장", "백만"]):
             tech_reqs["scalability"] = "high"
 
         return tech_reqs
@@ -1174,8 +1113,7 @@ Respond in JSON format."""
 
         # Budget constraints
         if any(
-            word in text_lower
-            for word in ["budget", "cost", "cheap", "free", "예산", "비용", "무료"]
+            word in text_lower for word in ["budget", "cost", "cheap", "free", "예산", "비용", "무료"]
         ):
             constraints.append("Budget conscious")
 
@@ -1340,9 +1278,7 @@ Respond in JSON format."""
             return "negative"
         return "neutral"
 
-    def _calculate_clarity_score(
-        self, text: str, project_type: str, features: List[str]
-    ) -> float:
+    def _calculate_clarity_score(self, text: str, project_type: str, features: List[str]) -> float:
         """Calculate how clear the requirements are"""
         score = 0.5  # Base score
 

@@ -3,52 +3,37 @@ Match Rate Agent - Production Implementation
 Calculates match rates between components and requirements
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import asyncio
-import numpy as np
-from datetime import datetime
-from pathlib import Path
 import math
 
 # Import base classes
 import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 
 sys.path.append("/home/ec2-user/T-DeveloperMVP/backend/src")
 
-from src.agents.unified.base import (
-    UnifiedBaseAgent,
-    AgentConfig,
-    AgentContext,
-    AgentResult,
-)
-from src.agents.unified.data_wrapper import (
-    AgentInput,
-    AgentContext,
-    wrap_input,
-    unwrap_result,
-)
-
-# from agents.phase2_enhancements import Phase2MatchRateResult  # Commented out - module not available
-
-# Import all specialized modules
-from src.agents.unified.match_rate.modules.similarity_calculator import (
-    SimilarityCalculator,
-)
-from src.agents.unified.match_rate.modules.semantic_matcher import SemanticMatcher
-from src.agents.unified.match_rate.modules.functional_scorer import FunctionalScorer
-from src.agents.unified.match_rate.modules.technical_compatibility import (
-    TechnicalCompatibility,
-)
-from src.agents.unified.match_rate.modules.performance_matcher import PerformanceMatcher
-from src.agents.unified.match_rate.modules.security_compliance import SecurityCompliance
+from src.agents.unified.base import AgentConfig, AgentContext, AgentResult, UnifiedBaseAgent
+from src.agents.unified.data_wrapper import AgentContext, AgentInput, unwrap_result, wrap_input
 from src.agents.unified.match_rate.modules.cost_efficiency import CostEfficiency
+from src.agents.unified.match_rate.modules.functional_scorer import FunctionalScorer
 from src.agents.unified.match_rate.modules.maintenance_score import MaintenanceScore
+from src.agents.unified.match_rate.modules.performance_matcher import PerformanceMatcher
 from src.agents.unified.match_rate.modules.popularity_metrics import PopularityMetrics
 from src.agents.unified.match_rate.modules.quality_assessor import QualityAssessor
+from src.agents.unified.match_rate.modules.recommendation_engine import RecommendationEngine
 from src.agents.unified.match_rate.modules.risk_analyzer import RiskAnalyzer
-from src.agents.unified.match_rate.modules.recommendation_engine import (
-    RecommendationEngine,
-)
+from src.agents.unified.match_rate.modules.security_compliance import SecurityCompliance
+from src.agents.unified.match_rate.modules.semantic_matcher import SemanticMatcher
+
+# Import all specialized modules
+from src.agents.unified.match_rate.modules.similarity_calculator import SimilarityCalculator
+from src.agents.unified.match_rate.modules.technical_compatibility import TechnicalCompatibility
+
+# from agents.phase2_enhancements import Phase2MatchRateResult  # Commented out - module not available
 
 
 class EnhancedMatchRateResult:
@@ -351,9 +336,7 @@ class MatchRateAgent(UnifiedBaseAgent):
                 cost_analysis.get(component_id, {}).get("efficiency_score", 0.5)
             )
             score_components["maintenance"] = self._normalize_score(
-                maintenance_scores.get(component_id, {}).get(
-                    "maintainability_score", 0.5
-                )
+                maintenance_scores.get(component_id, {}).get("maintainability_score", 0.5)
             )
             score_components["popularity"] = self._normalize_score(
                 popularity_data.get(component_id, {}).get("popularity_score", 0.5)
@@ -442,9 +425,7 @@ class MatchRateAgent(UnifiedBaseAgent):
 
         return matrix
 
-    def _calculate_component_similarity(
-        self, comp1_scores: Dict, comp2_scores: Dict
-    ) -> float:
+    def _calculate_component_similarity(self, comp1_scores: Dict, comp2_scores: Dict) -> float:
         """Calculate similarity between two components"""
 
         if not comp1_scores or not comp2_scores:
@@ -506,9 +487,7 @@ class MatchRateAgent(UnifiedBaseAgent):
         for component in components:
             component_id = component.get("id", component.get("name"))
             score = weighted_scores.get(component_id, 0.0)
-            rank_info = next(
-                (r for r in ranking if r["component_id"] == component_id), {}
-            )
+            rank_info = next((r for r in ranking if r["component_id"] == component_id), {})
 
             analysis[component_id] = {
                 "component_name": component.get("name", component_id),
@@ -518,11 +497,8 @@ class MatchRateAgent(UnifiedBaseAgent):
                 "percentile": rank_info.get("percentile", 0),
                 "strengths": self._identify_strengths(component_id, score),
                 "weaknesses": self._identify_weaknesses(component_id, score),
-                "recommendations": self._generate_component_recommendations(
-                    component_id, score
-                ),
-                "comparison_to_average": score
-                - np.mean(list(weighted_scores.values())),
+                "recommendations": self._generate_component_recommendations(component_id, score),
+                "comparison_to_average": score - np.mean(list(weighted_scores.values())),
                 "category_breakdown": self._get_category_breakdown(component_id),
             }
 
@@ -561,15 +537,11 @@ class MatchRateAgent(UnifiedBaseAgent):
 
         # Add more specific weaknesses
         if score < 0.7:
-            weaknesses.extend(
-                ["May require additional configuration", "Limited community support"]
-            )
+            weaknesses.extend(["May require additional configuration", "Limited community support"])
 
         return weaknesses
 
-    def _generate_component_recommendations(
-        self, component_id: str, score: float
-    ) -> List[str]:
+    def _generate_component_recommendations(self, component_id: str, score: float) -> List[str]:
         """Generate recommendations for component"""
 
         recommendations = []

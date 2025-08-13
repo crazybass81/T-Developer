@@ -2,10 +2,11 @@
 GPT-4 AI Model Integration
 """
 
-import os
-import json
-from typing import Dict, Any, Optional, List
 import asyncio
+import json
+import os
+from typing import Any, Dict, List, Optional
+
 from .base_model import BaseAIModel, ModelResponse
 
 
@@ -91,9 +92,7 @@ class GPT4Turbo(BaseAIModel):
         kwargs["response_format"] = {"type": "json_object"}
         return await self.complete(prompt, temperature, max_tokens=2000, **kwargs)
 
-    async def chat(
-        self, messages: List[Dict[str, str]], temperature: float = 0.7, **kwargs
-    ) -> str:
+    async def chat(self, messages: List[Dict[str, str]], temperature: float = 0.7, **kwargs) -> str:
         """
         대화형 완성
 
@@ -164,9 +163,7 @@ class GPT4Turbo(BaseAIModel):
         last_message = messages[-1]["content"] if messages else ""
         return f"Mock GPT-4 chat response to: {last_message[:100]}..."
 
-    async def generate_code(
-        self, specification: str, language: str = "python", **kwargs
-    ) -> str:
+    async def generate_code(self, specification: str, language: str = "python", **kwargs) -> str:
         """
         코드 생성 특화 메서드
 

@@ -3,15 +3,13 @@ Popularity Metrics Module
 Gathers and analyzes popularity metrics
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class PopularityMetrics:
     """Gathers popularity metrics"""
 
-    async def gather(
-        self, components: List[Dict[str, Any]]
-    ) -> Dict[str, Dict[str, Any]]:
+    async def gather(self, components: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         """Gather popularity metrics"""
 
         popularity_results = {}

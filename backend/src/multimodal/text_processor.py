@@ -1,5 +1,5 @@
-from typing import Dict, List, Any
 import re
+from typing import Any, Dict, List
 
 
 class MultiModalTextProcessor:
@@ -18,9 +18,7 @@ class MultiModalTextProcessor:
         tokens = self.tokenize(cleaned_text)
 
         # 청킹
-        chunks = self.chunk_text(
-            cleaned_text, options.get("max_tokens", self.max_chunk_size)
-        )
+        chunks = self.chunk_text(cleaned_text, options.get("max_tokens", self.max_chunk_size))
 
         # 임베딩 (선택적)
         embeddings = None
@@ -61,9 +59,7 @@ class MultiModalTextProcessor:
     def mask_sensitive_info(self, text: str) -> str:
         """민감정보 마스킹"""
         # 이메일 마스킹
-        text = re.sub(
-            r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "[EMAIL]", text
-        )
+        text = re.sub(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "[EMAIL]", text)
         # 전화번호 마스킹
         text = re.sub(r"\b\d{3}-\d{3,4}-\d{4}\b", "[PHONE]", text)
         return text

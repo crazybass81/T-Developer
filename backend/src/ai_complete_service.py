@@ -5,14 +5,14 @@ T-Developer AI-Powered Complete Service
 """
 
 import asyncio
-import sys
-import os
 import json
-import time
-from datetime import datetime
-from typing import Dict, Any, Optional, List
 import logging
+import os
+import sys
+import time
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 # 경로 설정
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -426,9 +426,7 @@ class AICompleteOrchestrator:
         response = await self.ai_client.generate(prompt)
         data = json.loads(response)
 
-        return AgentResult(
-            success=True, data=data, execution_time=time.time() - start, ai_calls=1
-        )
+        return AgentResult(success=True, data=data, execution_time=time.time() - start, ai_calls=1)
 
     async def _ai_ui_selection(self, pipeline_data: Dict) -> AgentResult:
         """AI 기반 UI 프레임워크 선택"""
@@ -452,9 +450,7 @@ class AICompleteOrchestrator:
         response = await self.ai_client.generate(prompt)
         data = json.loads(response)
 
-        return AgentResult(
-            success=True, data=data, execution_time=time.time() - start, ai_calls=1
-        )
+        return AgentResult(success=True, data=data, execution_time=time.time() - start, ai_calls=1)
 
     async def _ai_parser(self, pipeline_data: Dict) -> AgentResult:
         """AI 기반 프로젝트 구조 파싱"""
@@ -477,9 +473,7 @@ class AICompleteOrchestrator:
         response = await self.ai_client.generate(prompt)
         data = json.loads(response)
 
-        return AgentResult(
-            success=True, data=data, execution_time=time.time() - start, ai_calls=1
-        )
+        return AgentResult(success=True, data=data, execution_time=time.time() - start, ai_calls=1)
 
     async def _ai_component_decision(self, pipeline_data: Dict) -> AgentResult:
         """AI 기반 컴포넌트 아키텍처 결정"""
@@ -502,9 +496,7 @@ class AICompleteOrchestrator:
         response = await self.ai_client.generate(prompt)
         data = json.loads(response)
 
-        return AgentResult(
-            success=True, data=data, execution_time=time.time() - start, ai_calls=1
-        )
+        return AgentResult(success=True, data=data, execution_time=time.time() - start, ai_calls=1)
 
     async def _ai_match_rate(self, pipeline_data: Dict) -> AgentResult:
         """AI 기반 매칭 점수 계산"""
@@ -528,9 +520,7 @@ class AICompleteOrchestrator:
         response = await self.ai_client.generate(prompt)
         data = json.loads(response)
 
-        return AgentResult(
-            success=True, data=data, execution_time=time.time() - start, ai_calls=1
-        )
+        return AgentResult(success=True, data=data, execution_time=time.time() - start, ai_calls=1)
 
     async def _ai_search(self, pipeline_data: Dict) -> AgentResult:
         """AI 기반 템플릿 검색"""
@@ -553,9 +543,7 @@ class AICompleteOrchestrator:
         response = await self.ai_client.generate(prompt)
         data = json.loads(response)
 
-        return AgentResult(
-            success=True, data=data, execution_time=time.time() - start, ai_calls=1
-        )
+        return AgentResult(success=True, data=data, execution_time=time.time() - start, ai_calls=1)
 
     async def _ai_generation(self, pipeline_data: Dict) -> AgentResult:
         """AI 기반 실제 코드 생성"""
@@ -664,11 +652,12 @@ class AICompleteOrchestrator:
         )
 
 
+import uvicorn
+
 # FastAPI 앱
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel
-import uvicorn
 
 app = FastAPI(title="T-Developer AI Complete Service")
 

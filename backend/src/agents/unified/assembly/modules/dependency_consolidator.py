@@ -2,12 +2,13 @@
 Consolidates and optimizes project dependencies across all components
 """
 
-from typing import Dict, List, Any, Optional, Tuple, Set
 import asyncio
 import json
-import semver
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+import semver
 
 
 @dataclass

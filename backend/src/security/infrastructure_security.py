@@ -3,12 +3,13 @@ Infrastructure Security Module
 Validates AWS infrastructure security configurations
 """
 
-import logging
-import boto3
 import json
-from typing import Dict, List, Any, Optional
+import logging
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import boto3
 import botocore.exceptions
 
 logger = logging.getLogger(__name__)
@@ -46,9 +47,7 @@ class InfrastructureSecurityAuditor:
         self.session = boto3.Session()
         self.findings: List[SecurityFinding] = []
 
-    async def audit_infrastructure(
-        self, region: str = "us-east-1"
-    ) -> InfrastructureSecurityReport:
+    async def audit_infrastructure(self, region: str = "us-east-1") -> InfrastructureSecurityReport:
         """Perform comprehensive infrastructure security audit"""
 
         scan_start = datetime.now()
@@ -155,12 +154,8 @@ class InfrastructureSecurityAuditor:
                     for key in access_keys:
                         # Check last used
                         try:
-                            last_used = iam.get_access_key_last_used(
-                                AccessKeyId=key["AccessKeyId"]
-                            )
-                            if not last_used.get("AccessKeyLastUsed", {}).get(
-                                "LastUsedDate"
-                            ):
+                            last_used = iam.get_access_key_last_used(AccessKeyId=key["AccessKeyId"])
+                            if not last_used.get("AccessKeyLastUsed", {}).get("LastUsedDate"):
                                 self.findings.append(
                                     SecurityFinding(
                                         resource_id=f"{user['UserName']}:{key['AccessKeyId']}",
@@ -271,10 +266,7 @@ class InfrastructureSecurityAuditor:
 
                 if "t-developer" in function_name.lower():
                     # Check for environment variables with secrets
-                    if (
-                        "Environment" in function
-                        and "Variables" in function["Environment"]
-                    ):
+                    if "Environment" in function and "Variables" in function["Environment"]:
                         env_vars = function["Environment"]["Variables"]
 
                         for var_name, var_value in env_vars.items():
@@ -351,9 +343,7 @@ class InfrastructureSecurityAuditor:
 
                     # Check point-in-time recovery
                     try:
-                        backup_desc = dynamodb.describe_continuous_backups(
-                            TableName=table_name
-                        )
+                        backup_desc = dynamodb.describe_continuous_backups(TableName=table_name)
                         if (
                             not backup_desc["ContinuousBackupsDescription"][
                                 "PointInTimeRecoveryDescription"
@@ -398,9 +388,9 @@ class InfrastructureSecurityAuditor:
                         )["services"][0]
 
                         task_def_arn = service_desc["taskDefinition"]
-                        task_def = ecs.describe_task_definition(
-                            taskDefinition=task_def_arn
-                        )["taskDefinition"]
+                        task_def = ecs.describe_task_definition(taskDefinition=task_def_arn)[
+                            "taskDefinition"
+                        ]
 
                         # Check for privileged containers
                         for container in task_def.get("containerDefinitions", []):
@@ -419,9 +409,7 @@ class InfrastructureSecurityAuditor:
 
                             # Check for secrets in environment variables
                             for env_var in container.get("environment", []):
-                                if self._looks_like_secret(
-                                    env_var["name"], env_var["value"]
-                                ):
+                                if self._looks_like_secret(env_var["name"], env_var["value"]):
                                     self.findings.append(
                                         SecurityFinding(
                                             resource_id=f"{cluster_name}:{container['name']}",
@@ -447,10 +435,7 @@ class InfrastructureSecurityAuditor:
             security_groups = ec2.describe_security_groups()["SecurityGroups"]
 
             for sg in security_groups:
-                if (
-                    sg["GroupName"] != "default"
-                    and "t-developer" in sg["GroupName"].lower()
-                ):
+                if sg["GroupName"] != "default" and "t-developer" in sg["GroupName"].lower():
                     # Check for overly permissive inbound rules
                     for rule in sg.get("IpPermissions", []):
                         for ip_range in rule.get("IpRanges", []):
@@ -577,9 +562,7 @@ class InfrastructureSecurityAuditor:
 
         severity_weights = {"critical": 25, "high": 15, "medium": 8, "low": 3}
 
-        total_penalty = sum(
-            severity_weights.get(finding.severity, 5) for finding in self.findings
-        )
+        total_penalty = sum(severity_weights.get(finding.severity, 5) for finding in self.findings)
 
         return max(0, 100 - min(total_penalty, 100))
 
@@ -604,38 +587,26 @@ class InfrastructureSecurityAuditor:
         # Count findings by type
         finding_types = {}
         for finding in self.findings:
-            finding_types[finding.finding_type] = (
-                finding_types.get(finding.finding_type, 0) + 1
-            )
+            finding_types[finding.finding_type] = finding_types.get(finding.finding_type, 0) + 1
 
         # Priority recommendations
         if finding_types.get("public_bucket", 0) > 0:
-            recommendations.append(
-                "CRITICAL: Review and secure public S3 buckets immediately"
-            )
+            recommendations.append("CRITICAL: Review and secure public S3 buckets immediately")
 
         if finding_types.get("admin_access", 0) > 0:
-            recommendations.append(
-                "CRITICAL: Review and limit administrative IAM permissions"
-            )
+            recommendations.append("CRITICAL: Review and limit administrative IAM permissions")
 
         if finding_types.get("hardcoded_secret", 0) > 0:
-            recommendations.append(
-                "HIGH: Move hardcoded secrets to AWS Secrets Manager"
-            )
+            recommendations.append("HIGH: Move hardcoded secrets to AWS Secrets Manager")
 
         if (
             finding_types.get("unencrypted_bucket", 0) > 0
             or finding_types.get("unencrypted_table", 0) > 0
         ):
-            recommendations.append(
-                "HIGH: Enable encryption at rest for all data stores"
-            )
+            recommendations.append("HIGH: Enable encryption at rest for all data stores")
 
         if finding_types.get("open_security_group", 0) > 0:
-            recommendations.append(
-                "HIGH: Restrict security group rules to specific IP ranges"
-            )
+            recommendations.append("HIGH: Restrict security group rules to specific IP ranges")
 
         # General recommendations
         if len(self.findings) > 20:
@@ -644,15 +615,11 @@ class InfrastructureSecurityAuditor:
             )
 
         if any(f.severity == "critical" for f in self.findings):
-            recommendations.append(
-                "Perform immediate remediation of critical security findings"
-            )
+            recommendations.append("Perform immediate remediation of critical security findings")
 
         return recommendations
 
-    def generate_infrastructure_report(
-        self, report: InfrastructureSecurityReport
-    ) -> str:
+    def generate_infrastructure_report(self, report: InfrastructureSecurityReport) -> str:
         """Generate infrastructure security report"""
 
         output = f"""

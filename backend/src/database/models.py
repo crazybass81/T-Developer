@@ -3,29 +3,17 @@ Database Models
 엔터프라이즈 데이터베이스 모델
 """
 
-from sqlalchemy import (
-    Column,
-    String,
-    Integer,
-    Boolean,
-    DateTime,
-    Text,
-    JSON,
-    Float,
-    ForeignKey,
-    Index,
-    UniqueConstraint,
-    CheckConstraint,
-    Enum as SQLEnum,
-    Table,
-    BigInteger,
-)
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.sql import func
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+import uuid
 from datetime import datetime
 from enum import Enum
-import uuid
+
+from sqlalchemy import JSON, BigInteger, Boolean, CheckConstraint, Column, DateTime
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Float, ForeignKey, Index, Integer, String, Table, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.orm import backref, relationship
+from sqlalchemy.sql import func
+
 from .base import Base
 
 # Association tables for many-to-many relationships
@@ -40,9 +28,7 @@ user_roles = Table(
 project_collaborators = Table(
     "project_collaborators",
     Base.metadata,
-    Column(
-        "project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE")
-    ),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE")),
     Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")),
     Column("role", String(50), default="viewer"),
     Column("added_at", DateTime, default=func.now()),
@@ -139,19 +125,11 @@ class User(Base):
 
     # Relationships
     organization = relationship("Organization", back_populates="users")
-    projects = relationship(
-        "Project", back_populates="owner", cascade="all, delete-orphan"
-    )
-    api_keys = relationship(
-        "ApiKey", back_populates="user", cascade="all, delete-orphan"
-    )
-    audit_logs = relationship(
-        "AuditLog", back_populates="user", cascade="all, delete-orphan"
-    )
+    projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
+    api_keys = relationship("ApiKey", back_populates="user", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
     roles = relationship("Role", secondary=user_roles, back_populates="users")
-    sessions = relationship(
-        "UserSession", back_populates="user", cascade="all, delete-orphan"
-    )
+    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
 
     # Indexes
     __table_args__ = (
@@ -172,9 +150,7 @@ class Organization(Base):
 
     # Billing
     billing_email = Column(String(255))
-    subscription_tier = Column(
-        SQLEnum(SubscriptionTier), default=SubscriptionTier.ENTERPRISE
-    )
+    subscription_tier = Column(SQLEnum(SubscriptionTier), default=SubscriptionTier.ENTERPRISE)
     subscription_seats = Column(Integer, default=10)
 
     # Settings
@@ -320,9 +296,7 @@ class AgentExecution(Base):
 
     # References
     agent_id = Column(UUID(as_uuid=True), ForeignKey("agents.id", ondelete="CASCADE"))
-    project_id = Column(
-        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE")
-    )
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"))
 
     # Execution details
     status = Column(SQLEnum(AgentStatus), default=AgentStatus.IDLE)
@@ -367,9 +341,7 @@ class ApiKey(Base):
     description = Column(Text)
 
     # Owner
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     # Permissions
     scopes = Column(ARRAY(String), default=[])
@@ -419,9 +391,7 @@ class UserSession(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Session info
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     session_token = Column(String(255), unique=True, nullable=False)
     refresh_token = Column(String(255), unique=True)
 

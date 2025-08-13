@@ -3,10 +3,10 @@ Constraint Analyzer Module
 Analyzes and extracts constraints from requirements
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import re
-from enum import Enum
 from collections import defaultdict
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class ConstraintType(Enum):
@@ -143,9 +143,7 @@ class ConstraintAnalyzer:
         sentence_constraints = self._extract_sentence_constraints(sentences)
 
         # Merge constraints
-        all_constraints = self._merge_constraints(
-            pattern_constraints, sentence_constraints
-        )
+        all_constraints = self._merge_constraints(pattern_constraints, sentence_constraints)
 
         # Classify constraints
         classified = self._classify_constraints(all_constraints)
@@ -201,9 +199,7 @@ class ConstraintAnalyzer:
 
         return constraints
 
-    def _parse_constraint_match(
-        self, match: re.Match, constraint_type: str
-    ) -> Optional[Dict]:
+    def _parse_constraint_match(self, match: re.Match, constraint_type: str) -> Optional[Dict]:
         """Parse constraint from regex match"""
         groups = match.groups()
 
@@ -378,42 +374,25 @@ class ConstraintAnalyzer:
         """Determine constraint category"""
         text_lower = text.lower()
 
-        if any(
-            word in text_lower
-            for word in ["performance", "speed", "latency", "response"]
-        ):
+        if any(word in text_lower for word in ["performance", "speed", "latency", "response"]):
             return ConstraintType.PERFORMANCE.value
         elif any(
-            word in text_lower
-            for word in ["security", "authentication", "encryption", "privacy"]
+            word in text_lower for word in ["security", "authentication", "encryption", "privacy"]
         ):
             return ConstraintType.SECURITY.value
-        elif any(
-            word in text_lower for word in ["business", "rule", "policy", "process"]
-        ):
+        elif any(word in text_lower for word in ["business", "rule", "policy", "process"]):
             return ConstraintType.BUSINESS.value
         elif any(
-            word in text_lower
-            for word in ["technical", "system", "architecture", "implementation"]
+            word in text_lower for word in ["technical", "system", "architecture", "implementation"]
         ):
             return ConstraintType.TECHNICAL.value
-        elif any(
-            word in text_lower
-            for word in ["compliance", "regulation", "standard", "audit"]
-        ):
+        elif any(word in text_lower for word in ["compliance", "regulation", "standard", "audit"]):
             return ConstraintType.REGULATORY.value
-        elif any(
-            word in text_lower for word in ["data", "database", "storage", "format"]
-        ):
+        elif any(word in text_lower for word in ["data", "database", "storage", "format"]):
             return ConstraintType.DATA.value
-        elif any(
-            word in text_lower for word in ["ui", "interface", "display", "layout"]
-        ):
+        elif any(word in text_lower for word in ["ui", "interface", "display", "layout"]):
             return ConstraintType.UI.value
-        elif any(
-            word in text_lower
-            for word in ["integration", "api", "interface", "connect"]
-        ):
+        elif any(word in text_lower for word in ["integration", "api", "interface", "connect"]):
             return ConstraintType.INTEGRATION.value
 
         return ConstraintType.OPERATIONAL.value
@@ -538,9 +517,7 @@ class ConstraintAnalyzer:
                     }
                 )
             elif "authoriz" in text_lower or "permission" in text_lower:
-                security["authorization"].append(
-                    {"requirement": constraint.get("text")}
-                )
+                security["authorization"].append({"requirement": constraint.get("text")})
             elif "encrypt" in text_lower:
                 security["encryption"].append(
                     {
@@ -614,18 +591,13 @@ class ConstraintAnalyzer:
                 )
 
         # Check for regulation keywords
-        if any(
-            word in text.lower() for word in ["regulation", "regulatory", "compliance"]
-        ):
+        if any(word in text.lower() for word in ["regulation", "regulatory", "compliance"]):
             compliance["regulations"].append(
                 {"type": "general", "requirement": "Regulatory compliance required"}
             )
 
         # Check for certification requirements
-        if any(
-            word in text.lower()
-            for word in ["certified", "certification", "accredited"]
-        ):
+        if any(word in text.lower() for word in ["certified", "certification", "accredited"]):
             compliance["certifications"].append(
                 {"type": "general", "requirement": "Certification required"}
             )
@@ -752,18 +724,14 @@ class ConstraintAnalyzer:
         # Performance recommendations
         if ConstraintType.PERFORMANCE.value in classified:
             recommendations.append("Implement performance monitoring and profiling")
-            recommendations.append(
-                "Consider caching strategies for improved response times"
-            )
+            recommendations.append("Consider caching strategies for improved response times")
             recommendations.append("Plan for load testing and performance optimization")
 
         # Security recommendations
         if ConstraintType.SECURITY.value in classified:
             recommendations.append("Conduct security assessment and threat modeling")
             recommendations.append("Implement comprehensive logging and audit trails")
-            recommendations.append(
-                "Plan for security testing and vulnerability assessments"
-            )
+            recommendations.append("Plan for security testing and vulnerability assessments")
 
         # Compliance recommendations
         if ConstraintType.REGULATORY.value in classified:
@@ -779,9 +747,7 @@ class ConstraintAnalyzer:
         ):
             recommendations.append("Design for horizontal scalability from the start")
             recommendations.append("Implement proper load balancing and distribution")
-            recommendations.append(
-                "Consider microservices architecture for better scalability"
-            )
+            recommendations.append("Consider microservices architecture for better scalability")
 
         return recommendations
 

@@ -1,17 +1,16 @@
-from typing import Dict, Any, Optional
 import asyncio
-from PIL import Image
-import io
 import base64
+import io
+from typing import Any, Dict, Optional
+
+from PIL import Image
 
 
 class MultiModalImageProcessor:
     def __init__(self):
         self.supported_formats = ["jpeg", "png", "webp", "gif"]
 
-    async def process_image(
-        self, image_buffer: bytes, options: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def process_image(self, image_buffer: bytes, options: Dict[str, Any]) -> Dict[str, Any]:
         """이미지 처리 파이프라인"""
         results = {
             "metadata": await self.extract_metadata(image_buffer),
@@ -53,9 +52,7 @@ class MultiModalImageProcessor:
         except Exception:
             return {}
 
-    async def transform_image(
-        self, image_buffer: bytes, options: Dict[str, Any]
-    ) -> bytes:
+    async def transform_image(self, image_buffer: bytes, options: Dict[str, Any]) -> bytes:
         """이미지 변환 처리"""
         image = Image.open(io.BytesIO(image_buffer))
 

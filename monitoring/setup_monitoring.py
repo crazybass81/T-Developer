@@ -3,13 +3,14 @@ T-Developer Monitoring Setup
 Configures comprehensive monitoring for the 9-agent pipeline
 """
 
-import logging
-import boto3
 import json
+import logging
 import os
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import boto3
 
 logger = logging.getLogger(__name__)
 
@@ -222,8 +223,7 @@ class MonitoringSetup:
             try:
                 # Convert dimensions to CloudWatch format
                 dimensions = [
-                    {"Name": key, "Value": value}
-                    for key, value in config.dimensions.items()
+                    {"Name": key, "Value": value} for key, value in config.dimensions.items()
                 ]
 
                 self.cloudwatch.put_metric_alarm(
@@ -256,9 +256,7 @@ class MonitoringSetup:
         dashboard_name = f"t-developer-dashboard-{self.environment}"
 
         # Load dashboard configuration
-        dashboard_file = os.path.join(
-            os.path.dirname(__file__), "cloudwatch-dashboard.json"
-        )
+        dashboard_file = os.path.join(os.path.dirname(__file__), "cloudwatch-dashboard.json")
 
         with open(dashboard_file, "r") as f:
             dashboard_body = f.read()
@@ -393,9 +391,7 @@ class MonitoringSetup:
                             "MetricName": metric_name,
                             "Value": 0.0,
                             "Unit": "Count",
-                            "Dimensions": [
-                                {"Name": "Environment", "Value": self.environment}
-                            ],
+                            "Dimensions": [{"Name": "Environment", "Value": self.environment}],
                         }
                     ],
                 )
@@ -443,9 +439,7 @@ class MonitoringSetup:
             {
                 "namespace": "AWS/ApplicationELB",
                 "metric_name": "RequestCount",
-                "dimensions": [
-                    {"Name": "LoadBalancer", "Value": f"app/{self.alb_name}"}
-                ],
+                "dimensions": [{"Name": "LoadBalancer", "Value": f"app/{self.alb_name}"}],
             },
             {
                 "namespace": "T-Developer/Pipeline",
@@ -461,7 +455,9 @@ class MonitoringSetup:
 
         for metric_config in metrics_for_anomaly:
             try:
-                detector_name = f"{metric_config['namespace']}-{metric_config['metric_name']}-anomaly"
+                detector_name = (
+                    f"{metric_config['namespace']}-{metric_config['metric_name']}-anomaly"
+                )
 
                 self.cloudwatch.put_anomaly_detector(
                     Namespace=metric_config["namespace"],
@@ -513,9 +509,7 @@ def main():
         if args.email:
             topic_arn = results.get("sns_topic")
             if topic_arn:
-                monitor.sns.subscribe(
-                    TopicArn=topic_arn, Protocol="email", Endpoint=args.email
-                )
+                monitor.sns.subscribe(TopicArn=topic_arn, Protocol="email", Endpoint=args.email)
                 logger.info(f"Subscribed {args.email} to SNS topic")
 
         # Setup additional features
@@ -534,9 +528,7 @@ def main():
         print(f"Alarms Created: {len(results.get('alarms', []))}")
         print(f"Dashboard: {results.get('dashboard', 'Not created')}")
         print(f"Log Queries: {len(results.get('log_queries', []))}")
-        print(
-            f"Custom Metrics: {'Enabled' if results.get('custom_metrics') else 'Disabled'}"
-        )
+        print(f"Custom Metrics: {'Enabled' if results.get('custom_metrics') else 'Disabled'}")
         print(f"Composite Alarms: {len(results.get('composite_alarms', []))}")
         print(f"Anomaly Detectors: {len(results.get('anomaly_detectors', []))}")
         print("\nMonitoring dashboard available at:")

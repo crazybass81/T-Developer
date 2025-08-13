@@ -3,14 +3,14 @@ Security Validator Module
 Validates download security and prevents malicious access
 """
 
-from typing import Dict, List, Any, Optional
 import asyncio
-import os
-import re
 import hashlib
 import ipaddress
+import os
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -104,9 +104,7 @@ class SecurityValidator:
             checks.append(referer_check)
 
         # 6. Malicious pattern detection
-        pattern_check = await self._detect_malicious_patterns(
-            token, user_agent, referer
-        )
+        pattern_check = await self._detect_malicious_patterns(token, user_agent, referer)
         checks.append(pattern_check)
 
         # 7. Suspicious activity detection
@@ -550,16 +548,12 @@ class SecurityValidator:
         """Get security statistics"""
 
         total_requests = len(self.request_history)
-        blocked_requests = len(
-            [req for req in self.request_history if not req["allowed"]]
-        )
+        blocked_requests = len([req for req in self.request_history if not req["allowed"]])
 
         return {
             "total_requests": total_requests,
             "blocked_requests": blocked_requests,
-            "block_rate": blocked_requests / total_requests
-            if total_requests > 0
-            else 0,
+            "block_rate": blocked_requests / total_requests if total_requests > 0 else 0,
             "blocked_ips": len(self.security_config["blocked_ips"]),
             "suspicious_activities": len(self.suspicious_activity),
         }

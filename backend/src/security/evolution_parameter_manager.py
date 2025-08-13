@@ -16,23 +16,16 @@ TDD REFACTOR Phase: 실제 사용 케이스 및 통합 패턴
 import asyncio
 import json
 import logging
-from typing import Dict, Any, Optional, List
-from datetime import datetime
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 try:
-    from .parameter_store_client import (
-        ParameterStoreClient,
-        get_client,
-        get_parameter_value,
-    )
     from .config import get_config, initialize_security
+    from .parameter_store_client import ParameterStoreClient, get_client, get_parameter_value
 except ImportError:
-    from parameter_store_client import (
-        ParameterStoreClient,
-        get_client,
-        get_parameter_value,
-    )
+    from parameter_store_client import ParameterStoreClient, get_client, get_parameter_value
+
     from config import get_config, initialize_security
 
 logger = logging.getLogger(__name__)
@@ -78,9 +71,7 @@ class EvolutionParameterManager:
             param_path = self.get_parameter_path("evolution/engine")
             parameter = await self.parameter_client.get_parameter_async(param_path)
 
-            if "parsed_value" in parameter and isinstance(
-                parameter["parsed_value"], dict
-            ):
+            if "parsed_value" in parameter and isinstance(parameter["parsed_value"], dict):
                 return EvolutionConfig.from_dict(parameter["parsed_value"])
             else:
                 logger.warning("Evolution config not in expected JSON format")
@@ -165,13 +156,9 @@ class EvolutionParameterManager:
 
         # 환경별 기본값
         defaults = {
-            "development": EvolutionConfig(
-                ai_autonomy_level=0.7, evolution_enabled=True
-            ),
+            "development": EvolutionConfig(ai_autonomy_level=0.7, evolution_enabled=True),
             "staging": EvolutionConfig(ai_autonomy_level=0.8, evolution_enabled=True),
-            "production": EvolutionConfig(
-                ai_autonomy_level=0.85, evolution_enabled=True
-            ),
+            "production": EvolutionConfig(ai_autonomy_level=0.85, evolution_enabled=True),
         }
 
         return defaults.get(env, EvolutionConfig())
@@ -257,21 +244,15 @@ class AgentConfigurationService:
             logger.error(f"Failed to initialize agent {agent_name}: {e}")
             raise
 
-    async def update_agent_config(
-        self, agent_name: str, updates: Dict[str, Any]
-    ) -> bool:
+    async def update_agent_config(self, agent_name: str, updates: Dict[str, Any]) -> bool:
         """Agent 설정 업데이트 (런타임)"""
         try:
             if agent_name in self._agent_configs:
                 # 기존 설정 업데이트
                 self._agent_configs[agent_name]["agent_specific"].update(updates)
-                self._agent_configs[agent_name][
-                    "updated_at"
-                ] = datetime.utcnow().isoformat()
+                self._agent_configs[agent_name]["updated_at"] = datetime.utcnow().isoformat()
 
-                logger.info(
-                    f"Agent {agent_name} config updated: {list(updates.keys())}"
-                )
+                logger.info(f"Agent {agent_name} config updated: {list(updates.keys())}")
                 return True
             else:
                 logger.warning(f"Agent {agent_name} not initialized")
@@ -309,9 +290,7 @@ class WorkflowParameterService:
     def __init__(self):
         self.param_manager = EvolutionParameterManager()
 
-    async def get_workflow_chain_config(
-        self, workflow_type: str
-    ) -> List[Dict[str, Any]]:
+    async def get_workflow_chain_config(self, workflow_type: str) -> List[Dict[str, Any]]:
         """워크플로우 체인 설정"""
         workflow_configs = {
             "code_generation": [
@@ -391,9 +370,7 @@ class SystemIntegrationExample:
             for agent_name in agent_names:
                 try:
                     await self.agent_service.initialize_agent(agent_name)
-                    initialization_results["initialized_components"].append(
-                        f"agent_{agent_name}"
-                    )
+                    initialization_results["initialized_components"].append(f"agent_{agent_name}")
                 except Exception as e:
                     initialization_results["errors"].append(f"Agent {agent_name}: {e}")
 

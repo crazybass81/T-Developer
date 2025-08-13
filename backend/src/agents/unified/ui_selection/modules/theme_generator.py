@@ -3,8 +3,8 @@ Theme Generator Module
 Generates comprehensive UI themes with all design tokens
 """
 
-from typing import Dict, List, Any, Optional
 import json
+from typing import Any, Dict, List, Optional
 
 
 class ThemeGenerator:
@@ -204,14 +204,10 @@ class ThemeGenerator:
             "guidelines": self._generate_guidelines(),
         }
 
-    def _select_base_theme(
-        self, project_type: str, preferences: Optional[Dict]
-    ) -> Dict[str, Any]:
+    def _select_base_theme(self, project_type: str, preferences: Optional[Dict]) -> Dict[str, Any]:
         """Select base theme preset"""
         if preferences and "theme_mode" in preferences:
-            return self.theme_presets.get(
-                preferences["theme_mode"], self.theme_presets["light"]
-            )
+            return self.theme_presets.get(preferences["theme_mode"], self.theme_presets["light"])
 
         # Default selections based on project type
         if project_type in ["dashboard", "admin"]:
@@ -261,9 +257,7 @@ class ThemeGenerator:
         # Generate shades for primary colors
         for color_name in ["primary", "secondary", "success", "warning", "error"]:
             if color_name in tokens:
-                tokens[f"{color_name}_shades"] = self._generate_color_shades(
-                    tokens[color_name]
-                )
+                tokens[f"{color_name}_shades"] = self._generate_color_shades(tokens[color_name])
 
         return tokens
 

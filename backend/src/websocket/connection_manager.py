@@ -3,14 +3,15 @@ WebSocket Connection Manager
 연결 관리 및 메시지 브로드캐스팅
 """
 
-from typing import Dict, List, Set, Optional, Any
-from fastapi import WebSocket, WebSocketDisconnect
-import json
 import asyncio
-from datetime import datetime
-import redis.asyncio as aioredis
-from collections import defaultdict
+import json
 import logging
+from collections import defaultdict
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Set
+
+import redis.asyncio as aioredis
+from fastapi import WebSocket, WebSocketDisconnect
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +60,7 @@ class ConnectionManager:
         except Exception as e:
             logger.error(f"Failed to initialize Redis: {e}")
 
-    async def connect(
-        self, websocket: WebSocket, user_id: str, metadata: Dict[str, Any] = None
-    ):
+    async def connect(self, websocket: WebSocket, user_id: str, metadata: Dict[str, Any] = None):
         """Accept new WebSocket connection"""
         await websocket.accept()
 
@@ -143,9 +142,7 @@ class ConnectionManager:
             for conn in disconnected:
                 await self.disconnect(conn, user_id)
 
-    async def broadcast(
-        self, message: Dict[str, Any], exclude_user: Optional[str] = None
-    ):
+    async def broadcast(self, message: Dict[str, Any], exclude_user: Optional[str] = None):
         """Broadcast message to all connected users"""
         message_str = json.dumps(message)
 
@@ -333,9 +330,7 @@ class ConnectionManager:
         except Exception as e:
             logger.error(f"Error handling message from {user_id}: {e}")
             self.stats["errors"] += 1
-            await websocket.send_json(
-                {"type": "error", "message": "Internal server error"}
-            )
+            await websocket.send_json({"type": "error", "message": "Internal server error"})
 
     async def _redis_listener(self):
         """Listen for Redis pub/sub messages"""
@@ -377,9 +372,7 @@ class ConnectionManager:
         return {
             **self.stats,
             "active_users": len(self.active_connections),
-            "total_connections_now": sum(
-                len(conns) for conns in self.active_connections.values()
-            ),
+            "total_connections_now": sum(len(conns) for conns in self.active_connections.values()),
             "active_rooms": len(self.room_connections),
         }
 

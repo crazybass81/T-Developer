@@ -3,17 +3,18 @@ Security Auditor for T-Developer Pipeline
 Comprehensive security scanning and vulnerability detection
 """
 
-import logging
-import re
 import ast
-import os
-import json
 import hashlib
+import json
+import logging
+import os
+import re
 import subprocess
-from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import bandit
 import semgrep
 
@@ -234,9 +235,7 @@ class SecurityAuditor:
             for category, rules in self.security_rules.items():
                 for rule in rules:
                     pattern = rule["pattern"]
-                    matches = re.finditer(
-                        pattern, content, re.IGNORECASE | re.MULTILINE
-                    )
+                    matches = re.finditer(pattern, content, re.IGNORECASE | re.MULTILINE)
 
                     for match in matches:
                         line_number = content[: match.start()].count("\n") + 1
@@ -282,9 +281,7 @@ class SecurityAuditor:
 
         return vulnerabilities
 
-    async def _scan_python_file(
-        self, file_path: str, content: str
-    ) -> List[SecurityVulnerability]:
+    async def _scan_python_file(self, file_path: str, content: str) -> List[SecurityVulnerability]:
         """Python-specific security scanning"""
 
         vulnerabilities = []
@@ -384,9 +381,7 @@ class SecurityAuditor:
             for match in matches:
                 line_number = content[: match.start()].count("\n") + 1
                 lines = content.split("\n")
-                code_snippet = (
-                    lines[line_number - 1] if line_number <= len(lines) else ""
-                )
+                code_snippet = lines[line_number - 1] if line_number <= len(lines) else ""
 
                 vuln = SecurityVulnerability(
                     id=f"JS-{hashlib.md5(f'{file_path}:{line_number}:{pattern}'.encode()).hexdigest()[:8]}",
@@ -405,9 +400,7 @@ class SecurityAuditor:
 
         return vulnerabilities
 
-    async def _run_external_security_tools(
-        self, codebase_path: str
-    ) -> List[SecurityVulnerability]:
+    async def _run_external_security_tools(self, codebase_path: str) -> List[SecurityVulnerability]:
         """Run external security scanning tools"""
 
         vulnerabilities = []
@@ -449,9 +442,7 @@ class SecurityAuditor:
                         line_number=issue["line_number"],
                         code_snippet=issue["code"],
                         cwe_id=f"CWE-{issue.get('cwe', 'Unknown')}",
-                        recommendation=issue.get(
-                            "issue_text", "Review Bandit documentation"
-                        ),
+                        recommendation=issue.get("issue_text", "Review Bandit documentation"),
                         confidence=issue["issue_confidence"].lower(),
                     )
                     vulnerabilities.append(vuln)
@@ -482,13 +473,9 @@ class SecurityAuditor:
                 for result_item in semgrep_output.get("results", []):
                     vuln = SecurityVulnerability(
                         id=f"SEMGREP-{result_item['check_id']}",
-                        severity=result_item.get("extra", {})
-                        .get("severity", "medium")
-                        .lower(),
+                        severity=result_item.get("extra", {}).get("severity", "medium").lower(),
                         category="semgrep",
-                        title=result_item.get("extra", {}).get(
-                            "message", "Security issue"
-                        ),
+                        title=result_item.get("extra", {}).get("message", "Security issue"),
                         description=result_item.get("extra", {}).get("message", ""),
                         file_path=result_item["path"],
                         line_number=result_item["start"]["line"],
@@ -510,9 +497,7 @@ class SecurityAuditor:
         ) as e:
             logger.warning(f"Semgrep scan failed: {e}")
         except FileNotFoundError:
-            logger.warning(
-                "Semgrep not installed, skipping multi-language security scan"
-            )
+            logger.warning("Semgrep not installed, skipping multi-language security scan")
 
         return vulnerabilities
 
@@ -547,9 +532,7 @@ class SecurityAuditor:
 
         return any(filename.endswith(ext) for ext in source_extensions)
 
-    def _calculate_security_score(
-        self, vulnerabilities: List[SecurityVulnerability]
-    ) -> float:
+    def _calculate_security_score(self, vulnerabilities: List[SecurityVulnerability]) -> float:
         """Calculate overall security score (0-100)"""
 
         if not vulnerabilities:
@@ -557,9 +540,7 @@ class SecurityAuditor:
 
         severity_weights = {"critical": 25, "high": 15, "medium": 8, "low": 3}
 
-        total_penalty = sum(
-            severity_weights.get(vuln.severity, 5) for vuln in vulnerabilities
-        )
+        total_penalty = sum(severity_weights.get(vuln.severity, 5) for vuln in vulnerabilities)
 
         # Calculate score with maximum penalty cap
         max_penalty = 100
@@ -567,18 +548,14 @@ class SecurityAuditor:
 
         return max(0, 100 - (penalty_ratio * 100))
 
-    def _check_compliance(
-        self, vulnerabilities: List[SecurityVulnerability]
-    ) -> Dict[str, bool]:
+    def _check_compliance(self, vulnerabilities: List[SecurityVulnerability]) -> Dict[str, bool]:
         """Check compliance with security frameworks"""
 
         compliance_status = {}
 
         # Group vulnerabilities by category
         vuln_categories = {vuln.category for vuln in vulnerabilities}
-        critical_vulns = {
-            vuln.category for vuln in vulnerabilities if vuln.severity == "critical"
-        }
+        critical_vulns = {vuln.category for vuln in vulnerabilities if vuln.severity == "critical"}
 
         for framework, required_categories in self.compliance_checks.items():
             # Check if any critical vulnerabilities exist in required categories
@@ -587,9 +564,7 @@ class SecurityAuditor:
 
         return compliance_status
 
-    def _generate_recommendations(
-        self, vulnerabilities: List[SecurityVulnerability]
-    ) -> List[str]:
+    def _generate_recommendations(self, vulnerabilities: List[SecurityVulnerability]) -> List[str]:
         """Generate security recommendations"""
 
         recommendations = []
@@ -616,9 +591,7 @@ class SecurityAuditor:
             )
 
         if "command_injection" in critical_categories:
-            recommendations.append(
-                "CRITICAL: Sanitize input and avoid shell command execution"
-            )
+            recommendations.append("CRITICAL: Sanitize input and avoid shell command execution")
 
         # General recommendations
         if len(vulnerabilities) > 10:
@@ -627,9 +600,7 @@ class SecurityAuditor:
             )
 
         if any(vuln.severity in ["critical", "high"] for vuln in vulnerabilities):
-            recommendations.append(
-                "Perform manual security code review for high-risk areas"
-            )
+            recommendations.append("Perform manual security code review for high-risk areas")
 
         # Add specific recommendations from vulnerabilities
         unique_recommendations = set()
@@ -705,9 +676,7 @@ By Severity:
         if audit_result.vulnerabilities:
             report += "\n## Critical Vulnerabilities\n\n"
 
-            critical_vulns = [
-                v for v in audit_result.vulnerabilities if v.severity == "critical"
-            ]
+            critical_vulns = [v for v in audit_result.vulnerabilities if v.severity == "critical"]
             for vuln in critical_vulns[:5]:  # Show top 5 critical
                 report += f"**{vuln.id}**: {vuln.title}\n"
                 report += f"- File: {vuln.file_path}:{vuln.line_number}\n"

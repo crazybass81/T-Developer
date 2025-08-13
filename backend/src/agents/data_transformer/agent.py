@@ -3,12 +3,12 @@ Data Transformer Agent
 데이터 형식 불일치를 자동으로 감지하고 변환하는 스마트 에이전트
 """
 
-import json
 import asyncio
-from typing import Any, Dict, Optional, Union, List
-from dataclasses import dataclass, asdict, is_dataclass
 import inspect
+import json
+from dataclasses import asdict, dataclass, is_dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
 
 
 @dataclass
@@ -148,12 +148,8 @@ class DataTransformerAgent:
             return TransformationResult(
                 success=False,
                 transformed_data=fallback,
-                original_format=current_format
-                if "current_format" in locals()
-                else "unknown",
-                target_format=expected_format
-                if "expected_format" in locals()
-                else "unknown",
+                original_format=current_format if "current_format" in locals() else "unknown",
+                target_format=expected_format if "expected_format" in locals() else "unknown",
                 transformation_log=log,
                 error=str(e),
             )
@@ -168,10 +164,7 @@ class DataTransformerAgent:
             return data.get("data", data)
 
         # dict → object
-        elif (
-            from_format in ["dict", "plain_dict", "wrapped_dict"]
-            and to_format == "object"
-        ):
+        elif from_format in ["dict", "plain_dict", "wrapped_dict"] and to_format == "object":
             return self._dict_to_object(data, target_spec)
 
         # dict_or_object (둘 다 허용)
@@ -196,9 +189,7 @@ class DataTransformerAgent:
             if to_format == "dict":
                 return parsed
             else:
-                return await self._perform_transformation(
-                    parsed, "dict", to_format, target_spec
-                )
+                return await self._perform_transformation(parsed, "dict", to_format, target_spec)
 
         # 같은 형식이면 그대로 반환
         elif from_format == to_format:
@@ -331,9 +322,7 @@ class DataTransformerAgent:
 
         return result
 
-    async def auto_fix(
-        self, error: Exception, data: Any, agent_name: str
-    ) -> Optional[Any]:
+    async def auto_fix(self, error: Exception, data: Any, agent_name: str) -> Optional[Any]:
         """
         에러 발생 시 자동 수정 시도
 
@@ -397,9 +386,7 @@ async def test_transformer():
         "context": {"pipeline_id": "test_123"},
     }
 
-    result = await data_transformer.transform_for_agent(
-        wrapped_data, "component_decision"
-    )
+    result = await data_transformer.transform_for_agent(wrapped_data, "component_decision")
 
     print(f"Transformation 1: {result.success}")
     if result.success:
@@ -424,9 +411,7 @@ async def test_transformer():
 
     # 테스트 케이스 3: 자동 수정
     error = AttributeError("'dict' object has no attribute 'name'")
-    fixed = await data_transformer.auto_fix(
-        error, {"name": "Fixed"}, "component_decision"
-    )
+    fixed = await data_transformer.auto_fix(error, {"name": "Fixed"}, "component_decision")
 
     print(f"\nAuto-fix: {fixed is not None}")
     if fixed:

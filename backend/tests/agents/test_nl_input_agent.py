@@ -3,21 +3,19 @@ NL Input Agent 테스트 스위트
 목표 커버리지: 80% 이상
 """
 
-import pytest
 import json
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
-
-import sys
 import os
+import sys
+from datetime import datetime
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.agents.unified.nl_input.agent import (
-    UnifiedNLInputAgent as NLInputAgent,
-    NLInputResult,
-    EnhancedNLInputResult,
-)
+from src.agents.unified.nl_input.agent import EnhancedNLInputResult, NLInputResult
+from src.agents.unified.nl_input.agent import UnifiedNLInputAgent as NLInputAgent
+
 
 # 테스트용 더미 클래스 정의
 class ProjectType:
@@ -25,20 +23,24 @@ class ProjectType:
     MOBILE_APP = "mobile-app"
     UNKNOWN = "unknown"
 
+
 class ProjectRequirements:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+
 class ExtractedEntities:
-    def __init__(self, pages=None, components=None, actions=None, 
-                 data_models=None, apis=None, features=None):
+    def __init__(
+        self, pages=None, components=None, actions=None, data_models=None, apis=None, features=None
+    ):
         self.pages = pages or []
         self.components = components or []
         self.actions = actions or []
         self.data_models = data_models or []
         self.apis = apis or []
         self.features = features or []
+
 
 class TechnologyPreferences:
     def __init__(self, framework=None, database=None, authentication=None, styling=None):
@@ -292,9 +294,7 @@ class TestNLInputAgent:
         with pytest.raises(ValueError):
             agent.process_input("")
 
-        with patch.object(
-            agent, "_detect_project_type", side_effect=Exception("Test error")
-        ):
+        with patch.object(agent, "_detect_project_type", side_effect=Exception("Test error")):
             with pytest.raises(Exception):
                 agent.process_input("정상 쿼리")
 

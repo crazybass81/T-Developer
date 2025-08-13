@@ -2,12 +2,13 @@
 AI Capability Analyzer 테스트
 """
 
-import os
-import sys
-import pytest
 import asyncio
 import json
-from unittest.mock import Mock, patch, AsyncMock
+import os
+import sys
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 # 프로젝트 루트 경로 추가
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,8 +20,8 @@ os.environ["ENVIRONMENT"] = "test"
 from src.core.registry.ai_capability_analyzer import (
     AICapabilityAnalyzer,
     CapabilityCategory,
-    PerformanceProfile,
     CompatibilityInfo,
+    PerformanceProfile,
 )
 
 
@@ -244,9 +245,7 @@ class TestAWSIntegration:
     async def test_fallback_to_local_env(self):
         """AWS 실패 시 로컬 환경변수 폴백 테스트"""
         # AWS 연결 실패 시뮬레이션
-        with patch(
-            "src.core.config.aws_config_manager.AWSConfigManager"
-        ) as mock_config:
+        with patch("src.core.config.aws_config_manager.AWSConfigManager") as mock_config:
             mock_config.side_effect = Exception("AWS connection failed")
 
             # 로컬 환경변수 설정

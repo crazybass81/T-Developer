@@ -9,16 +9,16 @@ T-Developer 작업 단위별 자동 검증 시스템
 4. Git 커밋 및 푸시
 """
 
-import os
-import sys
-import json
-import subprocess
 import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-import time
-import re
 
 PROJECT_ROOT = Path("/home/ec2-user/T-DeveloperMVP")
 BACKEND_DIR = PROJECT_ROOT / "backend"
@@ -170,7 +170,9 @@ class TaskValidator:
                 if full_path.exists():
                     size = full_path.stat().st_size
                     if size > 6656:  # 6.5KB in bytes
-                        return f"❌ Memory constraint violated: {file_path} ({size/1024:.1f}KB > 6.5KB)"
+                        return (
+                            f"❌ Memory constraint violated: {file_path} ({size/1024:.1f}KB > 6.5KB)"
+                        )
 
         return "✅ Memory constraint: All agents < 6.5KB"
 
@@ -203,10 +205,7 @@ class TaskValidator:
 
         for file_path in files:
             if file_path.endswith((".js", ".ts", ".jsx", ".tsx")):
-                if not any(
-                    skip in file_path
-                    for skip in ["node_modules", ".github", "frontend"]
-                ):
+                if not any(skip in file_path for skip in ["node_modules", ".github", "frontend"]):
                     return f"❌ Python-only violated: {file_path}"
 
         return "✅ Python-only: No JS/TS in backend"
@@ -297,9 +296,7 @@ class TaskValidator:
 
         # 문서 누락 수정
         if validation["checks"]["documentation"]["status"] != "passed":
-            doc_file = (
-                DOCS_DIR / f"tasks/{validation['task'].lower().replace(' ', '_')}.md"
-            )
+            doc_file = DOCS_DIR / f"tasks/{validation['task'].lower().replace(' ', '_')}.md"
             doc_file.parent.mkdir(parents=True, exist_ok=True)
 
             with open(doc_file, "w") as f:
@@ -349,9 +346,7 @@ Task completed on {datetime.now().strftime('%Y-%m-%d')}
             def replacer(match):
                 return match.group(1) + new_line + "\n\n"
 
-            content = re.sub(
-                status_pattern, replacer, content, count=1, flags=re.DOTALL
-            )
+            content = re.sub(status_pattern, replacer, content, count=1, flags=re.DOTALL)
 
             with open(claude_file, "w", encoding="utf-8") as f:
                 f.write(content)
@@ -441,9 +436,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"""
             print(f"❌ Git operation failed: {e}")
             return False
 
-    def validate_and_complete(
-        self, task_name: str, files_created: List[str] = None
-    ) -> bool:
+    def validate_and_complete(self, task_name: str, files_created: List[str] = None) -> bool:
         """작업 검증 및 완료 처리 (메인 워크플로우)"""
 
         print(

@@ -3,11 +3,12 @@ DynamoDB Client
 AWS DynamoDB 클라이언트 및 테이블 관리
 """
 
-import os
-import boto3
-from typing import Dict, Any, List, Optional
-from botocore.exceptions import ClientError
 import logging
+import os
+from typing import Any, Dict, List, Optional
+
+import boto3
+from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
@@ -180,9 +181,7 @@ class DynamoDBClient:
             logger.error(f"Error putting item to {table_type}: {e}")
             raise
 
-    async def get_item(
-        self, table_type: str, key: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+    async def get_item(self, table_type: str, key: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """아이템 조회"""
         table = self.get_table(table_type)
         try:

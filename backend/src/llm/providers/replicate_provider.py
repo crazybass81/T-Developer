@@ -1,6 +1,8 @@
-import replicate
 import os
-from typing import AsyncIterator, Dict, Any, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+import replicate
+
 from .base_provider import ModelProvider, ModelResponse
 
 

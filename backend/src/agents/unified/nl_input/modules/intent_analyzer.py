@@ -3,8 +3,8 @@ Intent Analyzer Module
 Analyzes user intent and purpose
 """
 
-from typing import Dict, Any
 import re
+from typing import Any, Dict
 
 
 class IntentAnalyzer:

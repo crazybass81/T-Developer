@@ -3,7 +3,7 @@ Typography Selector Module
 Selects and configures typography systems for UI design
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class TypographySelector:
@@ -259,9 +259,7 @@ class TypographySelector:
         font_key = type_map.get(project_type, "inter")
         return self.font_stacks[font_key]
 
-    def _select_type_scale(
-        self, project_type: str, brand_personality: Optional[str]
-    ) -> Dict:
+    def _select_type_scale(self, project_type: str, brand_personality: Optional[str]) -> Dict:
         """Select type scale based on project"""
 
         # Map project types to scales

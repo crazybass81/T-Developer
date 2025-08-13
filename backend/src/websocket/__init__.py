@@ -4,8 +4,8 @@ WebSocket Module
 """
 
 from .connection_manager import ConnectionManager, get_connection_manager
-from .handlers import handle_project_status, handle_agent_progress, handle_chat_message
-from .events import WebSocketEvent, EventType
+from .events import EventType, WebSocketEvent
+from .handlers import handle_agent_progress, handle_chat_message, handle_project_status
 
 __all__ = [
     "ConnectionManager",

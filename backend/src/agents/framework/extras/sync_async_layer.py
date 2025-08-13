@@ -1,9 +1,10 @@
 # backend/src/agents/framework/sync_async_layer.py
 import asyncio
-from typing import Dict, Any, Optional, Callable, Union
-from concurrent.futures import ThreadPoolExecutor
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, Optional, Union
+
 from .communication import AgentMessage, MessageType
 
 
@@ -131,9 +132,7 @@ class AgentCommunicationLayer:
         self.comm_layer = CommunicationLayer(config)
         self.active_connections: Dict[str, Any] = {}
 
-    async def send_sync_request(
-        self, recipient_id: str, content: Dict[str, Any]
-    ) -> Any:
+    async def send_sync_request(self, recipient_id: str, content: Dict[str, Any]) -> Any:
         """Send synchronous request and wait for response"""
         message = AgentMessage(
             id=str(__import__("uuid").uuid4()),

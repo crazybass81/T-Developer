@@ -2,10 +2,11 @@
 """
 CloudWatch 대시보드 생성 스크립트
 """
-import boto3
 import json
 import os
 from pathlib import Path
+
+import boto3
 
 
 def create_dashboard():
@@ -13,9 +14,7 @@ def create_dashboard():
     cloudwatch = boto3.client("cloudwatch", region_name="us-east-1")
 
     # 템플릿 파일 로드
-    template_path = (
-        Path(__file__).parent.parent / "cloudwatch" / "dashboard-template.json"
-    )
+    template_path = Path(__file__).parent.parent / "cloudwatch" / "dashboard-template.json"
 
     with open(template_path, "r") as f:
         dashboard_body = f.read()

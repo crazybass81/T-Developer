@@ -3,8 +3,8 @@ Technology Stack Builder Module
 Builds comprehensive technology stack based on requirements
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class TechCategory(Enum):
@@ -44,9 +44,7 @@ class TechnologyStackBuilder:
         stack["database"] = self._select_database_stack(requirements, constraints)
 
         # Select infrastructure technologies
-        stack["infrastructure"] = self._select_infrastructure_stack(
-            requirements, constraints
-        )
+        stack["infrastructure"] = self._select_infrastructure_stack(requirements, constraints)
 
         # Select supporting technologies
         stack["supporting"] = self._select_supporting_stack(requirements, constraints)
@@ -74,9 +72,7 @@ class TechnologyStackBuilder:
 
         stack = {
             "framework": self._select_frontend_framework(requirements),
-            "language": "TypeScript"
-            if requirements.get("type_safety", True)
-            else "JavaScript",
+            "language": "TypeScript" if requirements.get("type_safety", True) else "JavaScript",
             "styling": self._select_styling_solution(requirements),
             "state_management": self._select_state_management(requirements),
             "build_tool": self._select_build_tool(requirements),
@@ -130,9 +126,7 @@ class TechnologyStackBuilder:
 
         return stack
 
-    def _select_infrastructure_stack(
-        self, requirements: Dict, constraints: Dict
-    ) -> Dict:
+    def _select_infrastructure_stack(self, requirements: Dict, constraints: Dict) -> Dict:
         """Select infrastructure technology stack"""
 
         cloud_provider = self._select_cloud_provider(constraints)
@@ -293,9 +287,7 @@ class TechnologyStackBuilder:
         lang_frameworks = frameworks.get(language, {})
 
         if requirements.get("async"):
-            return lang_frameworks.get(
-                "async", lang_frameworks.get("default", "Express.js")
-            )
+            return lang_frameworks.get("async", lang_frameworks.get("default", "Express.js"))
         elif requirements.get("full_featured"):
             return lang_frameworks.get(
                 "full_featured", lang_frameworks.get("default", "Express.js")
@@ -341,9 +333,7 @@ class TechnologyStackBuilder:
         """Select ORM"""
 
         orms = {
-            "Python": "SQLAlchemy"
-            if requirements.get("complex_queries")
-            else "Django ORM",
+            "Python": "SQLAlchemy" if requirements.get("complex_queries") else "Django ORM",
             "JavaScript": "Prisma" if requirements.get("type_safe") else "Sequelize",
             "Go": "GORM",
             "Java": "Hibernate",
@@ -625,9 +615,7 @@ class TechnologyStackBuilder:
 
         return {
             "containerization": "Docker",
-            "orchestration": stack.get("infrastructure", {}).get(
-                "orchestration", "Docker Compose"
-            ),
+            "orchestration": stack.get("infrastructure", {}).get("orchestration", "Docker Compose"),
             "environments": ["development", "staging", "production"],
             "deployment_strategy": "Blue-Green",
             "rollback": "Automatic",
@@ -637,9 +625,7 @@ class TechnologyStackBuilder:
         """Calculate stack complexity"""
 
         total_components = sum(
-            len(v) if isinstance(v, (list, dict)) else 1
-            for v in stack.values()
-            if v is not None
+            len(v) if isinstance(v, (list, dict)) else 1 for v in stack.values() if v is not None
         )
 
         return min(total_components * 0.1, 10.0)

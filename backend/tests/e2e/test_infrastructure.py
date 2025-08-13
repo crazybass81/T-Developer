@@ -4,15 +4,16 @@ End-to-End Infrastructure Test Suite
 Tests all AWS services connectivity and integration
 """
 
-import pytest
-import boto3
-import redis
-import psycopg2
 import json
+import logging
 import time
 from datetime import datetime
-from typing import Dict, Any, Optional
-import logging
+from typing import Any, Dict, Optional
+
+import boto3
+import psycopg2
+import pytest
+import redis
 import requests
 
 # Configure logging
@@ -53,9 +54,7 @@ class TestInfrastructure:
 
         # Get OpenAI API key
         try:
-            openai_secret = sm.get_secret_value(
-                SecretId=f"/t-developer/{env}/api-keys/openai"
-            )
+            openai_secret = sm.get_secret_value(SecretId=f"/t-developer/{env}/api-keys/openai")
             secrets["openai"] = json.loads(openai_secret["SecretString"])
         except Exception as e:
             logger.warning(f"Could not retrieve OpenAI secret: {e}")
@@ -73,9 +72,7 @@ class TestInfrastructure:
 
         # Get database credentials
         try:
-            db_secret = sm.get_secret_value(
-                SecretId=f"/t-developer/{env}/db/connection"
-            )
+            db_secret = sm.get_secret_value(SecretId=f"/t-developer/{env}/db/connection")
             secrets["database"] = json.loads(db_secret["SecretString"])
         except Exception as e:
             logger.warning(f"Could not retrieve database secret: {e}")
@@ -359,9 +356,7 @@ class TestInfrastructure:
                 # Check services
                 services_response = ecs.list_services(cluster=cluster_name)
                 if services_response["serviceArns"]:
-                    logger.info(
-                        f"  Found {len(services_response['serviceArns'])} services"
-                    )
+                    logger.info(f"  Found {len(services_response['serviceArns'])} services")
             else:
                 logger.warning(f"ECS cluster {cluster_name} not found")
 
@@ -373,9 +368,7 @@ class TestInfrastructure:
         ecr = aws_clients["ecr"]
 
         try:
-            response = ecr.describe_repositories(
-                repositoryNames=["t-developer-backend"]
-            )
+            response = ecr.describe_repositories(repositoryNames=["t-developer-backend"])
 
             if response["repositories"]:
                 repo = response["repositories"][0]
@@ -416,9 +409,7 @@ class TestInfrastructure:
             "estimated_performance": "fast",
         }
 
-        logger.info(
-            f"2. AI analysis complete: quality_score={ai_analysis['quality_score']}"
-        )
+        logger.info(f"2. AI analysis complete: quality_score={ai_analysis['quality_score']}")
 
         # Simulate workflow creation
         workflow = {

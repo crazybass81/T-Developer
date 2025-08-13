@@ -3,7 +3,7 @@ Tech Stack Analyzer Module
 Analyzes and recommends technology stacks
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class TechStackAnalyzer:
@@ -72,9 +72,7 @@ class TechStackAnalyzer:
         stack = self._add_project_specific_tech(stack, project_type)
 
         # Add performance and scaling considerations
-        if any(
-            word in text_lower for word in ["scale", "performance", "fast", "million"]
-        ):
+        if any(word in text_lower for word in ["scale", "performance", "fast", "million"]):
             stack = self._add_performance_tech(stack)
 
         # Add security considerations
@@ -129,9 +127,7 @@ class TechStackAnalyzer:
 
         return adjusted
 
-    def _add_project_specific_tech(
-        self, stack: Dict, project_type: str
-    ) -> Dict[str, List[str]]:
+    def _add_project_specific_tech(self, stack: Dict, project_type: str) -> Dict[str, List[str]]:
         """Add project-specific technologies"""
         enhanced = stack.copy()
 

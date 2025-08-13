@@ -3,13 +3,14 @@ Deployment Generator Module for Generation Agent
 Generates deployment configurations and infrastructure as code
 """
 
-from typing import Dict, List, Any, Optional, Union
 import asyncio
 import json
-import yaml
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
+
+import yaml
 
 
 class DeploymentTarget(Enum):
@@ -145,9 +146,7 @@ class DeploymentGenerator:
 
         return configs
 
-    async def _generate_k8s_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, DeploymentConfig]:
+    async def _generate_k8s_configs(self, context: Dict[str, Any]) -> Dict[str, DeploymentConfig]:
         """Generate Kubernetes configurations"""
 
         configs = {}
@@ -172,9 +171,7 @@ class DeploymentGenerator:
 
         return configs
 
-    async def _generate_aws_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, DeploymentConfig]:
+    async def _generate_aws_configs(self, context: Dict[str, Any]) -> Dict[str, DeploymentConfig]:
         """Generate AWS deployment configurations"""
 
         configs = {}
@@ -472,9 +469,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]"""
             "angular": "ng build --prod",
         }.get(framework, "npm run build")
 
-        publish_dir = {"react": "build", "vue": "dist", "angular": "dist"}.get(
-            framework, "build"
-        )
+        publish_dir = {"react": "build", "vue": "dist", "angular": "dist"}.get(framework, "build")
 
         config = f"""[build]
   command = "{build_command}"

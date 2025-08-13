@@ -1,6 +1,7 @@
-from typing import Any, Dict, List, Optional, Protocol
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Protocol
+
 from .base_agent import AgentStatus
 
 

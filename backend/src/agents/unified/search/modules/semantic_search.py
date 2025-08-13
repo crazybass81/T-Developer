@@ -3,11 +3,11 @@ Semantic Search Module
 Advanced semantic search using natural language processing and embeddings
 """
 
-from typing import Dict, List, Any, Optional, Tuple
-import re
-import math
-from collections import defaultdict
 import asyncio
+import math
+import re
+from collections import defaultdict
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class SemanticSearch:
@@ -166,9 +166,7 @@ class SemanticSearch:
         total_score += domain_score * self.semantic_weights["domain_expertise"]
 
         # 4. Contextual relevance
-        context_score = self._calculate_contextual_relevance(
-            query_features, component_features
-        )
+        context_score = self._calculate_contextual_relevance(query_features, component_features)
         total_score += context_score * self.semantic_weights["contextual_relevance"]
 
         # 5. Embedding similarity
@@ -178,9 +176,7 @@ class SemanticSearch:
         total_score += embedding_score * self.semantic_weights["linguistic_similarity"]
 
         # 6. Exact semantic matches
-        exact_score = self._calculate_exact_semantic_matches(
-            query_features, component_features
-        )
+        exact_score = self._calculate_exact_semantic_matches(query_features, component_features)
         total_score += exact_score * self.semantic_weights["exact_semantic_match"]
 
         # Normalize to 0-1 scale
@@ -220,9 +216,7 @@ class SemanticSearch:
 
         return intents
 
-    def _extract_concepts(
-        self, text: str, additional_terms: List[str] = None
-    ) -> List[str]:
+    def _extract_concepts(self, text: str, additional_terms: List[str] = None) -> List[str]:
         """Extract semantic concepts from text"""
 
         concepts = set()
@@ -251,9 +245,7 @@ class SemanticSearch:
 
         return list(concepts)
 
-    def _extract_domain_context(
-        self, text: str, requirements: Dict[str, Any]
-    ) -> Dict[str, float]:
+    def _extract_domain_context(self, text: str, requirements: Dict[str, Any]) -> Dict[str, float]:
         """Extract domain context and expertise areas"""
 
         domains = {}
@@ -370,9 +362,7 @@ class SemanticSearch:
 
         return entities
 
-    def _analyze_query_complexity(
-        self, query_text: str, terms: List[str]
-    ) -> Dict[str, Any]:
+    def _analyze_query_complexity(self, query_text: str, terms: List[str]) -> Dict[str, Any]:
         """Analyze query complexity and specificity"""
 
         return {
@@ -414,9 +404,7 @@ class SemanticSearch:
 
         return " ".join(text_parts)
 
-    def _extract_component_domain_info(
-        self, component: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _extract_component_domain_info(self, component: Dict[str, Any]) -> Dict[str, Any]:
         """Extract domain information from component"""
 
         domain_info = {
@@ -457,9 +445,7 @@ class SemanticSearch:
 
         return capabilities
 
-    def _extract_tech_characteristics(
-        self, component: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _extract_tech_characteristics(self, component: Dict[str, Any]) -> Dict[str, Any]:
         """Extract technical characteristics"""
 
         characteristics = {
@@ -562,9 +548,7 @@ class SemanticSearch:
 
         # Technical level alignment
         query_tech_level = query_features["analysis"].get("technical_level", 0.5)
-        component_complexity = component_features["tech_characteristics"].get(
-            "complexity", 0.5
-        )
+        component_complexity = component_features["tech_characteristics"].get("complexity", 0.5)
 
         tech_alignment = 1.0 - abs(query_tech_level - component_complexity)
         relevance_score += tech_alignment * 0.3
@@ -582,9 +566,7 @@ class SemanticSearch:
         relevance_score += min(use_case_match, 1.0) * 0.4
 
         # Maturity preference
-        component_maturity = component_features["tech_characteristics"].get(
-            "maturity", 0.5
-        )
+        component_maturity = component_features["tech_characteristics"].get("maturity", 0.5)
         maturity_bonus = component_maturity * 0.3
         relevance_score += maturity_bonus
 
@@ -884,12 +866,10 @@ class SemanticSearch:
 
         # Basic clarity indicators
         has_verb = any(
-            verb in query.lower()
-            for verb in ["find", "search", "need", "want", "build", "create"]
+            verb in query.lower() for verb in ["find", "search", "need", "want", "build", "create"]
         )
         has_object = any(
-            obj in query.lower()
-            for obj in ["component", "library", "tool", "framework"]
+            obj in query.lower() for obj in ["component", "library", "tool", "framework"]
         )
 
         clarity_score = 0.0
@@ -941,10 +921,7 @@ class SemanticSearch:
         }
 
         for domain, indicators in domain_indicators.items():
-            if any(
-                indicator in description or indicator in tags
-                for indicator in indicators
-            ):
+            if any(indicator in description or indicator in tags for indicator in indicators):
                 secondary_domains.append(domain)
 
         return secondary_domains

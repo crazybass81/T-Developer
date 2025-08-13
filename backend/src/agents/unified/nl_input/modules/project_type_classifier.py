@@ -3,7 +3,7 @@ Project Type Classifier Module
 Classifies projects into specific categories
 """
 
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 
 class ProjectTypeClassifier:

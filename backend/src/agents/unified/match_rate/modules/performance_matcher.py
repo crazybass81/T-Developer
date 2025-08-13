@@ -3,8 +3,8 @@ Performance Matcher Module
 Evaluates performance characteristics matching
 """
 
-from typing import Dict, List, Any, Optional
 import math
+from typing import Any, Dict, List, Optional
 
 
 class PerformanceMatcher:
@@ -34,18 +34,12 @@ class PerformanceMatcher:
                 "response_time": self._evaluate_response_time(
                     perf_characteristics, perf_requirements
                 ),
-                "throughput": self._evaluate_throughput(
-                    perf_characteristics, perf_requirements
-                ),
-                "scalability": self._evaluate_scalability(
-                    perf_characteristics, perf_requirements
-                ),
+                "throughput": self._evaluate_throughput(perf_characteristics, perf_requirements),
+                "scalability": self._evaluate_scalability(perf_characteristics, perf_requirements),
                 "resource_efficiency": self._evaluate_resource_efficiency(
                     perf_characteristics, perf_requirements
                 ),
-                "reliability": self._evaluate_reliability(
-                    perf_characteristics, perf_requirements
-                ),
+                "reliability": self._evaluate_reliability(perf_characteristics, perf_requirements),
             }
 
             # Calculate overall performance score
@@ -55,9 +49,7 @@ class PerformanceMatcher:
                 "performance_score": performance_score,
                 "detailed_evaluations": evaluations,
                 "benchmarks": self._compare_to_benchmarks(perf_characteristics),
-                "bottlenecks": self._identify_bottlenecks(
-                    perf_characteristics, perf_requirements
-                ),
+                "bottlenecks": self._identify_bottlenecks(perf_characteristics, perf_requirements),
                 "optimization_suggestions": self._suggest_optimizations(evaluations),
             }
 
@@ -90,9 +82,7 @@ class PerformanceMatcher:
 
         return characteristics
 
-    def _evaluate_response_time(
-        self, characteristics: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _evaluate_response_time(self, characteristics: Dict, requirements: Dict) -> Dict[str, Any]:
         """Evaluate response time performance"""
 
         actual_time = characteristics.get("typical_response_time_ms", 1000)
@@ -110,9 +100,7 @@ class PerformanceMatcher:
             "performance_margin": required_time - actual_time,
         }
 
-    def _evaluate_throughput(
-        self, characteristics: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _evaluate_throughput(self, characteristics: Dict, requirements: Dict) -> Dict[str, Any]:
         """Evaluate throughput performance"""
 
         actual_throughput = characteristics.get("max_throughput_rps", 100)
@@ -130,9 +118,7 @@ class PerformanceMatcher:
             "capacity_margin": actual_throughput - required_throughput,
         }
 
-    def _evaluate_scalability(
-        self, characteristics: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _evaluate_scalability(self, characteristics: Dict, requirements: Dict) -> Dict[str, Any]:
         """Evaluate scalability characteristics"""
 
         scalability_factor = characteristics.get("scalability_factor", 1.0)
@@ -172,9 +158,7 @@ class PerformanceMatcher:
         memory_limit = requirements.get("memory_limit_mb", 1024)
 
         cpu_usage = characteristics.get("cpu_usage_percent", 50)
-        cpu_limit = (
-            requirements.get("cpu_limit_cores", 2) * 100
-        )  # Convert to percentage
+        cpu_limit = requirements.get("cpu_limit_cores", 2) * 100  # Convert to percentage
 
         # Calculate efficiency scores
         memory_efficiency = min(1.0, memory_limit / max(memory_usage, 1))
@@ -191,9 +175,7 @@ class PerformanceMatcher:
             "within_limits": memory_usage <= memory_limit and cpu_usage <= cpu_limit,
         }
 
-    def _evaluate_reliability(
-        self, characteristics: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _evaluate_reliability(self, characteristics: Dict, requirements: Dict) -> Dict[str, Any]:
         """Evaluate reliability characteristics"""
 
         actual_uptime = characteristics.get("uptime_percentage", 99.0)
@@ -269,9 +251,7 @@ class PerformanceMatcher:
 
         return benchmarks
 
-    def _identify_bottlenecks(
-        self, characteristics: Dict, requirements: Dict
-    ) -> List[str]:
+    def _identify_bottlenecks(self, characteristics: Dict, requirements: Dict) -> List[str]:
         """Identify performance bottlenecks"""
 
         bottlenecks = []
@@ -283,15 +263,11 @@ class PerformanceMatcher:
             bottlenecks.append("Response time exceeds requirements")
 
         # Throughput bottleneck
-        if characteristics.get("max_throughput_rps", 0) < requirements.get(
-            "throughput_rps", 100
-        ):
+        if characteristics.get("max_throughput_rps", 0) < requirements.get("throughput_rps", 100):
             bottlenecks.append("Throughput below requirements")
 
         # Memory bottleneck
-        if characteristics.get("memory_usage_mb", 0) > requirements.get(
-            "memory_limit_mb", 1024
-        ):
+        if characteristics.get("memory_usage_mb", 0) > requirements.get("memory_limit_mb", 1024):
             bottlenecks.append("Memory usage exceeds limits")
 
         # CPU bottleneck
@@ -311,9 +287,7 @@ class PerformanceMatcher:
 
             if score < 0.6:
                 if category == "response_time":
-                    suggestions.append(
-                        "Consider caching strategies to improve response time"
-                    )
+                    suggestions.append("Consider caching strategies to improve response time")
                 elif category == "throughput":
                     suggestions.append("Implement load balancing or horizontal scaling")
                 elif category == "scalability":

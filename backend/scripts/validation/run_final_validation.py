@@ -2,9 +2,9 @@
 """NL Input Agent 최종 검증 스크립트"""
 
 import asyncio
-import time
-import sys
 import os
+import sys
+import time
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

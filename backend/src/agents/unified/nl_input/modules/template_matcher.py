@@ -3,9 +3,9 @@ Template Matcher Module
 Matches user input against predefined project templates
 """
 
-from typing import Dict, Any, Optional, List
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -299,9 +299,7 @@ class TemplateMatcher:
 
         return min(confidence, 1.0)
 
-    async def customize(
-        self, template_match: TemplateMatch, text: str
-    ) -> Dict[str, Any]:
+    async def customize(self, template_match: TemplateMatch, text: str) -> Dict[str, Any]:
         """
         Customize template based on specific user input
 
@@ -328,10 +326,7 @@ class TemplateMatcher:
         }
 
         for feature_text, feature_code in additional_features.items():
-            if (
-                feature_text in text_lower
-                and feature_code not in template_match.features
-            ):
+            if feature_text in text_lower and feature_code not in template_match.features:
                 customizations["additional_features"].append(feature_code)
 
         # Check for tech stack modifications

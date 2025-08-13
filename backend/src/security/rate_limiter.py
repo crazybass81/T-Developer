@@ -3,15 +3,16 @@ Advanced Rate Limiter
 Redis 기반 분산 Rate Limiting
 """
 
-import time
+import asyncio
 import hashlib
 import json
-from typing import Optional, Dict, Any
+import time
 from datetime import datetime, timedelta
-import redis
-from fastapi import Request, HTTPException, status
 from functools import wraps
-import asyncio
+from typing import Any, Dict, Optional
+
+import redis
+from fastapi import HTTPException, Request, status
 
 
 class RateLimiter:
@@ -161,9 +162,7 @@ class RateLimiter:
             self._memory_limits[key] = []
 
         # Remove old entries
-        self._memory_limits[key] = [
-            t for t in self._memory_limits[key] if t > now - window
-        ]
+        self._memory_limits[key] = [t for t in self._memory_limits[key] if t > now - window]
 
         if len(self._memory_limits[key]) < limit:
             self._memory_limits[key].append(now)
@@ -181,9 +180,7 @@ class RateLimiter:
             "reset": int(self._memory_limits[key][0] + window),
         }
 
-    def rate_limit_decorator(
-        self, requests: int = 100, window: int = 60, tier_based: bool = False
-    ):
+    def rate_limit_decorator(self, requests: int = 100, window: int = 60, tier_based: bool = False):
         """Rate limiting 데코레이터"""
 
         def decorator(func):

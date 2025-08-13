@@ -3,7 +3,7 @@ Risk Analyzer Module
 Analyzes risks associated with components
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class RiskAnalyzer:
@@ -24,9 +24,7 @@ class RiskAnalyzer:
                 "security_risk": self._assess_security_risk(component),
                 "maintenance_risk": self._assess_maintenance_risk(component),
                 "vendor_risk": self._assess_vendor_risk(component),
-                "compliance_risk": self._assess_compliance_risk(
-                    component, requirements
-                ),
+                "compliance_risk": self._assess_compliance_risk(component, requirements),
                 "overall_risk": 0.0,
             }
 
@@ -87,9 +85,7 @@ class RiskAnalyzer:
         if not required_standards:
             return 0.0  # No compliance requirements
 
-        compliance_coverage = len(
-            set(component_compliance).intersection(set(required_standards))
-        )
+        compliance_coverage = len(set(component_compliance).intersection(set(required_standards)))
         total_required = len(required_standards)
 
         return 1 - (compliance_coverage / total_required) if total_required > 0 else 0.0

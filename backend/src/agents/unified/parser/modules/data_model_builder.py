@@ -3,10 +3,10 @@ Data Model Builder Module
 Builds comprehensive data models from requirements and entities
 """
 
-from typing import Dict, List, Any, Optional, Set, Tuple
 import re
-from enum import Enum
 from collections import defaultdict
+from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 class DataType(Enum):
@@ -207,9 +207,7 @@ class DataModelBuilder:
 
                     # Check for template
                     if model_name.lower() in self.model_templates:
-                        models[model_name] = self._create_from_template(
-                            model_name.lower()
-                        )
+                        models[model_name] = self._create_from_template(model_name.lower())
                     else:
                         models[model_name] = self._create_basic_model(model_name)
 
@@ -286,9 +284,7 @@ class DataModelBuilder:
                 fields = self._extract_fields_from_requirement(req)
                 for field in fields:
                     if field not in models[model_name]["fields"]:
-                        models[model_name]["fields"][field] = self._infer_field_type(
-                            field
-                        )
+                        models[model_name]["fields"][field] = self._infer_field_type(field)
 
         return models
 
@@ -368,9 +364,9 @@ class DataModelBuilder:
                     field_name = self._normalize_field_name(attr["name"])
 
                     if field_name not in models[model_name]["fields"]:
-                        models[model_name]["fields"][
+                        models[model_name]["fields"][field_name] = self._infer_field_type(
                             field_name
-                        ] = self._infer_field_type(field_name)
+                        )
 
         return models
 
@@ -780,8 +776,7 @@ class DataModelBuilder:
         for model_name, model in models.items():
             # Check for primary key
             has_primary = any(
-                field.get("unique") and field.get("required")
-                for field in model["fields"].values()
+                field.get("unique") and field.get("required") for field in model["fields"].values()
             )
 
             if not has_primary:
@@ -789,9 +784,7 @@ class DataModelBuilder:
 
             # Check for timestamps
             if model.get("timestamps") and "created_at" not in model["fields"]:
-                validation["warnings"].append(
-                    f"Model '{model_name}' missing timestamps"
-                )
+                validation["warnings"].append(f"Model '{model_name}' missing timestamps")
 
             # Check foreign key references
             for field_name, field_spec in model["fields"].items():
@@ -839,19 +832,13 @@ class DataModelBuilder:
     def _calculate_statistics(self, models: Dict[str, Dict]) -> Dict[str, Any]:
         """Calculate model statistics"""
         total_fields = sum(len(model["fields"]) for model in models.values())
-        total_relations = sum(
-            len(model.get("relations", [])) for model in models.values()
-        )
+        total_relations = sum(len(model.get("relations", [])) for model in models.values())
 
         return {
             "total_models": len(models),
             "total_fields": total_fields,
             "average_fields_per_model": total_fields / len(models) if models else 0,
             "total_relationships": total_relations,
-            "models_with_soft_delete": sum(
-                1 for m in models.values() if m.get("soft_delete")
-            ),
-            "models_with_timestamps": sum(
-                1 for m in models.values() if m.get("timestamps")
-            ),
+            "models_with_soft_delete": sum(1 for m in models.values() if m.get("soft_delete")),
+            "models_with_timestamps": sum(1 for m in models.values() if m.get("timestamps")),
         }

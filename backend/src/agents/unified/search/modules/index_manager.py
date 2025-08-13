@@ -3,9 +3,9 @@ Index Manager Module
 Manages search indexes for efficient component retrieval
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import json
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class IndexManager:
@@ -98,9 +98,7 @@ class IndexManager:
 
         return index
 
-    def _create_popularity_index(
-        self, components: List[Dict]
-    ) -> List[Tuple[str, float]]:
+    def _create_popularity_index(self, components: List[Dict]) -> List[Tuple[str, float]]:
         """Create popularity-sorted index"""
 
         popularity_list = []
@@ -164,9 +162,7 @@ class IndexManager:
 
         return index
 
-    async def search_index(
-        self, index_name: str, query: str, max_results: int = 100
-    ) -> List[str]:
+    async def search_index(self, index_name: str, query: str, max_results: int = 100) -> List[str]:
         """Search a specific index"""
 
         if index_name not in self.indexes:

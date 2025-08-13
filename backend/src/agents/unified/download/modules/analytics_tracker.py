@@ -3,14 +3,14 @@ Analytics Tracker Module
 Tracks download analytics and usage patterns
 """
 
-from typing import Dict, List, Any, Optional
 import asyncio
+import hashlib
 import json
 import os
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
 from collections import defaultdict
-import hashlib
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -95,9 +95,7 @@ class AnalyticsTracker:
         event = DownloadEvent(
             event_id=event_id,
             token=token[:8] + "...",  # Partial token for privacy
-            client_ip=client_ip
-            if not self.analytics_config["track_ip_addresses"]
-            else "hidden",
+            client_ip=client_ip if not self.analytics_config["track_ip_addresses"] else "hidden",
             user_agent=self._sanitize_user_agent(user_agent),
             file_path=file_info.get("path", ""),
             file_size=file_info.get("size", 0),
@@ -121,9 +119,7 @@ class AnalyticsTracker:
 
         return event_id
 
-    async def track_download_progress(
-        self, event_id: str, bytes_transferred: int
-    ) -> None:
+    async def track_download_progress(self, event_id: str, bytes_transferred: int) -> None:
         """Track download progress"""
 
         if not self.analytics_config["enable_tracking"]:
@@ -163,9 +159,7 @@ class AnalyticsTracker:
             file_ext = os.path.splitext(event.file_path)[1]
             self.aggregated_stats[f"format_{file_ext}"] += 1
 
-    async def generate_analytics_report(
-        self, period: str = "last_24h"
-    ) -> AnalyticsReport:
+    async def generate_analytics_report(self, period: str = "last_24h") -> AnalyticsReport:
         """Generate comprehensive analytics report"""
 
         # Define time period
@@ -182,9 +176,7 @@ class AnalyticsTracker:
 
         # Filter events for period
         period_events = [
-            event
-            for event in self.download_events
-            if event.download_started >= start_time
+            event for event in self.download_events if event.download_started >= start_time
         ]
 
         # Calculate basic metrics
@@ -195,9 +187,7 @@ class AnalyticsTracker:
         total_bytes = sum(e.bytes_transferred for e in period_events if e.success)
 
         average_file_size = (
-            sum(e.file_size for e in period_events) / total_downloads
-            if total_downloads > 0
-            else 0
+            sum(e.file_size for e in period_events) / total_downloads if total_downloads > 0 else 0
         )
 
         successful_events = [e for e in period_events if e.success]
@@ -229,9 +219,7 @@ class AnalyticsTracker:
             hour = event.download_started.hour
             hour_distribution[hour] += 1
 
-        peak_hours = sorted(
-            hour_distribution.items(), key=lambda x: x[1], reverse=True
-        )[:5]
+        peak_hours = sorted(hour_distribution.items(), key=lambda x: x[1], reverse=True)[:5]
         peak_hours = [hour for hour, _ in peak_hours]
 
         # Error analysis
@@ -255,9 +243,7 @@ class AnalyticsTracker:
             error_analysis=dict(error_analysis),
         )
 
-    async def export_analytics(
-        self, format: str = "json", period: str = "last_24h"
-    ) -> str:
+    async def export_analytics(self, format: str = "json", period: str = "last_24h") -> str:
         """Export analytics data"""
 
         report = await self.generate_analytics_report(period)
@@ -328,9 +314,7 @@ class AnalyticsTracker:
         original_count = len(self.download_events)
 
         self.download_events = [
-            event
-            for event in self.download_events
-            if event.download_started > cutoff_date
+            event for event in self.download_events if event.download_started > cutoff_date
         ]
 
         cleaned_count = original_count - len(self.download_events)
@@ -380,9 +364,7 @@ class AnalyticsTracker:
         # Remove potentially sensitive information
         import re
 
-        user_agent = re.sub(
-            r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "[IP]", user_agent
-        )
+        user_agent = re.sub(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "[IP]", user_agent)
         user_agent = re.sub(
             r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
             "[EMAIL]",
@@ -396,9 +378,7 @@ class AnalyticsTracker:
 
         ua_lower = user_agent.lower()
 
-        if any(
-            mobile in ua_lower for mobile in ["mobile", "android", "iphone", "ipad"]
-        ):
+        if any(mobile in ua_lower for mobile in ["mobile", "android", "iphone", "ipad"]):
             return "mobile"
         elif any(tablet in ua_lower for tablet in ["tablet", "ipad"]):
             return "tablet"
@@ -465,16 +445,10 @@ class AnalyticsTracker:
         day_before = now - timedelta(days=2)
 
         yesterday_count = len(
-            [
-                e
-                for e in self.download_events
-                if day_before <= e.download_started < yesterday
-            ]
+            [e for e in self.download_events if day_before <= e.download_started < yesterday]
         )
 
-        today_count = len(
-            [e for e in self.download_events if e.download_started >= yesterday]
-        )
+        today_count = len([e for e in self.download_events if e.download_started >= yesterday])
 
         if yesterday_count == 0:
             return 0.0
@@ -491,15 +465,11 @@ class AnalyticsTracker:
             day_end = day_start + timedelta(days=1)
 
             day_events = [
-                e
-                for e in self.download_events
-                if day_start <= e.download_started < day_end
+                e for e in self.download_events if day_start <= e.download_started < day_end
             ]
 
             if day_events:
-                success_rate = len([e for e in day_events if e.success]) / len(
-                    day_events
-                )
+                success_rate = len([e for e in day_events if e.success]) / len(day_events)
                 trends.append(success_rate * 100)
             else:
                 trends.append(0.0)
@@ -516,9 +486,7 @@ class AnalyticsTracker:
             day_end = day_start + timedelta(days=1)
 
             day_events = [
-                e
-                for e in self.download_events
-                if day_start <= e.download_started < day_end
+                e for e in self.download_events if day_start <= e.download_started < day_end
             ]
 
             day_formats = defaultdict(int)

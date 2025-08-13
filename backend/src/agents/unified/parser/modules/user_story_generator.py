@@ -3,9 +3,9 @@ User Story Generator Module
 Generates user stories and acceptance criteria from requirements
 """
 
-from typing import Dict, List, Any, Optional
 import re
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class StorySize(Enum):
@@ -116,9 +116,7 @@ class UserStoryGenerator:
         story = {
             "id": f"US-{requirement.get('id', 'XXX')}",
             "title": self._generate_title(action),
-            "description": self.story_template.format(
-                actor=actor, action=action, benefit=benefit
-            ),
+            "description": self.story_template.format(actor=actor, action=action, benefit=benefit),
             "requirement_id": requirement.get("id"),
             "priority": requirement.get("priority", "medium"),
             "category": requirement.get("category", "general"),
@@ -307,9 +305,7 @@ class UserStoryGenerator:
         """Create story map structure"""
         return {
             "backbone": [epic["name"] for epic in epics],
-            "walking_skeleton": [
-                s["id"] for s in stories if s.get("priority") == "critical"
-            ],
+            "walking_skeleton": [s["id"] for s in stories if s.get("priority") == "critical"],
             "releases": self._plan_releases(stories),
             "dependencies": self._identify_story_dependencies(stories),
         }
@@ -330,11 +326,7 @@ class UserStoryGenerator:
             else:
                 releases["backlog"].append(story["id"])
 
-        return [
-            {"name": name, "stories": stories}
-            for name, stories in releases.items()
-            if stories
-        ]
+        return [{"name": name, "stories": stories} for name, stories in releases.items() if stories]
 
     def _identify_story_dependencies(self, stories: List[Dict]) -> List[Dict]:
         """Identify dependencies between stories"""
@@ -345,12 +337,8 @@ class UserStoryGenerator:
                 # Check if stories are related
                 if story1.get("category") == story2.get("category"):
                     # Simple heuristic: CRUD operations have dependencies
-                    action1 = self._extract_action(
-                        story1.get("original_requirement", "")
-                    )
-                    action2 = self._extract_action(
-                        story2.get("original_requirement", "")
-                    )
+                    action1 = self._extract_action(story1.get("original_requirement", ""))
+                    action2 = self._extract_action(story2.get("original_requirement", ""))
 
                     if "create" in action1 and any(
                         word in action2 for word in ["update", "delete", "view"]

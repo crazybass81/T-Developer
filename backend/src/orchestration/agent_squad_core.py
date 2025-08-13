@@ -5,11 +5,11 @@ AWS Agent Squad 기반 멀티 에이전트 오케스트레이션 시스템
 """
 
 import asyncio
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
-from enum import Enum
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class TaskStatus(Enum):
@@ -48,13 +48,9 @@ class AgentSquadOrchestrator:
         """에이전트 등록"""
         self.agents[agent_type] = agent_instance
 
-    async def execute_task(
-        self, agent_type: str, input_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def execute_task(self, agent_type: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """단일 태스크 실행"""
-        task = AgentTask(
-            id=str(uuid.uuid4()), agent_type=agent_type, input_data=input_data
-        )
+        task = AgentTask(id=str(uuid.uuid4()), agent_type=agent_type, input_data=input_data)
 
         if agent_type not in self.agents:
             raise ValueError(f"Agent type {agent_type} not registered")
@@ -79,9 +75,7 @@ class AgentSquadOrchestrator:
             if task.id in self.running_tasks:
                 del self.running_tasks[task.id]
 
-    async def execute_workflow(
-        self, workflow: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    async def execute_workflow(self, workflow: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """워크플로우 실행"""
         results = []
 
@@ -90,9 +84,7 @@ class AgentSquadOrchestrator:
                 # 병렬 실행
                 tasks = []
                 for agent_config in step["agents"]:
-                    task = self.execute_task(
-                        agent_config["type"], agent_config["input"]
-                    )
+                    task = self.execute_task(agent_config["type"], agent_config["input"])
                     tasks.append(task)
 
                 step_results = await asyncio.gather(*tasks, return_exceptions=True)

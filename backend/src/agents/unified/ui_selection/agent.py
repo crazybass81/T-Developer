@@ -4,29 +4,18 @@ Selects appropriate UI components, layouts, and design patterns
 """
 
 import asyncio
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 # Unified base imports
-from src.agents.unified.base import (
-    UnifiedBaseAgent,
-    AgentConfig,
-    AgentContext,
-    AgentResult,
-)
-from src.agents.unified.data_wrapper import (
-    AgentInput,
-    AgentContext,
-    wrap_input,
-    unwrap_result,
-)
-
+from src.agents.unified.base import AgentConfig, AgentContext, AgentResult, UnifiedBaseAgent
+from src.agents.unified.data_wrapper import AgentContext, AgentInput, unwrap_result, wrap_input
 
 # Phase 2 imports - optional
 try:
-    from src.core.interfaces import AgentInput, ProcessingStatus
     from src.core.agent_models import UISelectionResult
-    from src.core.event_bus import publish_agent_event, EventType
+    from src.core.event_bus import EventType, publish_agent_event
+    from src.core.interfaces import AgentInput, ProcessingStatus
 
     CORE_IMPORTS_AVAILABLE = True
 except ImportError:
@@ -401,9 +390,7 @@ class UnifiedUISelectionAgent(UnifiedBaseAgent):
         color_scheme = self._select_color_scheme(preferences)
 
         # Generate component list
-        components = self._generate_component_list(
-            project_type, features, layout, library
-        )
+        components = self._generate_component_list(project_type, features, layout, library)
 
         # Generate styling approach
         styles = self._generate_styles(design_system, color_scheme)
@@ -567,9 +554,7 @@ class UnifiedUISelectionAgent(UnifiedBaseAgent):
         # Remove duplicates
         return list(dict.fromkeys(components))
 
-    def _generate_styles(
-        self, design_system: str, color_scheme: Dict[str, str]
-    ) -> Dict[str, Any]:
+    def _generate_styles(self, design_system: str, color_scheme: Dict[str, str]) -> Dict[str, Any]:
         """Generate styling configuration"""
         system = self.design_systems[design_system]
 
@@ -665,9 +650,7 @@ class UnifiedUISelectionAgent(UnifiedBaseAgent):
 
         return content_map.get(project_type, [{"name": "ContentArea"}])
 
-    def _select_interaction_patterns(
-        self, features: List[str], project_type: str
-    ) -> List[str]:
+    def _select_interaction_patterns(self, features: List[str], project_type: str) -> List[str]:
         """Select interaction patterns"""
         patterns = []
 
@@ -771,9 +754,7 @@ class UnifiedUISelectionAgent(UnifiedBaseAgent):
             "required": {"rule": "notEmpty", "message": "This field is required"},
         }
 
-    def _get_performance_considerations(
-        self, library: str, component_count: int
-    ) -> List[str]:
+    def _get_performance_considerations(self, library: str, component_count: int) -> List[str]:
         """Get performance considerations"""
         considerations = []
 

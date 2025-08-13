@@ -3,10 +3,11 @@ Simple tests without database dependencies
 데이터베이스 의존성 없는 간단한 테스트
 """
 
-import pytest
 import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import Mock, mock_open, patch
+
+import pytest
 
 # 프로젝트 경로 추가
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -61,9 +62,7 @@ class TestBasicFunctionality:
         assert True or False
         assert not (False and False)
 
-    @pytest.mark.parametrize(
-        "input_val,expected", [(0, 0), (1, 1), (5, 120), (10, 3628800)]
-    )
+    @pytest.mark.parametrize("input_val,expected", [(0, 0), (1, 1), (5, 120), (10, 3628800)])
     def test_factorial(self, input_val, expected):
         """팩토리얼 테스트"""
 

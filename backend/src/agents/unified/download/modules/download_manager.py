@@ -3,15 +3,16 @@ Download Manager Module
 Manages secure download operations and file serving
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import asyncio
-import os
+import hashlib
 import json
-import aiofiles
+import mimetypes
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import hashlib
-import mimetypes
+from typing import Any, Dict, List, Optional, Tuple
+
+import aiofiles
 
 
 @dataclass
@@ -132,9 +133,7 @@ class DownloadManager:
                 "error_code": "SESSION_CREATION_FAILED",
             }
 
-    async def serve_file(
-        self, token: str, range_header: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def serve_file(self, token: str, range_header: Optional[str] = None) -> Dict[str, Any]:
         """Serve file for download with optional range support"""
 
         try:
@@ -333,9 +332,7 @@ class DownloadManager:
         mime_type, _ = mimetypes.guess_type(file_path)
         return mime_type or "application/octet-stream"
 
-    def _parse_range_header(
-        self, range_header: str, file_size: int
-    ) -> Optional[Tuple[int, int]]:
+    def _parse_range_header(self, range_header: str, file_size: int) -> Optional[Tuple[int, int]]:
         """Parse HTTP Range header"""
 
         try:

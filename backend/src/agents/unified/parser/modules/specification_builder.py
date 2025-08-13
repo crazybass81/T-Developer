@@ -3,7 +3,7 @@ Specification Builder Module
 Builds complete specifications from parsed requirements
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class SpecificationBuilder:
@@ -70,9 +70,7 @@ class SpecificationBuilder:
             "usability": [{"type": "responsive", "target": "All modern browsers"}],
         }
 
-    def _build_technical_spec(
-        self, requirements: List[Dict], constraints: Dict
-    ) -> Dict:
+    def _build_technical_spec(self, requirements: List[Dict], constraints: Dict) -> Dict:
         """Build technical specification"""
         return {
             "architecture": "microservices",
@@ -129,9 +127,7 @@ class SpecificationBuilder:
             "backup": {"frequency": "daily", "retention": "30 days"},
         }
 
-    def _generate_use_cases(
-        self, requirements: List[Dict], entities: Dict
-    ) -> List[Dict]:
+    def _generate_use_cases(self, requirements: List[Dict], entities: Dict) -> List[Dict]:
         """Generate use cases"""
         use_cases = []
         for req in requirements[:5]:  # Limit to first 5

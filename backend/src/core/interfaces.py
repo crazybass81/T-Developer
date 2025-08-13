@@ -2,12 +2,11 @@
 Core interfaces for the 9-agent pipeline
 Defines data models for agent communication
 """
-from typing import TypeVar, Generic, Dict, Any, List, Optional, Union
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-import uuid
-
+from typing import Any, Dict, Generic, List, Optional, TypeVar, Union
 
 # Type variables for generic types
 T = TypeVar("T")

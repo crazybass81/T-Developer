@@ -3,9 +3,9 @@ Color Palette Generator Module
 Generates harmonious color palettes for UI design
 """
 
-from typing import Dict, List, Tuple, Optional
-import math
 import colorsys
+import math
+from typing import Dict, List, Optional, Tuple
 
 
 class ColorPaletteGenerator:

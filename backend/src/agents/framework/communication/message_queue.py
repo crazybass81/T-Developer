@@ -1,9 +1,10 @@
 # backend/src/agents/framework/message_queue.py
 import asyncio
-from typing import Dict, Any, Optional, List, Callable
+import json
 from dataclasses import dataclass
 from enum import Enum
-import json
+from typing import Any, Callable, Dict, List, Optional
+
 from ..core.base_agent import AgentMessage
 from .communication_manager import MessageType
 
@@ -52,9 +53,7 @@ class MessageQueue:
             await self.queues[queue_name].put(message.to_dict())
 
         elif self.config.type == QueueType.REDIS and self.redis_client:
-            await self.redis_client.lpush(
-                f"queue:{queue_name}", json.dumps(message.to_dict())
-            )
+            await self.redis_client.lpush(f"queue:{queue_name}", json.dumps(message.to_dict()))
 
     async def dequeue(self, queue_name: str) -> Optional[AgentMessage]:
         if self.config.type == QueueType.MEMORY:

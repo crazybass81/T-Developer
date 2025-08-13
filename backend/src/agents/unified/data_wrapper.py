@@ -3,9 +3,9 @@ Data wrapper classes for unified agents
 Provides compatibility between production pipeline and unified agents
 """
 
-from typing import Dict, Any, Optional
-from dataclasses import dataclass
 import time
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -45,9 +45,7 @@ class AgentInput:
         return self.data.get(key, default)
 
 
-def wrap_input(
-    data: Dict[str, Any], context: Optional[AgentContext] = None
-) -> AgentInput:
+def wrap_input(data: Dict[str, Any], context: Optional[AgentContext] = None) -> AgentInput:
     """
     Wrap raw dict data into AgentInput format
 

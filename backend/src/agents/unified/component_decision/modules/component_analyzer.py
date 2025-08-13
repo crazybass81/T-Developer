@@ -3,8 +3,8 @@ Component Analyzer Module
 Analyzes and identifies required components based on requirements
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ComponentType(Enum):
@@ -382,9 +382,7 @@ class ComponentAnalyzer:
         seen_types = set()
 
         # Remove duplicates, keeping highest priority
-        sorted_components = sorted(
-            components, key=lambda x: x.get("priority", 0), reverse=True
-        )
+        sorted_components = sorted(components, key=lambda x: x.get("priority", 0), reverse=True)
 
         for component in sorted_components:
             comp_key = f"{component['type']}_{component.get('technology', '')}"
@@ -504,9 +502,7 @@ class ComponentAnalyzer:
                 {"connection_pool": 20, "max_connections": 100, "query_timeout": "30s"}
             )
         elif component["type"] == ComponentType.CACHE.value:
-            base_config.update(
-                {"eviction_policy": "LRU", "max_memory": "4GB", "ttl": 3600}
-            )
+            base_config.update({"eviction_policy": "LRU", "max_memory": "4GB", "ttl": 3600})
 
         return base_config
 

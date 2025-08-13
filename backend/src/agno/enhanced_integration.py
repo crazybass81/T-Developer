@@ -3,16 +3,16 @@ Enhanced Agno Framework Integration
 Agno 프레임워크를 실제 파이프라인에 통합
 """
 
-import time
-from typing import Any, Dict, Optional, Type
-from dataclasses import dataclass
 import asyncio
 import logging
+import time
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Type
 
-from src.agno.agno_agent import AgnoAgent, AgentPerformanceMetrics
-from src.agno.agent_pool import AgentPool
-from src.agno.framework_manager import AgnoFrameworkManager
 from src.agents.base import BaseAgent
+from src.agno.agent_pool import AgentPool
+from src.agno.agno_agent import AgentPerformanceMetrics, AgnoAgent
+from src.agno.framework_manager import AgnoFrameworkManager
 
 logger = logging.getLogger(__name__)
 
@@ -126,9 +126,7 @@ class AgnoEnhancedIntegration:
         except Exception as e:
             logger.error(f"Failed to create lightweight agent: {e}")
             # Fallback to regular agent
-            return AgnoAgent(
-                agent_id=f"{agent_type}_{time.time()}", agent_type=agent_type
-            )
+            return AgnoAgent(agent_id=f"{agent_type}_{time.time()}", agent_type=agent_type)
 
     async def execute_parallel_subtasks(
         self, tasks: list, agent_type: str, max_concurrent: int = 10
@@ -144,9 +142,7 @@ class AgnoEnhancedIntegration:
         async def execute_with_agent(task):
             async with semaphore:
                 # 초경량 에이전트 생성
-                agent = self.create_lightweight_agent(
-                    BaseAgent, agent_type  # 실제로는 태스크별 적절한 클래스
-                )
+                agent = self.create_lightweight_agent(BaseAgent, agent_type)  # 실제로는 태스크별 적절한 클래스
 
                 try:
                     # 태스크 실행
@@ -283,16 +279,12 @@ class AgnoEnhancedIntegration:
 
         # 요약
         if total_agents > 0:
-            report["summary"]["average_creation_time_us"] = (
-                total_creation_time / total_agents
-            )
+            report["summary"]["average_creation_time_us"] = total_creation_time / total_agents
 
         report["summary"]["total_agents_created"] = total_agents
 
         if (total_hits + total_misses) > 0:
-            report["summary"]["pool_efficiency"] = total_hits / (
-                total_hits + total_misses
-            )
+            report["summary"]["pool_efficiency"] = total_hits / (total_hits + total_misses)
 
         return report
 

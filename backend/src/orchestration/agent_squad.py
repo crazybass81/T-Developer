@@ -3,29 +3,30 @@ AWS Agent Squad Orchestration
 9개 에이전트를 조율하는 중앙 오케스트레이터
 """
 
-import json
 import asyncio
-import time
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, asdict
-from enum import Enum
+import json
 import logging
+import time
+from dataclasses import asdict, dataclass
+from enum import Enum
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
-from aws_lambda_powertools import Logger, Tracer, Metrics
+from aws_lambda_powertools import Logger, Metrics, Tracer
 from aws_lambda_powertools.metrics import MetricUnit
+
+from agents.ecs_integrated.assembly.main import AssemblyAgent
+from agents.ecs_integrated.component_decision.main import ComponentDecisionAgent
+from agents.ecs_integrated.download.main import DownloadAgent
+from agents.ecs_integrated.generation.main import GenerationAgent
+from agents.ecs_integrated.match_rate.main import MatchRateAgent
 
 # ECS-Integrated 에이전트 임포트
 from agents.ecs_integrated.nl_input.main import NLInputAgent
-from agents.ecs_integrated.ui_selection.main import UISelectionAgent
 from agents.ecs_integrated.parser.main import ParserAgent
-from agents.ecs_integrated.component_decision.main import ComponentDecisionAgent
-from agents.ecs_integrated.match_rate.main import MatchRateAgent
 from agents.ecs_integrated.search.main import SearchAgent
-from agents.ecs_integrated.generation.main import GenerationAgent
-from agents.ecs_integrated.assembly.main import AssemblyAgent
-from agents.ecs_integrated.download.main import DownloadAgent
+from agents.ecs_integrated.ui_selection.main import UISelectionAgent
 
 # AWS 클라이언트
 stepfunctions = boto3.client("stepfunctions")
@@ -198,9 +199,7 @@ class AgentSquadOrchestrator:
         try:
             # Step Functions 사용 가능한 경우
             if self.config.get("state_machine_arn"):
-                return await self._execute_with_step_functions(
-                    user_input, context, squad_config
-                )
+                return await self._execute_with_step_functions(user_input, context, squad_config)
             else:
                 # 직접 실행
                 return await self._execute_direct(user_input, context, squad_config)
@@ -376,37 +375,21 @@ class AgentSquadOrchestrator:
                 # 에이전트별 메소드 호출
                 if stage == PipelineStage.NL_INPUT:
                     result = await agent.process_description(input_data["query"])
-                    result = (
-                        result.to_dict()
-                        if hasattr(result, "to_dict")
-                        else asdict(result)
-                    )
+                    result = result.to_dict() if hasattr(result, "to_dict") else asdict(result)
 
                 elif stage == PipelineStage.UI_SELECTION:
                     result = await agent.select_ui_framework(input_data["requirements"])
-                    result = (
-                        result.to_dict()
-                        if hasattr(result, "to_dict")
-                        else asdict(result)
-                    )
+                    result = result.to_dict() if hasattr(result, "to_dict") else asdict(result)
 
                 elif stage == PipelineStage.PARSER:
                     result = await agent.parse_project(input_data["input_data"])
-                    result = (
-                        result.to_dict()
-                        if hasattr(result, "to_dict")
-                        else asdict(result)
-                    )
+                    result = result.to_dict() if hasattr(result, "to_dict") else asdict(result)
 
                 elif stage == PipelineStage.COMPONENT_DECISION:
                     result = await agent.make_decisions(
                         input_data["parsed_project"], input_data["ui_selection"]
                     )
-                    result = (
-                        result.to_dict()
-                        if hasattr(result, "to_dict")
-                        else asdict(result)
-                    )
+                    result = result.to_dict() if hasattr(result, "to_dict") else asdict(result)
 
                 elif stage == PipelineStage.MATCH_RATE:
                     result = await agent.calculate_match_rate(
@@ -584,9 +567,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         result = loop.run_until_complete(
-            orchestrator.execute_pipeline(
-                user_input, user_id, project_name, squad_config
-            )
+            orchestrator.execute_pipeline(user_input, user_id, project_name, squad_config)
         )
 
         return {

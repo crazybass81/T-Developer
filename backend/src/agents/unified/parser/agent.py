@@ -3,18 +3,13 @@ Unified Parser Agent
 Parses and structures natural language requirements into actionable specifications
 """
 
-from typing import Dict, List, Any, Optional
-from datetime import datetime
 import json
 import re
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from src.agents.unified.base import UnifiedBaseAgent, AgentConfig, AgentResult
-from src.agents.unified.data_wrapper import (
-    AgentInput,
-    AgentContext,
-    wrap_input,
-    unwrap_result,
-)
+from src.agents.unified.base import AgentConfig, AgentResult, UnifiedBaseAgent
+from src.agents.unified.data_wrapper import AgentContext, AgentInput, unwrap_result, wrap_input
 from src.agents.unified.input_handler import unwrap_input
 
 # from ...phase2.agents.parser import ParserAgent as Phase2Parser, ParserResult  # Commented out - module not available
@@ -152,9 +147,7 @@ class UnifiedParserAgent(UnifiedBaseAgent):
         """Custom initialization for Parser agent"""
         pass
 
-    async def _process_internal(
-        self, input_data: Dict[str, Any], context: Any
-    ) -> Dict[str, Any]:
+    async def _process_internal(self, input_data: Dict[str, Any], context: Any) -> Dict[str, Any]:
         """Internal processing method"""
         # Call the main process method
         result = await self.process(input_data)
@@ -164,18 +157,18 @@ class UnifiedParserAgent(UnifiedBaseAgent):
         """Initialize parsing modules"""
         try:
             from src.agents.unified.parser.modules import (
-                NLPProcessor,
-                EntityExtractor,
-                RequirementAnalyzer,
-                DataModelBuilder,
                 APIParser,
+                BusinessRuleExtractor,
                 ConstraintAnalyzer,
+                DataModelBuilder,
                 DependencyResolver,
+                EntityExtractor,
+                NLPProcessor,
+                RequirementAnalyzer,
+                SpecificationBuilder,
+                TechnicalAnalyzer,
                 UserStoryGenerator,
                 ValidationEngine,
-                SpecificationBuilder,
-                BusinessRuleExtractor,
-                TechnicalAnalyzer,
             )
 
             self.nlp_processor = NLPProcessor()
@@ -263,9 +256,7 @@ class UnifiedParserAgent(UnifiedBaseAgent):
             validation = await self._validate_all(specifications)
 
             # Create acceptance criteria
-            acceptance_criteria = await self._create_acceptance_criteria(
-                user_stories, requirements
-            )
+            acceptance_criteria = await self._create_acceptance_criteria(user_stories, requirements)
 
             # Combine results
             result = {
@@ -403,17 +394,13 @@ Respond with only the JSON object."""
         user_patterns = ["user", "admin", "customer", "client", "member"]
         for pattern in user_patterns:
             if pattern in text:
-                entities["users"].append(
-                    {"name": pattern, "type": "actor", "properties": []}
-                )
+                entities["users"].append({"name": pattern, "type": "actor", "properties": []})
 
         # Extract objects
         object_patterns = ["product", "order", "invoice", "report", "dashboard"]
         for pattern in object_patterns:
             if pattern in text:
-                entities["objects"].append(
-                    {"name": pattern, "type": "entity", "properties": []}
-                )
+                entities["objects"].append({"name": pattern, "type": "entity", "properties": []})
 
         # Extract actions
         for match in re.finditer(self.patterns["action"], text):
@@ -421,9 +408,7 @@ Respond with only the JSON object."""
 
         return entities
 
-    async def _analyze_requirements(
-        self, nlp_result: Dict, entities: Dict
-    ) -> List[Dict]:
+    async def _analyze_requirements(self, nlp_result: Dict, entities: Dict) -> List[Dict]:
         """Analyze requirements from text using AI"""
         if self.requirement_analyzer:
             return await self.requirement_analyzer.analyze(nlp_result, entities)
@@ -497,9 +482,7 @@ Respond with only the JSON array."""
 
         return requirements
 
-    async def _build_data_model(
-        self, entities: Dict, requirements: List[Dict]
-    ) -> Dict[str, Any]:
+    async def _build_data_model(self, entities: Dict, requirements: List[Dict]) -> Dict[str, Any]:
         """Build data model from entities and requirements"""
         if self.data_model_builder:
             return await self.data_model_builder.build(entities, requirements)
@@ -597,9 +580,7 @@ Respond with only the JSON array."""
 
         return constraints
 
-    async def _resolve_dependencies(
-        self, requirements: List[Dict], entities: Dict
-    ) -> List[Dict]:
+    async def _resolve_dependencies(self, requirements: List[Dict], entities: Dict) -> List[Dict]:
         """Resolve dependencies between requirements"""
         if self.dependency_resolver:
             return await self.dependency_resolver.resolve(requirements, entities)
@@ -623,9 +604,7 @@ Respond with only the JSON array."""
 
         return dependencies
 
-    async def _generate_user_stories(
-        self, requirements: List[Dict], entities: Dict
-    ) -> List[Dict]:
+    async def _generate_user_stories(self, requirements: List[Dict], entities: Dict) -> List[Dict]:
         """Generate user stories from requirements"""
         if self.user_story_generator:
             return await self.user_story_generator.generate(requirements, entities)
@@ -871,12 +850,8 @@ Respond with only the JSON array."""
 
         # Add common relationships
         if "order" in entity["name"].lower():
-            relationships.append(
-                {"type": "belongs_to", "target": "User", "foreign_key": "user_id"}
-            )
-            relationships.append(
-                {"type": "has_many", "target": "Product", "through": "OrderItem"}
-            )
+            relationships.append({"type": "belongs_to", "target": "User", "foreign_key": "user_id"})
+            relationships.append({"type": "has_many", "target": "Product", "through": "OrderItem"})
 
         return relationships
 
@@ -1022,9 +997,7 @@ Respond with only the JSON array."""
         words = text.split()[:5]
         return " ".join(words).title()
 
-    def _generate_use_cases(
-        self, entities: Dict, requirements: List[Dict]
-    ) -> List[Dict]:
+    def _generate_use_cases(self, entities: Dict, requirements: List[Dict]) -> List[Dict]:
         """Generate use cases"""
         use_cases = []
 
@@ -1064,9 +1037,7 @@ Respond with only the JSON array."""
 
     def _infer_usability(self, requirements: List[Dict]) -> List[Dict]:
         """Infer usability requirements"""
-        return [
-            {"type": "responsive", "description": "Responsive design for all devices"}
-        ]
+        return [{"type": "responsive", "description": "Responsive design for all devices"}]
 
     def _generate_schemas(self, data_model: Dict) -> Dict[str, Any]:
         """Generate database schemas"""

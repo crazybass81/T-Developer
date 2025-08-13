@@ -198,7 +198,11 @@
       "Bash(pytest:*)",
       "Bash(PYTHONPATH=backend python -m pytest backend/tests/analysis/test_ai_analysis_engine.py::TestAIAnalysisEngine::test_performance_scoring -v)",
       "Bash(PYTHONPATH=backend python -m pytest backend/tests/analysis/test_ai_analysis_engine.py::TestAIAnalysisEngine::test_multi_model_consensus -v)",
-      "Bash(PYTHONPATH=backend python -m pytest backend/tests/analysis/test_ai_analysis_engine.py -v --tb=line)"
+      "Bash(PYTHONPATH=backend python -m pytest backend/tests/analysis/test_ai_analysis_engine.py -v --tb=line)",
+      "Bash(export SKIP=task-validation)",
+      "Bash(export AWS_REGION=us-east-1)",
+      "Bash(export EVOLUTION_MODE=enabled)",
+      "Bash(export AI_AUTONOMY_LEVEL=0.85)"
     ],
     "deny": []
   }

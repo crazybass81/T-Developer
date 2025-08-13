@@ -3,12 +3,12 @@ Code Generator Module
 Core code generation functionality for different frameworks and languages
 """
 
-from typing import Dict, List, Any, Optional, Tuple
-import os
 import json
+import os
+import re
 from datetime import datetime
 from pathlib import Path
-import re
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class CodeGenerator:
@@ -64,9 +64,7 @@ class CodeGenerator:
             language = context.get("target_language", "javascript")
 
             if framework not in self.generators:
-                return GenerationResult(
-                    False, {}, f"Unsupported framework: {framework}"
-                )
+                return GenerationResult(False, {}, f"Unsupported framework: {framework}")
 
             generator = self.generators[framework]
             formatter = self.formatters.get(language, self.formatters["javascript"])
@@ -105,9 +103,7 @@ class CodeGenerator:
             for routing_file in routing_files:
                 formatted_routing = formatter.format_code(routing_file["content"])
                 core_files[routing_file["path"]] = formatted_routing
-                await self._write_file(
-                    output_path, routing_file["path"], formatted_routing
-                )
+                await self._write_file(output_path, routing_file["path"], formatted_routing)
 
             # State management setup (if applicable)
             state_files = await generator.generate_state_management(context)
@@ -148,32 +144,24 @@ class CodeGenerator:
 
                 if integration:
                     integration_files[integration["path"]] = integration["content"]
-                    await self._write_file(
-                        output_path, integration["path"], integration["content"]
-                    )
+                    await self._write_file(output_path, integration["path"], integration["content"])
 
                 # Generate component usage examples
                 examples = await self._generate_component_examples(component)
                 for example in examples:
                     integration_files[example["path"]] = example["content"]
-                    await self._write_file(
-                        output_path, example["path"], example["content"]
-                    )
+                    await self._write_file(output_path, example["path"], example["content"])
 
                 # Generate component configuration
                 config = await self._generate_component_config(component)
                 if config:
                     integration_files[config["path"]] = config["content"]
-                    await self._write_file(
-                        output_path, config["path"], config["content"]
-                    )
+                    await self._write_file(output_path, config["path"], config["content"])
 
             # Generate master integration file
             master_integration = await self._generate_master_integration(components)
             if master_integration:
-                integration_files[master_integration["path"]] = master_integration[
-                    "content"
-                ]
+                integration_files[master_integration["path"]] = master_integration["content"]
                 await self._write_file(
                     output_path,
                     master_integration["path"],
@@ -189,9 +177,7 @@ class CodeGenerator:
             self.generation_stats["errors_encountered"] += 1
             return GenerationResult(False, {}, str(e))
 
-    async def generate_utilities(
-        self, context: Dict[str, Any], language: str
-    ) -> Dict[str, str]:
+    async def generate_utilities(self, context: Dict[str, Any], language: str) -> Dict[str, str]:
         """Generate common utility functions"""
 
         utilities = {}
@@ -305,9 +291,7 @@ export default {{
             "content": content,
         }
 
-    async def _generate_component_examples(
-        self, component: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def _generate_component_examples(self, component: Dict[str, Any]) -> List[Dict[str, str]]:
         """Generate usage examples for a component"""
 
         examples = []
@@ -388,9 +372,7 @@ export default {safe_name}Example;
 
         for component in components:
             safe_name = re.sub(r"[^a-zA-Z0-9]", "", component.get("name", "Component"))
-            imports.append(
-                f"import {safe_name}Wrapper from './components/{safe_name}Wrapper';"
-            )
+            imports.append(f"import {safe_name}Wrapper from './components/{safe_name}Wrapper';")
             exports.append(f"  {safe_name}Wrapper,")
 
         content = f"""// Auto-generated component integrations
@@ -563,9 +545,7 @@ export type { ApiResponse, ApiError };
 export const apiClient = new ApiClient();
 """
 
-    def _generate_validation_utilities(
-        self, context: Dict[str, Any], language: str
-    ) -> str:
+    def _generate_validation_utilities(self, context: Dict[str, Any], language: str) -> str:
         """Generate validation utility functions"""
 
         if language == "typescript":
@@ -1078,9 +1058,7 @@ export default App;
 """
             return {"path": "src/App.js", "content": content}
 
-    async def generate_config_files(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def generate_config_files(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         configs = []
 
         # Package.json
@@ -1110,9 +1088,7 @@ export default App;
             },
         }
 
-        configs.append(
-            {"path": "package.json", "type": "json", "content": package_json}
-        )
+        configs.append({"path": "package.json", "type": "json", "content": package_json})
 
         return configs
 
@@ -1120,9 +1096,7 @@ export default App;
         # Basic routing setup
         return []
 
-    async def generate_state_management(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def generate_state_management(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         # Basic state management setup
         return []
 
@@ -1173,9 +1147,7 @@ export default {{
 """
         return {"path": "src/App.vue", "content": content}
 
-    async def generate_config_files(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def generate_config_files(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         configs = []
 
         # Package.json
@@ -1192,18 +1164,14 @@ export default {{
             "devDependencies": {"@vitejs/plugin-vue": "^4.2.3", "vite": "^4.4.5"},
         }
 
-        configs.append(
-            {"path": "package.json", "type": "json", "content": package_json}
-        )
+        configs.append({"path": "package.json", "type": "json", "content": package_json})
 
         return configs
 
     async def generate_routing(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
-    async def generate_state_management(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def generate_state_management(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
 
@@ -1218,17 +1186,13 @@ class AngularGenerator:
             "content": "// Angular app component",
         }
 
-    async def generate_config_files(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def generate_config_files(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     async def generate_routing(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
-    async def generate_state_management(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def generate_state_management(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
 
@@ -1239,17 +1203,13 @@ class ExpressGenerator:
     async def generate_main_app(self, context: Dict[str, Any]) -> Dict[str, str]:
         return {"path": "src/app.ts", "content": "// Express app"}
 
-    async def generate_config_files(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def generate_config_files(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     async def generate_routing(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
-    async def generate_state_management(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def generate_state_management(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
 
@@ -1260,17 +1220,13 @@ class FastAPIGenerator:
     async def generate_main_app(self, context: Dict[str, Any]) -> Dict[str, str]:
         return {"path": "app/main.py", "content": "# FastAPI app"}
 
-    async def generate_config_files(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def generate_config_files(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     async def generate_routing(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
-    async def generate_state_management(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def generate_state_management(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
 
@@ -1281,17 +1237,13 @@ class DjangoGenerator:
     async def generate_main_app(self, context: Dict[str, Any]) -> Dict[str, str]:
         return {"path": "project/settings.py", "content": "# Django settings"}
 
-    async def generate_config_files(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def generate_config_files(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     async def generate_routing(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
-    async def generate_state_management(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def generate_state_management(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
 
@@ -1302,17 +1254,13 @@ class FlaskGenerator:
     async def generate_main_app(self, context: Dict[str, Any]) -> Dict[str, str]:
         return {"path": "app/main.py", "content": "# Flask main"}
 
-    async def generate_config_files(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def generate_config_files(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     async def generate_routing(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
-    async def generate_state_management(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def generate_state_management(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
 
@@ -1323,17 +1271,13 @@ class SvelteGenerator:
     async def generate_main_app(self, context: Dict[str, Any]) -> Dict[str, str]:
         return {"path": "src/App.svelte", "content": "<!-- Svelte app -->"}
 
-    async def generate_config_files(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def generate_config_files(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     async def generate_routing(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
-    async def generate_state_management(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def generate_state_management(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
 
@@ -1344,17 +1288,13 @@ class NextJSGenerator:
     async def generate_main_app(self, context: Dict[str, Any]) -> Dict[str, str]:
         return {"path": "pages/index.js", "content": "// Next.js index"}
 
-    async def generate_config_files(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def generate_config_files(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     async def generate_routing(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
-    async def generate_state_management(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def generate_state_management(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
 
@@ -1365,17 +1305,13 @@ class NuxtGenerator:
     async def generate_main_app(self, context: Dict[str, Any]) -> Dict[str, str]:
         return {"path": "pages/index.vue", "content": "<!-- Nuxt index -->"}
 
-    async def generate_config_files(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def generate_config_files(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         return []
 
     async def generate_routing(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
-    async def generate_state_management(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+    async def generate_state_management(self, context: Dict[str, Any]) -> List[Dict[str, str]]:
         return []
 
 

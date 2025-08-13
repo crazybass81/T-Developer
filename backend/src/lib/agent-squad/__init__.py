@@ -2,9 +2,9 @@
 
 __version__ = "0.1.0"
 
-from typing import Dict, Any, List, Optional
 import asyncio
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -40,9 +40,7 @@ class AgentSquad:
         self, input_data: Dict[str, Any], agents: List[Any]
     ) -> List[Dict[str, Any]]:
         """Execute agents in parallel"""
-        tasks = [
-            agent.execute(input_data) for agent in agents if hasattr(agent, "execute")
-        ]
+        tasks = [agent.execute(input_data) for agent in agents if hasattr(agent, "execute")]
         return await asyncio.gather(*tasks)
 
 

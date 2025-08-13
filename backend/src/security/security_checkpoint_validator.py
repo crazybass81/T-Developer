@@ -22,16 +22,14 @@ import logging
 import os
 import sys
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Tuple, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 # 현재 디렉토리를 Python 경로에 추가
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 로깅 설정
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -91,9 +89,7 @@ class SecurityCheckpointValidator:
                 try:
                     content = file_path.read_text()
                     if "resource" in content and "aws_" in content:
-                        infra_results["terraform_files"][filename][
-                            "has_aws_resources"
-                        ] = True
+                        infra_results["terraform_files"][filename]["has_aws_resources"] = True
                     else:
                         infra_results["terraform_files"][filename]["status"] = "FAIL"
                         infra_results["terraform_files"][filename][
@@ -235,8 +231,7 @@ class SecurityCheckpointValidator:
             checks = {
                 "has_kms_keys": "aws_kms_key" in content,
                 "has_key_rotation": "enable_key_rotation" in content,
-                "has_key_policies": "aws_kms_key_policy" in content
-                or "policy" in content,
+                "has_key_policies": "aws_kms_key_policy" in content or "policy" in content,
                 "has_multiple_keys": content.count("aws_kms_key") >= 2,
             }
 
@@ -254,9 +249,7 @@ class SecurityCheckpointValidator:
 
     def _check_logging_config(self) -> Dict[str, Any]:
         """로깅 설정 검증"""
-        logging_file = (
-            self.project_root / "infrastructure" / "terraform" / "access_logging.tf"
-        )
+        logging_file = self.project_root / "infrastructure" / "terraform" / "access_logging.tf"
 
         if not logging_file.exists():
             return {
@@ -288,9 +281,7 @@ class SecurityCheckpointValidator:
 
     def _check_scanning_config(self) -> Dict[str, Any]:
         """스캔 설정 검증"""
-        scanning_file = (
-            self.project_root / "infrastructure" / "terraform" / "secret_scanning.tf"
-        )
+        scanning_file = self.project_root / "infrastructure" / "terraform" / "secret_scanning.tf"
 
         if not scanning_file.exists():
             return {
@@ -323,9 +314,7 @@ class SecurityCheckpointValidator:
 
     def _check_environment_config(self) -> Dict[str, Any]:
         """환경 설정 검증"""
-        env_file = (
-            self.project_root / "infrastructure" / "terraform" / "environments.tf"
-        )
+        env_file = self.project_root / "infrastructure" / "terraform" / "environments.tf"
 
         if not env_file.exists():
             return {
@@ -337,12 +326,8 @@ class SecurityCheckpointValidator:
             content = env_file.read_text()
 
             environments = ["development", "staging", "production"]
-            checks = {
-                f"has_{env}_config": env in content.lower() for env in environments
-            }
-            checks["has_environment_locals"] = (
-                "locals" in content and "environment" in content
-            )
+            checks = {f"has_{env}_config": env in content.lower() for env in environments}
+            checks["has_environment_locals"] = "locals" in content and "environment" in content
             checks["has_conditional_logic"] = "var.environment" in content
 
             passed_checks = sum(checks.values())
@@ -408,8 +393,8 @@ class SecurityCheckpointValidator:
         """Secrets Manager 클라이언트 테스트"""
         try:
             # Mock 테스트 실행
-            from unittest.mock import Mock, patch
             import json
+            from unittest.mock import Mock, patch
 
             with patch("boto3.client") as mock_boto:
                 mock_client = Mock()
@@ -421,11 +406,7 @@ class SecurityCheckpointValidator:
                 }
                 mock_boto.return_value = mock_client
 
-                from secrets_client import (
-                    SecretsManagerClient,
-                    ClientConfig,
-                    CacheConfig,
-                )
+                from secrets_client import CacheConfig, ClientConfig, SecretsManagerClient
 
                 config = ClientConfig(cache_config=CacheConfig(enabled=False))
                 client = SecretsManagerClient(config)
@@ -446,9 +427,9 @@ class SecurityCheckpointValidator:
     async def _test_parameter_client(self) -> Dict[str, Any]:
         """Parameter Store 클라이언트 테스트"""
         try:
-            from unittest.mock import Mock, patch
             import json
             from datetime import datetime, timezone
+            from unittest.mock import Mock, patch
 
             with patch("boto3.client") as mock_boto:
                 mock_client = Mock()
@@ -463,7 +444,7 @@ class SecurityCheckpointValidator:
                 }
                 mock_boto.return_value = mock_client
 
-                from parameter_store_client import ParameterStoreClient, ParameterConfig
+                from parameter_store_client import ParameterConfig, ParameterStoreClient
 
                 config = ParameterConfig(cache_enabled=False)
                 client = ParameterStoreClient(config)
@@ -487,9 +468,7 @@ class SecurityCheckpointValidator:
             from config import SecurityConfig, initialize_security
 
             # 설정 초기화 테스트
-            config = SecurityConfig(
-                project_name="test-project", environment="development"
-            )
+            config = SecurityConfig(project_name="test-project", environment="development")
             initialize_security(config)
 
             # 설정 검증
@@ -565,17 +544,13 @@ class SecurityCheckpointValidator:
 
         try:
             # 1. 인프라 파일 검증
-            self.validation_results[
-                "infrastructure_files"
-            ] = self.validate_infrastructure_files()
+            self.validation_results["infrastructure_files"] = self.validate_infrastructure_files()
 
             # 2. Python 클라이언트 검증
             self.validation_results["python_clients"] = self.validate_python_clients()
 
             # 3. 보안 기능 검증
-            self.validation_results[
-                "security_features"
-            ] = self.validate_security_features()
+            self.validation_results["security_features"] = self.validate_security_features()
 
             # 4. 기능적 테스트 실행
             functional_results = await self.run_functional_tests()
@@ -590,9 +565,7 @@ class SecurityCheckpointValidator:
             # 7. Day 2 산출물 체크리스트 검증
             self.validation_results["day2_deliverables"] = {
                 "kms_encryption": "COMPLETED"
-                if self.validation_results["security_features"]["encryption_at_rest"][
-                    "status"
-                ]
+                if self.validation_results["security_features"]["encryption_at_rest"]["status"]
                 == "PASS"
                 else "NEEDS_REVIEW",
                 "secrets_manager": "COMPLETED"
@@ -602,27 +575,18 @@ class SecurityCheckpointValidator:
                 if "parameter_store_client" in self.validation_results["python_clients"]
                 else "NEEDS_REVIEW",
                 "environment_separation": "COMPLETED"
-                if self.validation_results["security_features"][
-                    "environment_separation"
-                ]["status"]
+                if self.validation_results["security_features"]["environment_separation"]["status"]
                 == "PASS"
                 else "NEEDS_REVIEW",
                 "key_rotation": "COMPLETED"
-                if self.validation_results["security_features"]["key_rotation"][
-                    "status"
-                ]
-                == "PASS"
+                if self.validation_results["security_features"]["key_rotation"]["status"] == "PASS"
                 else "NEEDS_REVIEW",
                 "access_logging": "COMPLETED"
-                if self.validation_results["security_features"]["access_logging"][
-                    "status"
-                ]
+                if self.validation_results["security_features"]["access_logging"]["status"]
                 == "PASS"
                 else "NEEDS_REVIEW",
                 "secret_scanning": "COMPLETED"
-                if self.validation_results["security_features"]["secret_scanning"][
-                    "status"
-                ]
+                if self.validation_results["security_features"]["secret_scanning"]["status"]
                 == "PASS"
                 else "NEEDS_REVIEW",
                 "python_clients": "COMPLETED"

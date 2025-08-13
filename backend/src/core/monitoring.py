@@ -2,15 +2,15 @@
 Monitoring and Metrics System
 Tracks performance, health, and usage metrics
 """
-import time
 import asyncio
-from typing import Dict, Any, List, Optional, Callable
+import logging
+import statistics
+import time
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from collections import deque
-import statistics
-import logging
+from typing import Any, Callable, Dict, List, Optional
 
 from src.services.aws_clients import get_cloudwatch_client
 
@@ -105,9 +105,7 @@ class MetricsCollector:
         if use_cloudwatch:
             self._cloudwatch = get_cloudwatch_client()
 
-    def increment_counter(
-        self, name: str, value: float = 1.0, tags: Dict[str, str] = None
-    ) -> None:
+    def increment_counter(self, name: str, value: float = 1.0, tags: Dict[str, str] = None) -> None:
         """Increment a counter metric"""
         key = self._make_key(name, tags)
         if key not in self._counters:
@@ -141,9 +139,7 @@ class MetricsCollector:
             )
         )
 
-    def record_histogram(
-        self, name: str, value: float, tags: Dict[str, str] = None
-    ) -> None:
+    def record_histogram(self, name: str, value: float, tags: Dict[str, str] = None) -> None:
         """Record a histogram value"""
         key = self._make_key(name, tags)
         if key not in self._histograms:
@@ -151,13 +147,9 @@ class MetricsCollector:
         self._histograms[key].append(value)
 
         # Add to buffer
-        self._add_metric(
-            Metric(name=name, type=MetricType.HISTOGRAM, value=value, tags=tags or {})
-        )
+        self._add_metric(Metric(name=name, type=MetricType.HISTOGRAM, value=value, tags=tags or {}))
 
-    def record_timer(
-        self, name: str, duration_ms: float, tags: Dict[str, str] = None
-    ) -> None:
+    def record_timer(self, name: str, duration_ms: float, tags: Dict[str, str] = None) -> None:
         """Record a timer duration"""
         key = self._make_key(name, tags)
         if key not in self._timers:
@@ -190,9 +182,7 @@ class MetricsCollector:
         # Check if we should flush
         if len(self._buffer) >= self.buffer_size:
             asyncio.create_task(self.flush())
-        elif (
-            datetime.utcnow() - self._last_flush
-        ).total_seconds() > self.flush_interval:
+        elif (datetime.utcnow() - self._last_flush).total_seconds() > self.flush_interval:
             asyncio.create_task(self.flush())
 
     async def flush(self) -> int:
@@ -231,9 +221,7 @@ class MetricsCollector:
         key = self._make_key(name, tags)
         return self._gauges.get(key, 0)
 
-    def get_histogram_stats(
-        self, name: str, tags: Dict[str, str] = None
-    ) -> Dict[str, float]:
+    def get_histogram_stats(self, name: str, tags: Dict[str, str] = None) -> Dict[str, float]:
         """Get histogram statistics"""
         key = self._make_key(name, tags)
         values = list(self._histograms.get(key, []))
@@ -250,9 +238,7 @@ class MetricsCollector:
             "stddev": statistics.stdev(values) if len(values) > 1 else 0,
         }
 
-    def get_timer_stats(
-        self, name: str, tags: Dict[str, str] = None
-    ) -> Dict[str, float]:
+    def get_timer_stats(self, name: str, tags: Dict[str, str] = None) -> Dict[str, float]:
         """Get timer statistics"""
         key = self._make_key(name, tags)
         durations = self._timers.get(key, [])
@@ -341,14 +327,10 @@ class HealthMonitor:
                 try:
                     result = await self._health_checks[name]()
                     if not isinstance(result, HealthCheck):
-                        result = HealthCheck(
-                            name=name, status="healthy" if result else "unhealthy"
-                        )
+                        result = HealthCheck(name=name, status="healthy" if result else "unhealthy")
                     results[name] = result
                 except Exception as e:
-                    results[name] = HealthCheck(
-                        name=name, status="unhealthy", message=str(e)
-                    )
+                    results[name] = HealthCheck(name=name, status="unhealthy", message=str(e))
         else:
             # Check all components
             for check_name, check_func in self._health_checks.items():
@@ -395,9 +377,7 @@ class HealthMonitor:
         if not self._last_results:
             return "unknown"
 
-        unhealthy_count = sum(
-            1 for check in self._last_results.values() if not check.is_healthy()
-        )
+        unhealthy_count = sum(1 for check in self._last_results.values() if not check.is_healthy())
 
         if unhealthy_count == 0:
             return "healthy"
@@ -455,8 +435,9 @@ class PerformanceTracker:
 
     def track_memory_usage(self) -> float:
         """Track current memory usage"""
-        import psutil
         import os
+
+        import psutil
 
         process = psutil.Process(os.getpid())
         memory_mb = process.memory_info().rss / 1024 / 1024

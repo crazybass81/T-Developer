@@ -4,14 +4,15 @@ AWS Agent Squad Integration
 AWS Step Functions를 활용한 Agent 오케스트레이션
 """
 
-import json
-import boto3
 import asyncio
-from typing import Dict, Any, List, Optional
+import json
+import logging
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-import logging
-from dataclasses import dataclass, asdict
+from typing import Any, Dict, List, Optional
+
+import boto3
 
 logger = logging.getLogger(__name__)
 
@@ -163,9 +164,7 @@ class AWSAgentSquad:
         """Agent Pipeline 실행"""
         try:
             if not self.state_machine_arn:
-                logger.warning(
-                    "State machine ARN not configured, using local execution"
-                )
+                logger.warning("State machine ARN not configured, using local execution")
                 return await self._execute_local_pipeline(input_data)
 
             # Step Functions 실행 시작
@@ -196,9 +195,7 @@ class AWSAgentSquad:
 
         while elapsed_time < max_wait_time:
             try:
-                response = self.sfn_client.describe_execution(
-                    executionArn=execution_arn
-                )
+                response = self.sfn_client.describe_execution(executionArn=execution_arn)
 
                 status = response["status"]
 
@@ -234,9 +231,7 @@ class AWSAgentSquad:
             "execution_arn": execution_arn,
         }
 
-    async def _execute_local_pipeline(
-        self, input_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _execute_local_pipeline(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """로컬 파이프라인 실행 (AWS 없이)"""
         logger.info("Executing pipeline locally (fallback mode)")
 
@@ -266,9 +261,7 @@ class AWSAgentSquad:
                 start_time = datetime.now()
 
                 # 에이전트 실행 시뮬레이션
-                step_result = await self._execute_agent_locally(
-                    agent_name, current_data
-                )
+                step_result = await self._execute_agent_locally(agent_name, current_data)
 
                 end_time = datetime.now()
                 execution_time = (end_time - start_time).total_seconds()
@@ -294,9 +287,7 @@ class AWSAgentSquad:
 
                 # 진행률 로깅
                 progress = ((i + 1) / len(agents)) * 100
-                logger.info(
-                    f"Pipeline progress: {progress:.1f}% - {agent_name} completed"
-                )
+                logger.info(f"Pipeline progress: {progress:.1f}% - {agent_name} completed")
 
             except Exception as e:
                 logger.error(f"Error executing agent {agent_name}: {e}")
@@ -418,9 +409,7 @@ class AWSAgentSquad:
             logger.error(f"Failed to get execution metrics: {e}")
             return {"error": str(e)}
 
-    async def stop_execution(
-        self, execution_arn: str, reason: str = "User requested"
-    ) -> bool:
+    async def stop_execution(self, execution_arn: str, reason: str = "User requested") -> bool:
         """실행 중단"""
         try:
             self.sfn_client.stop_execution(

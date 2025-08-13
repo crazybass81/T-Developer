@@ -3,10 +3,11 @@ OpenAPI Documentation Configuration
 API 문서화 및 Swagger UI 설정
 """
 
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from fastapi import FastAPI
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
-from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 
 # API Metadata
 API_TITLE = "T-Developer API"
@@ -330,9 +331,6 @@ def setup_documentation(app: FastAPI):
     @app.get("/postman-collection", include_in_schema=False)
     async def export_postman_collection():
         """Export API as Postman collection"""
-        # Convert OpenAPI to Postman format
-        openapi = custom_openapi(app)
-
         # Simplified Postman collection structure
         postman_collection = {
             "info": {
@@ -342,9 +340,7 @@ def setup_documentation(app: FastAPI):
             },
             "auth": {
                 "type": "bearer",
-                "bearer": [
-                    {"key": "token", "value": "{{access_token}}", "type": "string"}
-                ],
+                "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}],
             },
             "item": [],
             "variable": [

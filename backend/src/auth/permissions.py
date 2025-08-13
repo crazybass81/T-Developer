@@ -3,11 +3,13 @@ Permission System
 역할 기반 접근 제어 (RBAC)
 """
 
-from typing import List, Set
 from functools import wraps
+from typing import List, Set
+
 from fastapi import Depends, HTTPException, status
-from .models import User, UserRole, Permission
+
 from .auth_middleware import get_current_active_user
+from .models import Permission, User, UserRole
 
 # Role-Permission Mapping
 ROLE_PERMISSIONS = {
@@ -149,17 +151,13 @@ class RoleChecker:
 
     def __call__(self, user: User = Depends(get_current_active_user)) -> User:
         if not any(role in self.allowed_roles for role in user.roles):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Role not authorized"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Role not authorized")
         return user
 
 
 # Convenience dependencies
 require_admin = RoleChecker([UserRole.ADMIN, UserRole.SUPER_ADMIN])
-require_developer = RoleChecker(
-    [UserRole.DEVELOPER, UserRole.ADMIN, UserRole.SUPER_ADMIN]
-)
+require_developer = RoleChecker([UserRole.DEVELOPER, UserRole.ADMIN, UserRole.SUPER_ADMIN])
 require_project_create = RequirePermissions([Permission.PROJECT_CREATE])
 require_project_delete = RequirePermissions([Permission.PROJECT_DELETE])
 require_user_manage = RequirePermissions(

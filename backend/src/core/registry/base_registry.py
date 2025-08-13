@@ -3,17 +3,18 @@ Base Agent Registry Implementation
 Core functionality for agent registration and management
 """
 
-from typing import Dict, Optional, Any, List
-import hashlib
 import asyncio
+import hashlib
+import json
+import logging
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import boto3
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import select, update, delete
-import boto3
-import json
-from dataclasses import dataclass, asdict
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -46,20 +47,14 @@ class AgentMetadata:
 class BaseAgentRegistry:
     """Base agent registry with AWS integration"""
 
-    def __init__(
-        self, db_session: Optional[AsyncSession] = None, config: Optional[Dict] = None
-    ):
+    def __init__(self, db_session: Optional[AsyncSession] = None, config: Optional[Dict] = None):
         self.db = db_session
         self.config = config or {}
         self.environment = self.config.get("environment", "dev")
 
         # AWS clients
-        self.ssm = boto3.client(
-            "ssm", region_name=self.config.get("region", "us-east-1")
-        )
-        self.sm = boto3.client(
-            "secretsmanager", region_name=self.config.get("region", "us-east-1")
-        )
+        self.ssm = boto3.client("ssm", region_name=self.config.get("region", "us-east-1"))
+        self.sm = boto3.client("secretsmanager", region_name=self.config.get("region", "us-east-1"))
         self.cloudwatch = boto3.client(
             "cloudwatch", region_name=self.config.get("region", "us-east-1")
         )
@@ -266,9 +261,7 @@ class BaseAgentRegistry:
 
                 # Update database if available
                 if self.db:
-                    await self._update_agent_in_db(
-                        agent_id, metadata, agent.get("code")
-                    )
+                    await self._update_agent_in_db(agent_id, metadata, agent.get("code"))
 
                 # Send metrics
                 await self._send_metrics("AgentUpdated", 1, {"AgentId": agent_id})
@@ -302,9 +295,7 @@ class BaseAgentRegistry:
                 logger.error(f"Failed to delete agent {agent_id}: {e}")
                 return False
 
-    async def list_agents(
-        self, filters: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+    async def list_agents(self, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """List all agents with optional filters"""
         agents = []
 

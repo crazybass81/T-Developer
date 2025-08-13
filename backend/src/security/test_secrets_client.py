@@ -12,15 +12,16 @@ import json
 import logging
 import os
 import sys
-from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, Mock, patch
 
 # 현재 디렉토리를 Python 경로에 추가
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import SecurityConfig, initialize_security
-from secrets_client import SecretsManagerClient, ClientConfig, CacheConfig
 from integration_example import EvolutionSystemIntegration
+from secrets_client import CacheConfig, ClientConfig, SecretsManagerClient
+
+from config import SecurityConfig, initialize_security
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -104,9 +105,7 @@ class MockSecretsManagerClient:
         else:
             from botocore.exceptions import ClientError
 
-            raise ClientError(
-                {"Error": {"Code": "ResourceNotFoundException"}}, "GetSecretValue"
-            )
+            raise ClientError({"Error": {"Code": "ResourceNotFoundException"}}, "GetSecretValue")
 
     def list_secrets(self, **kwargs):
         """Mock list_secrets"""
@@ -118,9 +117,7 @@ class MockSecretsManagerClient:
             if filters:
                 name_filter = next((f for f in filters if f["Key"] == "name"), None)
                 if name_filter:
-                    if not any(
-                        name.startswith(value) for value in name_filter["Values"]
-                    ):
+                    if not any(name.startswith(value) for value in name_filter["Values"]):
                         continue
 
             secrets_list.append(
@@ -156,18 +153,14 @@ def test_basic_functionality():
         try:
             openai_secret = client.get_secret("t-developer/evolution/openai-api-key")
             assert "parsed_secret" in openai_secret
-            assert (
-                openai_secret["parsed_secret"]["api_key"] == "sk-test-openai-key-12345"
-            )
+            assert openai_secret["parsed_secret"]["api_key"] == "sk-test-openai-key-12345"
             print("✓ OpenAI 비밀 조회 성공")
         except Exception as e:
             print(f"✗ OpenAI 비밀 조회 실패: {e}")
 
         # 비밀 JSON 값 추출 테스트
         try:
-            api_key = client.get_secret_value(
-                "t-developer/evolution/openai-api-key", "api_key"
-            )
+            api_key = client.get_secret_value("t-developer/evolution/openai-api-key", "api_key")
             assert api_key == "sk-test-openai-key-12345"
             print("✓ 비밀 값 추출 성공")
         except Exception as e:
@@ -198,9 +191,7 @@ def test_cache_functionality():
         mock_boto.return_value = mock_client
 
         # 캐시 활성화 설정
-        config = ClientConfig(
-            cache_config=CacheConfig(enabled=True, ttl_seconds=60, max_size=10)
-        )
+        config = ClientConfig(cache_config=CacheConfig(enabled=True, ttl_seconds=60, max_size=10))
 
         client = SecretsManagerClient(config)
 
@@ -210,9 +201,7 @@ def test_cache_functionality():
         # 두 번째 호출 (캐시에서 가져옴)
         secret2 = client.get_secret("t-developer/evolution/openai-api-key")
 
-        assert (
-            secret1["parsed_secret"]["api_key"] == secret2["parsed_secret"]["api_key"]
-        )
+        assert secret1["parsed_secret"]["api_key"] == secret2["parsed_secret"]["api_key"]
         print("✓ 캐시 기능 동작 확인")
 
         # 캐시 무효화 테스트
@@ -236,9 +225,7 @@ async def test_async_functionality():
 
         # 비동기 비밀 조회
         try:
-            openai_secret = await client.get_secret_async(
-                "t-developer/evolution/openai-api-key"
-            )
+            openai_secret = await client.get_secret_async("t-developer/evolution/openai-api-key")
             assert "parsed_secret" in openai_secret
             print("✓ 비동기 비밀 조회 성공")
         except Exception as e:
@@ -287,9 +274,7 @@ def test_integration():
             client = engine_secrets.secrets_client
 
             # OpenAI 설정 테스트
-            openai_config = client.get_secret_json(
-                "t-developer/evolution/openai-api-key"
-            )
+            openai_config = client.get_secret_json("t-developer/evolution/openai-api-key")
             assert openai_config["api_key"] == "sk-test-openai-key-12345"
             print("✓ OpenAI 통합 테스트 성공")
 
@@ -299,9 +284,7 @@ def test_integration():
             print("✓ 데이터베이스 통합 테스트 성공")
 
             # Agent 통신 키 테스트
-            agent_config = client.get_secret_json(
-                "t-developer/agents/communication-key"
-            )
+            agent_config = client.get_secret_json("t-developer/agents/communication-key")
             assert agent_config["symmetric_key"] == "test-symmetric-key-12345"
             print("✓ Agent 통신 키 통합 테스트 성공")
 
@@ -328,9 +311,7 @@ async def test_real_aws_connection():
 
         # 각 비밀의 기본 정보만 출력 (보안상)
         for secret in secrets_list:
-            print(
-                f"  - {secret['name']}: {secret.get('description', 'No description')}"
-            )
+            print(f"  - {secret['name']}: {secret.get('description', 'No description')}")
 
     except Exception as e:
         print(f"✗ 실제 AWS 연결 실패: {e}")

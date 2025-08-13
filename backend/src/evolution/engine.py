@@ -11,9 +11,9 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from enum import Enum
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +82,7 @@ class EvolutionEngine:
         self._lock = asyncio.Lock()
 
         # Initialize paths
-        self.evolution_dir = Path(
-            "/home/ec2-user/T-DeveloperMVP/backend/data/evolution"
-        )
+        self.evolution_dir = Path("/home/ec2-user/T-DeveloperMVP/backend/data/evolution")
         self.checkpoint_dir = self.evolution_dir / "checkpoints"
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
@@ -181,9 +179,7 @@ class EvolutionEngine:
                         return False
 
                 self.status = EvolutionStatus.COMPLETED
-                logger.info(
-                    f"Evolution completed at generation {self.current_generation}"
-                )
+                logger.info(f"Evolution completed at generation {self.current_generation}")
                 return True
 
             except Exception as e:
@@ -222,9 +218,7 @@ class EvolutionEngine:
         """
         try:
             if checkpoint_id:
-                checkpoint_path = (
-                    self.checkpoint_dir / f"checkpoint_{checkpoint_id}.json"
-                )
+                checkpoint_path = self.checkpoint_dir / f"checkpoint_{checkpoint_id}.json"
             else:
                 # Find last safe checkpoint
                 checkpoints = sorted(self.checkpoint_dir.glob("checkpoint_*.json"))
@@ -287,9 +281,7 @@ class EvolutionEngine:
         return {
             "id": f"agent_{time.time()}_{random.randint(1000, 9999)}",
             "genes": {
-                "layer_sizes": [
-                    random.randint(8, 32) for _ in range(random.randint(2, 4))
-                ],
+                "layer_sizes": [random.randint(8, 32) for _ in range(random.randint(2, 4))],
                 "activation": random.choice(["relu", "tanh", "sigmoid"]),
                 "learning_rate": random.uniform(0.001, 0.1),
                 "dropout_rate": random.uniform(0.1, 0.5),
@@ -382,9 +374,7 @@ class EvolutionEngine:
 
         for _ in range(self.config.population_size):
             # Tournament selection
-            tournament = random.sample(
-                self.population, min(tournament_size, len(self.population))
-            )
+            tournament = random.sample(self.population, min(tournament_size, len(self.population)))
             winner = max(tournament, key=lambda x: x["fitness"])
             parents.append(winner.copy())
 
@@ -462,9 +452,7 @@ class EvolutionEngine:
                     # Mutate layer sizes
                     if random.random() < 0.5 and len(genes["layer_sizes"]) > 2:
                         # Remove a layer
-                        genes["layer_sizes"].pop(
-                            random.randint(0, len(genes["layer_sizes"]) - 1)
-                        )
+                        genes["layer_sizes"].pop(random.randint(0, len(genes["layer_sizes"]) - 1))
                     else:
                         # Add or modify a layer
                         if random.random() < 0.5:
@@ -475,9 +463,7 @@ class EvolutionEngine:
 
                 elif gene_key == "learning_rate":
                     genes["learning_rate"] *= random.uniform(0.5, 2.0)
-                    genes["learning_rate"] = max(
-                        0.0001, min(0.1, genes["learning_rate"])
-                    )
+                    genes["learning_rate"] = max(0.0001, min(0.1, genes["learning_rate"]))
 
                 elif gene_key == "dropout_rate":
                     genes["dropout_rate"] = random.uniform(0.1, 0.5)
@@ -531,10 +517,7 @@ class EvolutionEngine:
             return False
 
         # Check instantiation time
-        if (
-            self.best_genome["metrics"]["instantiation_us"]
-            > self.config.instantiation_limit_us
-        ):
+        if self.best_genome["metrics"]["instantiation_us"] > self.config.instantiation_limit_us:
             logger.warning(
                 f"Instantiation time exceeded: {self.best_genome['metrics']['instantiation_us']}μs > {self.config.instantiation_limit_us}μs"
             )
@@ -568,9 +551,7 @@ class EvolutionEngine:
             "timestamp": datetime.now().isoformat(),
         }
 
-        checkpoint_file = (
-            self.checkpoint_dir / f"checkpoint_gen{self.current_generation:04d}.json"
-        )
+        checkpoint_file = self.checkpoint_dir / f"checkpoint_gen{self.current_generation:04d}.json"
         with open(checkpoint_file, "w") as f:
             json.dump(checkpoint_data, f, indent=2)
 
@@ -588,8 +569,7 @@ class EvolutionEngine:
         }
 
         checkpoint_file = (
-            self.checkpoint_dir
-            / f"emergency_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            self.checkpoint_dir / f"emergency_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         )
         with open(checkpoint_file, "w") as f:
             json.dump(checkpoint_data, f, indent=2)
@@ -602,14 +582,10 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Evolution Engine CLI")
-    parser.add_argument(
-        "--init", action="store_true", help="Initialize evolution engine"
-    )
+    parser.add_argument("--init", action="store_true", help="Initialize evolution engine")
     parser.add_argument("--start", action="store_true", help="Start evolution")
     parser.add_argument("--stop", action="store_true", help="Emergency stop")
-    parser.add_argument(
-        "--rollback", action="store_true", help="Rollback to last checkpoint"
-    )
+    parser.add_argument("--rollback", action="store_true", help="Rollback to last checkpoint")
     parser.add_argument("--status", action="store_true", help="Show current status")
 
     args = parser.parse_args()

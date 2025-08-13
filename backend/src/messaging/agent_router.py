@@ -17,9 +17,7 @@ class AgentMessageRouter:
     async def _get_redis_client(self):
         if self._redis_client is None:
             try:
-                self._redis_client = redis.from_url(
-                    self.config["redis_url"], decode_responses=True
-                )
+                self._redis_client = redis.from_url(self.config["redis_url"], decode_responses=True)
             except Exception:
                 pass
         return self._redis_client

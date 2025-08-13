@@ -3,9 +3,9 @@ Entity Extractor Module
 Extracts and classifies entities from parsed text
 """
 
-from typing import Dict, List, Any, Optional, Set, Tuple
 import re
 from collections import defaultdict
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 class EntityExtractor:
@@ -373,9 +373,7 @@ class EntityExtractor:
 
         return merged
 
-    def _classify_entities(
-        self, entities: List[Dict], text: str
-    ) -> Dict[str, List[Dict]]:
+    def _classify_entities(self, entities: List[Dict], text: str) -> Dict[str, List[Dict]]:
         """Classify entities into semantic categories"""
         classified = defaultdict(list)
 
@@ -412,9 +410,7 @@ class EntityExtractor:
             return "actors"
         elif any(pattern in text for pattern in ["page", "screen", "form", "button"]):
             return "ui_elements"
-        elif any(
-            pattern in text for pattern in ["api", "database", "service", "server"]
-        ):
+        elif any(pattern in text for pattern in ["api", "database", "service", "server"]):
             return "system_components"
         elif any(pattern in text for pattern in ["create", "update", "delete", "read"]):
             return "operations"
@@ -490,9 +486,7 @@ class EntityExtractor:
                 for entity in entity_list:
                     if entity["text"] in sentence.lower():
                         # Look for attributes near the entity
-                        attrs = self._find_attributes_in_sentence(
-                            entity["text"], sentence
-                        )
+                        attrs = self._find_attributes_in_sentence(entity["text"], sentence)
 
                         if attrs:
                             attributes[entity["text"]].extend(attrs)
@@ -647,9 +641,7 @@ class EntityExtractor:
                     constraints.append(
                         {
                             "entity": match.group(1),
-                            "constraint": match.group(2)
-                            if match.lastindex > 1
-                            else match.group(0),
+                            "constraint": match.group(2) if match.lastindex > 1 else match.group(0),
                             "type": self._classify_constraint(sentence),
                             "sentence": sentence,
                         }
@@ -705,9 +697,7 @@ class EntityExtractor:
 
                 model["entities"][entity_name] = {
                     "type": category,
-                    "attributes": [
-                        attr["name"] for attr in attributes.get(entity_name, [])
-                    ],
+                    "attributes": [attr["name"] for attr in attributes.get(entity_name, [])],
                     "relationships": [],
                 }
 
@@ -751,9 +741,7 @@ class EntityExtractor:
         """Calculate entity extraction statistics"""
         total_entities = sum(len(entity_list) for entity_list in entities.values())
 
-        category_counts = {
-            category: len(entity_list) for category, entity_list in entities.items()
-        }
+        category_counts = {category: len(entity_list) for category, entity_list in entities.items()}
 
         unique_entities = set()
         for entity_list in entities.values():

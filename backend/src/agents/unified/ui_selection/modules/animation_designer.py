@@ -3,7 +3,7 @@ Animation Designer Module
 Designs and configures animations for UI components
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class AnimationDesigner:
@@ -87,35 +87,25 @@ class AnimationDesigner:
             Animation configuration
         """
         # Select animation style
-        animation_style = self._select_animation_style(
-            project_type, preferences, performance_level
-        )
+        animation_style = self._select_animation_style(project_type, preferences, performance_level)
 
         # Configure component animations
-        component_animations = self._configure_component_animations(
-            components, animation_style
-        )
+        component_animations = self._configure_component_animations(components, animation_style)
 
         # Design page transitions
         page_transitions = self._design_page_transitions(project_type, animation_style)
 
         # Configure micro-interactions
-        micro_interactions = self._configure_micro_interactions(
-            components, animation_style
-        )
+        micro_interactions = self._configure_micro_interactions(components, animation_style)
 
         # Generate keyframes
         keyframes = self._generate_keyframes(component_animations)
 
         # Optimize for performance
-        optimizations = self._optimize_animations(
-            component_animations, performance_level
-        )
+        optimizations = self._optimize_animations(component_animations, performance_level)
 
         # Generate CSS
-        css = self._generate_animation_css(
-            component_animations, keyframes, micro_interactions
-        )
+        css = self._generate_animation_css(component_animations, keyframes, micro_interactions)
 
         # Generate JavaScript hooks
         js_hooks = self._generate_js_hooks(component_animations)
@@ -221,9 +211,7 @@ class AnimationDesigner:
 
         return animations
 
-    def _design_page_transitions(
-        self, project_type: str, style: Dict
-    ) -> Dict[str, Any]:
+    def _design_page_transitions(self, project_type: str, style: Dict) -> Dict[str, Any]:
         """Design page transition animations"""
 
         transitions = {
@@ -244,9 +232,7 @@ class AnimationDesigner:
 
         return transitions
 
-    def _configure_micro_interactions(
-        self, components: List[str], style: Dict
-    ) -> Dict[str, Any]:
+    def _configure_micro_interactions(self, components: List[str], style: Dict) -> Dict[str, Any]:
         """Configure micro-interactions"""
 
         if style["intensity"] == "none":
@@ -257,9 +243,7 @@ class AnimationDesigner:
         # Configure based on components
         if "Button" in components:
             interactions["hover"]["button"] = self.micro_interactions["hover"]["button"]
-            interactions["active"]["button"] = self.micro_interactions["active"][
-                "button"
-            ]
+            interactions["active"]["button"] = self.micro_interactions["active"]["button"]
 
         if "Card" in components:
             interactions["hover"]["card"] = self.micro_interactions["hover"]["card"]
@@ -342,9 +326,7 @@ class AnimationDesigner:
 
         return keyframes
 
-    def _optimize_animations(
-        self, animations: Dict, performance_level: str
-    ) -> Dict[str, Any]:
+    def _optimize_animations(self, animations: Dict, performance_level: str) -> Dict[str, Any]:
         """Optimize animations for performance"""
 
         optimizations = {

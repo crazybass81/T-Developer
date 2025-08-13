@@ -1,6 +1,6 @@
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
 from collections import defaultdict
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -124,9 +124,7 @@ class ModelRouter:
 
         return scores
 
-    def _calculate_specialty_score(
-        self, specialties: List[str], task_type: str
-    ) -> float:
+    def _calculate_specialty_score(self, specialties: List[str], task_type: str) -> float:
         if task_type in specialties:
             return 1.0
 

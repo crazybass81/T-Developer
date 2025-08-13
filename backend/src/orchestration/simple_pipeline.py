@@ -6,10 +6,10 @@ Direct implementation for API integration
 import asyncio
 import json
 import logging
-from typing import Dict, Any, Optional
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from dataclasses import dataclass, asdict
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

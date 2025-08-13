@@ -2,16 +2,16 @@
 Pipeline State Management System
 Manages state, history, and checkpoints for pipeline execution
 """
-import json
 import asyncio
-from typing import Dict, Any, List, Optional, Set
+import hashlib
+import json
+import pickle
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-import pickle
-import hashlib
-from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Set
 
-from src.core.interfaces import PipelineContext, AgentResult, ProcessingStatus
+from src.core.interfaces import AgentResult, PipelineContext, ProcessingStatus
 
 try:
     from src.services.aws_clients import get_dynamodb_client, get_s3_client
@@ -185,9 +185,7 @@ class PipelineStateManager:
 
         return None
 
-    async def update_state(
-        self, pipeline_id: str, agent_name: str, result: AgentResult
-    ) -> None:
+    async def update_state(self, pipeline_id: str, agent_name: str, result: AgentResult) -> None:
         """Update pipeline state with agent result"""
         async with self._get_lock(pipeline_id):
             if pipeline_id not in self._states:
@@ -252,9 +250,7 @@ class PipelineStateManager:
             raise ValueError(f"Pipeline {pipeline_id} not found")
 
         state = self._states[pipeline_id]
-        checkpoint_id = (
-            f"ckpt_{pipeline_id}_{agent_name}_{datetime.utcnow().timestamp()}"
-        )
+        checkpoint_id = f"ckpt_{pipeline_id}_{agent_name}_{datetime.utcnow().timestamp()}"
 
         checkpoint = Checkpoint(
             checkpoint_id=checkpoint_id,
@@ -275,9 +271,7 @@ class PipelineStateManager:
 
         return checkpoint_id
 
-    async def restore_from_checkpoint(
-        self, checkpoint_id: str
-    ) -> Optional[Dict[str, Any]]:
+    async def restore_from_checkpoint(self, checkpoint_id: str) -> Optional[Dict[str, Any]]:
         """Restore pipeline state from checkpoint"""
         # Find checkpoint
         checkpoint = None
@@ -374,17 +368,13 @@ class PipelineStateManager:
             return await self._load_from_redis(pipeline_id)
         return None
 
-    async def _persist_to_dynamodb(
-        self, pipeline_id: str, state: Dict[str, Any]
-    ) -> None:
+    async def _persist_to_dynamodb(self, pipeline_id: str, state: Dict[str, Any]) -> None:
         """Persist state to DynamoDB"""
         if not self._dynamodb:
             return
 
         # Add TTL for automatic cleanup
-        ttl_timestamp = int(
-            (datetime.utcnow() + timedelta(seconds=self.ttl_seconds)).timestamp()
-        )
+        ttl_timestamp = int((datetime.utcnow() + timedelta(seconds=self.ttl_seconds)).timestamp())
 
         item = {**state, "ttl": ttl_timestamp}
 
@@ -423,9 +413,7 @@ class PipelineStateManager:
 
         key = f"pipeline-states/{pipeline_id}/state.json"
 
-        data = self._s3.get_object(
-            bucket_name="t-developer-pipeline-states", object_key=key
-        )
+        data = self._s3.get_object(bucket_name="t-developer-pipeline-states", object_key=key)
 
         if data:
             return json.loads(data.decode("utf-8"))

@@ -5,23 +5,18 @@ Tests for Evolution Engine
 """
 
 import asyncio
-import pytest
-import tempfile
+import os
 import shutil
+import sys
+import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import sys
-import os
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from evolution.engine import (
-    EvolutionEngine,
-    EvolutionConfig,
-    EvolutionStatus,
-    EvolutionMetrics,
-)
+from evolution.engine import EvolutionConfig, EvolutionEngine, EvolutionMetrics, EvolutionStatus
 
 
 class TestEvolutionEngine:
@@ -169,9 +164,9 @@ class TestEvolutionEngine:
         original_fitnesses = [g["fitness"] for g in self.engine.population]
 
         # 선택된 부모들의 평균 적합도가 전체 평균보다 높거나 같아야 함
-        assert sum(parent_fitnesses) / len(parent_fitnesses) >= sum(
+        assert sum(parent_fitnesses) / len(parent_fitnesses) >= sum(original_fitnesses) / len(
             original_fitnesses
-        ) / len(original_fitnesses)
+        )
 
     @pytest.mark.asyncio
     async def test_crossover_operation(self):

@@ -4,13 +4,14 @@ Agno Framework Integration Client
 T-Developer에서 Agno 프레임워크를 사용하기 위한 클라이언트
 """
 
-import os
-import yaml
 import asyncio
-from typing import Dict, Any, Optional, List
-from pathlib import Path
-import httpx
 import logging
+import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import httpx
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +20,9 @@ class AgnoClient:
     """Agno Framework 통합 클라이언트"""
 
     def __init__(self, config_path: Optional[str] = None):
-        self.config_path = (
-            config_path or Path(__file__).parent.parent.parent / "agno.config.yaml"
-        )
+        self.config_path = config_path or Path(__file__).parent.parent.parent / "agno.config.yaml"
         self.config = self._load_config()
-        self.base_url = self.config.get("agno_api", {}).get(
-            "base_url", "http://localhost:8080"
-        )
+        self.base_url = self.config.get("agno_api", {}).get("base_url", "http://localhost:8080")
         self.timeout = self.config.get("agno_api", {}).get("timeout", 30)
         self.client = httpx.AsyncClient(timeout=self.timeout)
 
@@ -83,9 +80,7 @@ class AgnoClient:
             logger.error(f"Agno health check failed: {e}")
             return False
 
-    async def create_agent(
-        self, agent_type: str, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def create_agent(self, agent_type: str, config: Dict[str, Any]) -> Dict[str, Any]:
         """Agno에서 Agent 생성"""
         try:
             payload = {
@@ -94,9 +89,7 @@ class AgnoClient:
                 "performance_settings": self.config.get("performance", {}),
             }
 
-            response = await self.client.post(
-                f"{self.base_url}/agents/create", json=payload
-            )
+            response = await self.client.post(f"{self.base_url}/agents/create", json=payload)
 
             if response.status_code == 200:
                 return response.json()
@@ -108,9 +101,7 @@ class AgnoClient:
             logger.error(f"Agent creation failed: {e}")
             return {"success": False, "error": str(e)}
 
-    async def execute_agent(
-        self, agent_id: str, input_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def execute_agent(self, agent_id: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Agent 실행"""
         try:
             payload = {
@@ -119,9 +110,7 @@ class AgnoClient:
                 "timeout": self.timeout,
             }
 
-            response = await self.client.post(
-                f"{self.base_url}/agents/execute", json=payload
-            )
+            response = await self.client.post(f"{self.base_url}/agents/execute", json=payload)
 
             if response.status_code == 200:
                 return response.json()
@@ -136,9 +125,7 @@ class AgnoClient:
     async def get_agent_metrics(self, agent_id: str) -> Dict[str, Any]:
         """Agent 성능 메트릭 조회"""
         try:
-            response = await self.client.get(
-                f"{self.base_url}/agents/{agent_id}/metrics"
-            )
+            response = await self.client.get(f"{self.base_url}/agents/{agent_id}/metrics")
 
             if response.status_code == 200:
                 return response.json()
@@ -156,9 +143,7 @@ class AgnoClient:
         try:
             payload = {"agent_id": agent_id, "optimization": optimization_config}
 
-            response = await self.client.post(
-                f"{self.base_url}/agents/optimize", json=payload
-            )
+            response = await self.client.post(f"{self.base_url}/agents/optimize", json=payload)
 
             if response.status_code == 200:
                 return response.json()
@@ -240,9 +225,7 @@ class AgnoAgentManager:
                     created_agents[agent_type] = agent_id
                     logger.info(f"Created Agno agent: {agent_type} -> {agent_id}")
                 else:
-                    logger.error(
-                        f"Failed to create agent {agent_type}: {result.get('error')}"
-                    )
+                    logger.error(f"Failed to create agent {agent_type}: {result.get('error')}")
             except Exception as e:
                 logger.error(f"Error creating agent {agent_type}: {e}")
 

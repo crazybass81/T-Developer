@@ -3,8 +3,8 @@ Multilingual Processor Module
 Handles language detection and translation
 """
 
-from typing import Tuple
 import re
+from typing import Tuple
 
 
 class MultilingualProcessor:

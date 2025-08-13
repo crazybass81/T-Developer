@@ -5,13 +5,13 @@ CLI test for Agent Registry
 """
 
 import asyncio
-import sys
 import os
+import sys
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from evolution.registry import AgentRegistry, AgentType, AgentMetrics
+from evolution.registry import AgentMetrics, AgentRegistry, AgentType
 
 
 async def test_registry():

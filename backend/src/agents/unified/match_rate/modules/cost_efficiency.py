@@ -3,7 +3,7 @@ Cost Efficiency Module
 Analyzes cost efficiency of components
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class CostEfficiency:
@@ -23,8 +23,7 @@ class CostEfficiency:
             cost_analysis = {
                 "initial_cost": component.get("cost", 1000),
                 "operational_cost": component.get("operational_cost", 500),
-                "total_cost": component.get("cost", 1000)
-                + component.get("operational_cost", 500),
+                "total_cost": component.get("cost", 1000) + component.get("operational_cost", 500),
                 "roi_score": self._calculate_roi(component, requirements),
                 "efficiency_score": self._calculate_efficiency_score(component, budget),
             }

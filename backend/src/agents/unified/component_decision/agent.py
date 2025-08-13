@@ -3,65 +3,41 @@ Component Decision Agent - Production Implementation
 Decides which components and architecture to use based on parsed requirements
 """
 
-from typing import Dict, List, Any, Optional
 import asyncio
 import json
-from datetime import datetime
-from pathlib import Path
 
 # Import base classes
 import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 sys.path.append("/home/ec2-user/T-DeveloperMVP/backend/src")
 
-from src.agents.unified.base import (
-    UnifiedBaseAgent,
-    AgentConfig,
-    AgentContext,
-    AgentResult,
-)
-from src.agents.unified.data_wrapper import (
-    AgentInput,
-    AgentContext,
-    wrap_input,
-    unwrap_result,
-)
-
-# from agents.phase2_enhancements import Phase2ComponentDecisionResult  # Commented out - module not available
+from src.agents.unified.base import AgentConfig, AgentContext, AgentResult, UnifiedBaseAgent
+from src.agents.unified.component_decision.modules.api_architect import APIArchitect
 
 # Import all specialized modules
-from src.agents.unified.component_decision.modules.architecture_selector import (
-    ArchitectureSelector,
-)
-from src.agents.unified.component_decision.modules.component_analyzer import (
-    ComponentAnalyzer,
-)
+from src.agents.unified.component_decision.modules.architecture_selector import ArchitectureSelector
+from src.agents.unified.component_decision.modules.component_analyzer import ComponentAnalyzer
+from src.agents.unified.component_decision.modules.cost_optimizer import CostOptimizer
+from src.agents.unified.component_decision.modules.database_designer import DatabaseDesigner
+from src.agents.unified.component_decision.modules.dependency_resolver import DependencyResolver
 from src.agents.unified.component_decision.modules.design_pattern_selector import (
     DesignPatternSelector,
 )
-from src.agents.unified.component_decision.modules.technology_stack_builder import (
-    TechnologyStackBuilder,
-)
-from src.agents.unified.component_decision.modules.dependency_resolver import (
-    DependencyResolver,
-)
-from src.agents.unified.component_decision.modules.integration_mapper import (
-    IntegrationMapper,
-)
-from src.agents.unified.component_decision.modules.scalability_analyzer import (
-    ScalabilityAnalyzer,
-)
-from src.agents.unified.component_decision.modules.security_architect import (
-    SecurityArchitect,
-)
-from src.agents.unified.component_decision.modules.database_designer import (
-    DatabaseDesigner,
-)
-from src.agents.unified.component_decision.modules.api_architect import APIArchitect
 from src.agents.unified.component_decision.modules.infrastructure_planner import (
     InfrastructurePlanner,
 )
-from src.agents.unified.component_decision.modules.cost_optimizer import CostOptimizer
+from src.agents.unified.component_decision.modules.integration_mapper import IntegrationMapper
+from src.agents.unified.component_decision.modules.scalability_analyzer import ScalabilityAnalyzer
+from src.agents.unified.component_decision.modules.security_architect import SecurityArchitect
+from src.agents.unified.component_decision.modules.technology_stack_builder import (
+    TechnologyStackBuilder,
+)
+from src.agents.unified.data_wrapper import AgentContext, AgentInput, unwrap_result, wrap_input
+
+# from agents.phase2_enhancements import Phase2ComponentDecisionResult  # Commented out - module not available
 
 
 class EnhancedComponentDecisionResult:
@@ -256,14 +232,10 @@ class ComponentDecisionAgent(UnifiedBaseAgent):
             )
 
             # Generate monitoring strategy
-            monitoring_strategy = self._generate_monitoring_strategy(
-                components, infrastructure
-            )
+            monitoring_strategy = self._generate_monitoring_strategy(components, infrastructure)
 
             # Generate optimization recommendations
-            optimizations = self._generate_optimizations(
-                cost_analysis, scalability, security
-            )
+            optimizations = self._generate_optimizations(cost_analysis, scalability, security)
 
             # Create comprehensive result
             result = EnhancedComponentDecisionResult(
@@ -382,9 +354,7 @@ Each component should have: id, name, type, technology, responsibilities, interf
 
                 # Enhance components with templates
                 for component in decisions["components"]:
-                    template = self.component_templates.get(
-                        component.get("type", ""), {}
-                    )
+                    template = self.component_templates.get(component.get("type", ""), {})
                     component.update(
                         {
                             "interfaces": component.get(
@@ -448,12 +418,8 @@ Each component should have: id, name, type, technology, responsibilities, interf
             "id": f"comp_{component_type}_{datetime.now().timestamp()}",
             "type": component_type,
             "name": template.get("name", component_type.replace("_", " ").title()),
-            "description": template.get(
-                "description", f"Component for {component_type}"
-            ),
-            "technology": self._select_technology_for_component(
-                component_type, tech_stack
-            ),
+            "description": template.get("description", f"Component for {component_type}"),
+            "technology": self._select_technology_for_component(component_type, tech_stack),
             "interfaces": template.get("interfaces", []),
             "dependencies": template.get("dependencies", []),
             "configuration": template.get("configuration", {}),
@@ -496,13 +462,9 @@ Each component should have: id, name, type, technology, responsibilities, interf
             },
         }
 
-        return technology_map.get(
-            component_type, {"primary": "Generic", "alternatives": []}
-        )
+        return technology_map.get(component_type, {"primary": "Generic", "alternatives": []})
 
-    def _estimate_resources(
-        self, component_type: str, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _estimate_resources(self, component_type: str, requirements: Dict) -> Dict[str, Any]:
         """Estimate resource requirements for component"""
 
         # Base resource requirements
@@ -576,9 +538,7 @@ Each component should have: id, name, type, technology, responsibilities, interf
                 return True
         return False
 
-    def _apply_pattern_to_components(
-        self, pattern: Dict, components: List[Dict]
-    ) -> None:
+    def _apply_pattern_to_components(self, pattern: Dict, components: List[Dict]) -> None:
         """Apply design pattern to components"""
         pattern_type = pattern.get("type")
 
@@ -797,9 +757,7 @@ Each component should have: id, name, type, technology, responsibilities, interf
 
         # Technology diversity
         tech_stack = decisions.get("technology", {})
-        tech_count = sum(
-            len(v) if isinstance(v, list) else 1 for v in tech_stack.values()
-        )
+        tech_count = sum(len(v) if isinstance(v, list) else 1 for v in tech_stack.values())
         complexity += tech_count * 0.05
 
         # Pattern complexity
@@ -882,13 +840,9 @@ Each component should have: id, name, type, technology, responsibilities, interf
 
         return templates
 
-    def _create_error_result(
-        self, error_message: str
-    ) -> EnhancedComponentDecisionResult:
+    def _create_error_result(self, error_message: str) -> EnhancedComponentDecisionResult:
         """Create error result"""
-        result = EnhancedComponentDecisionResult(
-            success=False, data={}, error=error_message
-        )
+        result = EnhancedComponentDecisionResult(success=False, data={}, error=error_message)
         return result
 
     async def health_check(self) -> Dict[str, Any]:

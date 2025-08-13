@@ -6,8 +6,9 @@ Integration test for NL Input Agent to Parser Agent workflow
 Author: T-Developer Team
 Created: 2024-12
 """
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock
 
 
 class TestNLToParserWorkflow:

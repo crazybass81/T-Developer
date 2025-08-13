@@ -362,7 +362,7 @@ class TestIntegrationMonitoring:
 
         # Initialize components
         monitor = EvolutionMonitor()
-        _ = PerformanceBaseline()  # baseline 
+        _ = PerformanceBaseline()  # baseline
         aggregator = LogAggregator()
 
         # Simulate evolution cycle

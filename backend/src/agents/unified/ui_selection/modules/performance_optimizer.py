@@ -3,7 +3,7 @@ Performance Optimizer Module
 Optimizes UI components for performance
 """
 
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 
 class PerformanceOptimizer:
@@ -97,9 +97,7 @@ class PerformanceOptimizer:
         component_analysis = self._analyze_components(components)
 
         # Select optimization techniques
-        optimizations = self._select_optimizations(
-            component_analysis, features, performance_level
-        )
+        optimizations = self._select_optimizations(component_analysis, features, performance_level)
 
         # Generate loading strategy
         loading_strategy = self._generate_loading_strategy(components, optimizations)
@@ -108,9 +106,7 @@ class PerformanceOptimizer:
         caching_config = self._configure_caching(components, features)
 
         # Generate bundle strategy
-        bundle_strategy = self._generate_bundle_strategy(
-            components, budget["bundle_size"]
-        )
+        bundle_strategy = self._generate_bundle_strategy(components, budget["bundle_size"])
 
         # Create monitoring plan
         monitoring = self._create_monitoring_plan(budget)
@@ -232,9 +228,7 @@ class PerformanceOptimizer:
 
         return implementations.get(technique, {})
 
-    def _generate_loading_strategy(
-        self, components: List[str], optimizations: List[Dict]
-    ) -> Dict:
+    def _generate_loading_strategy(self, components: List[str], optimizations: List[Dict]) -> Dict:
         """Generate component loading strategy"""
         strategy = {"critical": [], "prefetch": [], "lazy": [], "on_demand": []}
 

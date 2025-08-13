@@ -3,13 +3,13 @@ Performance Analyzer Module for Assembly Agent
 Analyzes and optimizes project performance characteristics
 """
 
-from typing import Dict, List, Any, Optional, Tuple
-import asyncio
-import re
-import json
 import ast
+import asyncio
+import json
+import re
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -214,9 +214,7 @@ class PerformanceAnalyzer:
 
         # Analyze large files
         large_files = [
-            (path, len(content))
-            for path, content in files.items()
-            if len(content) > 10000
+            (path, len(content)) for path, content in files.items() if len(content) > 10000
         ]  # Files > 10KB
 
         if large_files:
@@ -234,9 +232,7 @@ class PerformanceAnalyzer:
 
         return metrics
 
-    async def _analyze_code_complexity(
-        self, files: Dict[str, str]
-    ) -> List[PerformanceMetric]:
+    async def _analyze_code_complexity(self, files: Dict[str, str]) -> List[PerformanceMetric]:
         """Analyze code complexity metrics"""
 
         metrics = []
@@ -272,9 +268,7 @@ class PerformanceAnalyzer:
 
         return metrics
 
-    async def _analyze_dependencies(
-        self, files: Dict[str, str]
-    ) -> List[PerformanceMetric]:
+    async def _analyze_dependencies(self, files: Dict[str, str]) -> List[PerformanceMetric]:
         """Analyze dependency usage and optimization"""
 
         metrics = []
@@ -326,9 +320,7 @@ class PerformanceAnalyzer:
 
         return metrics
 
-    async def _analyze_performance_patterns(
-        self, files: Dict[str, str]
-    ) -> List[PerformanceMetric]:
+    async def _analyze_performance_patterns(self, files: Dict[str, str]) -> List[PerformanceMetric]:
         """Analyze code for performance anti-patterns"""
 
         metrics = []
@@ -358,9 +350,7 @@ class PerformanceAnalyzer:
 
         return metrics
 
-    async def _analyze_resource_usage(
-        self, files: Dict[str, str]
-    ) -> List[PerformanceMetric]:
+    async def _analyze_resource_usage(self, files: Dict[str, str]) -> List[PerformanceMetric]:
         """Analyze resource usage patterns"""
 
         metrics = []
@@ -389,9 +379,7 @@ class PerformanceAnalyzer:
         # Analyze image usage (if any referenced in code)
         image_references = 0
         for content in files.values():
-            image_refs = len(
-                re.findall(r"\.(jpg|jpeg|png|gif|webp|svg)", content, re.IGNORECASE)
-            )
+            image_refs = len(re.findall(r"\.(jpg|jpeg|png|gif|webp|svg)", content, re.IGNORECASE))
             image_references += image_refs
 
         if image_references > 0:
@@ -456,9 +444,7 @@ class PerformanceAnalyzer:
         score = max(0, 100 - total_penalty)
         return score
 
-    def _group_metrics_by_category(
-        self, metrics: List[PerformanceMetric]
-    ) -> Dict[str, List[Dict]]:
+    def _group_metrics_by_category(self, metrics: List[PerformanceMetric]) -> Dict[str, List[Dict]]:
         """Group metrics by category"""
 
         categories = {}
@@ -487,9 +473,7 @@ class PerformanceAnalyzer:
 
         # Sort by severity and return top recommendations
         severity_order = {"critical": 0, "warning": 1, "info": 2}
-        sorted_metrics = sorted(
-            metrics, key=lambda m: severity_order.get(m.severity, 3)
-        )
+        sorted_metrics = sorted(metrics, key=lambda m: severity_order.get(m.severity, 3))
 
         recommendations = []
         for metric in sorted_metrics[:limit]:

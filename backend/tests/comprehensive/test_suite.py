@@ -3,28 +3,29 @@ Comprehensive Test Suite for T-Developer 9-Agent Pipeline
 Includes E2E, Integration, Performance, and Security Tests
 """
 
-import pytest
 import asyncio
-import logging
-import time
+import concurrent.futures
 import json
-import subprocess
-import tempfile
+import logging
+import os
 import shutil
-from typing import Dict, List, Any, Optional
+import subprocess
+import sys
+import tempfile
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
-import concurrent.futures
-import os
-import sys
+from typing import Any, Dict, List, Optional
+
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src"))
 
-from orchestration.master_orchestrator import MasterOrchestrator, PipelineConfig
-from optimization.performance_optimizer import PerformanceOptimizer
-from agents.unified.nl_input import NLInputAgent
 from agents.unified.download import DownloadAgent
+from agents.unified.nl_input import NLInputAgent
+from optimization.performance_optimizer import PerformanceOptimizer
+from orchestration.master_orchestrator import MasterOrchestrator, PipelineConfig
 
 logger = logging.getLogger(__name__)
 
@@ -216,19 +217,14 @@ class TestE2EWorkflow:
             )
 
             # Verify success
-            assert result[
-                "success"
-            ], f"Pipeline failed: {result.get('error', 'Unknown error')}"
+            assert result["success"], f"Pipeline failed: {result.get('error', 'Unknown error')}"
 
             # Verify expected outputs
             pipeline_result = result["pipeline_result"]
 
             # Check framework selection
             if "framework" in scenario.expected_outputs:
-                assert (
-                    scenario.expected_outputs["framework"]
-                    in str(pipeline_result).lower()
-                )
+                assert scenario.expected_outputs["framework"] in str(pipeline_result).lower()
 
             # Check download availability
             if scenario.expected_outputs.get("download_available"):
@@ -251,9 +247,7 @@ class TestE2EWorkflow:
         """Test complete pipeline with medium complexity scenario"""
 
         orchestrator = MasterOrchestrator(
-            PipelineConfig(
-                enable_monitoring=True, enable_caching=True, timeout_seconds=60
-            )
+            PipelineConfig(enable_monitoring=True, enable_caching=True, timeout_seconds=60)
         )
 
         test_suite = ComprehensiveTestSuite()
@@ -265,9 +259,7 @@ class TestE2EWorkflow:
             )
 
             # Verify success
-            assert result[
-                "success"
-            ], f"Pipeline failed: {result.get('error', 'Unknown error')}"
+            assert result["success"], f"Pipeline failed: {result.get('error', 'Unknown error')}"
 
             # Verify API-specific outputs
             pipeline_result = result["pipeline_result"]
@@ -295,9 +287,7 @@ class TestE2EWorkflow:
         """Test error handling and recovery mechanisms"""
 
         # Test with invalid input
-        orchestrator = MasterOrchestrator(
-            PipelineConfig(max_retry_attempts=2, timeout_seconds=10)
-        )
+        orchestrator = MasterOrchestrator(PipelineConfig(max_retry_attempts=2, timeout_seconds=10))
 
         try:
             # Test with empty input
@@ -382,9 +372,7 @@ class TestPerformanceBenchmarks:
 
         async def run_single_pipeline():
             orchestrator = MasterOrchestrator(
-                PipelineConfig(
-                    enable_caching=True, enable_monitoring=False  # Reduce overhead
-                )
+                PipelineConfig(enable_caching=True, enable_monitoring=False)  # Reduce overhead
             )
 
             try:
@@ -407,9 +395,7 @@ class TestPerformanceBenchmarks:
 
         # Filter successful executions
         successful_times = [
-            t
-            for t in execution_times
-            if isinstance(t, (int, float)) and t != float("inf")
+            t for t in execution_times if isinstance(t, (int, float)) and t != float("inf")
         ]
 
         assert (
@@ -417,9 +403,7 @@ class TestPerformanceBenchmarks:
         ), "Less than 50% of concurrent requests succeeded"
 
         avg_time = sum(successful_times) / len(successful_times)
-        assert (
-            avg_time < 45.0
-        ), f"Average execution time {avg_time:.2f}s exceeds threshold"
+        assert avg_time < 45.0, f"Average execution time {avg_time:.2f}s exceeds threshold"
 
         logger.info(
             f"✅ Load test: {len(successful_times)}/{num_concurrent} succeeded, avg time: {avg_time:.2f}s"
@@ -449,16 +433,12 @@ class TestPerformanceBenchmarks:
             peak_memory = process.memory_info().rss / 1024 / 1024  # MB
             memory_increase = peak_memory - baseline_memory
 
-            max_memory_mb = complex_scenario.performance_thresholds.get(
-                "memory_usage_mb", 600.0
-            )
+            max_memory_mb = complex_scenario.performance_thresholds.get("memory_usage_mb", 600.0)
             assert (
                 memory_increase < max_memory_mb
             ), f"Memory usage {memory_increase:.2f}MB exceeds threshold {max_memory_mb}MB"
 
-            logger.info(
-                f"✅ Memory test: used {memory_increase:.2f}MB (limit: {max_memory_mb}MB)"
-            )
+            logger.info(f"✅ Memory test: used {memory_increase:.2f}MB (limit: {max_memory_mb}MB)")
 
         finally:
             await orchestrator.cleanup()
@@ -528,21 +508,14 @@ class TestSecurityValidation:
         for filename, content in test_files.items():
             # Check for hardcoded credentials
             if "password" in content.lower() and ("=" in content or ":" in content):
-                if not any(
-                    safe in content.lower()
-                    for safe in ["placeholder", "example", "dummy"]
-                ):
-                    security_issues.append(
-                        f"Potential hardcoded password in {filename}"
-                    )
+                if not any(safe in content.lower() for safe in ["placeholder", "example", "dummy"]):
+                    security_issues.append(f"Potential hardcoded password in {filename}")
 
             # Check for dangerous functions
             dangerous_functions = ["eval(", "exec(", "system(", "shell_exec("]
             for func in dangerous_functions:
                 if func in content:
-                    security_issues.append(
-                        f"Dangerous function {func} found in {filename}"
-                    )
+                    security_issues.append(f"Dangerous function {func} found in {filename}")
 
             # Check for SQL injection vulnerabilities
             if "select * from" in content.lower() and "+" in content:
@@ -667,23 +640,13 @@ def create_user(user: User):
             # Should have type annotations (for TypeScript/Python)
             if language in ["typescript", "python"]:
                 if ":" not in code:
-                    quality_issues.append(
-                        f"Missing type annotations in {language} code"
-                    )
+                    quality_issues.append(f"Missing type annotations in {language} code")
 
             # Should have proper function/component structure
-            if (
-                language == "typescript"
-                and "const " not in code
-                and "function " not in code
-            ):
-                quality_issues.append(
-                    f"No proper function/component structure in {language}"
-                )
+            if language == "typescript" and "const " not in code and "function " not in code:
+                quality_issues.append(f"No proper function/component structure in {language}")
             elif language == "python" and "def " not in code and "class " not in code:
-                quality_issues.append(
-                    f"No proper function/class structure in {language}"
-                )
+                quality_issues.append(f"No proper function/class structure in {language}")
 
             # Should have exports/returns
             if language == "typescript" and "export" not in code:

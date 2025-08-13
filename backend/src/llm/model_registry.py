@@ -1,5 +1,6 @@
-from typing import Dict, List, Optional
 from dataclasses import dataclass
+from typing import Dict, List, Optional
+
 from .model_provider_abstract import ModelConfig, ModelProvider, ModelProviderFactory
 
 
@@ -136,9 +137,7 @@ class ModelRegistry:
     def list_models(self, provider: Optional[str] = None) -> List[ModelInfo]:
         """모델 목록 조회"""
         if provider:
-            return [
-                model for model in self.models.values() if model.provider == provider
-            ]
+            return [model for model in self.models.values() if model.provider == provider]
         return list(self.models.values())
 
     def create_provider(self, model_name: str, **config_overrides) -> ModelProvider:

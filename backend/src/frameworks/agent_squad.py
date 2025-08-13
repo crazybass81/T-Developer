@@ -4,19 +4,19 @@ Orchestration framework for managing agent collaboration
 """
 import asyncio
 import json
-import uuid
-from datetime import datetime
-from typing import Dict, Any, Optional, List, Callable, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
 import logging
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.frameworks.agno_framework import (
-    AgnoAgent,
     AgentContext,
     AgentInput,
     AgentResult,
     AgentStatus,
+    AgnoAgent,
 )
 
 logger = logging.getLogger(__name__)
@@ -130,9 +130,7 @@ class AgentSquad:
     def add_agent(self, agent: AgnoAgent, profile: AgentProfile) -> None:
         """Add agent to squad"""
         if len(self.agents) >= self.config.max_agents:
-            raise ValueError(
-                f"Squad already has maximum agents ({self.config.max_agents})"
-            )
+            raise ValueError(f"Squad already has maximum agents ({self.config.max_agents})")
 
         self.agents[profile.agent_id] = (agent, profile)
         logger.info(f"Added agent {profile.name} to squad {self.squad_name}")
@@ -210,9 +208,7 @@ class AgentSquad:
             # Apply routing rules
             for rule in self.routing_rules:
                 if rule.evaluate(input_data):
-                    matching = [
-                        aid for aid in rule.target_agents if aid in available_agents
-                    ]
+                    matching = [aid for aid in rule.target_agents if aid in available_agents]
                     if matching:
                         return matching[:num_agents]
 
@@ -228,9 +224,7 @@ class AgentSquad:
         if context is None:
             context = AgentContext(request_id=str(uuid.uuid4()))
 
-        session = SquadSession(
-            session_id=session_id, created_at=datetime.utcnow(), context=context
-        )
+        session = SquadSession(session_id=session_id, created_at=datetime.utcnow(), context=context)
 
         self.sessions[session_id] = session
         self._metrics["total_sessions"] += 1
@@ -239,9 +233,7 @@ class AgentSquad:
         logger.info(f"Created squad session {session_id}")
         return session_id
 
-    async def execute_single(
-        self, session_id: str, agent_id: str, input_data: Any
-    ) -> AgentResult:
+    async def execute_single(self, session_id: str, agent_id: str, input_data: Any) -> AgentResult:
         """Execute single agent in session"""
         if session_id not in self.sessions:
             raise ValueError(f"Session {session_id} not found")
@@ -270,8 +262,7 @@ class AgentSquad:
 
             # Update profile metrics
             profile.average_response_time = (
-                profile.average_response_time * self._metrics["total_agent_calls"]
-                + execution_time
+                profile.average_response_time * self._metrics["total_agent_calls"] + execution_time
             ) / (self._metrics["total_agent_calls"] + 1)
 
             if result.status == AgentStatus.COMPLETED:
@@ -299,10 +290,7 @@ class AgentSquad:
         self, session_id: str, agent_ids: List[str], input_data: Any
     ) -> List[AgentResult]:
         """Execute multiple agents in parallel"""
-        tasks = [
-            self.execute_single(session_id, agent_id, input_data)
-            for agent_id in agent_ids
-        ]
+        tasks = [self.execute_single(session_id, agent_id, input_data) for agent_id in agent_ids]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -331,9 +319,7 @@ class AgentSquad:
     ) -> AgentResult:
         """Execute with consensus from multiple agents"""
         # Select agents for consensus
-        agent_ids = self._select_agents(
-            input_data, required_skills, num_agents=max(min_agents, 3)
-        )
+        agent_ids = self._select_agents(input_data, required_skills, num_agents=max(min_agents, 3))
 
         if len(agent_ids) < min_agents:
             return AgentResult(
@@ -405,9 +391,7 @@ class AgentSquad:
         )
 
         if primary_agents:
-            result = await self.execute_single(
-                session_id, primary_agents[0], input_data
-            )
+            result = await self.execute_single(session_id, primary_agents[0], input_data)
 
             if result.status == AgentStatus.COMPLETED:
                 return result
@@ -419,9 +403,7 @@ class AgentSquad:
             )
 
             if fallback_agents:
-                return await self.execute_single(
-                    session_id, fallback_agents[0], input_data
-                )
+                return await self.execute_single(session_id, fallback_agents[0], input_data)
 
         return AgentResult(
             agent_name="squad_fallback",
@@ -444,8 +426,7 @@ class AgentSquad:
         # Calculate session time
         session_time = (datetime.utcnow() - session.created_at).total_seconds()
         self._metrics["average_session_time"] = (
-            self._metrics["average_session_time"]
-            * (self._metrics["completed_sessions"] - 1)
+            self._metrics["average_session_time"] * (self._metrics["completed_sessions"] - 1)
             + session_time
         ) / self._metrics["completed_sessions"]
 

@@ -6,25 +6,24 @@ Coordinates all agents with error handling, monitoring, and optimization
 import asyncio
 import logging
 import time
-from typing import Dict, List, Any, Optional, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
-from ..agents.unified.nl_input import NLInputAgent
-from ..agents.unified.ui_selection import UISelectionAgent
-from ..agents.unified.parser import ParserAgent
-from ..agents.unified.component_decision import ComponentDecisionAgent
-from ..agents.unified.match_rate import MatchRateAgent
-from ..agents.unified.search import SearchAgent
-from ..agents.unified.generation import GenerationAgent
 from ..agents.unified.assembly import AssemblyAgent
+from ..agents.unified.component_decision import ComponentDecisionAgent
 from ..agents.unified.download import DownloadAgent
-
-from ..core.interfaces import PipelineContext, AgentResult
-from ..core.state_manager import PipelineStateManager
-from ..core.monitoring import MetricsCollector
+from ..agents.unified.generation import GenerationAgent
+from ..agents.unified.match_rate import MatchRateAgent
+from ..agents.unified.nl_input import NLInputAgent
+from ..agents.unified.parser import ParserAgent
+from ..agents.unified.search import SearchAgent
+from ..agents.unified.ui_selection import UISelectionAgent
 from ..core.event_bus import EventBus
+from ..core.interfaces import AgentResult, PipelineContext
+from ..core.monitoring import MetricsCollector
+from ..core.state_manager import PipelineStateManager
 
 logger = logging.getLogger(__name__)
 
@@ -99,9 +98,7 @@ class MasterOrchestrator:
 
         # Initialize infrastructure
         self.state_manager = PipelineStateManager()
-        self.metrics_collector = (
-            MetricsCollector() if config.enable_monitoring else None
-        )
+        self.metrics_collector = MetricsCollector() if config.enable_monitoring else None
         self.event_bus = EventBus()
 
         # Execution state
@@ -139,9 +136,7 @@ class MasterOrchestrator:
 
             # Start monitoring
             if self.metrics_collector:
-                await self.metrics_collector.start_pipeline_tracking(
-                    self.context.project_id
-                )
+                await self.metrics_collector.start_pipeline_tracking(self.context.project_id)
 
             await self._emit_event(
                 "pipeline_started",
@@ -160,8 +155,7 @@ class MasterOrchestrator:
                 "execution_time": total_time,
                 "pipeline_result": pipeline_result,
                 "stage_results": {
-                    stage.value: result.__dict__
-                    for stage, result in self.stage_results.items()
+                    stage.value: result.__dict__ for stage, result in self.stage_results.items()
                 },
                 "performance_metrics": await self._generate_performance_report(),
             }
@@ -181,8 +175,7 @@ class MasterOrchestrator:
                 "execution_time": (datetime.now() - self.start_time).total_seconds(),
                 "current_stage": self.current_stage.value,
                 "stage_results": {
-                    stage.value: result.__dict__
-                    for stage, result in self.stage_results.items()
+                    stage.value: result.__dict__ for stage, result in self.stage_results.items()
                 },
             }
 
@@ -303,9 +296,7 @@ class MasterOrchestrator:
                 return result
 
             except asyncio.TimeoutError:
-                last_error = (
-                    f"{stage.value} timed out after {self.config.timeout_seconds}s"
-                )
+                last_error = f"{stage.value} timed out after {self.config.timeout_seconds}s"
                 logger.warning(last_error)
 
             except Exception as e:
@@ -319,10 +310,7 @@ class MasterOrchestrator:
             retry_count += 1
 
             # Apply retry strategy if available
-            if (
-                stage in self.retry_strategies
-                and retry_count <= self.config.max_retry_attempts
-            ):
+            if stage in self.retry_strategies and retry_count <= self.config.max_retry_attempts:
                 await self.retry_strategies[stage](retry_count, last_error)
             else:
                 # Default backoff strategy
@@ -346,9 +334,7 @@ class MasterOrchestrator:
             {"stage": stage.value, "error": last_error, "retry_count": retry_count - 1},
         )
 
-        raise RuntimeError(
-            f"Stage {stage.value} failed after {retry_count} attempts: {last_error}"
-        )
+        raise RuntimeError(f"Stage {stage.value} failed after {retry_count} attempts: {last_error}")
 
     async def _execute_parallel_stages(
         self, stages: List[PipelineStage], input_data: Dict[str, Any]
@@ -385,9 +371,7 @@ class MasterOrchestrator:
 
         return parallel_stages
 
-    def _generate_cache_key(
-        self, stage: PipelineStage, input_data: Dict[str, Any]
-    ) -> str:
+    def _generate_cache_key(self, stage: PipelineStage, input_data: Dict[str, Any]) -> str:
         """Generate cache key for stage result"""
 
         import hashlib
@@ -413,8 +397,7 @@ class MasterOrchestrator:
         # Stage-specific validation
         stage_validators = {
             PipelineStage.NL_INPUT: lambda r: "requirements" in r and "intent" in r,
-            PipelineStage.UI_SELECTION: lambda r: "framework" in r
-            and "components" in r,
+            PipelineStage.UI_SELECTION: lambda r: "framework" in r and "components" in r,
             PipelineStage.PARSER: lambda r: "structure" in r and "dependencies" in r,
             PipelineStage.COMPONENT_DECISION: lambda r: "architecture" in r,
             PipelineStage.MATCH_RATE: lambda r: "match_score" in r,
@@ -448,15 +431,12 @@ class MasterOrchestrator:
             "project_id": self.context.project_id,
             "current_stage": self.current_stage.value,
             "stage_results": {
-                stage.value: result.__dict__
-                for stage, result in self.stage_results.items()
+                stage.value: result.__dict__ for stage, result in self.stage_results.items()
             },
             "timestamp": datetime.now().isoformat(),
         }
 
-        await self.state_manager.save_checkpoint(
-            self.context.project_id, checkpoint_data
-        )
+        await self.state_manager.save_checkpoint(self.context.project_id, checkpoint_data)
 
         logger.info(f"Checkpoint saved for {self.context.project_id}")
 
@@ -467,9 +447,7 @@ class MasterOrchestrator:
             await self.event_bus.emit(
                 event_type,
                 {
-                    "project_id": self.context.project_id
-                    if self.context
-                    else "unknown",
+                    "project_id": self.context.project_id if self.context else "unknown",
                     "timestamp": datetime.now().isoformat(),
                     **data,
                 },
@@ -486,13 +464,11 @@ class MasterOrchestrator:
         total_time = (datetime.now() - self.start_time).total_seconds()
 
         stage_times = {
-            stage.value: result.execution_time
-            for stage, result in self.stage_results.items()
+            stage.value: result.execution_time for stage, result in self.stage_results.items()
         }
 
         memory_usage = {
-            stage.value: result.memory_usage
-            for stage, result in self.stage_results.items()
+            stage.value: result.memory_usage for stage, result in self.stage_results.items()
         }
 
         return {
@@ -501,8 +477,7 @@ class MasterOrchestrator:
             "stage_memory_usage": memory_usage,
             "cache_hit_rate": self._calculate_cache_hit_rate(),
             "retry_counts": {
-                stage.value: result.retry_count
-                for stage, result in self.stage_results.items()
+                stage.value: result.retry_count for stage, result in self.stage_results.items()
             },
             "success_rate": len([r for r in self.stage_results.values() if r.success])
             / len(self.stage_results),
@@ -531,9 +506,7 @@ class MasterOrchestrator:
             if not checkpoint:
                 raise ValueError(f"No checkpoint found for project {project_id}")
 
-            logger.info(
-                f"Resuming pipeline {project_id} from {checkpoint['current_stage']}"
-            )
+            logger.info(f"Resuming pipeline {project_id} from {checkpoint['current_stage']}")
 
             # Restore state
             self.context = PipelineContext(
@@ -571,9 +544,7 @@ class MasterOrchestrator:
 
         return {
             "project_id": project_id,
-            "current_stage": self.current_stage.value
-            if self.current_stage
-            else "not_started",
+            "current_stage": self.current_stage.value if self.current_stage else "not_started",
             "completed_stages": [stage.value for stage in self.stage_results.keys()],
             "success_rate": len([r for r in self.stage_results.values() if r.success])
             / len(self.stage_results)
@@ -582,8 +553,7 @@ class MasterOrchestrator:
             "total_execution_time": (datetime.now() - self.start_time).total_seconds()
             if self.start_time
             else 0,
-            "is_running": self.current_stage
-            not in [PipelineStage.COMPLETE, PipelineStage.ERROR],
+            "is_running": self.current_stage not in [PipelineStage.COMPLETE, PipelineStage.ERROR],
         }
 
     async def cleanup(self) -> None:

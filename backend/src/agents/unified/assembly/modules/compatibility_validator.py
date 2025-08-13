@@ -3,12 +3,12 @@ Compatibility Validator Module for Assembly Agent
 Validates cross-platform and framework compatibility
 """
 
-from typing import Dict, List, Any, Optional
 import asyncio
-import re
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -151,12 +151,8 @@ class CompatibilityValidator:
             # Determine compatible platforms
             compatible_platforms = []
             for platform in target_platforms:
-                platform_issues = [
-                    i for i in issues if platform in i.platforms_affected
-                ]
-                critical_platform_issues = [
-                    i for i in platform_issues if i.severity == "critical"
-                ]
+                platform_issues = [i for i in issues if platform in i.platforms_affected]
+                critical_platform_issues = [i for i in platform_issues if i.severity == "critical"]
                 if len(critical_platform_issues) == 0:
                     compatible_platforms.append(platform)
 
@@ -403,9 +399,9 @@ class CompatibilityValidator:
             for file_path, content in files.items():
                 if file_path.endswith((".js", ".jsx", ".ts", ".tsx")):
                     for api in node_apis:
-                        if re.search(
-                            f"require\(['\"]?{api}['\"]?\)", content
-                        ) or re.search(f"from ['\"]?{api}['\"]?", content):
+                        if re.search(f"require\(['\"]?{api}['\"]?\)", content) or re.search(
+                            f"from ['\"]?{api}['\"]?", content
+                        ):
                             issues.append(
                                 CompatibilityIssue(
                                     severity="critical",
@@ -435,9 +431,7 @@ class CompatibilityValidator:
 
         return False
 
-    def _is_version_compatible(
-        self, version: str, supported_versions: List[str]
-    ) -> bool:
+    def _is_version_compatible(self, version: str, supported_versions: List[str]) -> bool:
         """Check if version is compatible with supported versions"""
 
         # Simple version compatibility check

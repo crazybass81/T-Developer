@@ -3,11 +3,11 @@ Project Scaffolder Module
 Creates project structure and scaffolding for different frameworks
 """
 
-from typing import Dict, List, Any, Optional, Tuple
-import os
 import json
+import os
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class ProjectScaffolder:
@@ -85,9 +85,7 @@ class ProjectScaffolder:
             generation_mode = context.get("generation_mode", "full")
 
             # Create base directory structure
-            structure = await self._create_base_structure(
-                framework, context, output_path
-            )
+            structure = await self._create_base_structure(framework, context, output_path)
 
             # Create framework-specific structure
             framework_structure = await self._create_framework_structure(
@@ -107,9 +105,7 @@ class ProjectScaffolder:
             test_structure = await self._create_test_structure(context, output_path)
 
             # Create deployment structure
-            deploy_structure = await self._create_deployment_structure(
-                context, output_path
-            )
+            deploy_structure = await self._create_deployment_structure(context, output_path)
 
             # Combine all structures
             complete_structure = {
@@ -233,9 +229,7 @@ class ProjectScaffolder:
 
         return structure
 
-    async def _get_vue_structure(
-        self, context: Dict[str, Any], output_path: str
-    ) -> Dict[str, str]:
+    async def _get_vue_structure(self, context: Dict[str, Any], output_path: str) -> Dict[str, str]:
         """Create Vue project structure"""
 
         structure = {}
@@ -532,9 +526,7 @@ class ProjectScaffolder:
         # Add Docker files if requested
         if context.get("include_docker", True):
             config_files["Dockerfile"] = self.file_templates["dockerfile"](context)
-            config_files["docker-compose.yml"] = self.file_templates["docker_compose"](
-                context
-            )
+            config_files["docker-compose.yml"] = self.file_templates["docker_compose"](context)
 
         # Write files
         for file_path, content in config_files.items():
@@ -545,9 +537,7 @@ class ProjectScaffolder:
 
         return structure
 
-    async def _create_dev_tools(
-        self, context: Dict[str, Any], output_path: str
-    ) -> Dict[str, str]:
+    async def _create_dev_tools(self, context: Dict[str, Any], output_path: str) -> Dict[str, str]:
         """Create development tools and scripts"""
 
         structure = {}

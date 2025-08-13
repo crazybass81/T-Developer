@@ -1,8 +1,9 @@
-from typing import Dict, Any, Union
 import asyncio
-from .text_processor import MultiModalTextProcessor
-from .image_processor import MultiModalImageProcessor
+from typing import Any, Dict, Union
+
 from .audio_processor import AudioVideoProcessor
+from .image_processor import MultiModalImageProcessor
+from .text_processor import MultiModalTextProcessor
 
 
 class MultiModalProcessor:

@@ -1,9 +1,10 @@
-from typing import Dict, Any, Optional, List
 import asyncio
 import base64
-import numpy as np
-import tempfile
 import os
+import tempfile
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 
 
 class AudioVideoProcessor:
@@ -31,9 +32,7 @@ class AudioVideoProcessor:
         except ImportError:
             return False
 
-    async def process_audio(
-        self, audio_buffer: bytes, options: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def process_audio(self, audio_buffer: bytes, options: Dict[str, Any]) -> Dict[str, Any]:
         """오디오 처리 파이프라인"""
         results = {
             "duration": None,
@@ -61,9 +60,7 @@ class AudioVideoProcessor:
 
         return results
 
-    async def process_video(
-        self, video_buffer: bytes, options: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def process_video(self, video_buffer: bytes, options: Dict[str, Any]) -> Dict[str, Any]:
         """비디오 처리 파이프라인"""
         results = {
             "metadata": await self.extract_video_metadata(video_buffer),

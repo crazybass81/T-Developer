@@ -3,7 +3,7 @@ Responsive Designer Module
 Designs responsive layouts and breakpoints
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class ResponsiveDesigner:
@@ -57,14 +57,10 @@ class ResponsiveDesigner:
         grid_system = self._design_grid_system(breakpoint_config)
 
         # Configure component behavior
-        component_behavior = self._configure_component_behavior(
-            components, breakpoint_config
-        )
+        component_behavior = self._configure_component_behavior(components, breakpoint_config)
 
         # Generate media queries
-        media_queries = self._generate_media_queries(
-            breakpoint_config, responsive_strategy
-        )
+        media_queries = self._generate_media_queries(breakpoint_config, responsive_strategy)
 
         # Create touch targets
         touch_targets = self._configure_touch_targets()
@@ -121,9 +117,7 @@ class ResponsiveDesigner:
             },
         }
 
-    def _configure_component_behavior(
-        self, components: List[str], breakpoints: Dict
-    ) -> Dict:
+    def _configure_component_behavior(self, components: List[str], breakpoints: Dict) -> Dict:
         """Configure component responsive behavior"""
         behavior = {}
 

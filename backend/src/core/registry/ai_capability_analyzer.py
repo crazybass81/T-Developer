@@ -3,16 +3,16 @@ AI Capability Analyzer for Agent Registration
 Analyzes agent code using multiple AI models to assess capabilities and quality
 """
 
-import asyncio
-import json
-import time
-from typing import Dict, Any, List, Optional, Tuple
-from datetime import datetime
-import hashlib
-import logging
-from dataclasses import dataclass, asdict
 import ast
+import asyncio
+import hashlib
+import json
+import logging
 import re
+import time
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 # AI Model imports
 try:
@@ -177,9 +177,7 @@ class AICapabilityAnalyzer:
                 "performance_profile": self._generate_performance_profile(validation),
                 "compatibility_matrix": self._generate_compatibility_matrix(validation),
                 "suggested_improvements": validation.get("improvements", []),
-                "confidence_score": self._calculate_confidence(
-                    structure_analysis, validation
-                ),
+                "confidence_score": self._calculate_confidence(structure_analysis, validation),
                 "analysis_metadata": {
                     "timestamp": datetime.utcnow().isoformat(),
                     "models_used": ["claude-3-opus", "gpt-4-turbo"],
@@ -228,9 +226,7 @@ class AICapabilityAnalyzer:
         }}
         """
 
-        response = await self.claude.analyze(
-            prompt=prompt, temperature=0.2, max_tokens=2000
-        )
+        response = await self.claude.analyze(prompt=prompt, temperature=0.2, max_tokens=2000)
 
         return json.loads(response)
 
@@ -262,9 +258,7 @@ class AICapabilityAnalyzer:
         }}
         """
 
-        response = await self.gpt4.complete(
-            prompt=prompt, temperature=0.3, max_tokens=2000
-        )
+        response = await self.gpt4.complete(prompt=prompt, temperature=0.3, max_tokens=2000)
 
         return json.loads(response)
 
@@ -386,9 +380,7 @@ class AICapabilityAnalyzer:
 
         return {
             "total_analyses": len(self._analysis_history),
-            "average_confidence": sum(
-                a["confidence_score"] for a in self._analysis_history
-            )
+            "average_confidence": sum(a["confidence_score"] for a in self._analysis_history)
             / len(self._analysis_history),
             "common_capabilities": self._get_common_capabilities(),
             "improvement_trends": self._get_improvement_trends(),
@@ -419,9 +411,7 @@ class AICapabilityAnalyzer:
                 improvement_count[imp] = improvement_count.get(imp, 0) + 1
 
         # 상위 3개 반환
-        sorted_imps = sorted(
-            improvement_count.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_imps = sorted(improvement_count.items(), key=lambda x: x[1], reverse=True)
         return [imp for imp, _ in sorted_imps[:3]]
 
 

@@ -3,12 +3,12 @@ Cache Manager Module
 Advanced caching system for search results and component data
 """
 
-from typing import Dict, List, Any, Optional, Tuple
-import json
-import hashlib
 import asyncio
-from datetime import datetime, timedelta
+import hashlib
+import json
 from collections import OrderedDict
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class CacheManager:
@@ -449,9 +449,7 @@ class MemoryCache:
         """Remove expired entries"""
 
         now = datetime.now()
-        expired_keys = [
-            key for key, expiry_time in self.expiry_times.items() if now > expiry_time
-        ]
+        expired_keys = [key for key, expiry_time in self.expiry_times.items() if now > expiry_time]
 
         for key in expired_keys:
             await self.delete(key)
@@ -558,9 +556,7 @@ class SessionCache:
         """Remove expired entries"""
 
         now = datetime.now()
-        expired_keys = [
-            key for key, expiry_time in self.expiry_times.items() if now > expiry_time
-        ]
+        expired_keys = [key for key, expiry_time in self.expiry_times.items() if now > expiry_time]
 
         for key in expired_keys:
             await self.delete(key)

@@ -3,30 +3,29 @@ Test suite for all 9 agents in the pipeline
 각 에이전트의 완전한 기능 테스트
 """
 
-import pytest
 import asyncio
 import json
-from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 # 프로젝트 경로 추가
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # 에이전트 임포트 시도
 try:
-    from src.agents.implementations.nl_input_agent import NLInputAgent
-    from src.agents.implementations.ui_selection_agent import UISelectionAgent
-    from src.agents.implementations.parser_agent import ParserAgent
-    from src.agents.implementations.component_decision_agent import (
-        ComponentDecisionAgent,
-    )
-    from src.agents.implementations.match_rate_agent import MatchRateAgent
-    from src.agents.implementations.search_agent import SearchAgent
-    from src.agents.implementations.generation_agent import GenerationAgent
     from src.agents.implementations.assembly_agent import AssemblyAgent
+    from src.agents.implementations.component_decision_agent import ComponentDecisionAgent
     from src.agents.implementations.download_agent import DownloadAgent
+    from src.agents.implementations.generation_agent import GenerationAgent
+    from src.agents.implementations.match_rate_agent import MatchRateAgent
+    from src.agents.implementations.nl_input_agent import NLInputAgent
+    from src.agents.implementations.parser_agent import ParserAgent
+    from src.agents.implementations.search_agent import SearchAgent
+    from src.agents.implementations.ui_selection_agent import UISelectionAgent
 
     AGENTS_AVAILABLE = True
 except ImportError:
@@ -140,9 +139,7 @@ class TestNLInputAgent:
     async def test_error_handling(self, agent):
         """오류 처리 테스트"""
         if AGENTS_AVAILABLE:
-            with patch.object(
-                agent, "_clean_text", side_effect=Exception("Processing error")
-            ):
+            with patch.object(agent, "_clean_text", side_effect=Exception("Processing error")):
                 result = await agent.execute("test input", {})
 
                 assert result.success is False
@@ -227,9 +224,7 @@ class TestUISelectionAgent:
             result = await agent.execute(nl_data, {})
             assert result.data["layout"]["type"] == "responsive"
         else:
-            agent.execute.return_value = Mock(
-                success=True, data={"layout": {"type": "responsive"}}
-            )
+            agent.execute.return_value = Mock(success=True, data={"layout": {"type": "responsive"}})
             result = await agent.execute(nl_data, {})
             assert result.data["layout"]["type"] == "responsive"
 
@@ -307,9 +302,7 @@ class TestParserAgent:
     async def test_api_spec_generation(self, agent):
         """API 스펙 생성 테스트"""
         ui_data = {}
-        nl_data = {
-            "entities": {"components": ["user", "product"], "features": ["auth"]}
-        }
+        nl_data = {"entities": {"components": ["user", "product"], "features": ["auth"]}}
 
         if AGENTS_AVAILABLE:
             result = await agent.execute(ui_data, nl_data, {})
@@ -411,9 +404,7 @@ class TestMatchRateAgent:
     @pytest.mark.asyncio
     async def test_match_rate_calculation(self, agent):
         """매칭률 계산 테스트"""
-        component_data = {
-            "components": [{"name": "Button"}, {"name": "Form"}, {"name": "Table"}]
-        }
+        component_data = {"components": [{"name": "Button"}, {"name": "Form"}, {"name": "Table"}]}
         nl_data = {
             "entities": {
                 "components": ["button", "form", "table", "modal"],
@@ -432,9 +423,7 @@ class TestMatchRateAgent:
             assert "feature_matches" in result.data
             assert "suggestions" in result.data
         else:
-            agent.execute.return_value = Mock(
-                success=True, data={"overall_score": 85.5}
-            )
+            agent.execute.return_value = Mock(success=True, data={"overall_score": 85.5})
             result = await agent.execute(component_data, nl_data, {})
             assert result.data["overall_score"] == 85.5
 
@@ -753,15 +742,11 @@ class TestPipelineIntegration:
         assert component_result.success
 
         match_agent = MatchRateAgent()
-        match_result = await match_agent.execute(
-            component_result.data, nl_result.data, {}
-        )
+        match_result = await match_agent.execute(component_result.data, nl_result.data, {})
         assert match_result.success
 
         search_agent = SearchAgent()
-        search_result = await search_agent.execute(
-            match_result.data, component_result.data, {}
-        )
+        search_result = await search_agent.execute(match_result.data, component_result.data, {})
         assert search_result.success
 
         generation_agent = GenerationAgent()

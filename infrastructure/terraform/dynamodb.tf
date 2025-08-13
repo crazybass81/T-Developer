@@ -8,50 +8,50 @@ resource "aws_dynamodb_table" "evolution_state" {
   write_capacity = var.environment == "production" ? 10 : null
   hash_key       = "agent_id"
   range_key      = "version"
-  
+
   # Enable encryption
   server_side_encryption {
     enabled     = true
     kms_key_id  = aws_kms_key.dynamodb_kms.arn
   }
-  
+
   # Enable Point-in-Time Recovery
   point_in_time_recovery {
     enabled = true
   }
-  
+
   # TTL for old evolution states
   ttl {
     attribute_name = "ttl"
     enabled        = true
   }
-  
+
   # Attributes
   attribute {
     name = "agent_id"
     type = "S"
   }
-  
+
   attribute {
     name = "version"
     type = "N"
   }
-  
+
   attribute {
     name = "generation"
     type = "N"
   }
-  
+
   attribute {
     name = "fitness_score"
     type = "N"
   }
-  
+
   attribute {
     name = "created_at"
     type = "N"
   }
-  
+
   # Global Secondary Indexes
   global_secondary_index {
     name            = "generation-index"
@@ -61,7 +61,7 @@ resource "aws_dynamodb_table" "evolution_state" {
     read_capacity   = var.environment == "production" ? 5 : null
     write_capacity  = var.environment == "production" ? 5 : null
   }
-  
+
   global_secondary_index {
     name            = "fitness-index"
     hash_key        = "agent_id"
@@ -71,11 +71,11 @@ resource "aws_dynamodb_table" "evolution_state" {
     read_capacity   = var.environment == "production" ? 5 : null
     write_capacity  = var.environment == "production" ? 5 : null
   }
-  
+
   # Stream for real-time evolution tracking
   stream_enabled   = true
   stream_view_type = "NEW_AND_OLD_IMAGES"
-  
+
   tags = merge(
     local.common_tags,
     {
@@ -92,58 +92,58 @@ resource "aws_dynamodb_table" "agent_registry" {
   name           = "t-developer-agent-registry-${var.environment}"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "agent_id"
-  
+
   # Enable encryption
   server_side_encryption {
     enabled     = true
     kms_key_id  = aws_kms_key.dynamodb_kms.arn
   }
-  
+
   # Enable Point-in-Time Recovery
   point_in_time_recovery {
     enabled = true
   }
-  
+
   # Attributes
   attribute {
     name = "agent_id"
     type = "S"
   }
-  
+
   attribute {
     name = "agent_name"
     type = "S"
   }
-  
+
   attribute {
     name = "capability"
     type = "S"
   }
-  
+
   attribute {
     name = "status"
     type = "S"
   }
-  
+
   attribute {
     name = "last_evolved"
     type = "N"
   }
-  
+
   # Global Secondary Indexes
   global_secondary_index {
     name            = "name-index"
     hash_key        = "agent_name"
     projection_type = "ALL"
   }
-  
+
   global_secondary_index {
     name            = "capability-index"
     hash_key        = "capability"
     range_key       = "last_evolved"
     projection_type = "ALL"
   }
-  
+
   global_secondary_index {
     name            = "status-index"
     hash_key        = "status"
@@ -151,7 +151,7 @@ resource "aws_dynamodb_table" "agent_registry" {
     projection_type = "INCLUDE"
     non_key_attributes = ["agent_name", "capability", "fitness_score"]
   }
-  
+
   tags = merge(
     local.common_tags,
     {
@@ -169,40 +169,40 @@ resource "aws_dynamodb_table" "performance_metrics" {
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "metric_id"
   range_key      = "timestamp"
-  
+
   # Enable encryption
   server_side_encryption {
     enabled     = true
     kms_key_id  = aws_kms_key.dynamodb_kms.arn
   }
-  
+
   # TTL for old metrics (30 days)
   ttl {
     attribute_name = "ttl"
     enabled        = true
   }
-  
+
   # Attributes
   attribute {
     name = "metric_id"
     type = "S"
   }
-  
+
   attribute {
     name = "timestamp"
     type = "N"
   }
-  
+
   attribute {
     name = "agent_id"
     type = "S"
   }
-  
+
   attribute {
     name = "metric_type"
     type = "S"
   }
-  
+
   # Global Secondary Indexes
   global_secondary_index {
     name            = "agent-metrics-index"
@@ -210,7 +210,7 @@ resource "aws_dynamodb_table" "performance_metrics" {
     range_key       = "timestamp"
     projection_type = "ALL"
   }
-  
+
   global_secondary_index {
     name            = "type-index"
     hash_key        = "metric_type"
@@ -218,11 +218,11 @@ resource "aws_dynamodb_table" "performance_metrics" {
     projection_type = "INCLUDE"
     non_key_attributes = ["value", "agent_id", "constraint_met"]
   }
-  
+
   # Stream for real-time metric analysis
   stream_enabled   = true
   stream_view_type = "NEW_IMAGE"
-  
+
   tags = merge(
     local.common_tags,
     {
@@ -240,44 +240,44 @@ resource "aws_dynamodb_table" "evolution_history" {
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "evolution_id"
   range_key      = "timestamp"
-  
+
   # Enable encryption
   server_side_encryption {
     enabled     = true
     kms_key_id  = aws_kms_key.dynamodb_kms.arn
   }
-  
+
   # Enable Point-in-Time Recovery for audit trail
   point_in_time_recovery {
     enabled = true
   }
-  
+
   # Attributes
   attribute {
     name = "evolution_id"
     type = "S"
   }
-  
+
   attribute {
     name = "timestamp"
     type = "N"
   }
-  
+
   attribute {
     name = "parent_agent_id"
     type = "S"
   }
-  
+
   attribute {
     name = "child_agent_id"
     type = "S"
   }
-  
+
   attribute {
     name = "evolution_type"
     type = "S"
   }
-  
+
   # Global Secondary Indexes
   global_secondary_index {
     name            = "parent-index"
@@ -285,14 +285,14 @@ resource "aws_dynamodb_table" "evolution_history" {
     range_key       = "timestamp"
     projection_type = "ALL"
   }
-  
+
   global_secondary_index {
     name            = "child-index"
     hash_key        = "child_agent_id"
     range_key       = "timestamp"
     projection_type = "ALL"
   }
-  
+
   global_secondary_index {
     name            = "type-index"
     hash_key        = "evolution_type"
@@ -300,7 +300,7 @@ resource "aws_dynamodb_table" "evolution_history" {
     projection_type = "INCLUDE"
     non_key_attributes = ["parent_agent_id", "child_agent_id", "success", "fitness_delta"]
   }
-  
+
   tags = merge(
     local.common_tags,
     {
@@ -372,7 +372,7 @@ resource "aws_cloudwatch_metric_alarm" "dynamodb_throttle" {
     performance_metrics = aws_dynamodb_table.performance_metrics.name
     evolution_history  = aws_dynamodb_table.evolution_history.name
   }
-  
+
   alarm_name          = "t-developer-dynamodb-${each.key}-throttle-${var.environment}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"

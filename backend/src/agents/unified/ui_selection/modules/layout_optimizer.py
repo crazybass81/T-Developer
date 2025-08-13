@@ -3,8 +3,8 @@ Layout Optimizer Module
 Optimizes layout structure for different screen sizes and use cases
 """
 
-from typing import Dict, List, Any, Tuple
 import math
+from typing import Any, Dict, List, Tuple
 
 
 class LayoutOptimizer:
@@ -156,9 +156,7 @@ class LayoutOptimizer:
             ),
         }
 
-    def _select_layout_pattern(
-        self, project_type: str, components: List[str]
-    ) -> Dict[str, Any]:
+    def _select_layout_pattern(self, project_type: str, components: List[str]) -> Dict[str, Any]:
         """Select optimal layout pattern"""
         # Map project types to layout patterns
         type_map = {
@@ -199,9 +197,7 @@ class LayoutOptimizer:
 
         return self.grid_systems["12_column"]  # Default
 
-    def _calculate_spacing(
-        self, components: List[str], grid: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _calculate_spacing(self, components: List[str], grid: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate optimal spacing"""
         # Determine density
         component_count = len(components)
@@ -305,9 +301,7 @@ class LayoutOptimizer:
 
         return optimizations
 
-    def _calculate_metrics(
-        self, layout: Dict[str, Any], components: List[str]
-    ) -> Dict[str, Any]:
+    def _calculate_metrics(self, layout: Dict[str, Any], components: List[str]) -> Dict[str, Any]:
         """Calculate layout metrics"""
         # Calculate complexity score
         complexity = len(components) * 0.1
@@ -330,9 +324,7 @@ class LayoutOptimizer:
             "render_cost": self._estimate_render_cost(components),
         }
 
-    def _generate_css_config(
-        self, layout: Dict[str, Any], grid: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _generate_css_config(self, layout: Dict[str, Any], grid: Dict[str, Any]) -> Dict[str, Any]:
         """Generate CSS configuration"""
         css_config = {
             "display": "grid" if "grid" in layout["grid"] else "flex",

@@ -3,15 +3,16 @@ Input Validation & Sanitization
 SQL Injection 및 XSS 방어
 """
 
-import re
-import html
-import bleach
-from typing import Any, Dict, List, Optional, Union
-from pydantic import BaseModel, validator, Field
-import sqlalchemy
-from sqlalchemy.sql import text
 import hashlib
+import html
 import json
+import re
+from typing import Any, Dict, List, Optional, Union
+
+import bleach
+import sqlalchemy
+from pydantic import BaseModel, Field, validator
+from sqlalchemy.sql import text
 
 
 class InputSanitizer:
@@ -131,9 +132,7 @@ class InputSanitizer:
         }
 
         # Clean with bleach
-        cleaned = bleach.clean(
-            value, tags=allowed_tags, attributes=allowed_attributes, strip=True
-        )
+        cleaned = bleach.clean(value, tags=allowed_tags, attributes=allowed_attributes, strip=True)
 
         # Additional XSS pattern removal
         for pattern in cls.XSS_PATTERNS:
@@ -250,9 +249,7 @@ class SQLQueryBuilder:
         # Build ORDER BY clause
         if order_by:
             # Validate order by (column name and optional DESC/ASC)
-            if not re.match(
-                r"^[a-zA-Z_][a-zA-Z0-9_]*(\s+(ASC|DESC))?$", order_by, re.IGNORECASE
-            ):
+            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*(\s+(ASC|DESC))?$", order_by, re.IGNORECASE):
                 raise ValueError(f"Invalid ORDER BY clause: {order_by}")
             query += f" ORDER BY {order_by}"
 
@@ -336,9 +333,7 @@ class FileUploadValidator:
 
         # Verify extension matches content
         if file_type and ext != file_type:
-            raise ValueError(
-                f"File extension ({ext}) doesn't match content ({file_type})"
-            )
+            raise ValueError(f"File extension ({ext}) doesn't match content ({file_type})")
 
         return {
             "filename": safe_filename,

@@ -4,18 +4,19 @@ T-Developer Operational Readiness Check
 Comprehensive validation of production readiness
 """
 
-import logging
-import boto3
+import concurrent.futures
 import json
+import logging
 import os
-import sys
 import subprocess
-import requests
+import sys
 import time
-from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-import concurrent.futures
+from typing import Any, Dict, List, Optional, Tuple
+
+import boto3
+import requests
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -166,14 +167,11 @@ class OperationalReadinessChecker:
 
             # Check deployment status
             deployments = service["deployments"]
-            primary_deployment = next(
-                (d for d in deployments if d["status"] == "PRIMARY"), None
-            )
+            primary_deployment = next((d for d in deployments if d["status"] == "PRIMARY"), None)
 
             if (
                 not primary_deployment
-                or primary_deployment["runningCount"]
-                != primary_deployment["desiredCount"]
+                or primary_deployment["runningCount"] != primary_deployment["desiredCount"]
             ):
                 return CheckResult(
                     name="ECS Service Health",
@@ -242,9 +240,7 @@ class OperationalReadinessChecker:
             total_targets = 0
 
             for tg in target_groups["TargetGroups"]:
-                health = self.elbv2.describe_target_health(
-                    TargetGroupArn=tg["TargetGroupArn"]
-                )
+                health = self.elbv2.describe_target_health(TargetGroupArn=tg["TargetGroupArn"])
 
                 for target in health["TargetHealthDescriptions"]:
                     total_targets += 1
@@ -315,14 +311,12 @@ class OperationalReadinessChecker:
                 )
 
             # Check point-in-time recovery
-            backup_desc = self.dynamodb.describe_continuous_backups(
-                TableName=self.table_name
-            )
+            backup_desc = self.dynamodb.describe_continuous_backups(TableName=self.table_name)
 
             pitr_enabled = (
-                backup_desc["ContinuousBackupsDescription"][
-                    "PointInTimeRecoveryDescription"
-                ]["PointInTimeRecoveryStatus"]
+                backup_desc["ContinuousBackupsDescription"]["PointInTimeRecoveryDescription"][
+                    "PointInTimeRecoveryStatus"
+                ]
                 == "ENABLED"
             )
 
@@ -377,10 +371,7 @@ class OperationalReadinessChecker:
                 encryption = self.s3.get_bucket_encryption(Bucket=self.bucket_name)
                 encrypted = True
             except self.s3.exceptions.ClientError as e:
-                if (
-                    e.response["Error"]["Code"]
-                    == "ServerSideEncryptionConfigurationNotFoundError"
-                ):
+                if e.response["Error"]["Code"] == "ServerSideEncryptionConfigurationNotFoundError":
                     encrypted = False
                 else:
                     raise
@@ -407,9 +398,7 @@ class OperationalReadinessChecker:
 
             # Check lifecycle policy
             try:
-                lifecycle = self.s3.get_bucket_lifecycle_configuration(
-                    Bucket=self.bucket_name
-                )
+                lifecycle = self.s3.get_bucket_lifecycle_configuration(Bucket=self.bucket_name)
                 lifecycle_configured = True
             except self.s3.exceptions.ClientError as e:
                 if e.response["Error"]["Code"] == "NoSuchLifecycleConfiguration":
@@ -463,9 +452,7 @@ class OperationalReadinessChecker:
             # Check alarm states
             alarm_states = {}
             for alarm in alarms["MetricAlarms"]:
-                alarm_states[alarm["StateValue"]] = (
-                    alarm_states.get(alarm["StateValue"], 0) + 1
-                )
+                alarm_states[alarm["StateValue"]] = alarm_states.get(alarm["StateValue"], 0) + 1
 
             # Check dashboard
             try:
@@ -477,9 +464,7 @@ class OperationalReadinessChecker:
                 dashboard_exists = False
 
             # Check log groups
-            log_groups = self.logs.describe_log_groups(
-                logGroupNamePrefix="/ecs/t-developer"
-            )
+            log_groups = self.logs.describe_log_groups(logGroupNamePrefix="/ecs/t-developer")
             log_group_count = len(log_groups["logGroups"])
 
             return CheckResult(
@@ -596,9 +581,7 @@ class OperationalReadinessChecker:
 
             # Check lifecycle policies
             try:
-                lifecycle = self.s3.get_bucket_lifecycle_configuration(
-                    Bucket=self.bucket_name
-                )
+                lifecycle = self.s3.get_bucket_lifecycle_configuration(Bucket=self.bucket_name)
                 lifecycle_rules = len(lifecycle["Rules"])
                 details["lifecycle_rules"] = lifecycle_rules
             except self.s3.exceptions.ClientError:
@@ -693,11 +676,7 @@ class OperationalReadinessChecker:
                 )
 
             avg_response_time = (
-                sum(
-                    r["response_time"]
-                    for r in results.values()
-                    if r["response_time"] is not None
-                )
+                sum(r["response_time"] for r in results.values() if r["response_time"] is not None)
                 / healthy_endpoints
             )
 
@@ -822,9 +801,7 @@ class OperationalReadinessChecker:
             )
 
             # Check if deployment scripts exist
-            deploy_script_exists = os.path.exists(
-                "/home/ec2-user/T-DeveloperMVP/scripts/deploy.sh"
-            )
+            deploy_script_exists = os.path.exists("/home/ec2-user/T-DeveloperMVP/scripts/deploy.sh")
 
             # Check if backup procedures are documented
             runbook_exists = os.path.exists(
@@ -837,9 +814,7 @@ class OperationalReadinessChecker:
                     cluster=self.cluster_name, services=[self.service_name]
                 )
                 service = response["services"][0]
-                subnets = service["networkConfiguration"]["awsvpcConfiguration"][
-                    "subnets"
-                ]
+                subnets = service["networkConfiguration"]["awsvpcConfiguration"]["subnets"]
                 multi_az = len(subnets) > 1
             except Exception:
                 multi_az = False
@@ -998,12 +973,8 @@ class OperationalReadinessChecker:
         # Generate recommendations
         recommendations = []
 
-        critical_failures = [
-            c for c in self.checks if not c.passed and c.severity == "critical"
-        ]
-        high_failures = [
-            c for c in self.checks if not c.passed and c.severity == "high"
-        ]
+        critical_failures = [c for c in self.checks if not c.passed and c.severity == "critical"]
+        high_failures = [c for c in self.checks if not c.passed and c.severity == "high"]
 
         if critical_failures:
             recommendations.append(
@@ -1016,17 +987,13 @@ class OperationalReadinessChecker:
             )
 
         if score < 95:
-            recommendations.append(
-                "Complete all readiness checks before production launch"
-            )
+            recommendations.append("Complete all readiness checks before production launch")
 
         if not any(c.name == "Performance Baselines" and c.passed for c in self.checks):
             recommendations.append("Establish performance baselines and SLO monitoring")
 
         if not any(c.name == "Disaster Recovery" and c.passed for c in self.checks):
-            recommendations.append(
-                "Complete disaster recovery testing and documentation"
-            )
+            recommendations.append("Complete disaster recovery testing and documentation")
 
         return ReadinessReport(
             timestamp=datetime.now(),
@@ -1045,9 +1012,7 @@ class OperationalReadinessChecker:
         output.append(f"T-DEVELOPER OPERATIONAL READINESS REPORT")
         output.append("=" * 80)
         output.append(f"Environment: {report.environment.upper()}")
-        output.append(
-            f"Timestamp: {report.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}"
-        )
+        output.append(f"Timestamp: {report.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}")
         output.append(f"Overall Status: {report.overall_status}")
         output.append(f"Readiness Score: {report.score:.1f}%")
         output.append("")
@@ -1072,9 +1037,7 @@ class OperationalReadinessChecker:
                     c for c in report.checks if not c.passed and c.severity == severity
                 ]
                 if severity_checks:
-                    emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "⚪"}[
-                        severity
-                    ]
+                    emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "⚪"}[severity]
                     output.append(f"  {emoji} {severity.upper()}:")
                     for check in severity_checks:
                         output.append(f"    - {check.name}: {check.message}")
@@ -1110,9 +1073,7 @@ class OperationalReadinessChecker:
                 "  ⚠️  System is mostly ready. Address remaining issues before production."
             )
         elif report.overall_status == "NEEDS_WORK":
-            output.append(
-                "  🔧 System needs significant work before production readiness."
-            )
+            output.append("  🔧 System needs significant work before production readiness.")
         else:
             output.append(
                 "  🚨 System is NOT ready for production. Critical issues must be resolved."
@@ -1128,9 +1089,7 @@ def main():
 
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="T-Developer Operational Readiness Check"
-    )
+    parser = argparse.ArgumentParser(description="T-Developer Operational Readiness Check")
     parser.add_argument(
         "--environment",
         default="production",
@@ -1139,16 +1098,12 @@ def main():
     )
     parser.add_argument("--region", default="us-east-1", help="AWS region")
     parser.add_argument("--output-file", help="Output file for report")
-    parser.add_argument(
-        "--json-output", action="store_true", help="Output report in JSON format"
-    )
+    parser.add_argument("--json-output", action="store_true", help="Output report in JSON format")
 
     args = parser.parse_args()
 
     # Initialize checker
-    checker = OperationalReadinessChecker(
-        environment=args.environment, region=args.region
-    )
+    checker = OperationalReadinessChecker(environment=args.environment, region=args.region)
 
     try:
         # Run comprehensive check

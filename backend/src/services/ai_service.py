@@ -5,9 +5,9 @@ Provides abstraction layer for multiple AI providers
 import asyncio
 import json
 import logging
-from typing import Optional, Dict, Any, List
-from abc import ABC, abstractmethod
 import time
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Optional
 
 from src.config.ai_config import ai_config
 
@@ -35,9 +35,7 @@ class BedrockProvider(AIProvider):
         try:
             import boto3
 
-            self.client = boto3.client(
-                "bedrock-runtime", region_name=ai_config.bedrock_region
-            )
+            self.client = boto3.client("bedrock-runtime", region_name=ai_config.bedrock_region)
             self.available = True
         except Exception as e:
             logger.warning(f"Bedrock not available: {e}")
@@ -176,9 +174,7 @@ class AnthropicProvider(AIProvider):
             try:
                 import anthropic
 
-                self.client = anthropic.AsyncAnthropic(
-                    api_key=ai_config.anthropic_api_key
-                )
+                self.client = anthropic.AsyncAnthropic(api_key=ai_config.anthropic_api_key)
                 self.available = True
             except ImportError:
                 logger.warning("Anthropic library not installed")
@@ -291,10 +287,7 @@ class AIService:
             return self.providers[ai_config.preferred_provider]
 
         # Try fallback provider
-        if (
-            ai_config.fallback_provider
-            and ai_config.fallback_provider in self.providers
-        ):
+        if ai_config.fallback_provider and ai_config.fallback_provider in self.providers:
             return self.providers[ai_config.fallback_provider]
 
         # Return any available provider
@@ -305,9 +298,7 @@ class AIService:
         # Last resort: mock provider
         return self.providers["mock"]
 
-    async def generate(
-        self, prompt: str, provider: Optional[str] = None, **kwargs
-    ) -> str:
+    async def generate(self, prompt: str, provider: Optional[str] = None, **kwargs) -> str:
         """Generate response using AI provider"""
 
         # Check cache if enabled
@@ -336,7 +327,9 @@ class AIService:
 
         # Check cache if enabled
         if ai_config.enable_caching:
-            cache_key = f"ana_{hash(text)}_{analysis_type}_{provider or ai_config.preferred_provider}"
+            cache_key = (
+                f"ana_{hash(text)}_{analysis_type}_{provider or ai_config.preferred_provider}"
+            )
             if cache_key in self.cache:
                 cached_time, cached_response = self.cache[cache_key]
                 if time.time() - cached_time < ai_config.cache_ttl:

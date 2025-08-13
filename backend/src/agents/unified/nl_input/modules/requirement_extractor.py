@@ -3,8 +3,8 @@ Requirement Extractor Module
 Extracts functional, non-functional, and technical requirements
 """
 
-from typing import List, Tuple, Dict, Any
 import re
+from typing import Any, Dict, List, Tuple
 
 
 class RequirementExtractor:

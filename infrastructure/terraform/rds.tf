@@ -141,7 +141,7 @@ resource "aws_db_instance" "t_developer_primary" {
   identifier     = "t-developer-db-${var.environment}"
   engine         = "postgres"
   engine_version = "15.4"
-  
+
   # Instance configuration
   instance_class               = var.db_instance_class
   allocated_storage           = var.db_allocated_storage
@@ -151,21 +151,21 @@ resource "aws_db_instance" "t_developer_primary" {
   kms_key_id                  = aws_kms_key.database_kms.arn
   iops                        = var.db_iops
   storage_throughput          = var.db_storage_throughput
-  
+
   # Database configuration
   db_name  = "t_developer"
   username = "t_developer_admin"
   password = random_password.db_password.result
   port     = 5432
-  
+
   # Network configuration
   db_subnet_group_name   = aws_db_subnet_group.t_developer.name
   vpc_security_group_ids = [aws_security_group.rds.id]
   publicly_accessible    = false
-  
+
   # Parameter and option groups
   parameter_group_name = aws_db_parameter_group.t_developer_pg15.name
-  
+
   # Backup configuration
   backup_retention_period         = var.backup_retention_days
   backup_window                   = "03:00-04:00"
@@ -173,25 +173,25 @@ resource "aws_db_instance" "t_developer_primary" {
   skip_final_snapshot            = var.environment != "production"
   final_snapshot_identifier      = var.environment == "production" ? "t-developer-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}" : null
   copy_tags_to_snapshot          = true
-  
+
   # Performance Insights
   performance_insights_enabled          = true
   performance_insights_kms_key_id      = aws_kms_key.database_kms.arn
   performance_insights_retention_period = var.environment == "production" ? 731 : 7
-  
+
   # Monitoring
   enabled_cloudwatch_logs_exports = ["postgresql"]
   monitoring_interval             = 60
   monitoring_role_arn            = aws_iam_role.rds_monitoring.arn
-  
+
   # High Availability
   multi_az               = var.environment == "production"
   deletion_protection    = var.environment == "production"
-  
+
   # Auto Minor Version Upgrade
   auto_minor_version_upgrade = var.environment != "production"
   apply_immediately         = var.environment != "production"
-  
+
   tags = merge(
     local.common_tags,
     {
@@ -211,26 +211,26 @@ resource "aws_db_instance" "t_developer_primary" {
 # RDS Read Replica (Production only)
 resource "aws_db_instance" "t_developer_read_replica" {
   count = var.environment == "production" ? 1 : 0
-  
+
   identifier             = "t-developer-db-read-${var.environment}"
   replicate_source_db    = aws_db_instance.t_developer_primary.identifier
-  
+
   # Instance configuration
   instance_class         = var.db_instance_class_replica
   storage_encrypted      = true
-  
+
   # Performance Insights
   performance_insights_enabled          = true
   performance_insights_kms_key_id      = aws_kms_key.database_kms.arn
   performance_insights_retention_period = 7
-  
+
   # Monitoring
   monitoring_interval = 60
   monitoring_role_arn = aws_iam_role.rds_monitoring.arn
-  
+
   # No backups on read replica
   backup_retention_period = 0
-  
+
   tags = merge(
     local.common_tags,
     {

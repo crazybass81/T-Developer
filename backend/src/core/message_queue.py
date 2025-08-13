@@ -4,12 +4,12 @@ Integrates with AWS SQS for distributed processing
 """
 import asyncio
 import json
-from typing import Dict, Any, List, Optional, Callable
+import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-import uuid
-import logging
+from typing import Any, Callable, Dict, List, Optional
 
 from src.services.aws_clients import get_sqs_client
 
@@ -86,20 +86,12 @@ class Message:
         attrs = sqs_message.get("MessageAttributes", {})
 
         return cls(
-            message_id=attrs.get("message_id", {}).get(
-                "StringValue", str(uuid.uuid4())
-            ),
-            queue_type=QueueType(
-                attrs.get("queue_type", {}).get("StringValue", "agent-tasks")
-            ),
-            priority=MessagePriority(
-                int(attrs.get("priority", {}).get("StringValue", "2"))
-            ),
+            message_id=attrs.get("message_id", {}).get("StringValue", str(uuid.uuid4())),
+            queue_type=QueueType(attrs.get("queue_type", {}).get("StringValue", "agent-tasks")),
+            priority=MessagePriority(int(attrs.get("priority", {}).get("StringValue", "2"))),
             correlation_id=attrs.get("correlation_id", {}).get("StringValue"),
             timestamp=datetime.fromisoformat(
-                attrs.get("timestamp", {}).get(
-                    "StringValue", datetime.utcnow().isoformat()
-                )
+                attrs.get("timestamp", {}).get("StringValue", datetime.utcnow().isoformat())
             ),
             retry_count=int(attrs.get("retry_count", {}).get("StringValue", "0")),
             body=json.loads(sqs_message.get("Body", "{}")),
@@ -151,27 +143,19 @@ class MessageQueue:
                     message.body,
                     message_attributes=message.to_sqs_format()["MessageAttributes"],
                 )
-                logger.debug(
-                    f"Sent message {message.message_id} to SQS queue {self.queue_name}"
-                )
+                logger.debug(f"Sent message {message.message_id} to SQS queue {self.queue_name}")
                 return message_id or message.message_id
             else:
                 # Add to local queue (priority based on message priority)
-                await self._local_queue.put(
-                    (-message.priority.value, message.timestamp, message)
-                )
-                logger.debug(
-                    f"Added message {message.message_id} to local queue {self.queue_name}"
-                )
+                await self._local_queue.put((-message.priority.value, message.timestamp, message))
+                logger.debug(f"Added message {message.message_id} to local queue {self.queue_name}")
                 return message.message_id
 
         except Exception as e:
             logger.error(f"Failed to send message: {e}")
             raise
 
-    async def receive_messages(
-        self, max_messages: int = 10, wait_time: int = 5
-    ) -> List[Message]:
+    async def receive_messages(self, max_messages: int = 10, wait_time: int = 5) -> List[Message]:
         """Receive messages from the queue"""
         messages = []
 
@@ -275,9 +259,7 @@ class MessageQueue:
                 try:
                     result = await handler_func(message)
                     processed = True
-                    logger.debug(
-                        f"Handler {handler_name} processed message {message.message_id}"
-                    )
+                    logger.debug(f"Handler {handler_name} processed message {message.message_id}")
                 except Exception as e:
                     logger.error(f"Handler {handler_name} failed: {e}")
 
@@ -372,9 +354,7 @@ class MessageQueueManager:
         """Get a queue by name"""
         return self._queues.get(queue_name)
 
-    def register_default_handler(
-        self, queue_type: QueueType, handler: Callable
-    ) -> None:
+    def register_default_handler(self, queue_type: QueueType, handler: Callable) -> None:
         """Register default handler for a queue type"""
         if queue_type not in self._default_handlers:
             self._default_handlers[queue_type] = []

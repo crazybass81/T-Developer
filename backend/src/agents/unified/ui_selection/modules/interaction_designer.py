@@ -3,7 +3,7 @@ Interaction Designer Module
 Designs user interactions and gestures for UI components
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class InteractionDesigner:
@@ -186,9 +186,7 @@ class InteractionDesigner:
         flow = self._create_interaction_flow(components, patterns)
 
         # Generate implementation code
-        implementation = self._generate_implementation(
-            patterns, gestures, feedback, states
-        )
+        implementation = self._generate_implementation(patterns, gestures, feedback, states)
 
         return {
             "patterns": patterns,
@@ -276,9 +274,7 @@ class InteractionDesigner:
             # Platform-specific adjustments
             if platform == "mobile":
                 # Remove hover patterns for mobile
-                component_patterns = [
-                    p for p in component_patterns if p["type"] != "hover"
-                ]
+                component_patterns = [p for p in component_patterns if p["type"] != "hover"]
 
             patterns[component] = component_patterns
 

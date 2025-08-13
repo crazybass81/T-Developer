@@ -2,18 +2,19 @@
 Security Layer Implementation
 Handles authentication, authorization, input validation, and data protection
 """
+import base64
 import hashlib
 import hmac
-import secrets
+import json
+import logging
 import re
-import jwt
-from typing import Dict, Any, List, Optional, Set
+import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-import base64
-import json
-import logging
+from typing import Any, Dict, List, Optional, Set
+
+import jwt
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +67,7 @@ class InputValidator:
         "email": re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"),
         "url": re.compile(r"^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"),
         "alphanumeric": re.compile(r"^[a-zA-Z0-9]+$"),
-        "uuid": re.compile(
-            r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-        ),
+        "uuid": re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
         "safe_string": re.compile(r"^[a-zA-Z0-9\s\-_.]+$"),
     }
 
@@ -349,9 +348,7 @@ class DataProtection:
         from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
 
         # Derive key
-        kdf = PBKDF2(
-            algorithm=hashes.SHA256(), length=32, salt=b"stable_salt", iterations=100000
-        )
+        kdf = PBKDF2(algorithm=hashes.SHA256(), length=32, salt=b"stable_salt", iterations=100000)
         key = base64.urlsafe_b64encode(kdf.derive(self.encryption_key))
 
         # Decrypt data
@@ -364,9 +361,7 @@ class DataProtection:
     def mask_pii(self, text: str) -> str:
         """Mask personally identifiable information"""
         # Mask email addresses
-        email_pattern = re.compile(
-            r"([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})"
-        )
+        email_pattern = re.compile(r"([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})")
         text = email_pattern.sub(r"***@\2", text)
 
         # Mask phone numbers
@@ -416,9 +411,7 @@ class RateLimiter:
         self._limits: Dict[str, Dict[str, Any]] = {}
         self._request_history: Dict[str, List[datetime]] = {}
 
-    def configure_limit(
-        self, resource: str, max_requests: int, time_window: int
-    ) -> None:
+    def configure_limit(self, resource: str, max_requests: int, time_window: int) -> None:
         """Configure rate limit for resource"""
         self._limits[resource] = {
             "max_requests": max_requests,
@@ -466,9 +459,7 @@ class RateLimiter:
         now = datetime.utcnow()
         cutoff = now - timedelta(seconds=limit["time_window"])
 
-        current_requests = sum(
-            1 for req_time in self._request_history[key] if req_time > cutoff
-        )
+        current_requests = sum(1 for req_time in self._request_history[key] if req_time > cutoff)
 
         return max(0, limit["max_requests"] - current_requests)
 

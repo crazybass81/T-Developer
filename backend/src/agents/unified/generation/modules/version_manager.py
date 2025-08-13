@@ -3,16 +3,17 @@ Version Manager Module for Generation Agent
 Manages project versioning, git setup, and release management
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import asyncio
 import json
 import os
+import re
 import subprocess
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
 import semver
-import re
 
 
 class VersioningStrategy(Enum):
@@ -162,9 +163,7 @@ class VersionManager:
             version_info = await self._initialize_version_info(initial_version, context)
 
             # Setup Git repository
-            git_config = await self._setup_git_repository(
-                project_path, project_name, context
-            )
+            git_config = await self._setup_git_repository(project_path, project_name, context)
 
             # Configure release management
             release_config = await self._setup_release_configuration(framework, context)
@@ -276,9 +275,7 @@ class VersionManager:
 
             # Create initial commit
             initial_commit_message = f"feat: Initial project setup for {project_name}\n\n🤖 Generated with T-Developer\n\nCo-authored-by: Claude <noreply@anthropic.com>"
-            await self._run_git_command(
-                project_path, ["commit", "-m", initial_commit_message]
-            )
+            await self._run_git_command(project_path, ["commit", "-m", initial_commit_message])
             git_config.initial_commit_created = True
 
             # Configure branches
@@ -299,9 +296,7 @@ class VersionManager:
     ) -> ReleaseConfig:
         """Setup release management configuration"""
 
-        framework_config = self.framework_configs.get(
-            framework, self.framework_configs["react"]
-        )
+        framework_config = self.framework_configs.get(framework, self.framework_configs["react"])
 
         return ReleaseConfig(
             automated_changelog=True,
@@ -444,17 +439,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             # Check if user is configured globally
             result = await self._run_git_command(project_path, ["config", "user.name"])
             if not result.strip():
-                await self._run_git_command(
-                    project_path, ["config", "user.name", "T-Developer"]
-                )
+                await self._run_git_command(project_path, ["config", "user.name", "T-Developer"])
                 await self._run_git_command(
                     project_path, ["config", "user.email", "noreply@t-developer.com"]
                 )
         except:
             # Set default user
-            await self._run_git_command(
-                project_path, ["config", "user.name", "T-Developer"]
-            )
+            await self._run_git_command(project_path, ["config", "user.name", "T-Developer"])
             await self._run_git_command(
                 project_path, ["config", "user.email", "noreply@t-developer.com"]
             )
@@ -490,14 +481,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
         return stdout.decode()
 
-    def _generate_release_script(
-        self, framework: str, version_info: VersionInfo
-    ) -> str:
+    def _generate_release_script(self, framework: str, version_info: VersionInfo) -> str:
         """Generate release automation script"""
 
-        framework_config = self.framework_configs.get(
-            framework, self.framework_configs["react"]
-        )
+        framework_config = self.framework_configs.get(framework, self.framework_configs["react"])
 
         script = f"""#!/bin/bash
 set -e
@@ -599,9 +586,7 @@ bumpVersion(releaseType);
     def _generate_release_workflow(self, framework: str) -> str:
         """Generate GitHub Actions release workflow"""
 
-        framework_config = self.framework_configs.get(
-            framework, self.framework_configs["react"]
-        )
+        framework_config = self.framework_configs.get(framework, self.framework_configs["react"])
 
         workflow = {
             "name": "Release",
@@ -623,8 +608,7 @@ bumpVersion(releaseType);
                                 if framework in ["react", "vue", "angular", "express"]
                                 else None,
                                 "python-version": "3.9"
-                                if framework
-                                not in ["react", "vue", "angular", "express"]
+                                if framework not in ["react", "vue", "angular", "express"]
                                 else None,
                             },
                         },
@@ -636,15 +620,11 @@ bumpVersion(releaseType);
                         },
                         {
                             "name": "Run tests",
-                            "run": framework_config.get(
-                                "test_command", 'echo "No tests"'
-                            ),
+                            "run": framework_config.get("test_command", 'echo "No tests"'),
                         },
                         {
                             "name": "Build project",
-                            "run": framework_config.get(
-                                "build_command", 'echo "No build"'
-                            ),
+                            "run": framework_config.get("build_command", 'echo "No build"'),
                         },
                         {
                             "name": "Create Release",

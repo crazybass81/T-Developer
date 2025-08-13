@@ -3,16 +3,17 @@ JWT Token Handler
 엔터프라이즈급 JWT 토큰 관리
 """
 
-import os
-import jwt
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend
-import redis
 import hashlib
 import json
+import os
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional
+
+import jwt
+import redis
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 
 class JWTHandler:
@@ -132,9 +133,7 @@ class JWTHandler:
 
         return token
 
-    def verify_token(
-        self, token: str, token_type: str = "access"
-    ) -> Optional[Dict[str, Any]]:
+    def verify_token(self, token: str, token_type: str = "access") -> Optional[Dict[str, Any]]:
         """토큰 검증"""
         try:
             # Choose verification key
@@ -200,9 +199,7 @@ class JWTHandler:
 
             if payload:
                 # Create new access token
-                return self.create_access_token(
-                    user_id=payload["sub"], email=payload["email"]
-                )
+                return self.create_access_token(user_id=payload["sub"], email=payload["email"])
 
         except Exception:
             pass
@@ -213,9 +210,7 @@ class JWTHandler:
         """JWT ID 생성"""
         return hashlib.sha256(os.urandom(32)).hexdigest()
 
-    def _store_token_metadata(
-        self, jti: str, user_id: str, token_type: str, expire: datetime
-    ):
+    def _store_token_metadata(self, jti: str, user_id: str, token_type: str, expire: datetime):
         """토큰 메타데이터 저장"""
         try:
             ttl = int((expire - datetime.now(timezone.utc)).total_seconds())

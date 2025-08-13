@@ -3,9 +3,9 @@ Dependency Resolver Module
 Resolves dependencies between requirements and components
 """
 
-from typing import Dict, List, Any, Optional, Set, Tuple
 from collections import defaultdict, deque
 from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 class DependencyType(Enum):
@@ -115,9 +115,7 @@ class DependencyResolver:
         """Check for explicit dependency indicators"""
         for dep_type, indicators in self.dependency_indicators.items():
             for indicator in indicators:
-                if indicator in text1 and any(
-                    word in text1 for word in text2.split()[:3]
-                ):
+                if indicator in text1 and any(word in text1 for word in text2.split()[:3]):
                     return dep_type
         return None
 
@@ -292,18 +290,12 @@ class DependencyResolver:
                 "direct_dependencies": direct,
                 "indirect_dependencies": indirect,
                 "total_impact": direct + indirect,
-                "criticality": "high"
-                if indirect > 5
-                else "medium"
-                if indirect > 2
-                else "low",
+                "criticality": "high" if indirect > 5 else "medium" if indirect > 2 else "low",
             }
 
         return impact
 
-    def _count_indirect_dependencies(
-        self, node: str, graph: Dict[str, Set[str]]
-    ) -> int:
+    def _count_indirect_dependencies(self, node: str, graph: Dict[str, Set[str]]) -> int:
         """Count indirect dependencies of a node"""
         visited = set()
 
@@ -327,17 +319,10 @@ class DependencyResolver:
         return {
             "total_dependencies": len(dependencies),
             "total_nodes": len(graph),
-            "strong_dependencies": sum(
-                1 for d in dependencies if d.get("strength") == "strong"
-            ),
-            "weak_dependencies": sum(
-                1 for d in dependencies if d.get("strength") == "weak"
-            ),
-            "average_dependencies": sum(len(neighbors) for neighbors in graph.values())
-            / len(graph)
+            "strong_dependencies": sum(1 for d in dependencies if d.get("strength") == "strong"),
+            "weak_dependencies": sum(1 for d in dependencies if d.get("strength") == "weak"),
+            "average_dependencies": sum(len(neighbors) for neighbors in graph.values()) / len(graph)
             if graph
             else 0,
-            "max_dependencies": max(len(neighbors) for neighbors in graph.values())
-            if graph
-            else 0,
+            "max_dependencies": max(len(neighbors) for neighbors in graph.values()) if graph else 0,
         }

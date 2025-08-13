@@ -3,12 +3,13 @@ Celery Application Configuration
 엔터프라이즈 비동기 작업 큐 설정
 """
 
-import os
-from celery import Celery, Task
-from celery.signals import task_prerun, task_postrun, task_failure, task_success
-from kombu import Exchange, Queue
 import logging
+import os
 from datetime import timedelta
+
+from celery import Celery, Task
+from celery.signals import task_failure, task_postrun, task_prerun, task_success
+from kombu import Exchange, Queue
 
 logger = logging.getLogger(__name__)
 
@@ -149,9 +150,7 @@ celery_app.Task = TDeveloperTask
 
 # Signal handlers for monitoring
 @task_prerun.connect
-def task_prerun_handler(
-    sender=None, task_id=None, task=None, args=None, kwargs=None, **extra
-):
+def task_prerun_handler(sender=None, task_id=None, task=None, args=None, kwargs=None, **extra):
     """Before task execution"""
     logger.info(f"Starting task {task.name}[{task_id}]")
     # Record start time in Redis for monitoring
@@ -240,8 +239,9 @@ def update_task_metrics(task_name: str, state: str):
 
 def store_task_failure(task_id: str, task_name: str, error: str, traceback: str):
     """Store task failure information"""
-    import redis
     import json
+
+    import redis
 
     r = redis.Redis.from_url(REDIS_BACKEND)
 

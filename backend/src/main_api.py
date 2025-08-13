@@ -10,31 +10,25 @@ Features:
 - Project Preview & Download Functionality
 """
 
-from fastapi import (
-    FastAPI,
-    HTTPException,
-    BackgroundTasks,
-    Request,
-    WebSocket,
-    WebSocketDisconnect,
-)
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
-from fastapi.exception_handlers import request_validation_exception_handler
-from fastapi.exceptions import RequestValidationError
-import logging
-from pydantic import BaseModel
-from typing import Optional, Dict, Any, List, Set
-import os
-import sys
-import json
-import zipfile
-import shutil
 import asyncio
+import json
+import logging
+import os
+import shutil
 import subprocess
+import sys
+import uuid
+import zipfile
 from datetime import datetime
 from pathlib import Path
-import uuid
+from typing import Any, Dict, List, Optional, Set
+
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from pydantic import BaseModel
 
 # 프로젝트 루트 경로 추가
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -56,9 +50,7 @@ except Exception as e:
     logger.error(f"❌ Failed to load AWS environment variables: {e}")
     # 개발 환경에서는 계속 진행
     if os.getenv("ENVIRONMENT", "development") == "development":
-        logger.warning(
-            "⚠️ Continuing with local environment variables in development mode"
-        )
+        logger.warning("⚠️ Continuing with local environment variables in development mode")
     else:
         # 프로덕션에서는 실패 시 종료
         sys.exit(1)
@@ -106,10 +98,7 @@ except ImportError as e:
 
 # Bedrock AgentCore 통합
 try:
-    from integrations.bedrock_agentcore import (
-        bedrock_integration,
-        initialize_bedrock_agentcore,
-    )
+    from integrations.bedrock_agentcore import bedrock_integration, initialize_bedrock_agentcore
 
     BEDROCK_AVAILABLE = True
     logger.info("Bedrock AgentCore integration loaded")
@@ -153,9 +142,7 @@ class ConnectionManager:
             for conn in disconnected:
                 self.active_connections[project_id].discard(conn)
 
-    async def send_progress(
-        self, project_id: str, agent_id: int, progress: int, status: str
-    ):
+    async def send_progress(self, project_id: str, agent_id: int, progress: int, status: str):
         if project_id in self.active_connections:
             progress_data = {
                 "type": "progress",
@@ -223,9 +210,7 @@ class ProjectRequest(BaseModel):
 
     # 선택 필드
     idea: Optional[str] = None  # 자연어 프로젝트 설명
-    template: Optional[
-        str
-    ] = "blank"  # blank, dashboard, ecommerce, blog, portfolio, todo
+    template: Optional[str] = "blank"  # blank, dashboard, ecommerce, blog, portfolio, todo
     status: Optional[str] = "draft"
     userId: Optional[str] = "user-1"
     settings: Optional[ProjectSettings] = None
@@ -517,9 +502,7 @@ yarn-error.log*
     return project_path
 
 
-def generate_react_app_component(
-    project_name: str, description: str, features: List[str]
-) -> str:
+def generate_react_app_component(project_name: str, description: str, features: List[str]) -> str:
     """React App 컴포넌트 생성"""
 
     has_todo = "todo" in features
@@ -751,9 +734,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
     프로젝트 생성 - ECS Pipeline 통합
     9-Agent Pipeline을 통한 실제 프로젝트 생성
     """
-    project_id = (
-        f"project_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
-    )
+    project_id = f"project_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
 
     try:
         logger.info(f"Starting project generation: {project_id}")
@@ -763,9 +744,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
         user_input = request.idea or request.user_input or request.description
         project_name = request.name or request.project_name or "untitled"
         project_type = request.framework or request.project_type or "react"
-        features = (
-            request.settings.features if request.settings else request.features or []
-        )
+        features = request.settings.features if request.settings else request.features or []
 
         # 입력 검증
         if not user_input or not user_input.strip():
@@ -817,18 +796,14 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                     logger.info(f"ECS Pipeline completed successfully for {project_id}")
 
                     # 파이프라인 결과에서 다운로드 정보 추출
-                    pipeline_data = pipeline_result.get("metadata", {}).get(
-                        "pipeline_data", {}
-                    )
+                    pipeline_data = pipeline_result.get("metadata", {}).get("pipeline_data", {})
                     download_url = pipeline_data.get("download_url")
                     download_id = pipeline_data.get("download_id")
                     generated_code = pipeline_data.get("generated_code", {})
 
                     # 파이프라인이 완전히 실행되어 다운로드 URL이 있는 경우
                     if download_url and download_id:
-                        logger.info(
-                            f"Pipeline created downloadable package: {download_url}"
-                        )
+                        logger.info(f"Pipeline created downloadable package: {download_url}")
                         # ZIP 파일이 이미 생성됨, 추가 작업 불필요
                         zip_path = DOWNLOAD_PATH / f"{download_id}.zip"
                         if not zip_path.exists():
@@ -861,9 +836,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                             logger.warning(
                                 "ECS Pipeline didn't generate code, using Production Code Generator"
                             )
-                            await ws_manager.send_log(
-                                project_id, "프로덕션 코드 생성기 사용", "info"
-                            )
+                            await ws_manager.send_log(project_id, "프로덕션 코드 생성기 사용", "info")
 
                             # Production Code Generator로 프로젝트 생성
                             generation_result = code_generator.generate_project(
@@ -878,9 +851,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                             logger.info(f"Production code generated at {project_path}")
                         else:
                             # 최종 폴백: 템플릿 기반 생성
-                            logger.warning(
-                                "No Code Generator available, falling back to template"
-                            )
+                            logger.warning("No Code Generator available, falling back to template")
                             project_path = await generate_real_project(
                                 project_id=project_id,
                                 project_name=project_name,
@@ -894,9 +865,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                         logger.warning(
                             f"ECS Pipeline failed: {pipeline_result.get('errors', 'Unknown error')}, using Production Code Generator"
                         )
-                        await ws_manager.send_log(
-                            project_id, "프로덕션 코드 생성기로 전환", "warning"
-                        )
+                        await ws_manager.send_log(project_id, "프로덕션 코드 생성기로 전환", "warning")
 
                         generation_result = code_generator.generate_project(
                             project_id=project_id,
@@ -922,9 +891,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
             except Exception as e:
                 # 에러시 Production Code Generator 시도
                 if CODE_GENERATOR_AVAILABLE:
-                    logger.error(
-                        f"ECS Pipeline error: {e}, using Production Code Generator"
-                    )
+                    logger.error(f"ECS Pipeline error: {e}, using Production Code Generator")
                     await ws_manager.send_log(project_id, f"프로덕션 코드 생성기로 전환", "warning")
 
                     try:
@@ -948,9 +915,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                             features=enhanced_features,
                         )
                 else:
-                    logger.error(
-                        f"ECS Pipeline error: {e}, falling back to template generation"
-                    )
+                    logger.error(f"ECS Pipeline error: {e}, falling back to template generation")
                     await ws_manager.send_log(project_id, f"템플릿 모드로 전환", "warning")
                     project_path = await generate_real_project(
                         project_id=project_id,
@@ -962,9 +927,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
         else:
             # ECS Pipeline 사용 불가능 - Production Code Generator 우선 사용
             if CODE_GENERATOR_AVAILABLE:
-                logger.info(
-                    "ECS Pipeline not available, using Production Code Generator"
-                )
+                logger.info("ECS Pipeline not available, using Production Code Generator")
                 await ws_manager.send_log(project_id, "프로덕션 코드 생성기 사용", "info")
 
                 try:
@@ -978,9 +941,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                     project_path = Path(generation_result["project_path"])
                     logger.info(f"Production code generated at {project_path}")
                 except Exception as e:
-                    logger.error(
-                        f"Code Generator failed: {e}, falling back to template"
-                    )
+                    logger.error(f"Code Generator failed: {e}, falling back to template")
                     await ws_manager.send_log(project_id, "템플릿 모드로 전환", "warning")
                     project_path = await generate_real_project(
                         project_id=project_id,
@@ -1028,16 +989,10 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                 # Bedrock에서 강화된 정보 추출
                 if bedrock_enhancement and bedrock_enhancement.get("enhanced_steps"):
                     for step in bedrock_enhancement["enhanced_steps"]:
-                        if step["agent"] == "nl_input" and step.get("result", {}).get(
-                            "success"
-                        ):
-                            parsed_response = step["result"]["result"].get(
-                                "parsed_response", {}
-                            )
+                        if step["agent"] == "nl_input" and step.get("result", {}).get("success"):
+                            parsed_response = step["result"]["result"].get("parsed_response", {})
                             if parsed_response:
-                                enhanced_features.extend(
-                                    parsed_response.get("features", [])
-                                )
+                                enhanced_features.extend(parsed_response.get("features", []))
                                 if parsed_response.get("project_type"):
                                     project_type = parsed_response["project_type"]
 
@@ -1104,10 +1059,7 @@ async def generate_project(request: ProjectRequest, background_tasks: Background
                 "original_features": request.features or [],
                 "enhancement_steps": len(bedrock_enhancement.get("enhanced_steps", [])),
                 "agent_insights": [
-                    step.get("result", {})
-                    .get("result", {})
-                    .get("raw_response", "")[:100]
-                    + "..."
+                    step.get("result", {}).get("result", {}).get("raw_response", "")[:100] + "..."
                     for step in bedrock_enhancement.get("enhanced_steps", [])
                     if step.get("result", {}).get("success")
                 ],
@@ -1151,9 +1103,7 @@ async def download_project(project_id: str):
 
         if not zip_path.exists():
             logger.warning(f"ZIP file not found: {zip_path}")
-            raise HTTPException(
-                status_code=404, detail="프로젝트를 찾을 수 없습니다. 파일이 만료되었거나 삭제되었을 수 있습니다."
-            )
+            raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다. 파일이 만료되었거나 삭제되었을 수 있습니다.")
 
         # 파일 크기 확인
         file_size = zip_path.stat().st_size
@@ -1486,9 +1436,7 @@ async def startup_event():
         except Exception as e:
             logger.error(f"❌ Bedrock AgentCore initialization error: {e}")
     else:
-        logger.info(
-            "⚠️ Bedrock AgentCore not available, running without AI enhancement"
-        )
+        logger.info("⚠️ Bedrock AgentCore not available, running without AI enhancement")
 
     logger.info("🚀 T-Developer API ready with 3-framework integration:")
     logger.info("   • AWS Agent Squad: ✅ Integrated")

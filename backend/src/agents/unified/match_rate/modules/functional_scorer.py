@@ -3,8 +3,8 @@ Functional Scorer Module
 Scores components based on functional requirements matching
 """
 
-from typing import Dict, List, Any, Optional
 import re
+from typing import Any, Dict, List, Optional
 
 
 class FunctionalScorer:
@@ -31,15 +31,9 @@ class FunctionalScorer:
 
             # Score different functional aspects
             scores = {
-                "feature_coverage": self._score_feature_coverage(
-                    capabilities, func_requirements
-                ),
-                "use_case_match": self._score_use_case_matching(
-                    capabilities, func_requirements
-                ),
-                "workflow_support": self._score_workflow_support(
-                    capabilities, func_requirements
-                ),
+                "feature_coverage": self._score_feature_coverage(capabilities, func_requirements),
+                "use_case_match": self._score_use_case_matching(capabilities, func_requirements),
+                "workflow_support": self._score_workflow_support(capabilities, func_requirements),
                 "integration_capabilities": self._score_integration_capabilities(
                     capabilities, func_requirements
                 ),
@@ -57,9 +51,7 @@ class FunctionalScorer:
             functional_scores[component_id] = {
                 "individual_scores": scores,
                 "total_score": total_score,
-                "coverage_analysis": self._analyze_coverage(
-                    capabilities, func_requirements
-                ),
+                "coverage_analysis": self._analyze_coverage(capabilities, func_requirements),
                 "gap_analysis": self._analyze_gaps(capabilities, func_requirements),
                 "recommendations": self._generate_functional_recommendations(scores),
             }
@@ -224,15 +216,11 @@ class FunctionalScorer:
 
         return supported_workflows / total_workflows if total_workflows > 0 else 0.7
 
-    def _score_integration_capabilities(
-        self, capabilities: Dict, requirements: Dict
-    ) -> float:
+    def _score_integration_capabilities(self, capabilities: Dict, requirements: Dict) -> float:
         """Score integration capabilities"""
 
         required_integrations = requirements.get("integrations", [])
-        available_integrations = capabilities.get(
-            "integrations", []
-        ) + capabilities.get("apis", [])
+        available_integrations = capabilities.get("integrations", []) + capabilities.get("apis", [])
 
         if not required_integrations:
             return 0.8  # Good default if no specific integrations required
@@ -251,19 +239,14 @@ class FunctionalScorer:
             integration_score = 0
             for int_type, keywords in integration_types.items():
                 if any(keyword in str(req_integration).lower() for keyword in keywords):
-                    if any(
-                        keyword in str(available_integrations).lower()
-                        for keyword in keywords
-                    ):
+                    if any(keyword in str(available_integrations).lower() for keyword in keywords):
                         integration_score = 1.0
                         break
             score += integration_score
 
         return score / len(required_integrations)
 
-    def _score_customization_support(
-        self, capabilities: Dict, requirements: Dict
-    ) -> float:
+    def _score_customization_support(self, capabilities: Dict, requirements: Dict) -> float:
         """Score customization support"""
 
         customization_indicators = [
@@ -278,9 +261,7 @@ class FunctionalScorer:
         req_text = str(requirements).lower()
         cap_text = str(capabilities).lower()
 
-        needs_customization = any(
-            indicator in req_text for indicator in customization_indicators
-        )
+        needs_customization = any(indicator in req_text for indicator in customization_indicators)
         supports_customization = any(
             indicator in cap_text for indicator in customization_indicators
         )
@@ -290,9 +271,7 @@ class FunctionalScorer:
 
         return 1.0 if supports_customization else 0.3
 
-    def _score_scalability_features(
-        self, capabilities: Dict, requirements: Dict
-    ) -> float:
+    def _score_scalability_features(self, capabilities: Dict, requirements: Dict) -> float:
         """Score scalability features"""
 
         scalability_indicators = [
@@ -306,12 +285,8 @@ class FunctionalScorer:
         req_text = str(requirements).lower()
         cap_text = str(capabilities).lower()
 
-        needs_scalability = any(
-            indicator in req_text for indicator in scalability_indicators
-        )
-        supports_scalability = any(
-            indicator in cap_text for indicator in scalability_indicators
-        )
+        needs_scalability = any(indicator in req_text for indicator in scalability_indicators)
+        supports_scalability = any(indicator in cap_text for indicator in scalability_indicators)
 
         if not needs_scalability:
             return 0.8  # Good default if scalability not critical
@@ -333,26 +308,16 @@ class FunctionalScorer:
         total = sum(scores[category] * weights[category] for category in weights.keys())
         return min(1.0, max(0.0, total))
 
-    def _analyze_coverage(
-        self, capabilities: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _analyze_coverage(self, capabilities: Dict, requirements: Dict) -> Dict[str, Any]:
         """Analyze requirement coverage"""
 
         return {
-            "covered_requirements": self._find_covered_requirements(
-                capabilities, requirements
-            ),
-            "coverage_percentage": self._calculate_coverage_percentage(
-                capabilities, requirements
-            ),
-            "critical_coverage": self._analyze_critical_coverage(
-                capabilities, requirements
-            ),
+            "covered_requirements": self._find_covered_requirements(capabilities, requirements),
+            "coverage_percentage": self._calculate_coverage_percentage(capabilities, requirements),
+            "critical_coverage": self._analyze_critical_coverage(capabilities, requirements),
         }
 
-    def _find_covered_requirements(
-        self, capabilities: Dict, requirements: Dict
-    ) -> List[str]:
+    def _find_covered_requirements(self, capabilities: Dict, requirements: Dict) -> List[str]:
         """Find which requirements are covered"""
 
         covered = []
@@ -373,9 +338,7 @@ class FunctionalScorer:
         # Simple keyword matching
         return any(word in cap_text for word in req_words)
 
-    def _calculate_coverage_percentage(
-        self, capabilities: Dict, requirements: Dict
-    ) -> float:
+    def _calculate_coverage_percentage(self, capabilities: Dict, requirements: Dict) -> float:
         """Calculate overall coverage percentage"""
 
         total_requirements = len(requirements.get("features", [])) + len(
@@ -383,15 +346,9 @@ class FunctionalScorer:
         )
         covered_count = len(self._find_covered_requirements(capabilities, requirements))
 
-        return (
-            (covered_count / total_requirements) * 100
-            if total_requirements > 0
-            else 100
-        )
+        return (covered_count / total_requirements) * 100 if total_requirements > 0 else 100
 
-    def _analyze_critical_coverage(
-        self, capabilities: Dict, requirements: Dict
-    ) -> Dict[str, bool]:
+    def _analyze_critical_coverage(self, capabilities: Dict, requirements: Dict) -> Dict[str, bool]:
         """Analyze coverage of critical requirements"""
 
         critical_features = [
@@ -419,18 +376,14 @@ class FunctionalScorer:
 
         return gaps
 
-    def _generate_functional_recommendations(
-        self, scores: Dict[str, float]
-    ) -> List[str]:
+    def _generate_functional_recommendations(self, scores: Dict[str, float]) -> List[str]:
         """Generate recommendations based on functional scores"""
 
         recommendations = []
 
         for category, score in scores.items():
             if score < 0.5:
-                recommendations.append(
-                    f"Low {category.replace('_', ' ')} - consider alternatives"
-                )
+                recommendations.append(f"Low {category.replace('_', ' ')} - consider alternatives")
             elif score < 0.7:
                 recommendations.append(
                     f"Moderate {category.replace('_', ' ')} - may need customization"

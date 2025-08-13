@@ -3,30 +3,30 @@ OpenTelemetry Tracing
 분산 트레이싱 및 모니터링
 """
 
-import os
-from typing import Optional, Dict, Any, Callable
-from functools import wraps
 import logging
+import os
+from functools import wraps
+from typing import Any, Callable, Dict, Optional
 
-from opentelemetry import trace, metrics, baggage
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry import baggage, metrics, trace
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
+from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
+from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.instrumentation.redis import RedisInstrumentor
-from opentelemetry.instrumentation.celery import CeleryInstrumentor
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
+from opentelemetry.metrics import get_meter_provider, set_meter_provider
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.propagators.b3 import B3MultiFormat
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
+from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-from opentelemetry.trace import Status, StatusCode, SpanKind
-from opentelemetry.metrics import get_meter_provider, set_meter_provider
+from opentelemetry.trace import SpanKind, Status, StatusCode
 from prometheus_client import start_http_server
 
 logger = logging.getLogger(__name__)
@@ -43,9 +43,7 @@ class TracingConfig:
         # Exporters
         self.otlp_endpoint = os.getenv("OTLP_ENDPOINT", "localhost:4317")
         self.jaeger_endpoint = os.getenv("JAEGER_ENDPOINT", "localhost:14250")
-        self.use_console_exporter = (
-            os.getenv("USE_CONSOLE_EXPORTER", "false").lower() == "true"
-        )
+        self.use_console_exporter = os.getenv("USE_CONSOLE_EXPORTER", "false").lower() == "true"
 
         # Metrics
         self.prometheus_port = int(os.getenv("PROMETHEUS_PORT", "9090"))
@@ -124,9 +122,7 @@ class TelemetryManager:
 
         # Add console exporter for development
         if self.config.use_console_exporter:
-            self.tracer_provider.add_span_processor(
-                BatchSpanProcessor(ConsoleSpanExporter())
-            )
+            self.tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
         # Set global tracer provider
         trace.set_tracer_provider(self.tracer_provider)
@@ -135,9 +131,7 @@ class TelemetryManager:
         set_global_textmap(B3MultiFormat())
 
         # Get tracer
-        self.tracer = trace.get_tracer(
-            self.config.service_name, self.config.service_version
-        )
+        self.tracer = trace.get_tracer(self.config.service_name, self.config.service_version)
 
     def _init_metrics(self):
         """메트릭 초기화"""
@@ -150,9 +144,7 @@ class TelemetryManager:
         set_meter_provider(self.meter_provider)
 
         # Get meter
-        self.meter = metrics.get_meter(
-            self.config.service_name, self.config.service_version
-        )
+        self.meter = metrics.get_meter(self.config.service_name, self.config.service_version)
 
         # Create metrics
         self.request_counter = self.meter.create_counter(
@@ -178,9 +170,7 @@ class TelemetryManager:
         # Start Prometheus metrics server
         if self.config.environment != "testing":
             start_http_server(self.config.prometheus_port)
-            logger.info(
-                f"Prometheus metrics available at port {self.config.prometheus_port}"
-            )
+            logger.info(f"Prometheus metrics available at port {self.config.prometheus_port}")
 
     def _auto_instrument(self):
         """자동 계측"""
@@ -195,9 +185,7 @@ class TelemetryManager:
         # SQLAlchemy
         from ..database.base import engine
 
-        SQLAlchemyInstrumentor().instrument(
-            engine=engine, tracer_provider=self.tracer_provider
-        )
+        SQLAlchemyInstrumentor().instrument(engine=engine, tracer_provider=self.tracer_provider)
 
         # Redis
         RedisInstrumentor().instrument(tracer_provider=self.tracer_provider)
@@ -326,8 +314,6 @@ telemetry = TelemetryManager()
 
 
 # Decorator for tracing
-def trace_method(
-    name: Optional[str] = None, kind: SpanKind = SpanKind.INTERNAL, **attributes
-):
+def trace_method(name: Optional[str] = None, kind: SpanKind = SpanKind.INTERNAL, **attributes):
     """메서드 트레이싱 데코레이터"""
     return telemetry.trace_function(name, kind, attributes)

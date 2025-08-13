@@ -3,17 +3,18 @@ Agno Framework Agent Registry
 동적으로 생성된 에이전트들을 등록하고 저장하는 시스템
 """
 
-import json
-import pickle
-import hashlib
-from pathlib import Path
-from typing import Dict, Any, List, Optional
-from datetime import datetime
 import asyncio
-import aiofiles
-from dataclasses import dataclass, asdict
-import sqlite3
+import hashlib
+import json
 import os
+import pickle
+import sqlite3
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import aiofiles
 
 
 @dataclass
@@ -109,9 +110,7 @@ class AgentRegistry:
         # 인덱스 생성
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_agent_type ON agents(type)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_agent_name ON agents(name)")
-        cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_usage_agent ON agent_usage(agent_id)"
-        )
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_usage_agent ON agent_usage(agent_id)")
 
         conn.commit()
         conn.close()
@@ -463,9 +462,7 @@ class AgentRegistry:
         total_usage = cursor.fetchone()[0] or 0
 
         # 평균 실행 시간
-        cursor.execute(
-            "SELECT AVG(execution_time_ms) FROM agent_usage WHERE success = 1"
-        )
+        cursor.execute("SELECT AVG(execution_time_ms) FROM agent_usage WHERE success = 1")
         avg_execution_time = cursor.fetchone()[0] or 0
 
         conn.close()

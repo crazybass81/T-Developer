@@ -3,8 +3,8 @@ Cost Optimizer Module
 Optimizes infrastructure and operational costs
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class CostCategory(Enum):
@@ -65,16 +65,10 @@ class CostOptimizer:
         transactions = requirements.get("transactions_per_day", 10000)
 
         costs = {
-            CostCategory.COMPUTE.value: self._calculate_compute_costs(
-                users, transactions
-            ),
+            CostCategory.COMPUTE.value: self._calculate_compute_costs(users, transactions),
             CostCategory.STORAGE.value: self._calculate_storage_costs(data_volume),
-            CostCategory.NETWORK.value: self._calculate_network_costs(
-                users, data_volume
-            ),
-            CostCategory.DATABASE.value: self._calculate_database_costs(
-                transactions, data_volume
-            ),
+            CostCategory.NETWORK.value: self._calculate_network_costs(users, data_volume),
+            CostCategory.DATABASE.value: self._calculate_database_costs(transactions, data_volume),
             CostCategory.MONITORING.value: self._calculate_monitoring_costs(users),
             CostCategory.SUPPORT.value: self._calculate_support_costs(requirements),
         }
@@ -170,8 +164,7 @@ class CostOptimizer:
                     "category": CostCategory.COMPUTE.value,
                     "type": "reserved_instances",
                     "description": "Use Reserved Instances for predictable workloads",
-                    "potential_savings": costs["breakdown"][CostCategory.COMPUTE.value]
-                    * 0.3,
+                    "potential_savings": costs["breakdown"][CostCategory.COMPUTE.value] * 0.3,
                     "effort": "low",
                     "risk": "low",
                 }
@@ -182,8 +175,7 @@ class CostOptimizer:
                     "category": CostCategory.COMPUTE.value,
                     "type": "spot_instances",
                     "description": "Use Spot Instances for batch processing",
-                    "potential_savings": costs["breakdown"][CostCategory.COMPUTE.value]
-                    * 0.7,
+                    "potential_savings": costs["breakdown"][CostCategory.COMPUTE.value] * 0.7,
                     "effort": "medium",
                     "risk": "medium",
                 }
@@ -196,8 +188,7 @@ class CostOptimizer:
                     "category": CostCategory.STORAGE.value,
                     "type": "s3_lifecycle",
                     "description": "Implement S3 lifecycle policies",
-                    "potential_savings": costs["breakdown"][CostCategory.STORAGE.value]
-                    * 0.4,
+                    "potential_savings": costs["breakdown"][CostCategory.STORAGE.value] * 0.4,
                     "effort": "low",
                     "risk": "low",
                 }
@@ -210,8 +201,7 @@ class CostOptimizer:
                     "category": CostCategory.DATABASE.value,
                     "type": "read_replicas",
                     "description": "Use read replicas to reduce main DB load",
-                    "potential_savings": costs["breakdown"][CostCategory.DATABASE.value]
-                    * 0.2,
+                    "potential_savings": costs["breakdown"][CostCategory.DATABASE.value] * 0.2,
                     "effort": "medium",
                     "risk": "low",
                 }
@@ -231,9 +221,7 @@ class CostOptimizer:
 
         return opportunities
 
-    def _generate_optimization_plan(
-        self, opportunities: List[Dict], constraints: Dict
-    ) -> Dict:
+    def _generate_optimization_plan(self, opportunities: List[Dict], constraints: Dict) -> Dict:
         """Generate optimization plan"""
 
         # Filter opportunities based on constraints
@@ -313,15 +301,12 @@ class CostOptimizer:
     def _calculate_savings(self, current_costs: Dict, plan: Dict) -> Dict:
         """Calculate potential savings"""
 
-        total_savings = sum(
-            opp["potential_savings"] for opp in plan["selected_optimizations"]
-        )
+        total_savings = sum(opp["potential_savings"] for opp in plan["selected_optimizations"])
 
         return {
             "monthly_savings": total_savings,
             "yearly_savings": total_savings * 12,
-            "percentage_reduction": (total_savings / current_costs["monthly_total"])
-            * 100,
+            "percentage_reduction": (total_savings / current_costs["monthly_total"]) * 100,
             "breakeven_months": plan["implementation_cost"] / total_savings
             if total_savings > 0
             else float("inf"),
@@ -383,15 +368,12 @@ class CostOptimizer:
             elif month < 6:
                 # 50% of optimizations implemented
                 savings = sum(
-                    opp["potential_savings"] * 0.5
-                    for opp in plan["selected_optimizations"]
+                    opp["potential_savings"] * 0.5 for opp in plan["selected_optimizations"]
                 )
                 cost = current_monthly - savings
             else:
                 # Full optimizations implemented
-                savings = sum(
-                    opp["potential_savings"] for opp in plan["selected_optimizations"]
-                )
+                savings = sum(opp["potential_savings"] for opp in plan["selected_optimizations"])
                 cost = current_monthly - savings
 
             # Add growth factor
@@ -425,14 +407,10 @@ class CostOptimizer:
             else 0,
             "payback_period_months": savings["breakeven_months"],
             "net_present_value": self._calculate_npv(investment, annual_return, 3),
-            "internal_rate_of_return": self._calculate_irr(
-                investment, annual_return, 3
-            ),
+            "internal_rate_of_return": self._calculate_irr(investment, annual_return, 3),
         }
 
-    def _calculate_npv(
-        self, investment: float, annual_return: float, years: int
-    ) -> float:
+    def _calculate_npv(self, investment: float, annual_return: float, years: int) -> float:
         """Calculate Net Present Value"""
 
         discount_rate = 0.1  # 10% discount rate
@@ -443,9 +421,7 @@ class CostOptimizer:
 
         return npv
 
-    def _calculate_irr(
-        self, investment: float, annual_return: float, years: int
-    ) -> float:
+    def _calculate_irr(self, investment: float, annual_return: float, years: int) -> float:
         """Calculate Internal Rate of Return (simplified)"""
 
         # Simplified IRR calculation

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # scripts/test_uv_compatibility.py
 
-import subprocess
-import time
 import json
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -22,9 +22,7 @@ class UvCompatibilityTester:
     def test_individual_packages(self):
         """각 패키지를 개별적으로 테스트"""
         with open(self.requirements_file, "r") as f:
-            packages = [
-                line.strip() for line in f if line.strip() and not line.startswith("#")
-            ]
+            packages = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
         self.results["total_packages"] = len(packages)
 

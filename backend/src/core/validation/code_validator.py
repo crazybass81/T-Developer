@@ -4,15 +4,15 @@ Comprehensive Python code validation and security checks
 """
 
 import ast
-import re
 import asyncio
-from typing import List, Dict, Any, Optional, Tuple
+import hashlib
+import logging
+import os
+import re
 import subprocess
 import tempfile
-import os
-import hashlib
 from dataclasses import dataclass
-import logging
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -156,9 +156,7 @@ class CodeValidator:
         # Check for potential SQL injection
         if "SELECT" in code.upper() or "INSERT" in code.upper():
             if not re.search(r"\?|%s|:\w+", code):  # No parameterized queries
-                self.warnings.append(
-                    "Use parameterized queries to prevent SQL injection"
-                )
+                self.warnings.append("Use parameterized queries to prevent SQL injection")
 
         # Check for hardcoded secrets
         secret_patterns = [
@@ -186,22 +184,16 @@ class CodeValidator:
             tree = ast.parse(code)
 
             # Find all class definitions
-            classes = [
-                node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
-            ]
+            classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
 
             if not classes:
-                self.errors.append(
-                    "No class definition found. Agent must be defined as a class."
-                )
+                self.errors.append("No class definition found. Agent must be defined as a class.")
                 return
 
             # Check for required methods in the main class
             main_class = classes[0]  # Assume first class is the agent
             method_names = [
-                node.name
-                for node in main_class.body
-                if isinstance(node, ast.FunctionDef)
+                node.name for node in main_class.body if isinstance(node, ast.FunctionDef)
             ]
 
             for required_method in self.REQUIRED_METHODS:
@@ -226,9 +218,7 @@ class CodeValidator:
                 # Check parameters
                 args = execute_method.args
                 if len(args.args) < 2:  # self + at least one parameter
-                    self.warnings.append(
-                        "execute() method should accept input parameters"
-                    )
+                    self.warnings.append("execute() method should accept input parameters")
 
         except Exception as e:
             self.errors.append(f"Failed to analyze code structure: {str(e)}")
@@ -243,16 +233,12 @@ class CodeValidator:
                     for alias in node.names:
                         module = alias.name.split(".")[0]
                         if module not in self.ALLOWED_IMPORTS:
-                            self.warnings.append(
-                                f"Import '{module}' is not in the allowed list"
-                            )
+                            self.warnings.append(f"Import '{module}' is not in the allowed list")
 
                 elif isinstance(node, ast.ImportFrom):
                     module = node.module.split(".")[0] if node.module else ""
                     if module and module not in self.ALLOWED_IMPORTS:
-                        self.warnings.append(
-                            f"Import from '{module}' is not in the allowed list"
-                        )
+                        self.warnings.append(f"Import from '{module}' is not in the allowed list")
 
         except Exception as e:
             self.warnings.append(f"Could not validate imports: {str(e)}")
@@ -266,16 +252,10 @@ class CodeValidator:
             lines_of_code = len(code.splitlines())
 
             # Count functions and classes
-            functions = [
-                node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
-            ]
-            classes = [
-                node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
-            ]
+            functions = [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
+            classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
             imports = [
-                node
-                for node in ast.walk(tree)
-                if isinstance(node, (ast.Import, ast.ImportFrom))
+                node for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom))
             ]
 
             # Calculate cyclomatic complexity (simplified)
@@ -343,15 +323,11 @@ class CodeValidator:
 
         # Check for logging
         if "print(" in code:
-            self.suggestions.append(
-                "Consider using logging instead of print statements"
-            )
+            self.suggestions.append("Consider using logging instead of print statements")
 
         # Check for magic numbers
         if re.search(r"[^0-9]\d{3,}[^0-9]", code):
-            self.suggestions.append(
-                "Consider using named constants instead of magic numbers"
-            )
+            self.suggestions.append("Consider using named constants instead of magic numbers")
 
         # Check for TODO comments
         if "TODO" in code or "FIXME" in code:
@@ -359,18 +335,14 @@ class CodeValidator:
 
         # Check for proper resource management
         if "open(" in code and "with" not in code:
-            self.warnings.append(
-                "Use context managers (with statement) for file operations"
-            )
+            self.warnings.append("Use context managers (with statement) for file operations")
 
     def _validate_type_hints(self, code: str):
         """Validate type hints usage"""
         try:
             tree = ast.parse(code)
 
-            functions = [
-                node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)
-            ]
+            functions = [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
 
             functions_without_hints = 0
             for func in functions:
@@ -399,9 +371,7 @@ class CodeValidator:
             tree = ast.parse(code)
 
             # Check main class docstring
-            classes = [
-                node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
-            ]
+            classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
             if classes:
                 main_class = classes[0]
                 if not ast.get_docstring(main_class):
@@ -410,12 +380,8 @@ class CodeValidator:
             # Check critical method docstrings
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
-                    if node.name in self.REQUIRED_METHODS and not ast.get_docstring(
-                        node
-                    ):
-                        self.warnings.append(
-                            f"Required method '{node.name}' lacks a docstring"
-                        )
+                    if node.name in self.REQUIRED_METHODS and not ast.get_docstring(node):
+                        self.warnings.append(f"Required method '{node.name}' lacks a docstring")
 
         except Exception as e:
             logger.debug(f"Could not validate docstrings: {e}")

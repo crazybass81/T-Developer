@@ -7,10 +7,11 @@ T-Developer MVP - Basic Entry Point (Skeleton)
 Features: 기본 health check만 제공
 Production API: src/main_api.py (9-Agent Pipeline, Bedrock 통합)
 """
+import os
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-import os
 
 app = FastAPI(
     title="T-Developer MVP",
@@ -38,6 +39,4 @@ async def health_check():
 
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)), reload=True
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)), reload=True)

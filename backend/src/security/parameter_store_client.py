@@ -11,15 +11,16 @@ TDD GREEN Phase: 테스트 통과하는 최소 코드
 """
 
 import asyncio
-import boto3
 import json
 import logging
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
-from dataclasses import dataclass
-from concurrent.futures import ThreadPoolExecutor
+
+import boto3
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
@@ -104,9 +105,7 @@ class ParameterCache:
             # 크기 제한 확인
             if len(self._cache) >= self.config.max_size:
                 # 가장 오래된 항목 제거
-                oldest_key = min(
-                    self._cache.keys(), key=lambda k: self._cache[k]["timestamp"]
-                )
+                oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k]["timestamp"])
                 del self._cache[oldest_key]
 
             self._cache[key] = {"data": value, "timestamp": time.time()}
@@ -176,9 +175,7 @@ class ParameterStoreClient:
             if error_code == "ParameterNotFound":
                 raise Exception(f"ParameterNotFound: {name}")
             else:
-                raise Exception(
-                    f"AWS Error {error_code}: {e.response['Error']['Message']}"
-                )
+                raise Exception(f"AWS Error {error_code}: {e.response['Error']['Message']}")
 
     def get_parameter_value(self, name: str, json_key: Optional[str] = None) -> Any:
         """파라미터 값 직접 조회"""
@@ -215,9 +212,7 @@ class ParameterStoreClient:
                 for i in range(0, len(uncached_names), 10):
                     batch = uncached_names[i : i + 10]
 
-                    response = self.client.get_parameters(
-                        Names=batch, WithDecryption=decrypt
-                    )
+                    response = self.client.get_parameters(Names=batch, WithDecryption=decrypt)
 
                     # 성공한 파라미터들 처리
                     for parameter in response["Parameters"]:
@@ -274,14 +269,10 @@ class ParameterStoreClient:
 
         return results
 
-    async def get_parameter_async(
-        self, name: str, decrypt: bool = True
-    ) -> Dict[str, Any]:
+    async def get_parameter_async(self, name: str, decrypt: bool = True) -> Dict[str, Any]:
         """비동기 단일 파라미터 조회"""
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            self._thread_pool, self.get_parameter, name, decrypt
-        )
+        return await loop.run_in_executor(self._thread_pool, self.get_parameter, name, decrypt)
 
     async def batch_get_parameters_async(
         self, names: List[str], decrypt: bool = True

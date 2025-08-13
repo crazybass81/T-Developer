@@ -3,8 +3,8 @@ Scalability Analyzer Module
 Analyzes scalability requirements and provides recommendations
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ScalabilityType(Enum):
@@ -213,9 +213,7 @@ class ScalabilityAnalyzer:
             "predictive_scaling": load["growth_rate"] > 0.3,
         }
 
-    def _generate_recommendations(
-        self, bottlenecks: List[Dict], strategy: Dict
-    ) -> List[str]:
+    def _generate_recommendations(self, bottlenecks: List[Dict], strategy: Dict) -> List[str]:
         """Generate scalability recommendations"""
 
         recommendations = []
@@ -239,9 +237,7 @@ class ScalabilityAnalyzer:
             recommendations.append("Deploy to multiple regions for global scalability")
 
         if strategy["type"] == ScalabilityType.ELASTIC.value:
-            recommendations.append(
-                "Implement predictive auto-scaling based on historical patterns"
-            )
+            recommendations.append("Implement predictive auto-scaling based on historical patterns")
 
         return recommendations
 

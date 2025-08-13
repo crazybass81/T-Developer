@@ -1,8 +1,8 @@
-from typing import Dict, Any, Optional, List
-import json
 import asyncio
+import json
 from abc import ABC, abstractmethod
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 class StateStore(ABC):
@@ -49,11 +49,7 @@ class MemoryStateStore(StateStore):
 
     async def list_states(self, prefix: str = "") -> List[str]:
         async with self._lock:
-            return [
-                agent_id
-                for agent_id in self._states.keys()
-                if agent_id.startswith(prefix)
-            ]
+            return [agent_id for agent_id in self._states.keys() if agent_id.startswith(prefix)]
 
 
 class FileStateStore(StateStore):
@@ -90,8 +86,8 @@ class FileStateStore(StateStore):
             pass
 
     async def list_states(self, prefix: str = "") -> List[str]:
-        import os
         import glob
+        import os
 
         pattern = f"{self.base_path}/{prefix}*.json"
         files = glob.glob(pattern)

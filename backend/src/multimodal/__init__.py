@@ -8,10 +8,10 @@ This module provides comprehensive multimodal processing capabilities including:
 - Unified API for seamless integration
 """
 
+from .audio_processor import AudioVideoProcessor
+from .image_processor import MultiModalImageProcessor
 from .multimodal_processor import MultiModalProcessor
 from .text_processor import MultiModalTextProcessor
-from .image_processor import MultiModalImageProcessor
-from .audio_processor import AudioVideoProcessor
 from .unified_api import UnifiedMultiModalAPI
 
 __all__ = [

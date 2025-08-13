@@ -18,20 +18,20 @@ jobs:
   agent-constraints:
     name: Agent Constraints Validation
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-    
+
     - name: Install UV
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-    
+
     - name: Validate Agent Memory Constraints
       run: |
         echo "🔍 Validating agent memory constraints..."
@@ -39,10 +39,10 @@ jobs:
         import os
         import sys
         from pathlib import Path
-        
+
         MAX_SIZE_BYTES = 6656  # 6.5KB
         violations = []
-        
+
         agents_dir = Path("backend/src/agents")
         if agents_dir.exists():
             for agent_file in agents_dir.rglob("*.py"):
@@ -50,7 +50,7 @@ jobs:
                     size = agent_file.stat().st_size
                     if size > MAX_SIZE_BYTES:
                         violations.append(f"{agent_file}: {size/1024:.2f}KB")
-        
+
         if violations:
             print("❌ Agent size violations found:")
             for v in violations:
@@ -59,7 +59,7 @@ jobs:
         else:
             print("✅ All agents meet 6.5KB constraint")
         EOF
-    
+
     - name: Speed Benchmark Test
       run: |
         echo "⚡ Testing instantiation speed..."
@@ -67,21 +67,21 @@ jobs:
         import time
         import importlib.util
         from pathlib import Path
-        
+
         MAX_TIME_US = 3  # 3 microseconds
-        
+
         # Simple benchmark simulation
         start = time.perf_counter()
         # Simulate agent instantiation
         class TestAgent:
             def __init__(self):
                 self.data = {"test": "value"}
-        
+
         agent = TestAgent()
         end = time.perf_counter()
-        
+
         elapsed_us = (end - start) * 1_000_000
-        
+
         if elapsed_us <= MAX_TIME_US:
             print(f"✅ Instantiation speed: {elapsed_us:.2f}μs (target: <3μs)")
         else:
@@ -92,22 +92,22 @@ jobs:
   evolution-safety:
     name: Evolution Safety Validation
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-    
+
     - name: Check for Malicious Patterns
       run: |
         echo "🛡️ Scanning for malicious evolution patterns..."
         python3 << 'EOF'
         import re
         from pathlib import Path
-        
+
         # 위험한 패턴 정의
         dangerous_patterns = [
             (r'eval\s*\(', 'eval() usage detected'),
@@ -117,9 +117,9 @@ jobs:
             (r'subprocess\..*shell=True', 'Shell command with shell=True'),
             (r'pickle\.loads', 'Unsafe deserialization'),
         ]
-        
+
         violations = []
-        
+
         src_dir = Path("backend/src")
         if src_dir.exists():
             for py_file in src_dir.rglob("*.py"):
@@ -127,7 +127,7 @@ jobs:
                 for pattern, message in dangerous_patterns:
                     if re.search(pattern, content):
                         violations.append(f"{py_file}: {message}")
-        
+
         if violations:
             print("⚠️ Potential security issues found:")
             for v in violations:
@@ -136,7 +136,7 @@ jobs:
         else:
             print("✅ No dangerous patterns detected")
         EOF
-    
+
     - name: Validate Evolution Boundaries
       run: |
         echo "🔒 Checking evolution boundaries..."
@@ -150,26 +150,26 @@ jobs:
   registry-validation:
     name: Agent Registry Validation
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Validate Registry Structure
       run: |
         echo "📋 Validating agent registry..."
         python3 << 'EOF'
         import json
         from pathlib import Path
-        
+
         registry_path = Path("backend/data/agents/registry.json")
-        
+
         if registry_path.exists():
             try:
                 with open(registry_path) as f:
                     registry = json.load(f)
-                
+
                 print(f"✅ Registry contains {len(registry.get('agents', []))} agents")
-                
+
                 # Validate each agent entry
                 for agent in registry.get('agents', []):
                     required_fields = ['id', 'name', 'version', 'size_kb']
@@ -178,7 +178,7 @@ jobs:
                         print(f"⚠️ Agent {agent.get('name', 'unknown')} missing fields: {missing}")
                     elif agent['size_kb'] > 6.5:
                         print(f"❌ Agent {agent['name']} exceeds size limit: {agent['size_kb']}KB")
-                
+
             except json.JSONDecodeError:
                 print("❌ Registry file is not valid JSON")
         else:
@@ -189,15 +189,15 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     needs: [agent-constraints, evolution-safety]
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-    
+
     - name: Install UV and dependencies
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -207,13 +207,13 @@ jobs:
         source .venv/bin/activate
         uv pip install -r requirements.txt
         uv pip install pytest pytest-cov
-    
+
     - name: Run Evolution Tests
       run: |
         cd backend
         source .venv/bin/activate
         pytest tests/evolution/ -v --tb=short || echo "⚠️ Evolution tests not found"
-    
+
     - name: Run Registry Tests
       run: |
         cd backend
@@ -224,44 +224,44 @@ jobs:
     name: Daily Evolution Health Check
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Evolution System Health Check
       run: |
         echo "🏥 Running daily evolution health check..."
         echo "Date: $(date)"
         echo "Branch: ${{ github.ref }}"
-        
+
         # Check evolution metrics
         echo "📊 Evolution Metrics:"
         echo "- AI Autonomy: 85%"
         echo "- Agent Count: $(find backend/src/agents -name "*.py" | wc -l)"
         echo "- Safety Violations: 0"
         echo "- Performance: Optimal"
-    
+
     - name: Create Health Report
       if: always()
       run: |
         cat > evolution-health-report.md << EOF
         # Evolution System Health Report
-        
+
         **Date**: $(date)
         **Status**: ✅ Healthy
-        
+
         ## Metrics
         - AI Autonomy Level: 85%
         - Memory Compliance: 100%
         - Speed Compliance: 100%
         - Safety Score: A+
-        
+
         ## Recommendations
         - Continue monitoring agent size growth
         - Review evolution patterns weekly
         - Update safety rules as needed
         EOF
-    
+
     - name: Upload Health Report
       if: always()
       uses: actions/upload-artifact@v3

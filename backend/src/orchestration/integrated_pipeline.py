@@ -6,10 +6,10 @@ Integrated Production Pipeline
 import asyncio
 import json
 import logging
-from typing import Dict, Any, Optional, List
+import sys
 from datetime import datetime
 from pathlib import Path
-import sys
+from typing import Any, Dict, List, Optional
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -63,12 +63,8 @@ class IntegratedPipeline:
             # Stage 1: NL Input Analysis
             logger.info("Stage 1/9: NL Input Analysis")
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 1, 10, "processing"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "🔍 자연어 분석 중...", "info"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 1, 10, "processing")
+                await ws_manager.send_log(context.get("project_id"), "🔍 자연어 분석 중...", "info")
 
             nl_result = await self.nl_input_agent.process(
                 {
@@ -85,9 +81,7 @@ class IntegratedPipeline:
             self.pipeline_state["framework"] = nl_result["framework"]
 
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 1, 100, "completed"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 1, 100, "completed")
                 await ws_manager.send_log(
                     context.get("project_id"),
                     f"✅ 프로젝트 타입: {nl_result['project_type']}",
@@ -97,12 +91,8 @@ class IntegratedPipeline:
             # Stage 2: UI Selection
             logger.info("Stage 2/9: UI Selection")
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 2, 10, "processing"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "🎨 UI 프레임워크 선택 중...", "info"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 2, 10, "processing")
+                await ws_manager.send_log(context.get("project_id"), "🎨 UI 프레임워크 선택 중...", "info")
 
             ui_result = self._select_ui_framework(nl_result)
             results["ui_selection"] = ui_result
@@ -110,9 +100,7 @@ class IntegratedPipeline:
             self.pipeline_state["ui_components"] = ui_result["components"]
 
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 2, 100, "completed"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 2, 100, "completed")
                 await ws_manager.send_log(
                     context.get("project_id"),
                     f"✅ UI: {ui_result['framework']}",
@@ -122,43 +110,29 @@ class IntegratedPipeline:
             # Stage 3: Parser
             logger.info("Stage 3/9: Project Structure Parsing")
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 3, 10, "processing"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "📁 프로젝트 구조 분석 중...", "info"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 3, 10, "processing")
+                await ws_manager.send_log(context.get("project_id"), "📁 프로젝트 구조 분석 중...", "info")
 
             parser_result = self._parse_project_structure(nl_result, ui_result)
             results["parser"] = parser_result
             self.pipeline_state["file_structure"] = parser_result["structure"]
 
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 3, 100, "completed"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), f"✅ 파일 구조 결정", "success"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 3, 100, "completed")
+                await ws_manager.send_log(context.get("project_id"), f"✅ 파일 구조 결정", "success")
 
             # Stage 4: Component Decision
             logger.info("Stage 4/9: Component Architecture Decision")
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 4, 10, "processing"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "🧩 컴포넌트 아키텍처 결정 중...", "info"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 4, 10, "processing")
+                await ws_manager.send_log(context.get("project_id"), "🧩 컴포넌트 아키텍처 결정 중...", "info")
 
             component_result = self._decide_components(nl_result, ui_result)
             results["components"] = component_result
             self.pipeline_state["components"] = component_result["components"]
 
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 4, 100, "completed"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 4, 100, "completed")
                 await ws_manager.send_log(
                     context.get("project_id"),
                     f"✅ {len(component_result['components'])}개 컴포넌트 설계",
@@ -168,20 +142,14 @@ class IntegratedPipeline:
             # Stage 5: Match Rate
             logger.info("Stage 5/9: Template Matching")
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 5, 10, "processing"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "📊 템플릿 매칭 중...", "info"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 5, 10, "processing")
+                await ws_manager.send_log(context.get("project_id"), "📊 템플릿 매칭 중...", "info")
 
             match_result = self._calculate_match_rate(nl_result)
             results["match_rate"] = match_result
 
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 5, 100, "completed"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 5, 100, "completed")
                 await ws_manager.send_log(
                     context.get("project_id"),
                     f"✅ 매칭률: {match_result['confidence']*100:.0f}%",
@@ -191,20 +159,14 @@ class IntegratedPipeline:
             # Stage 6: Search
             logger.info("Stage 6/9: Solution Search")
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 6, 10, "processing"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "🔎 최적 솔루션 검색 중...", "info"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 6, 10, "processing")
+                await ws_manager.send_log(context.get("project_id"), "🔎 최적 솔루션 검색 중...", "info")
 
             search_result = self._search_solutions(nl_result)
             results["search"] = search_result
 
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 6, 100, "completed"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 6, 100, "completed")
                 await ws_manager.send_log(
                     context.get("project_id"),
                     f"✅ {len(search_result['libraries'])}개 라이브러리 선택",
@@ -214,12 +176,8 @@ class IntegratedPipeline:
             # Stage 7: Generation - 실제 코드 생성
             logger.info("Stage 7/9: Code Generation")
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 7, 10, "processing"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "⚙️ 프로덕션 코드 생성 중...", "info"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 7, 10, "processing")
+                await ws_manager.send_log(context.get("project_id"), "⚙️ 프로덕션 코드 생성 중...", "info")
 
             # Use enhanced code generator for real code
             generated_files = self.code_generator.generate_project_files(
@@ -239,9 +197,7 @@ class IntegratedPipeline:
             self.pipeline_state["generated_files"] = generated_files
 
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 7, 100, "completed"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 7, 100, "completed")
                 await ws_manager.send_log(
                     context.get("project_id"),
                     f"✅ {len(generated_files)}개 파일 생성 완료",
@@ -251,33 +207,21 @@ class IntegratedPipeline:
             # Stage 8: Assembly
             logger.info("Stage 8/9: Project Assembly")
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 8, 10, "processing"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "🏗️ 프로젝트 조립 중...", "info"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 8, 10, "processing")
+                await ws_manager.send_log(context.get("project_id"), "🏗️ 프로젝트 조립 중...", "info")
 
             assembly_result = self._assemble_project(generated_files)
             results["assembly"] = assembly_result
 
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 8, 100, "completed"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "✅ 프로젝트 조립 완료", "success"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 8, 100, "completed")
+                await ws_manager.send_log(context.get("project_id"), "✅ 프로젝트 조립 완료", "success")
 
             # Stage 9: Download Preparation
             logger.info("Stage 9/9: Download Package Preparation")
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 9, 10, "processing"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "📦 다운로드 패키지 준비 중...", "info"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 9, 10, "processing")
+                await ws_manager.send_log(context.get("project_id"), "📦 다운로드 패키지 준비 중...", "info")
 
             download_result = {
                 "ready": True,
@@ -287,12 +231,8 @@ class IntegratedPipeline:
             results["download"] = download_result
 
             if ws_manager:
-                await ws_manager.send_progress(
-                    context.get("project_id"), 9, 100, "completed"
-                )
-                await ws_manager.send_log(
-                    context.get("project_id"), "✅ 다운로드 준비 완료", "success"
-                )
+                await ws_manager.send_progress(context.get("project_id"), 9, 100, "completed")
+                await ws_manager.send_log(context.get("project_id"), "✅ 다운로드 준비 완료", "success")
 
             # Calculate execution time
             execution_time = (datetime.now() - start_time).total_seconds()
@@ -305,9 +245,7 @@ class IntegratedPipeline:
                         "project_type": self.pipeline_state["project_type"],
                         "framework": self.pipeline_state["framework"],
                         "features": self.pipeline_state["features"],
-                        "components_count": len(
-                            self.pipeline_state.get("components", [])
-                        ),
+                        "components_count": len(self.pipeline_state.get("components", [])),
                         "files_count": len(generated_files),
                     },
                 },
@@ -319,9 +257,7 @@ class IntegratedPipeline:
         except Exception as e:
             logger.error(f"Pipeline execution failed: {e}")
             if ws_manager:
-                await ws_manager.send_log(
-                    context.get("project_id"), f"❌ 오류 발생: {str(e)}", "error"
-                )
+                await ws_manager.send_log(context.get("project_id"), f"❌ 오류 발생: {str(e)}", "error")
 
             return {
                 "success": False,
@@ -387,9 +323,7 @@ class IntegratedPipeline:
         # Add state management if needed
         state_management = None
         if len(components) > 5:
-            state_management = (
-                "context" if nl_result["framework"] == "react" else "vuex"
-            )
+            state_management = "context" if nl_result["framework"] == "react" else "vuex"
 
         return {
             "components": components,

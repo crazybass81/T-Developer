@@ -4,16 +4,17 @@ AWS Bedrock AgentCore Integration
 T-Developer의 3대 핵심 프레임워크 중 하나인 AWS Bedrock AgentCore 통합
 """
 
-import boto3
-import json
 import asyncio
-import uuid
-from typing import Dict, Any, List, Optional, AsyncGenerator
-from dataclasses import dataclass, asdict
-from datetime import datetime
+import json
 import logging
-from contextlib import asynccontextmanager
 import os
+import uuid
+from contextlib import asynccontextmanager
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
+import boto3
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +80,7 @@ class BedrockAgentCoreClient:
                 "bedrock-agent-runtime", region_name=config.region
             )
 
-            self.bedrock_agent = boto3.client(
-                "bedrock-agent", region_name=config.region
-            )
+            self.bedrock_agent = boto3.client("bedrock-agent", region_name=config.region)
 
             logger.info(f"Bedrock AgentCore initialized: agent_id={config.agent_id}")
         except Exception as e:
@@ -151,18 +150,14 @@ class BedrockAgentCoreClient:
             citations = []
 
             if "completion" in response:
-                async for chunk in self._process_response_stream(
-                    response["completion"]
-                ):
+                async for chunk in self._process_response_stream(response["completion"]):
                     if chunk["type"] == "chunk":
                         if "bytes" in chunk["data"]:
                             response_text += chunk["data"]["bytes"].decode("utf-8")
                     elif chunk["type"] == "trace":
                         trace_data.append(chunk["data"])
                     elif chunk["type"] == "return_control":
-                        completion_reason = chunk["data"].get(
-                            "invocationId", "completed"
-                        )
+                        completion_reason = chunk["data"].get("invocationId", "completed")
 
             execution_time = (datetime.now() - start_time).total_seconds()
 
@@ -188,9 +183,7 @@ class BedrockAgentCoreClient:
                 timestamp=datetime.now(),
             )
 
-            logger.info(
-                f"Agent invocation completed: {session_id}, time: {execution_time:.2f}s"
-            )
+            logger.info(f"Agent invocation completed: {session_id}, time: {execution_time:.2f}s")
             return agent_response
 
         except Exception as e:
@@ -321,9 +314,7 @@ class BedrockAgentCoreClient:
 
     def get_all_sessions(self) -> List[Dict[str, Any]]:
         """모든 세션 정보 조회"""
-        return [
-            self.get_session_info(session_id) for session_id in self.sessions.keys()
-        ]
+        return [self.get_session_info(session_id) for session_id in self.sessions.keys()]
 
 
 class BedrockAgentCoreIntegration:
@@ -347,9 +338,7 @@ class BedrockAgentCoreIntegration:
                 logger.error(f"Failed to verify agent: {agent_info['error']}")
                 return False
 
-            logger.info(
-                f"Bedrock AgentCore integration initialized: {agent_info['agent_name']}"
-            )
+            logger.info(f"Bedrock AgentCore integration initialized: {agent_info['agent_name']}")
             return True
 
         except Exception as e:
@@ -443,9 +432,7 @@ JSON 형식으로 반환:
 
         return agent_prompts.get(agent_name, f"다음 작업을 수행해주세요: {user_input}")
 
-    def _process_agent_response(
-        self, agent_name: str, response: AgentResponse
-    ) -> Dict[str, Any]:
+    def _process_agent_response(self, agent_name: str, response: AgentResponse) -> Dict[str, Any]:
         """Agent 응답 처리"""
         try:
             # JSON 응답 파싱 시도
@@ -476,9 +463,7 @@ JSON 형식으로 반환:
             logger.error(f"Error processing agent response: {e}")
             return {"raw_response": response.response_text, "error": str(e)}
 
-    async def enhance_pipeline_with_bedrock(
-        self, pipeline_input: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def enhance_pipeline_with_bedrock(self, pipeline_input: Dict[str, Any]) -> Dict[str, Any]:
         """Bedrock으로 파이프라인 강화"""
         enhanced_steps = []
         user_input = pipeline_input.get("user_input", "")
@@ -489,9 +474,7 @@ JSON 형식으로 반환:
 
         for agent_name in bedrock_agents:
             try:
-                result = await self.execute_agent_with_bedrock(
-                    agent_name, user_input, user_id
-                )
+                result = await self.execute_agent_with_bedrock(agent_name, user_input, user_id)
                 enhanced_steps.append(
                     {"agent": agent_name, "bedrock_enhanced": True, "result": result}
                 )

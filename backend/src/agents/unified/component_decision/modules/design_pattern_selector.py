@@ -3,8 +3,8 @@ Design Pattern Selector Module
 Selects appropriate design patterns based on requirements
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class PatternCategory(Enum):
@@ -425,9 +425,7 @@ class DesignPatternSelector:
         seen_purposes = set()
 
         # Remove duplicate patterns with same purpose
-        for pattern in sorted(
-            patterns, key=lambda x: x.get("priority", 0), reverse=True
-        ):
+        for pattern in sorted(patterns, key=lambda x: x.get("priority", 0), reverse=True):
             purpose_key = f"{pattern['category']}_{pattern['purpose']}"
             if purpose_key not in seen_purposes:
                 resolved.append(pattern)
@@ -449,8 +447,7 @@ class DesignPatternSelector:
                     if not (
                         p["type"] == pair[1]
                         and any(
-                            p2["type"] == pair[0]
-                            and p2.get("priority", 0) > p.get("priority", 0)
+                            p2["type"] == pair[0] and p2.get("priority", 0) > p.get("priority", 0)
                             for p2 in resolved
                         )
                     )

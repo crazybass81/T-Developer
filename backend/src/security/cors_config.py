@@ -3,9 +3,10 @@ CORS Configuration
 Cross-Origin Resource Sharing 설정
 """
 
-from typing import List, Optional
-from fastapi.middleware.cors import CORSMiddleware
 import os
+from typing import List, Optional
+
+from fastapi.middleware.cors import CORSMiddleware
 
 
 class CORSConfig:

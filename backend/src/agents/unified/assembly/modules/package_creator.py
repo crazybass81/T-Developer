@@ -2,15 +2,15 @@
 Creates deployable packages in various formats
 """
 
-from typing import Dict, List, Any, Optional
 import asyncio
 import os
-import zipfile
-import tarfile
 import shutil
+import tarfile
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -126,9 +126,7 @@ class PackageCreator:
                 original_size += len(content.encode("utf-8"))
 
         compressed_size = os.path.getsize(package_path)
-        compression_ratio = (
-            compressed_size / original_size if original_size > 0 else 1.0
-        )
+        compression_ratio = compressed_size / original_size if original_size > 0 else 1.0
 
         return {"path": package_path, "compression_ratio": compression_ratio}
 
@@ -144,14 +142,10 @@ class PackageCreator:
         output_format = context.get("output_format", "tar.gz")
 
         if output_format == "tar.gz":
-            package_path = os.path.join(
-                workspace_path, "packages", f"{project_name}.tar.gz"
-            )
+            package_path = os.path.join(workspace_path, "packages", f"{project_name}.tar.gz")
             mode = "w:gz"
         else:  # tar.bz2
-            package_path = os.path.join(
-                workspace_path, "packages", f"{project_name}.tar.bz2"
-            )
+            package_path = os.path.join(workspace_path, "packages", f"{project_name}.tar.bz2")
             mode = "w:bz2"
 
         os.makedirs(os.path.dirname(package_path), exist_ok=True)
@@ -179,9 +173,7 @@ class PackageCreator:
         shutil.rmtree(temp_dir)
 
         compressed_size = os.path.getsize(package_path)
-        compression_ratio = (
-            compressed_size / original_size if original_size > 0 else 1.0
-        )
+        compression_ratio = compressed_size / original_size if original_size > 0 else 1.0
 
         return {"path": package_path, "compression_ratio": compression_ratio}
 

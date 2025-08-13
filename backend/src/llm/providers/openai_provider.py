@@ -1,6 +1,8 @@
-import openai
 import os
-from typing import AsyncIterator, Dict, Any, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+import openai
+
 from ..base import ModelProvider, ModelResponse
 
 
@@ -21,12 +23,8 @@ class OpenAIProvider(ModelProvider):
             max_tokens=options.get("max_tokens", self.config.max_tokens),
             temperature=options.get("temperature", self.config.temperature),
             top_p=options.get("top_p", self.config.top_p),
-            frequency_penalty=options.get(
-                "frequency_penalty", self.config.frequency_penalty
-            ),
-            presence_penalty=options.get(
-                "presence_penalty", self.config.presence_penalty
-            ),
+            frequency_penalty=options.get("frequency_penalty", self.config.frequency_penalty),
+            presence_penalty=options.get("presence_penalty", self.config.presence_penalty),
             stop=options.get("stop", self.config.stop_sequences),
         )
 
@@ -55,9 +53,7 @@ class OpenAIProvider(ModelProvider):
                 yield chunk.choices[0].delta.content
 
     async def embed(self, texts: List[str]) -> List[List[float]]:
-        response = await self.client.embeddings.create(
-            model="text-embedding-ada-002", input=texts
-        )
+        response = await self.client.embeddings.create(model="text-embedding-ada-002", input=texts)
         return [data.embedding for data in response.data]
 
     def estimate_tokens(self, text: str) -> int:

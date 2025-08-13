@@ -4,18 +4,17 @@ Setup AWS Secrets Manager secrets for T-Developer
 This script creates all necessary secrets in AWS Secrets Manager
 """
 
-import boto3
 import json
+import logging
 import os
 import sys
 from datetime import datetime
-from typing import Dict, Any, Optional
-import logging
+from typing import Any, Dict, Optional
+
+import boto3
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -59,19 +58,13 @@ class SecretsManager:
             logger.error(f"Error managing KMS key: {e}")
             return None
 
-    def create_or_update_secret(
-        self, secret_id: str, secret_data: Dict[str, Any]
-    ) -> bool:
+    def create_or_update_secret(self, secret_id: str, secret_data: Dict[str, Any]) -> bool:
         """Create or update a secret in AWS Secrets Manager"""
         try:
             # Prepare secret value
             secret_value = json.dumps(secret_data.get("value", {}))
-            kms_key = secret_data.get(
-                "kms_key", f"alias/t-developer-{self.environment}"
-            )
-            tags = [
-                {"Key": k, "Value": v} for k, v in secret_data.get("tags", {}).items()
-            ]
+            kms_key = secret_data.get("kms_key", f"alias/t-developer-{self.environment}")
+            tags = [{"Key": k, "Value": v} for k, v in secret_data.get("tags", {}).items()]
 
             # Ensure KMS key exists
             self.create_kms_key_if_not_exists(kms_key)
@@ -113,15 +106,9 @@ class SecretsManager:
         # Import secrets structure
         sys.path.insert(
             0,
-            os.path.join(
-                os.path.dirname(__file__), "..", "infrastructure", "aws", "secrets"
-            ),
+            os.path.join(os.path.dirname(__file__), "..", "infrastructure", "aws", "secrets"),
         )
-        from secrets_structure import (
-            secrets_structure,
-            staging_secrets,
-            production_secrets,
-        )
+        from secrets_structure import production_secrets, secrets_structure, staging_secrets
 
         # Select secrets based on environment
         if self.environment == "dev":
@@ -140,21 +127,13 @@ class SecretsManager:
         for secret_id, secret_data in secrets.items():
             # Get actual values from environment variables or use defaults
             if "api-keys/openai" in secret_id:
-                secret_data["value"]["api_key"] = os.environ.get(
-                    "OPENAI_API_KEY", "sk-proj-xxx"
-                )
+                secret_data["value"]["api_key"] = os.environ.get("OPENAI_API_KEY", "sk-proj-xxx")
             elif "api-keys/anthropic" in secret_id:
-                secret_data["value"]["api_key"] = os.environ.get(
-                    "ANTHROPIC_API_KEY", "sk-ant-xxx"
-                )
+                secret_data["value"]["api_key"] = os.environ.get("ANTHROPIC_API_KEY", "sk-ant-xxx")
             elif "db/connection" in secret_id:
-                secret_data["value"]["password"] = os.environ.get(
-                    "DB_PASSWORD", "changeme"
-                )
+                secret_data["value"]["password"] = os.environ.get("DB_PASSWORD", "changeme")
             elif "github/token" in secret_id:
-                secret_data["value"]["token"] = os.environ.get(
-                    "GITHUB_TOKEN", "ghp_xxx"
-                )
+                secret_data["value"]["token"] = os.environ.get("GITHUB_TOKEN", "ghp_xxx")
 
             results[secret_id] = self.create_or_update_secret(secret_id, secret_data)
 
@@ -164,9 +143,7 @@ class SecretsManager:
         """Verify that all secrets are accessible"""
         sys.path.insert(
             0,
-            os.path.join(
-                os.path.dirname(__file__), "..", "infrastructure", "aws", "secrets"
-            ),
+            os.path.join(os.path.dirname(__file__), "..", "infrastructure", "aws", "secrets"),
         )
         from secrets_structure import secrets_structure
 
@@ -213,9 +190,7 @@ def main():
         results = sm.verify_secrets()
     else:
         # Setup secrets
-        logger.info(
-            f"Setting up secrets for {args.environment} environment in {args.region}..."
-        )
+        logger.info(f"Setting up secrets for {args.environment} environment in {args.region}...")
         results = sm.setup_all_secrets()
 
     # Summary
@@ -232,7 +207,9 @@ def main():
         logger.info("All secrets successfully created/updated")
 
         # Save results to log file
-        log_file = f"secrets-created-{args.environment}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
+        log_file = (
+            f"secrets-created-{args.environment}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
+        )
         with open(log_file, "w") as f:
             json.dump(
                 {

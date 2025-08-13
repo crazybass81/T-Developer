@@ -3,9 +3,9 @@ Semantic Matcher Module
 Performs semantic matching using NLP techniques
 """
 
-from typing import Dict, List, Any, Optional
 import re
 from collections import Counter
+from typing import Any, Dict, List, Optional
 
 
 class SemanticMatcher:
@@ -32,17 +32,13 @@ class SemanticMatcher:
             comp_semantics = self._extract_semantic_features(component)
 
             # Calculate semantic similarity
-            semantic_score = self._calculate_semantic_similarity(
-                comp_semantics, req_semantics
-            )
+            semantic_score = self._calculate_semantic_similarity(comp_semantics, req_semantics)
 
             # Analyze intent matching
             intent_match = self._analyze_intent_matching(comp_semantics, req_semantics)
 
             # Analyze domain relevance
-            domain_relevance = self._analyze_domain_relevance(
-                comp_semantics, req_semantics
-            )
+            domain_relevance = self._analyze_domain_relevance(comp_semantics, req_semantics)
 
             # Extract key concepts
             key_concepts = self._extract_key_concepts(comp_semantics, req_semantics)
@@ -52,12 +48,8 @@ class SemanticMatcher:
                 "intent_match": intent_match,
                 "domain_relevance": domain_relevance,
                 "key_concepts": key_concepts,
-                "concept_overlap": self._calculate_concept_overlap(
-                    comp_semantics, req_semantics
-                ),
-                "context_alignment": self._analyze_context_alignment(
-                    comp_semantics, req_semantics
-                ),
+                "concept_overlap": self._calculate_concept_overlap(comp_semantics, req_semantics),
+                "context_alignment": self._analyze_context_alignment(comp_semantics, req_semantics),
             }
 
         return semantic_results
@@ -267,9 +259,7 @@ class SemanticMatcher:
         # Normalize complexity (0-1 scale)
         return min(1.0, avg_words_per_sentence / 20.0)
 
-    def _calculate_semantic_similarity(
-        self, comp_semantics: Dict, req_semantics: Dict
-    ) -> float:
+    def _calculate_semantic_similarity(self, comp_semantics: Dict, req_semantics: Dict) -> float:
         """Calculate overall semantic similarity"""
 
         similarities = []
@@ -278,8 +268,7 @@ class SemanticMatcher:
         comp_keywords = set(comp_semantics.get("keywords", []))
         req_keywords = set(req_semantics.get("keywords", []))
         keyword_similarity = (
-            len(comp_keywords.intersection(req_keywords))
-            / len(comp_keywords.union(req_keywords))
+            len(comp_keywords.intersection(req_keywords)) / len(comp_keywords.union(req_keywords))
             if comp_keywords.union(req_keywords)
             else 0
         )
@@ -289,8 +278,7 @@ class SemanticMatcher:
         comp_entities = set(comp_semantics.get("entities", []))
         req_entities = set(req_semantics.get("entities", []))
         entity_similarity = (
-            len(comp_entities.intersection(req_entities))
-            / len(comp_entities.union(req_entities))
+            len(comp_entities.intersection(req_entities)) / len(comp_entities.union(req_entities))
             if comp_entities.union(req_entities)
             else 0
         )
@@ -300,30 +288,23 @@ class SemanticMatcher:
         comp_concepts = set(comp_semantics.get("concepts", []))
         req_concepts = set(req_semantics.get("concepts", []))
         concept_similarity = (
-            len(comp_concepts.intersection(req_concepts))
-            / len(comp_concepts.union(req_concepts))
+            len(comp_concepts.intersection(req_concepts)) / len(comp_concepts.union(req_concepts))
             if comp_concepts.union(req_concepts)
             else 0
         )
         similarities.append(concept_similarity)
 
         # Intent matching
-        intent_match = (
-            1.0 if comp_semantics.get("intent") == req_semantics.get("intent") else 0.5
-        )
+        intent_match = 1.0 if comp_semantics.get("intent") == req_semantics.get("intent") else 0.5
         similarities.append(intent_match)
 
         # Domain matching
-        domain_match = (
-            1.0 if comp_semantics.get("domain") == req_semantics.get("domain") else 0.3
-        )
+        domain_match = 1.0 if comp_semantics.get("domain") == req_semantics.get("domain") else 0.3
         similarities.append(domain_match)
 
         return sum(similarities) / len(similarities)
 
-    def _analyze_intent_matching(
-        self, comp_semantics: Dict, req_semantics: Dict
-    ) -> Dict[str, Any]:
+    def _analyze_intent_matching(self, comp_semantics: Dict, req_semantics: Dict) -> Dict[str, Any]:
         """Analyze intent matching"""
 
         comp_intent = comp_semantics.get("intent", "general")
@@ -333,9 +314,7 @@ class SemanticMatcher:
             "component_intent": comp_intent,
             "requirement_intent": req_intent,
             "exact_match": comp_intent == req_intent,
-            "compatibility_score": self._calculate_intent_compatibility(
-                comp_intent, req_intent
-            ),
+            "compatibility_score": self._calculate_intent_compatibility(comp_intent, req_intent),
         }
 
     def _calculate_intent_compatibility(self, intent1: str, intent2: str) -> float:
@@ -381,9 +360,7 @@ class SemanticMatcher:
             "component_domain": comp_domain,
             "requirement_domain": req_domain,
             "domain_match": comp_domain == req_domain,
-            "relevance_score": self._calculate_domain_relevance(
-                comp_domain, req_domain
-            ),
+            "relevance_score": self._calculate_domain_relevance(comp_domain, req_domain),
         }
 
     def _calculate_domain_relevance(self, domain1: str, domain2: str) -> float:
@@ -407,9 +384,7 @@ class SemanticMatcher:
 
         return 0.3  # General compatibility
 
-    def _extract_key_concepts(
-        self, comp_semantics: Dict, req_semantics: Dict
-    ) -> List[str]:
+    def _extract_key_concepts(self, comp_semantics: Dict, req_semantics: Dict) -> List[str]:
         """Extract key concepts from both sources"""
 
         comp_concepts = set(comp_semantics.get("concepts", []))
@@ -420,9 +395,7 @@ class SemanticMatcher:
 
         return list(common_concepts)[:10]  # Top 10 key concepts
 
-    def _calculate_concept_overlap(
-        self, comp_semantics: Dict, req_semantics: Dict
-    ) -> float:
+    def _calculate_concept_overlap(self, comp_semantics: Dict, req_semantics: Dict) -> float:
         """Calculate concept overlap percentage"""
 
         comp_concepts = set(comp_semantics.get("concepts", []))
@@ -451,9 +424,7 @@ class SemanticMatcher:
             "overall_context_score": 0.0,  # Will be calculated
         }
 
-    def _calculate_sentiment_alignment(
-        self, comp_sentiment: float, req_sentiment: float
-    ) -> float:
+    def _calculate_sentiment_alignment(self, comp_sentiment: float, req_sentiment: float) -> float:
         """Calculate sentiment alignment"""
 
         # If both are neutral (close to 0), consider it a good match
@@ -466,9 +437,7 @@ class SemanticMatcher:
 
         return 1.0 - (actual_diff / max_diff)
 
-    def _calculate_complexity_match(
-        self, comp_complexity: float, req_complexity: float
-    ) -> float:
+    def _calculate_complexity_match(self, comp_complexity: float, req_complexity: float) -> float:
         """Calculate complexity match"""
 
         # Prefer component complexity to be slightly higher than requirement complexity

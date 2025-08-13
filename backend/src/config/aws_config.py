@@ -3,11 +3,12 @@ AWS Configuration with IAM Role
 IAM Role을 통한 자동 인증 및 시크릿 관리
 """
 
-import os
 import json
-import boto3
-from typing import Optional, Dict, Any
+import os
 from functools import lru_cache
+from typing import Any, Dict, Optional
+
+import boto3
 
 
 class AWSConfig:

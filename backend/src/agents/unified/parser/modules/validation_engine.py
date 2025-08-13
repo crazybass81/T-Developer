@@ -3,8 +3,8 @@ Validation Engine Module
 Validates parsed requirements and specifications
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ValidationLevel(Enum):
@@ -43,10 +43,7 @@ class ValidationEngine:
         recommendations = self._generate_recommendations(issues)
 
         return {
-            "valid": len(
-                [i for i in issues if i["level"] == ValidationLevel.ERROR.value]
-            )
-            == 0,
+            "valid": len([i for i in issues if i["level"] == ValidationLevel.ERROR.value]) == 0,
             "issues": issues,
             "recommendations": recommendations,
             "score": self._calculate_validation_score(issues),
@@ -131,9 +128,7 @@ class ValidationEngine:
             recommendations.append("Resolve conflicting requirements with stakeholders")
 
         if "feasibility" in issue_categories:
-            recommendations.append(
-                "Validate technical requirements with development team"
-            )
+            recommendations.append("Validate technical requirements with development team")
 
         return recommendations
 
@@ -142,12 +137,8 @@ class ValidationEngine:
         if not issues:
             return 1.0
 
-        error_count = sum(
-            1 for i in issues if i["level"] == ValidationLevel.ERROR.value
-        )
-        warning_count = sum(
-            1 for i in issues if i["level"] == ValidationLevel.WARNING.value
-        )
+        error_count = sum(1 for i in issues if i["level"] == ValidationLevel.ERROR.value)
+        warning_count = sum(1 for i in issues if i["level"] == ValidationLevel.WARNING.value)
 
         score = 1.0 - (error_count * 0.2) - (warning_count * 0.1)
         return max(0.0, score)

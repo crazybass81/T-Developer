@@ -3,13 +3,13 @@ Production Code Generator Service
 실제 작동하는 코드를 생성하는 프로덕션 서비스
 """
 
-import os
 import json
-from typing import Dict, Any, List, Optional
-from pathlib import Path
+import os
 import shutil
 import zipfile
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 class CodeGeneratorService:
@@ -57,9 +57,7 @@ class CodeGeneratorService:
             files = self._generate_fastapi_project(project_name, description, features)
         else:
             # 기본 웹 프로젝트
-            files = self._generate_basic_web_project(
-                project_name, description, features
-            )
+            files = self._generate_basic_web_project(project_name, description, features)
 
         # 파일 생성
         for file_path, content in files.items():

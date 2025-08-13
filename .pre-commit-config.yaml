@@ -82,7 +82,7 @@ repos:
             .*\.png|
             .*\.jpg
           )$
-      
+
       # 줄 끝 공백 제거
       - id: trailing-whitespace
         exclude: |
@@ -90,7 +90,7 @@ repos:
             .*\.md|
             .*\.svg
           )$
-      
+
       # YAML 문법 검사
       - id: check-yaml
         exclude: |
@@ -101,10 +101,10 @@ repos:
             infrastructure/.*\.yml|
             backend/deployment/ecs/.*\.yaml
           )$
-      
+
       # JSON 문법 검사
       - id: check-json
-      
+
       # 대용량 파일 방지 (500KB)
       - id: check-added-large-files
         args: ['--maxkb=500']
@@ -114,10 +114,10 @@ repos:
             .*\.dump|
             .*package-lock\.json
           )$
-      
+
       # 병합 충돌 마커 검사
       - id: check-merge-conflict
-      
+
       # Python 문법 검사
       - id: check-ast
         exclude: |
@@ -125,20 +125,20 @@ repos:
             .*test_.*\.py|
             .*migrations/.*
           )$
-      
+
       # 개인키/비밀키 감지
       - id: detect-private-key
-      
+
       # AWS 자격 증명 감지
       - id: detect-aws-credentials
         args: ['--allow-missing-credentials']
-      
+
       # 심볼릭 링크 검사
       - id: check-symlinks
-      
+
       # 실행 권한 검사
       - id: check-executables-have-shebangs
-      
+
       # Shebang 검사
       - id: check-shebang-scripts-are-executable
 
@@ -216,7 +216,7 @@ fail_fast: false
 ci:
   autofix_commit_msg: |
     [pre-commit.ci] auto fixes from pre-commit hooks
-    
+
     for more information, see https://pre-commit.ci
   autofix_prs: true
   autoupdate_branch: ''

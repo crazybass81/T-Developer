@@ -3,15 +3,15 @@ Conflict Resolver Module for Assembly Agent
 Resolves file conflicts and ensures consistent project structure
 """
 
-from typing import Dict, List, Any, Optional, Tuple, Set
 import asyncio
-import os
-import hashlib
-from dataclasses import dataclass
-from enum import Enum
-from datetime import datetime
 import difflib
+import hashlib
 import json
+import os
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 class ConflictType(Enum):
@@ -200,9 +200,7 @@ class ConflictResolver:
                 error=str(e),
             )
 
-    async def _detect_conflicts(
-        self, organized_files: Dict[str, Any]
-    ) -> List[FileConflict]:
+    async def _detect_conflicts(self, organized_files: Dict[str, Any]) -> List[FileConflict]:
         """Detect various types of conflicts in organized files"""
 
         conflicts = []
@@ -226,9 +224,7 @@ class ConflictResolver:
                 file_contents = []
                 for fp in file_paths:
                     if hasattr(organized_files[fp], "organized_path"):
-                        with open(
-                            organized_files[fp].organized_path, "r", encoding="utf-8"
-                        ) as f:
+                        with open(organized_files[fp].organized_path, "r", encoding="utf-8") as f:
                             file_contents.append(f.read())
                     else:
                         file_contents.append(organized_files[fp])
@@ -378,9 +374,7 @@ class ConflictResolver:
 
         return conflicts
 
-    async def _detect_import_conflicts(
-        self, organized_files: Dict[str, Any]
-    ) -> List[FileConflict]:
+    async def _detect_import_conflicts(self, organized_files: Dict[str, Any]) -> List[FileConflict]:
         """Detect import/export conflicts"""
 
         conflicts = []
@@ -457,17 +451,13 @@ class ConflictResolver:
 
             # Get file contents
             if hasattr(organized_files[file1_path], "organized_path"):
-                with open(
-                    organized_files[file1_path].organized_path, "r", encoding="utf-8"
-                ) as f:
+                with open(organized_files[file1_path].organized_path, "r", encoding="utf-8") as f:
                     content1 = f.read()
             else:
                 content1 = organized_files[file1_path]
 
             if hasattr(organized_files[file2_path], "organized_path"):
-                with open(
-                    organized_files[file2_path].organized_path, "r", encoding="utf-8"
-                ) as f:
+                with open(organized_files[file2_path].organized_path, "r", encoding="utf-8") as f:
                     content2 = f.read()
             else:
                 content2 = organized_files[file2_path]
@@ -585,9 +575,7 @@ class ConflictResolver:
 
         for i, file_path in enumerate(files_involved):
             if hasattr(organized_files[file_path], "organized_path"):
-                with open(
-                    organized_files[file_path].organized_path, "r", encoding="utf-8"
-                ) as f:
+                with open(organized_files[file_path].organized_path, "r", encoding="utf-8") as f:
                     content = f.read()
             else:
                 content = organized_files[file_path]
@@ -614,9 +602,7 @@ class ConflictResolver:
         primary_file = files_involved[0]
 
         if hasattr(organized_files[primary_file], "organized_path"):
-            with open(
-                organized_files[primary_file].organized_path, "r", encoding="utf-8"
-            ) as f:
+            with open(organized_files[primary_file].organized_path, "r", encoding="utf-8") as f:
                 content = f.read()
         else:
             content = organized_files[primary_file]
@@ -637,9 +623,7 @@ class ConflictResolver:
 
         for i, file_path in enumerate(files_involved):
             if hasattr(organized_files[file_path], "organized_path"):
-                with open(
-                    organized_files[file_path].organized_path, "r", encoding="utf-8"
-                ) as f:
+                with open(organized_files[file_path].organized_path, "r", encoding="utf-8") as f:
                     content = f.read()
             else:
                 content = organized_files[file_path]
@@ -660,9 +644,7 @@ class ConflictResolver:
             "files": resolved_files,
         }
 
-    def _is_file_in_conflicts(
-        self, file_path: str, conflicts: List[FileConflict]
-    ) -> bool:
+    def _is_file_in_conflicts(self, file_path: str, conflicts: List[FileConflict]) -> bool:
         """Check if a file is involved in any conflicts"""
 
         for conflict in conflicts:

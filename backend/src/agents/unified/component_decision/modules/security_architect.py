@@ -3,8 +3,8 @@ Security Architect Module
 Designs security architecture and controls
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class SecurityLevel(Enum):
@@ -64,14 +64,10 @@ class SecurityArchitect:
             "compliance": compliance,
             "incident_response": incident_response,
             "security_controls": self._select_security_controls(security_level),
-            "recommendations": self._generate_recommendations(
-                security_level, vulnerabilities
-            ),
+            "recommendations": self._generate_recommendations(security_level, vulnerabilities),
         }
 
-    def _determine_security_level(
-        self, requirements: Dict, constraints: Dict
-    ) -> SecurityLevel:
+    def _determine_security_level(self, requirements: Dict, constraints: Dict) -> SecurityLevel:
         """Determine required security level"""
 
         indicators = {
@@ -149,9 +145,7 @@ class SecurityArchitect:
             "transport": {
                 "protocol": "TLS 1.3",
                 "cipher_suites": ["TLS_AES_256_GCM_SHA384"],
-                "certificate": "EV SSL"
-                if level == SecurityLevel.CRITICAL
-                else "DV SSL",
+                "certificate": "EV SSL" if level == SecurityLevel.CRITICAL else "DV SSL",
             },
             "storage": {
                 "algorithm": "AES-256-GCM",
@@ -179,8 +173,7 @@ class SecurityArchitect:
                 "ddos_protection": True,
             },
             "network_segmentation": {"dmz": True, "private_subnets": True, "vpc": True},
-            "intrusion_detection": level
-            in [SecurityLevel.HIGH, SecurityLevel.CRITICAL],
+            "intrusion_detection": level in [SecurityLevel.HIGH, SecurityLevel.CRITICAL],
             "vpn": level == SecurityLevel.CRITICAL,
         }
 
@@ -200,8 +193,7 @@ class SecurityArchitect:
                 "encryption": True,
                 "offsite": True,
             },
-            "data_loss_prevention": level
-            in [SecurityLevel.HIGH, SecurityLevel.CRITICAL],
+            "data_loss_prevention": level in [SecurityLevel.HIGH, SecurityLevel.CRITICAL],
             "anonymization": requirements.get("gdpr_compliance", False),
             "retention_policy": {
                 "default": 90,

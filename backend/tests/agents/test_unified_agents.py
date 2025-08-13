@@ -3,36 +3,35 @@ Test Suite for Unified Agent System
 Tests all 9 agents and orchestrator
 """
 
-import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
-import sys
 import os
+import sys
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.agents.unified.unified_agents import (
-    UnifiedNLInputAgent,
-    UnifiedUISelectionAgent,
-    UnifiedParserAgent,
-    UnifiedComponentDecisionAgent,
-    UnifiedMatchRateAgent,
-    UnifiedSearchAgent,
-    UnifiedGenerationAgent,
-    UnifiedAssemblyAgent,
-    UnifiedDownloadAgent,
-)
-from src.agents.unified.orchestrator import UnifiedOrchestrator
 from src.agents.enterprise.base_agent import AgentContext
+from src.agents.unified.orchestrator import UnifiedOrchestrator
+from src.agents.unified.unified_agents import (
+    UnifiedAssemblyAgent,
+    UnifiedComponentDecisionAgent,
+    UnifiedDownloadAgent,
+    UnifiedGenerationAgent,
+    UnifiedMatchRateAgent,
+    UnifiedNLInputAgent,
+    UnifiedParserAgent,
+    UnifiedSearchAgent,
+    UnifiedUISelectionAgent,
+)
 
 
 @pytest.fixture
 def agent_context():
     """Create test context"""
-    return AgentContext(
-        trace_id="test-trace-123", user_id="test-user", tenant_id="test-tenant"
-    )
+    return AgentContext(trace_id="test-trace-123", user_id="test-user", tenant_id="test-tenant")
 
 
 @pytest.fixture
@@ -92,9 +91,7 @@ class TestUnifiedUISelectionAgent:
         agent = UnifiedUISelectionAgent()
         await agent.initialize()
 
-        result = await agent.process(
-            {"requirements": sample_requirements}, agent_context
-        )
+        result = await agent.process({"requirements": sample_requirements}, agent_context)
 
         assert result is not None
         assert "selected_framework" in result
@@ -177,9 +174,7 @@ class TestUnifiedMatchRateAgent:
         agent = UnifiedMatchRateAgent()
         await agent.initialize()
 
-        result = await agent.process(
-            {"requirements": sample_requirements}, agent_context
-        )
+        result = await agent.process({"requirements": sample_requirements}, agent_context)
 
         assert result is not None
         assert "best_match" in result
@@ -347,9 +342,7 @@ class TestUnifiedOrchestrator:
         await orchestrator.initialize()
 
         # Mock NL Input to fail (critical agent)
-        orchestrator.agents["nl_input"].process = AsyncMock(
-            side_effect=Exception("Test failure")
-        )
+        orchestrator.agents["nl_input"].process = AsyncMock(side_effect=Exception("Test failure"))
 
         result = await orchestrator.execute_pipeline(query="Test query")
 

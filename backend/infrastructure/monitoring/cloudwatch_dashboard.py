@@ -4,10 +4,11 @@ CloudWatch Dashboard Configuration for T-Developer
 Creates and manages CloudWatch dashboards for monitoring
 """
 
-import boto3
 import json
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
+import boto3
 
 
 class CloudWatchDashboardManager:
@@ -477,16 +478,12 @@ def main():
         help="Environment",
     )
     parser.add_argument("--region", "-r", default="us-east-1", help="AWS region")
-    parser.add_argument(
-        "--test-metrics", "-t", action="store_true", help="Send test metrics"
-    )
+    parser.add_argument("--test-metrics", "-t", action="store_true", help="Send test metrics")
 
     args = parser.parse_args()
 
     # Initialize manager
-    manager = CloudWatchDashboardManager(
-        region=args.region, environment=args.environment
-    )
+    manager = CloudWatchDashboardManager(region=args.region, environment=args.environment)
 
     # Create dashboard
     print(f"Creating CloudWatch dashboard for {args.environment}...")

@@ -3,33 +3,33 @@ UI Selection Agent 테스트 스위트
 목표 커버리지: 80% 이상
 """
 
-import pytest
 import json
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
-
-import sys
 import os
+import sys
+from datetime import datetime
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.agents.unified.ui_selection.agent import (
-    UnifiedUISelectionAgent as UISelectionAgent,
-    UISelectionResult,
-    EnhancedUISelectionResult,
-)
+from src.agents.unified.ui_selection.agent import EnhancedUISelectionResult, UISelectionResult
+from src.agents.unified.ui_selection.agent import UnifiedUISelectionAgent as UISelectionAgent
+
 
 # 테스트용 더미 클래스 정의
 class FrameworkCategory:
     MOBILE = "mobile"
     DESKTOP = "desktop"
     WEB = "web"
-    
+
+
 class FrameworkInfo:
     def __init__(self, name=None, category=None, popularity=None):
         self.name = name
         self.category = category
         self.popularity = popularity
+
 
 class UIStack:
     def __init__(self, framework=None, styling=None, components=None):
@@ -92,9 +92,7 @@ class TestUISelectionAgent:
 
     def test_get_framework_candidates_with_preference(self, agent):
         """선호 프레임워크가 있는 경우"""
-        candidates = agent._get_framework_candidates(
-            "web-application", {}, {"framework": "vue"}
-        )
+        candidates = agent._get_framework_candidates("web-application", {}, {"framework": "vue"})
 
         # Vue가 첫 번째 후보여야 함
         assert candidates[0] == "vue"
@@ -193,9 +191,7 @@ class TestUISelectionAgent:
         """대안 스택 생성"""
         candidates = ["react", "vue", "angular", "svelte"]
 
-        alternatives = agent._generate_alternatives(
-            candidates, {}, None, "react"  # 선택된 프레임워크
-        )
+        alternatives = agent._generate_alternatives(candidates, {}, None, "react")  # 선택된 프레임워크
 
         assert len(alternatives) <= 3
         assert all(alt.framework != "react" for alt in alternatives)
@@ -409,9 +405,7 @@ class TestUISelectionAgent:
 
     def test_select_ui_stack_mobile(self, agent):
         """모바일 앱 스택 선택"""
-        result = agent.select_ui_stack(
-            "mobile-application", {"cross_platform": True}, None
-        )
+        result = agent.select_ui_stack("mobile-application", {"cross_platform": True}, None)
 
         assert result.project_type == "mobile-application"
         assert result.recommended_stack.framework in [
@@ -518,9 +512,7 @@ class TestLambdaHandler:
         mock_agent.select_ui_stack.side_effect = Exception("Unexpected error")
         mock_agent_class.return_value = mock_agent
 
-        event = {
-            "body": json.dumps({"project_type": "web-application", "requirements": {}})
-        }
+        event = {"body": json.dumps({"project_type": "web-application", "requirements": {}})}
 
         response = lambda_handler(event, None)
 

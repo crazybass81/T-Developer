@@ -4,29 +4,26 @@ Combines Phase 2 core interfaces with ECS optimization
 """
 
 import asyncio
-import json
-import time
 import hashlib
+import json
+import logging
+import os
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, TypeVar, Generic
 from enum import Enum
-import logging
-import os
+from typing import Any, Dict, Generic, List, Optional, TypeVar
+
+from src.core.event_bus import EventType, publish_agent_event
 
 # Phase 2 Core Imports
-from src.core.interfaces import (
-    BaseAgent as Phase2BaseAgent,
-    AgentInput,
-    ProcessingStatus,
-    PipelineContext,
-    ValidationResult,
-)
-from src.core.event_bus import publish_agent_event, EventType
+from src.core.interfaces import AgentInput
+from src.core.interfaces import BaseAgent as Phase2BaseAgent
+from src.core.interfaces import PipelineContext, ProcessingStatus, ValidationResult
 from src.core.monitoring import get_metrics_collector, get_performance_tracker
-from src.core.state_manager import PipelineStateManager
 from src.core.security import InputValidator
+from src.core.state_manager import PipelineStateManager
 
 # AWS SDK (optional)
 try:
@@ -47,7 +44,7 @@ except ImportError:
 
 # Monitoring tools (optional)
 try:
-    from aws_lambda_powertools import Logger, Tracer, Metrics
+    from aws_lambda_powertools import Logger, Metrics, Tracer
     from aws_lambda_powertools.metrics import MetricUnit
 
     POWERTOOLS_AVAILABLE = True
@@ -204,9 +201,7 @@ class UnifiedBaseAgent(Phase2BaseAgent, ABC):
         """Custom initialization for specific agent"""
         pass
 
-    async def execute(
-        self, input_data: Any, context: Optional[Any] = None
-    ) -> AgentResult:
+    async def execute(self, input_data: Any, context: Optional[Any] = None) -> AgentResult:
         """
         Execute agent with unified interface
         Supports both Phase 2 AgentInput and ECS dict input
@@ -243,9 +238,7 @@ class UnifiedBaseAgent(Phase2BaseAgent, ABC):
         try:
             # Start monitoring
             if self.perf_tracker:
-                timer_id = self.perf_tracker.start_timer(
-                    f"{self.config.name}_processing"
-                )
+                timer_id = self.perf_tracker.start_timer(f"{self.config.name}_processing")
 
             # Log start
             self.logger.info(
@@ -265,9 +258,7 @@ class UnifiedBaseAgent(Phase2BaseAgent, ABC):
             # Check cache if enabled
             cached_result = None
             if self.config.enable_caching:
-                cached_result = await self._get_cached_result(
-                    agent_input, agent_context
-                )
+                cached_result = await self._get_cached_result(agent_input, agent_context)
                 if cached_result:
                     self.logger.info("Cache hit")
                     return cached_result
@@ -327,9 +318,7 @@ class UnifiedBaseAgent(Phase2BaseAgent, ABC):
             # Record metrics
             if self.metrics:
                 self.metrics.increment_counter(f"{self.config.name}.processed")
-                self.metrics.set_gauge(
-                    f"{self.config.name}.confidence", result.confidence
-                )
+                self.metrics.set_gauge(f"{self.config.name}.confidence", result.confidence)
 
             # Publish completion event
             if agent_context.pipeline_context:
@@ -425,9 +414,7 @@ class UnifiedBaseAgent(Phase2BaseAgent, ABC):
 
         return None
 
-    async def _cache_result(
-        self, input_data: Any, result: AgentResult, context: AgentContext
-    ):
+    async def _cache_result(self, input_data: Any, result: AgentResult, context: AgentContext):
         """Cache result"""
         if not self.redis_client or not result.success:
             return
@@ -513,8 +500,7 @@ class UnifiedBaseAgent(Phase2BaseAgent, ABC):
             "metrics": {
                 "processed": self.processing_count,
                 "errors": self.error_count,
-                "avg_processing_time": self.total_processing_time
-                / max(1, self.processing_count),
+                "avg_processing_time": self.total_processing_time / max(1, self.processing_count),
             },
         }
 
@@ -562,8 +548,7 @@ class UnifiedBaseAgent(Phase2BaseAgent, ABC):
             "total_processed": self.processing_count,
             "total_errors": self.error_count,
             "error_rate": self.error_count / max(1, self.processing_count),
-            "avg_processing_time": self.total_processing_time
-            / max(1, self.processing_count),
+            "avg_processing_time": self.total_processing_time / max(1, self.processing_count),
             "total_processing_time": self.total_processing_time,
         }
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import boto3
 import json
+
+import boto3
 from botocore.exceptions import ClientError
 
 
@@ -47,9 +48,7 @@ def set_bucket_policy(s3_client, bucket_name):
     }
 
     try:
-        s3_client.put_bucket_policy(
-            Bucket=bucket_name, Policy=json.dumps(bucket_policy)
-        )
+        s3_client.put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(bucket_policy))
         print(f"  📋 버킷 정책 설정 완료: {bucket_name}")
     except ClientError as e:
         print(f"  ⚠️ 버킷 정책 설정 실패: {e}")

@@ -3,15 +3,13 @@ Quality Assessor Module
 Assesses overall quality of components
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class QualityAssessor:
     """Assesses component quality"""
 
-    async def assess(
-        self, components: List[Dict[str, Any]]
-    ) -> Dict[str, Dict[str, Any]]:
+    async def assess(self, components: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
         """Assess component quality"""
 
         quality_results = {}

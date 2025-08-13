@@ -3,8 +3,8 @@ Architecture Selector Module
 Selects the best architecture pattern based on requirements
 """
 
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ArchitectureType(Enum):
@@ -129,14 +129,10 @@ class ArchitectureSelector:
         best_arch = max(scores, key=scores.get)
 
         # Generate architecture specification
-        architecture = self._generate_architecture_spec(
-            best_arch, requirements, constraints
-        )
+        architecture = self._generate_architecture_spec(best_arch, requirements, constraints)
 
         # Add decision rationale
-        architecture["decision_rationale"] = self._generate_rationale(
-            best_arch, scores, analysis
-        )
+        architecture["decision_rationale"] = self._generate_rationale(best_arch, scores, analysis)
 
         # Add migration path if needed
         if self._needs_migration(requirements):
@@ -298,17 +294,11 @@ class ArchitectureSelector:
             score += 1.0
 
         # Performance fit
-        if (
-            analysis["performance"]["real_time"]
-            and arch_type == ArchitectureType.EVENT_DRIVEN
-        ):
+        if analysis["performance"]["real_time"] and arch_type == ArchitectureType.EVENT_DRIVEN:
             score += 2.0
 
         # Cost considerations
-        if (
-            constraints.get("budget") == "low"
-            and arch_type == ArchitectureType.SERVERLESS
-        ):
+        if constraints.get("budget") == "low" and arch_type == ArchitectureType.SERVERLESS:
             score += 1.5
 
         # Check indicators
@@ -541,9 +531,7 @@ class ArchitectureSelector:
                 {
                     "architecture": arch.value,
                     "score": score,
-                    "reason_not_selected": self._get_rejection_reason(
-                        arch, selected, scores
-                    ),
+                    "reason_not_selected": self._get_rejection_reason(arch, selected, scores),
                 }
                 for arch, score in scores.items()
                 if arch != selected
@@ -552,9 +540,7 @@ class ArchitectureSelector:
             "mitigations": self._suggest_mitigations(selected, analysis),
         }
 
-    def _identify_key_factors(
-        self, selected: ArchitectureType, analysis: Dict
-    ) -> List[str]:
+    def _identify_key_factors(self, selected: ArchitectureType, analysis: Dict) -> List[str]:
         """Identify key decision factors"""
         factors = []
 
@@ -599,15 +585,11 @@ class ArchitectureSelector:
                 ]
             )
         elif selected == ArchitectureType.SERVERLESS:
-            risks.extend(
-                ["Vendor lock-in", "Cold start latency", "Limited execution time"]
-            )
+            risks.extend(["Vendor lock-in", "Cold start latency", "Limited execution time"])
 
         return risks
 
-    def _suggest_mitigations(
-        self, selected: ArchitectureType, analysis: Dict
-    ) -> List[str]:
+    def _suggest_mitigations(self, selected: ArchitectureType, analysis: Dict) -> List[str]:
         """Suggest risk mitigations"""
         mitigations = []
 
@@ -651,9 +633,7 @@ class ArchitectureSelector:
             "strategies": self._get_migration_strategies(current, target),
         }
 
-    def _get_migration_phases(
-        self, current: str, target: ArchitectureType
-    ) -> List[Dict]:
+    def _get_migration_phases(self, current: str, target: ArchitectureType) -> List[Dict]:
         """Get migration phases"""
         phases = []
 
@@ -667,9 +647,7 @@ class ArchitectureSelector:
 
         return phases
 
-    def _estimate_migration_duration(
-        self, current: str, target: ArchitectureType
-    ) -> str:
+    def _estimate_migration_duration(self, current: str, target: ArchitectureType) -> str:
         """Estimate migration duration"""
         if "monolithic" in current.lower() and target == ArchitectureType.MICROSERVICES:
             return "3-6 months"
@@ -683,9 +661,7 @@ class ArchitectureSelector:
             "Team learning curve",
         ]
 
-    def _get_migration_strategies(
-        self, current: str, target: ArchitectureType
-    ) -> List[str]:
+    def _get_migration_strategies(self, current: str, target: ArchitectureType) -> List[str]:
         """Get migration strategies"""
         return [
             "Strangler Fig pattern for gradual migration",

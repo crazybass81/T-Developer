@@ -5,81 +5,51 @@ Core framework for building and managing AI agents in the T-Developer platform.
 Organized into logical modules for better maintainability.
 """
 
-# Core Components
-from .core.base_agent import (
-    BaseAgent,
-    AgentStatus,
-    AgentMetadata,
-    AgentContext,
-    AgentMessage,
+# Communication
+from .communication.communication_manager import (
+    AgentCommunicationManager,
+    AgentCommunicationMixin,
+    AgentRPC,
+    CommunicationProtocol,
+    InMemoryMessageBus,
+    MessageBus,
+    MessageType,
 )
+from .communication.data_sharing import (
+    AgentDataSharingMixin,
+    DataSharingManager,
+    DataType,
+    SharedData,
+    ShareScope,
+)
+from .communication.event_bus import AgentEventMixin, Event, EventPriority
+from .communication.message_queue import MessageQueue, MessageRouter, QueueConfig, QueueType
 from .core.agent_types import (
-    AgentType,
-    AgentSpec,
     AGENT_SPECIFICATIONS,
+    AgentSpec,
+    AgentType,
     get_agent_dependencies,
     get_execution_order,
 )
-from .core.interfaces import (
-    IAgent,
-    ICollaborativeAgent,
-    HealthCheckResult,
-    AgentMetrics,
-)
+
+# Core Components
+from .core.base_agent import AgentContext, AgentMessage, AgentMetadata, AgentStatus, BaseAgent
+from .core.interfaces import AgentMetrics, HealthCheckResult, IAgent, ICollaborativeAgent
+from .management.agent_factory import AgentFactory
 
 # Management
-from .management.agent_manager import AgentManager, AgentInfo
-from .management.agent_registry import AgentRegistry, AgentRegistration
-from .management.agent_factory import AgentFactory
+from .management.agent_manager import AgentInfo, AgentManager
+from .management.agent_registry import AgentRegistration, AgentRegistry
 from .management.lifecycle import LifecycleEvent, LifecycleStateMachine
-
-# Communication
-from .communication.communication_manager import (
-    MessageBus,
-    InMemoryMessageBus,
-    AgentCommunicationManager,
-    AgentRPC,
-    AgentCommunicationMixin,
-    MessageType,
-    CommunicationProtocol,
-)
-from .communication.message_queue import (
-    MessageQueue,
-    MessageRouter,
-    QueueConfig,
-    QueueType,
-)
-from .communication.event_bus import Event, EventPriority, AgentEventMixin
-from .communication.data_sharing import (
-    DataSharingManager,
-    SharedData,
-    ShareScope,
-    DataType,
-    AgentDataSharingMixin,
-)
+from .monitoring.error_handling import AgentError, AgentErrorHandler, ErrorCategory, ErrorSeverity
+from .monitoring.error_recovery import ErrorRecoveryManager, RecoveryAction, RecoveryStrategy
+from .monitoring.logging_tracing import AgentLogger, AgentLoggingMixin, DistributedTracer, TraceSpan
 
 # Monitoring
 from .monitoring.performance_monitor import (
-    PerformanceMonitor,
-    PerformanceMetric,
     AgentPerformanceStats,
-)
-from .monitoring.logging_tracing import (
-    AgentLogger,
-    DistributedTracer,
-    AgentLoggingMixin,
-    TraceSpan,
-)
-from .monitoring.error_handling import (
-    AgentError,
-    ErrorSeverity,
-    ErrorCategory,
-    AgentErrorHandler,
-)
-from .monitoring.error_recovery import (
-    ErrorRecoveryManager,
-    RecoveryStrategy,
-    RecoveryAction,
+    PerformanceMetric,
+    PerformanceMonitor,
 )
 
 # Version

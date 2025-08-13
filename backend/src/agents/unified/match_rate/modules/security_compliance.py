@@ -3,8 +3,8 @@ Security Compliance Module
 Checks security compliance and requirements matching
 """
 
-from typing import Dict, List, Any, Optional
 import re
+from typing import Any, Dict, List, Optional
 
 
 class SecurityCompliance:
@@ -60,9 +60,7 @@ class SecurityCompliance:
                 "detailed_checks": compliance_checks,
                 "security_gaps": self._identify_security_gaps(compliance_checks),
                 "compliance_level": self._determine_compliance_level(compliance_score),
-                "remediation_actions": self._suggest_remediation_actions(
-                    compliance_checks
-                ),
+                "remediation_actions": self._suggest_remediation_actions(compliance_checks),
             }
 
         return compliance_results
@@ -73,18 +71,12 @@ class SecurityCompliance:
         text = str(requirements).lower()
 
         return {
-            "authentication_required": any(
-                term in text for term in ["auth", "login", "signin"]
-            ),
+            "authentication_required": any(term in text for term in ["auth", "login", "signin"]),
             "authorization_required": any(
                 term in text for term in ["authorization", "permissions", "roles"]
             ),
-            "encryption_required": any(
-                term in text for term in ["encrypt", "ssl", "tls", "https"]
-            ),
-            "audit_required": any(
-                term in text for term in ["audit", "logging", "compliance"]
-            ),
+            "encryption_required": any(term in text for term in ["encrypt", "ssl", "tls", "https"]),
+            "audit_required": any(term in text for term in ["audit", "logging", "compliance"]),
             "compliance_standards": self._extract_compliance_standards(text),
             "data_sensitivity": self._assess_data_sensitivity(text),
             "security_level": requirements.get("security_level", "standard"),
@@ -140,21 +132,14 @@ class SecurityCompliance:
             "has_authorization": any(
                 term in text for term in ["authorization", "rbac", "permissions"]
             ),
-            "has_encryption": any(
-                term in text for term in ["encryption", "ssl", "tls", "aes"]
-            ),
-            "has_audit_logging": any(
-                term in text for term in ["audit", "logging", "trail"]
-            ),
+            "has_encryption": any(term in text for term in ["encryption", "ssl", "tls", "aes"]),
+            "has_audit_logging": any(term in text for term in ["audit", "logging", "trail"]),
             "has_input_validation": any(
                 term in text for term in ["validation", "sanitization", "xss"]
             ),
-            "has_security_headers": any(
-                term in text for term in ["csrf", "cors", "csp"]
-            ),
+            "has_security_headers": any(term in text for term in ["csrf", "cors", "csp"]),
             "vulnerability_scanning": any(
-                term in text
-                for term in ["security scan", "vulnerability", "penetration"]
+                term in text for term in ["security scan", "vulnerability", "penetration"]
             ),
             "compliance_certifications": self._extract_certifications(text),
         }
@@ -198,9 +183,7 @@ class SecurityCompliance:
             "status": "compliant" if available else "non_compliant",
         }
 
-    def _check_authorization_compliance(
-        self, features: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _check_authorization_compliance(self, features: Dict, requirements: Dict) -> Dict[str, Any]:
         """Check authorization compliance"""
 
         required = requirements.get("authorization_required", False)
@@ -219,9 +202,7 @@ class SecurityCompliance:
             "status": "compliant" if available else "non_compliant",
         }
 
-    def _check_encryption_compliance(
-        self, features: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _check_encryption_compliance(self, features: Dict, requirements: Dict) -> Dict[str, Any]:
         """Check encryption compliance"""
 
         required = requirements.get("encryption_required", False)
@@ -268,9 +249,7 @@ class SecurityCompliance:
             "status": "compliant" if protection_score >= 0.7 else "partial_compliance",
         }
 
-    def _check_audit_compliance(
-        self, features: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _check_audit_compliance(self, features: Dict, requirements: Dict) -> Dict[str, Any]:
         """Check audit logging compliance"""
 
         required = requirements.get("audit_required", False)
@@ -298,9 +277,7 @@ class SecurityCompliance:
             "status": "compliant" if available else "non_compliant",
         }
 
-    def _check_vulnerability_management(
-        self, features: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _check_vulnerability_management(self, features: Dict, requirements: Dict) -> Dict[str, Any]:
         """Check vulnerability management"""
 
         has_scanning = features.get("vulnerability_scanning", False)
@@ -374,9 +351,7 @@ class SecurityCompliance:
         for category, check in checks.items():
             if not check.get("compliant", True):
                 if category == "authentication":
-                    actions.append(
-                        "Implement robust authentication mechanism (OAuth2/JWT)"
-                    )
+                    actions.append("Implement robust authentication mechanism (OAuth2/JWT)")
                 elif category == "authorization":
                     actions.append("Add role-based access control (RBAC)")
                 elif category == "encryption":
@@ -389,9 +364,7 @@ class SecurityCompliance:
                     actions.append("Implement regular vulnerability scanning")
 
         if not actions:
-            actions.append(
-                "Security compliance looks good - maintain current practices"
-            )
+            actions.append("Security compliance looks good - maintain current practices")
 
         return actions
 

@@ -3,10 +3,10 @@ Search Engine Module
 Core search functionality for component retrieval
 """
 
-from typing import Dict, List, Any, Optional, Tuple
-import re
 import math
+import re
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class SearchEngine:
@@ -284,9 +284,7 @@ class SearchEngine:
                 tfidf_score = self._calculate_tfidf_score(term, component, components)
 
                 # Combine scores with weights
-                combined_score = (
-                    exact_score * 0.5 + fuzzy_score * 0.3 + tfidf_score * 0.2
-                )
+                combined_score = exact_score * 0.5 + fuzzy_score * 0.3 + tfidf_score * 0.2
 
                 total_score += combined_score
 
@@ -327,9 +325,7 @@ class SearchEngine:
             recency_boost = self._calculate_recency_boost(last_updated)
 
             # Calculate final score
-            result["score"] = (
-                original_score * boost_multiplier * popularity_boost * recency_boost
-            )
+            result["score"] = original_score * boost_multiplier * popularity_boost * recency_boost
             result["boost_applied"] = {
                 "field_boost": boost_multiplier,
                 "popularity_boost": popularity_boost,
@@ -425,9 +421,7 @@ class SearchEngine:
         # Default: check if query appears in text
         return query_lower in searchable_text
 
-    def _calculate_boolean_score(
-        self, terms: List[str], component: Dict[str, Any]
-    ) -> float:
+    def _calculate_boolean_score(self, terms: List[str], component: Dict[str, Any]) -> float:
         """Calculate score for boolean matches"""
 
         score = 0.0
@@ -442,9 +436,7 @@ class SearchEngine:
 
         return score
 
-    def _calculate_exact_match_score(
-        self, term: str, component: Dict[str, Any]
-    ) -> float:
+    def _calculate_exact_match_score(self, term: str, component: Dict[str, Any]) -> float:
         """Calculate exact match score for a term"""
 
         score = 0.0
@@ -464,9 +456,7 @@ class SearchEngine:
 
         return score
 
-    def _calculate_fuzzy_match_score(
-        self, term: str, component: Dict[str, Any]
-    ) -> float:
+    def _calculate_fuzzy_match_score(self, term: str, component: Dict[str, Any]) -> float:
         """Calculate fuzzy match score for a term"""
 
         max_score = 0.0

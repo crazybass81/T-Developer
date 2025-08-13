@@ -4,12 +4,12 @@ Lightweight agent framework with minimal memory footprint (6.5KB target)
 """
 import asyncio
 import json
+import logging
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List, Callable, TypeVar, Generic
 from enum import Enum
-import logging
+from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -338,9 +338,7 @@ class AgnoOrchestrator:
                 continue
 
             agent = self.agents[agent_name]
-            agent_input = AgentInput(
-                data=input_data, context=context, previous_results=[]
-            )
+            agent_input = AgentInput(data=input_data, context=context, previous_results=[])
 
             tasks.append(agent.execute(agent_input))
 
@@ -364,9 +362,7 @@ class AgnoOrchestrator:
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get metrics for all agents"""
-        return {
-            agent_name: agent.get_metrics() for agent_name, agent in self.agents.items()
-        }
+        return {agent_name: agent.get_metrics() for agent_name, agent in self.agents.items()}
 
     def reset_all_metrics(self) -> None:
         """Reset metrics for all agents"""

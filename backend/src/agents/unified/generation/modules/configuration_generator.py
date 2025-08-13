@@ -3,15 +3,16 @@ Configuration Generator Module for Generation Agent
 Generates framework-specific configuration files and environment settings
 """
 
-from typing import Dict, List, Any, Optional, Union
 import asyncio
 import json
-import yaml
 import os
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+import yaml
 
 
 class ConfigType(Enum):
@@ -225,9 +226,7 @@ class ConfigurationGenerator:
         return configs
 
     # React configurations
-    async def _get_react_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_react_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate React-specific configurations"""
 
         configs = {}
@@ -329,9 +328,7 @@ export default defineConfig({{
         return configs
 
     # Vue configurations
-    async def _get_vue_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_vue_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Vue-specific configurations"""
 
         configs = {}
@@ -370,9 +367,7 @@ export default defineConfig({{
         return configs
 
     # Angular configurations
-    async def _get_angular_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_angular_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Angular-specific configurations"""
 
         configs = {}
@@ -420,9 +415,7 @@ export default defineConfig({{
         return configs
 
     # Express configurations
-    async def _get_express_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_express_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Express-specific configurations"""
 
         configs = {}
@@ -481,9 +474,7 @@ export default defineConfig({{
         return configs
 
     # FastAPI configurations
-    async def _get_fastapi_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_fastapi_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate FastAPI-specific configurations"""
 
         configs = {}
@@ -593,9 +584,7 @@ datefmt = %H:%M:%S"""
         return configs
 
     # Common configurations
-    async def _get_git_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_git_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Git configuration files"""
 
         configs = {}
@@ -703,9 +692,7 @@ pids
 
         return configs
 
-    async def _get_docker_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_docker_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Docker configuration files"""
 
         configs = {}
@@ -866,8 +853,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]"""
                                 if framework in ["react", "vue", "angular", "express"]
                                 else None,
                                 "python-version": "3.9"
-                                if framework
-                                not in ["react", "vue", "angular", "express"]
+                                if framework not in ["react", "vue", "angular", "express"]
                                 else None,
                             },
                         },
@@ -912,9 +898,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]"""
         return configs
 
     # Environment configurations
-    async def _get_development_env(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_development_env(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate development environment configuration"""
 
         configs = {}
@@ -971,9 +955,7 @@ VITE_ENABLE_LOGGING=true"""
 
         return configs
 
-    async def _get_production_env(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_production_env(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate production environment configuration"""
 
         configs = {}
@@ -1065,45 +1047,31 @@ VITE_SENTRY_DSN=${SENTRY_DSN}"""
         return counts
 
     # Additional framework-specific methods (simplified)
-    async def _get_svelte_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_svelte_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Svelte-specific configurations"""
         return {}
 
-    async def _get_nextjs_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_nextjs_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Next.js-specific configurations"""
         return {}
 
-    async def _get_nuxtjs_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_nuxtjs_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Nuxt.js-specific configurations"""
         return {}
 
-    async def _get_django_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_django_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Django-specific configurations"""
         return {}
 
-    async def _get_flask_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_flask_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Flask-specific configurations"""
         return {}
 
-    async def _get_vscode_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_vscode_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate VS Code workspace configurations"""
         return {}
 
-    async def _get_prettier_configs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_prettier_configs(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Prettier formatting configurations"""
         return {}
 
@@ -1113,22 +1081,16 @@ VITE_SENTRY_DSN=${SENTRY_DSN}"""
         """Generate EditorConfig configurations"""
         return {}
 
-    async def _get_test_env(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_test_env(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate test environment configuration"""
         return {}
 
     # Security configuration methods (simplified)
-    async def _get_cors_config(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_cors_config(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate CORS configuration"""
         return {}
 
-    async def _get_helmet_config(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_helmet_config(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate Helmet security configuration"""
         return {}
 
@@ -1138,8 +1100,6 @@ VITE_SENTRY_DSN=${SENTRY_DSN}"""
         """Generate rate limiting configuration"""
         return {}
 
-    async def _get_auth_config(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, ConfigurationFile]:
+    async def _get_auth_config(self, context: Dict[str, Any]) -> Dict[str, ConfigurationFile]:
         """Generate authentication configuration"""
         return {}

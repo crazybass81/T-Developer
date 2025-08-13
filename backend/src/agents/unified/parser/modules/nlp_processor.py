@@ -3,9 +3,9 @@ NLP Processor Module
 Advanced natural language processing for requirement analysis
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import re
 from collections import Counter
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class NLPProcessor:
@@ -264,25 +264,16 @@ class NLPProcessor:
                     [t for t, _ in pos_tags[max(0, i - 2) : min(len(pos_tags), i + 3)]]
                 )
 
-                if any(
-                    word in context for word in ["user", "person", "people", "customer"]
-                ):
+                if any(word in context for word in ["user", "person", "people", "customer"]):
                     entities["persons"].append(token)
-                elif any(
-                    word in context for word in ["company", "organization", "team"]
-                ):
+                elif any(word in context for word in ["company", "organization", "team"]):
                     entities["organizations"].append(token)
-                elif any(
-                    word in context for word in ["place", "location", "address", "city"]
-                ):
+                elif any(word in context for word in ["place", "location", "address", "city"]):
                     entities["locations"].append(token)
-                elif any(
-                    word in context for word in ["product", "service", "application"]
-                ):
+                elif any(word in context for word in ["product", "service", "application"]):
                     entities["products"].append(token)
                 elif any(
-                    word in context
-                    for word in ["technology", "framework", "language", "tool"]
+                    word in context for word in ["technology", "framework", "language", "tool"]
                 ):
                     entities["technologies"].append(token)
                 else:
@@ -387,9 +378,7 @@ class NLPProcessor:
 
         return structure
 
-    def _extract_key_phrases(
-        self, tokens: List[str], pos_tags: List[Tuple[str, str]]
-    ) -> List[str]:
+    def _extract_key_phrases(self, tokens: List[str], pos_tags: List[Tuple[str, str]]) -> List[str]:
         """Extract key phrases from text"""
         key_phrases = []
         current_phrase = []
@@ -442,16 +431,12 @@ class NLPProcessor:
         if positive_count > negative_count:
             sentiment = "positive"
             score = (
-                positive_count / (positive_count + negative_count)
-                if negative_count > 0
-                else 1.0
+                positive_count / (positive_count + negative_count) if negative_count > 0 else 1.0
             )
         elif negative_count > positive_count:
             sentiment = "negative"
             score = (
-                -negative_count / (positive_count + negative_count)
-                if positive_count > 0
-                else -1.0
+                -negative_count / (positive_count + negative_count) if positive_count > 0 else -1.0
             )
         else:
             sentiment = "neutral"
@@ -488,9 +473,7 @@ class NLPProcessor:
 
         return coreferences
 
-    def _find_antecedent(
-        self, pronoun: str, previous_sentences: List[str]
-    ) -> Optional[str]:
+    def _find_antecedent(self, pronoun: str, previous_sentences: List[str]) -> Optional[str]:
         """Find antecedent for a pronoun"""
         # Simple heuristic: look for nearest noun
         for sentence in reversed(previous_sentences):
@@ -517,9 +500,7 @@ class NLPProcessor:
 
         return True
 
-    def _extract_relationships(
-        self, entities: Dict, dependencies: List[Dict]
-    ) -> List[Dict]:
+    def _extract_relationships(self, entities: Dict, dependencies: List[Dict]) -> List[Dict]:
         """Extract relationships between entities"""
         relationships = []
 
@@ -566,17 +547,13 @@ class NLPProcessor:
                 features["tense"].append("present")
 
             # Detect voice
-            if "by" in tokens and any(
-                word in tokens for word in ["was", "were", "is", "are"]
-            ):
+            if "by" in tokens and any(word in tokens for word in ["was", "were", "is", "are"]):
                 features["voice"].append("passive")
             else:
                 features["voice"].append("active")
 
             # Detect mood
-            if sentence.endswith("!") or any(
-                word in tokens for word in ["please", "must"]
-            ):
+            if sentence.endswith("!") or any(word in tokens for word in ["please", "must"]):
                 features["mood"].append("imperative")
             elif sentence.endswith("?"):
                 features["mood"].append("interrogative")
@@ -605,9 +582,7 @@ class NLPProcessor:
             "word_count": len(words),
             "sentence_count": len(sentences),
             "token_count": len(tokens),
-            "average_word_length": sum(len(w) for w in words) / len(words)
-            if words
-            else 0,
+            "average_word_length": sum(len(w) for w in words) / len(words) if words else 0,
             "average_sentence_length": len(words) / len(sentences) if sentences else 0,
             "vocabulary_size": len(set(words)),
             "lexical_diversity": len(set(words)) / len(words) if words else 0,
@@ -623,9 +598,7 @@ class NLPProcessor:
 
         # Flesch Reading Ease formula
         score = (
-            206.835
-            - 1.015 * (len(words) / len(sentences))
-            - 84.6 * (syllable_count / len(words))
+            206.835 - 1.015 * (len(words) / len(sentences)) - 84.6 * (syllable_count / len(words))
         )
 
         return max(0, min(100, score))

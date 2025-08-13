@@ -3,9 +3,10 @@ Similarity Calculator Module
 Calculates various similarity metrics between components and requirements
 """
 
-from typing import Dict, List, Any, Optional
-import numpy as np
 import math
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -29,20 +30,16 @@ class SimilarityCalculator:
             similarities[component_id] = {
                 "cosine_similarity": self._cosine_similarity(component, requirements),
                 "jaccard_similarity": self._jaccard_similarity(component, requirements),
-                "euclidean_similarity": self._euclidean_similarity(
-                    component, requirements
-                ),
-                "semantic_similarity": self._semantic_similarity(
-                    component, requirements
-                ),
+                "euclidean_similarity": self._euclidean_similarity(component, requirements),
+                "semantic_similarity": self._semantic_similarity(component, requirements),
                 "fuzzy_similarity": self._fuzzy_similarity(component, requirements),
                 "weighted_average": 0.0,
             }
 
             # Calculate weighted average
-            similarities[component_id][
-                "weighted_average"
-            ] = self._calculate_weighted_average(similarities[component_id])
+            similarities[component_id]["weighted_average"] = self._calculate_weighted_average(
+                similarities[component_id]
+            )
 
         return similarities
 
@@ -89,9 +86,7 @@ class SimilarityCalculator:
         req_features.extend([0] * (max_len - len(req_features)))
 
         # Calculate Euclidean distance
-        distance = math.sqrt(
-            sum((a - b) ** 2 for a, b in zip(comp_features, req_features))
-        )
+        distance = math.sqrt(sum((a - b) ** 2 for a, b in zip(comp_features, req_features)))
 
         # Convert to similarity (1 / (1 + distance))
         return 1 / (1 + distance)
@@ -117,9 +112,7 @@ class SimilarityCalculator:
         """Calculate fuzzy string similarity"""
 
         comp_name = str(component.get("name", ""))
-        req_keywords = " ".join(
-            str(v) for v in requirements.values() if isinstance(v, str)
-        )
+        req_keywords = " ".join(str(v) for v in requirements.values() if isinstance(v, str))
 
         return self._calculate_string_similarity(comp_name, req_keywords)
 
@@ -195,9 +188,7 @@ class SimilarityCalculator:
             word_counts[word] = word_counts.get(word, 0) + 1
 
         # Get top 100 most common words as dimensions
-        sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[
-            :100
-        ]
+        sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:100]
 
         vector = np.zeros(100)
         for i, (word, count) in enumerate(sorted_words):

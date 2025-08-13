@@ -3,9 +3,9 @@ Faceted Search Module
 Provides faceted search capabilities for refined component discovery
 """
 
-from typing import Dict, List, Any, Optional, Tuple
-from collections import defaultdict, Counter
 import math
+from collections import Counter, defaultdict
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class FacetedSearch:
@@ -89,9 +89,7 @@ class FacetedSearch:
 
             elif facet_type == "tags" and facet_values:
                 filtered = [
-                    c
-                    for c in filtered
-                    if any(tag in c.get("tags", []) for tag in facet_values)
+                    c for c in filtered if any(tag in c.get("tags", []) for tag in facet_values)
                 ]
 
             elif facet_type == "license" and facet_values:
@@ -114,9 +112,7 @@ class FacetedSearch:
                     filtered = [
                         c
                         for c in filtered
-                        if quality_range["min"]
-                        <= c.get("quality", 0)
-                        <= quality_range["max"]
+                        if quality_range["min"] <= c.get("quality", 0) <= quality_range["max"]
                     ]
 
             elif facet_type == "features" and facet_values:
@@ -179,9 +175,7 @@ class FacetedSearch:
                     "selected": selected and tech in selected,
                     "percentage": (count / len(components)) * 100 if components else 0,
                     "ecosystem": ecosystem,
-                    "popularity_score": self._calculate_tech_popularity(
-                        tech, components
-                    ),
+                    "popularity_score": self._calculate_tech_popularity(tech, components),
                 }
             )
 
@@ -397,10 +391,7 @@ class FacetedSearch:
         for range_config in ranges:
             count = 0
             for component in components:
-                size_kb = (
-                    component.get("bundle_size", component.get("package_size", 0))
-                    / 1024
-                )
+                size_kb = component.get("bundle_size", component.get("package_size", 0)) / 1024
                 if range_config["min"] <= size_kb < range_config["max"]:
                     count += 1
 
@@ -482,9 +473,7 @@ class FacetedSearch:
             count = sum(
                 1
                 for c in components
-                if range_config["min"]
-                <= c.get("security_score", 5)
-                <= range_config["max"]
+                if range_config["min"] <= c.get("security_score", 5) <= range_config["max"]
             )
 
             if count > 0:
@@ -528,14 +517,10 @@ class FacetedSearch:
         for range_config in ranges:
             if range_config["days"] == float("inf"):
                 cutoff_date = now - timedelta(days=730)
-                count = sum(
-                    1 for c in components if self._get_component_date(c) < cutoff_date
-                )
+                count = sum(1 for c in components if self._get_component_date(c) < cutoff_date)
             else:
                 cutoff_date = now - timedelta(days=range_config["days"])
-                count = sum(
-                    1 for c in components if self._get_component_date(c) >= cutoff_date
-                )
+                count = sum(1 for c in components if self._get_component_date(c) >= cutoff_date)
 
             if count > 0:
                 facets.append(
@@ -544,9 +529,7 @@ class FacetedSearch:
                         "label": range_config["label"],
                         "count": count,
                         "selected": selected == range_config["days"],
-                        "percentage": (count / len(components)) * 100
-                        if components
-                        else 0,
+                        "percentage": (count / len(components)) * 100 if components else 0,
                     }
                 )
 
@@ -574,9 +557,7 @@ class FacetedSearch:
             count = sum(
                 1
                 for c in components
-                if range_config["min"]
-                <= c.get("performance_score", 5)
-                <= range_config["max"]
+                if range_config["min"] <= c.get("performance_score", 5) <= range_config["max"]
             )
 
             if count > 0:
@@ -651,12 +632,9 @@ class FacetedSearch:
         if not tech_components:
             return 0.0
 
-        avg_popularity = sum(c.get("popularity", 0) for c in tech_components) / len(
-            tech_components
-        )
+        avg_popularity = sum(c.get("popularity", 0) for c in tech_components) / len(tech_components)
         total_downloads = sum(
-            max(c.get("npm_downloads", 0), c.get("pypi_downloads", 0))
-            for c in tech_components
+            max(c.get("npm_downloads", 0), c.get("pypi_downloads", 0)) for c in tech_components
         )
 
         # Normalize to 0-10 scale
@@ -683,9 +661,7 @@ class FacetedSearch:
         else:
             return "general"
 
-    def _calculate_tag_relevance(
-        self, tag: str, components: List[Dict[str, Any]]
-    ) -> float:
+    def _calculate_tag_relevance(self, tag: str, components: List[Dict[str, Any]]) -> float:
         """Calculate tag relevance score"""
 
         tag_components = [c for c in components if tag in c.get("tags", [])]
@@ -694,12 +670,8 @@ class FacetedSearch:
             return 0.0
 
         # Calculate based on component quality and popularity
-        avg_quality = sum(c.get("quality", 0) for c in tag_components) / len(
-            tag_components
-        )
-        avg_popularity = sum(c.get("popularity", 0) for c in tag_components) / len(
-            tag_components
-        )
+        avg_quality = sum(c.get("quality", 0) for c in tag_components) / len(tag_components)
+        avg_popularity = sum(c.get("popularity", 0) for c in tag_components) / len(tag_components)
 
         return (avg_quality + avg_popularity) / 20.0  # Normalize to 0-1
 
@@ -739,9 +711,7 @@ class FacetedSearch:
             "permissive": permissive,
         }
 
-    def _analyze_feature(
-        self, feature: str, components: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def _analyze_feature(self, feature: str, components: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze a feature"""
 
         feature_lower = feature.lower()
@@ -808,6 +778,7 @@ class FacetedSearch:
         """Get component date for comparison"""
 
         from datetime import datetime
+
         from dateutil.parser import parse as parse_date
 
         date_str = component.get("last_updated")
@@ -827,17 +798,13 @@ class FacetedSearch:
         facets = {}
 
         # Get all available values for each facet type
-        facets["categories"] = list(
-            set(c.get("category") for c in components if c.get("category"))
-        )
+        facets["categories"] = list(set(c.get("category") for c in components if c.get("category")))
 
         facets["technologies"] = list(
             set(c.get("technology") for c in components if c.get("technology"))
         )
 
-        facets["licenses"] = list(
-            set(c.get("license") for c in components if c.get("license"))
-        )
+        facets["licenses"] = list(set(c.get("license") for c in components if c.get("license")))
 
         facets["tags"] = list(set(tag for c in components for tag in c.get("tags", [])))
 

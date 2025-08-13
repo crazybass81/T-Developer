@@ -3,12 +3,12 @@ Integrity Checker Module for Assembly Agent
 Verifies project integrity and consistency
 """
 
-from typing import Dict, List, Any, Optional
 import asyncio
 import hashlib
 import os
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -67,9 +67,7 @@ class IntegrityChecker:
                 error=str(e),
             )
 
-    async def _generate_checksums(
-        self, build_artifacts: Dict[str, str]
-    ) -> Dict[str, str]:
+    async def _generate_checksums(self, build_artifacts: Dict[str, str]) -> Dict[str, str]:
         """Generate checksums for all files"""
 
         checksums = {}
@@ -121,18 +119,14 @@ class IntegrityChecker:
                 expected_scripts = ["build", "test", "start"]
                 missing_scripts = [s for s in expected_scripts if s not in scripts]
                 if missing_scripts:
-                    issues.append(
-                        f"Missing package.json scripts: {', '.join(missing_scripts)}"
-                    )
+                    issues.append(f"Missing package.json scripts: {', '.join(missing_scripts)}")
 
             except json.JSONDecodeError:
                 issues.append("Invalid package.json format")
 
         return issues
 
-    async def _verify_file_relationships(
-        self, build_artifacts: Dict[str, str]
-    ) -> List[str]:
+    async def _verify_file_relationships(self, build_artifacts: Dict[str, str]) -> List[str]:
         """Verify file relationships and imports"""
 
         issues = []
@@ -151,9 +145,7 @@ class IntegrityChecker:
                     if import_path.startswith("."):
                         # Relative import
                         base_dir = os.path.dirname(file_path)
-                        full_import_path = os.path.normpath(
-                            os.path.join(base_dir, import_path)
-                        )
+                        full_import_path = os.path.normpath(os.path.join(base_dir, import_path))
 
                         # Add common extensions
                         possible_paths = [
@@ -172,8 +164,6 @@ class IntegrityChecker:
                                 break
 
                         if not found:
-                            issues.append(
-                                f"Broken import in {file_path}: {import_path}"
-                            )
+                            issues.append(f"Broken import in {file_path}: {import_path}")
 
         return issues

@@ -3,25 +3,25 @@ Agno Framework Integration
 고성능 에이전트 프레임워크 통합
 """
 
+import asyncio
+import hashlib
+import json
 import os
 import time
-import asyncio
-from typing import Dict, List, Optional, Any, Callable
-from dataclasses import dataclass
-import json
-import hashlib
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
+
+import boto3
+from aws_lambda_powertools import Logger, Metrics, Tracer
 
 # Agno Framework 컴포넌트
 from agno.agent import Agent, AgentConfig
-from agno.models.aws import AwsBedrock
-from agno.memory import ConversationSummaryMemory, VectorMemory
-from agno.tools import Tool, ToolResult
-from agno.performance import PerformanceMonitor
 from agno.cache import AgentCache
-
-import boto3
-from aws_lambda_powertools import Logger, Tracer, Metrics
+from agno.memory import ConversationSummaryMemory, VectorMemory
+from agno.models.aws import AwsBedrock
+from agno.performance import PerformanceMonitor
+from agno.tools import Tool, ToolResult
 
 logger = Logger()
 tracer = Tracer()
@@ -76,9 +76,10 @@ class HighPerformanceAgent(Agent):
 
     def _measure_performance(self):
         """성능 측정"""
-        import sys
-        import psutil
         import gc
+        import sys
+
+        import psutil
 
         # 인스턴스화 시간 측정
         start_time = time.perf_counter()
@@ -90,9 +91,7 @@ class HighPerformanceAgent(Agent):
         process = psutil.Process()
         self.memory_footprint = process.memory_info().rss
 
-        logger.info(
-            f"Agent instantiation time: {self.instantiation_time*1000000:.2f}μs"
-        )
+        logger.info(f"Agent instantiation time: {self.instantiation_time*1000000:.2f}μs")
         logger.info(f"Agent memory footprint: {self.memory_footprint/1024:.2f}KB")
 
     async def execute_with_cache(self, prompt: str) -> Any:
@@ -128,9 +127,7 @@ class AgnoIntegrationManager:
     def _init_shared_resources(self):
         """공유 리소스 초기화"""
         # 공유 메모리
-        self.shared_memory = VectorMemory(
-            dimension=1536, index_type="HNSW", metric="cosine"
-        )
+        self.shared_memory = VectorMemory(dimension=1536, index_type="HNSW", metric="cosine")
 
         # 공유 캐시
         self.shared_cache = AgentCache(ttl=self.config.cache_ttl, max_size=1000)
@@ -210,9 +207,7 @@ class AgnoIntegrationManager:
 
         return result
 
-    async def _execute_parallel(
-        self, agents: List[str], initial_input: Any
-    ) -> List[Any]:
+    async def _execute_parallel(self, agents: List[str], initial_input: Any) -> List[Any]:
         """병렬 실행"""
         tasks = []
 

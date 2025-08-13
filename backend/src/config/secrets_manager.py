@@ -3,11 +3,13 @@ AWS Secrets Manager 통합
 IAM Role 기반 시크릿 관리
 """
 
-import os
 import json
-import boto3
-from typing import Optional, Dict, Any
+import os
 from functools import lru_cache
+from typing import Any, Dict, Optional
+
+import boto3
+
 
 class SecretsManager:
     """
@@ -15,14 +17,14 @@ class SecretsManager:
     """
 
     def __init__(self):
-        self.use_aws = os.getenv('USE_AWS_SECRETS', 'false').lower() == 'true'
-        self.region = os.getenv('AWS_REGION', 'us-east-1')
+        self.use_aws = os.getenv("USE_AWS_SECRETS", "false").lower() == "true"
+        self.region = os.getenv("AWS_REGION", "us-east-1")
 
         if self.use_aws:
             try:
                 # IAM Role을 통한 자동 인증
-                self.sm_client = boto3.client('secretsmanager', region_name=self.region)
-                self.ssm_client = boto3.client('ssm', region_name=self.region)
+                self.sm_client = boto3.client("secretsmanager", region_name=self.region)
+                self.ssm_client = boto3.client("ssm", region_name=self.region)
                 self._test_connection()
             except Exception as e:
                 print(f"Warning: Cannot connect to AWS ({e}). Falling back to local env.")
@@ -32,7 +34,7 @@ class SecretsManager:
         """AWS 연결 테스트"""
         try:
             # IAM Role이 있는지 확인
-            sts = boto3.client('sts')
+            sts = boto3.client("sts")
             identity = sts.get_caller_identity()
             print(f"Connected to AWS as: {identity.get('Arn')}")
             return True
@@ -52,13 +54,11 @@ class SecretsManager:
         # 1. AWS Secrets Manager 시도
         if self.use_aws:
             try:
-                response = self.sm_client.get_secret_value(
-                    SecretId=f't-developer/{secret_name}'
-                )
+                response = self.sm_client.get_secret_value(SecretId=f"t-developer/{secret_name}")
 
                 # JSON 형식 시크릿 처리
-                if 'SecretString' in response:
-                    secret = response['SecretString']
+                if "SecretString" in response:
+                    secret = response["SecretString"]
                     try:
                         # JSON인 경우 파싱
                         return json.loads(secret)
@@ -72,25 +72,25 @@ class SecretsManager:
                 print(f"Error getting secret from AWS: {e}")
 
         # 2. 환경 변수에서 가져오기
-        env_name = secret_name.upper().replace('-', '_')
+        env_name = secret_name.upper().replace("-", "_")
         env_value = os.getenv(env_name)
         if env_value:
             return env_value
 
         # 3. 로컬 .env 파일에서 가져오기
-        env_file = '/home/ec2-user/T-DeveloperMVP/backend/.env'
+        env_file = "/home/ec2-user/T-DeveloperMVP/backend/.env"
         if os.path.exists(env_file):
             with open(env_file) as f:
                 for line in f:
-                    if line.startswith(f'{env_name}='):
-                        return line.split('=', 1)[1].strip()
+                    if line.startswith(f"{env_name}="):
+                        return line.split("=", 1)[1].strip()
 
         # 4. 기본값 반환 (개발/테스트용)
         defaults = {
-            'openai-api-key': 'sk-local-development',
-            'anthropic-api-key': 'sk-ant-local-development',
-            'database-url': 'postgresql://postgres:postgres@localhost:5432/t_developer',
-            'redis-url': 'redis://localhost:6379/0'
+            "openai-api-key": "sk-local-development",
+            "anthropic-api-key": "sk-ant-local-development",
+            "database-url": "postgresql://postgres:postgres@localhost:5432/t_developer",
+            "redis-url": "redis://localhost:6379/0",
         }
 
         return defaults.get(secret_name)
@@ -102,25 +102,23 @@ class SecretsManager:
 
         if self.use_aws:
             try:
-                response = self.ssm_client.get_parameter(
-                    Name=f'/t-developer/{param_name}'
-                )
-                return response['Parameter']['Value']
+                response = self.ssm_client.get_parameter(Name=f"/t-developer/{param_name}")
+                return response["Parameter"]["Value"]
             except Exception as e:
                 print(f"Error getting parameter: {e}")
 
         # 환경 변수 폴백
-        return os.getenv(param_name.upper().replace('-', '_'))
+        return os.getenv(param_name.upper().replace("-", "_"))
 
     def get_all_secrets(self) -> Dict[str, Any]:
         """
         모든 필요한 시크릿 가져오기
         """
         secrets = {
-            'openai_api_key': self.get_secret('openai-api-key'),
-            'anthropic_api_key': self.get_secret('anthropic-api-key'),
-            'database_url': self.get_secret('database-url'),
-            'redis_url': self.get_secret('redis-url'),
+            "openai_api_key": self.get_secret("openai-api-key"),
+            "anthropic_api_key": self.get_secret("anthropic-api-key"),
+            "database_url": self.get_secret("database-url"),
+            "redis_url": self.get_secret("redis-url"),
         }
 
         # None 값 필터링
@@ -136,9 +134,9 @@ class SecretsManager:
 
         try:
             response = self.sm_client.create_secret(
-                Name=f't-developer/{secret_name}',
-                Description=description or f'Secret for {secret_name}',
-                SecretString=secret_value
+                Name=f"t-developer/{secret_name}",
+                Description=description or f"Secret for {secret_name}",
+                SecretString=secret_value,
             )
             print(f"✅ Created secret: {response['ARN']}")
             return True

@@ -5,16 +5,17 @@ Directed Acyclic Graph workflow execution engine for agent orchestration
 
 import asyncio
 import json
+import logging
+import traceback
 import uuid
-from typing import Dict, List, Any, Optional, Set, Tuple
+from collections import defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-import logging
-from collections import defaultdict, deque
+from typing import Any, Dict, List, Optional, Set, Tuple
+
 import networkx as nx
-from concurrent.futures import ThreadPoolExecutor
-import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -160,9 +161,7 @@ class DAGWorkflowEngine:
             for node in nodes:
                 for dep in node.dependencies:
                     if dep not in dag.nodes:
-                        raise ValueError(
-                            f"Node {node.node_id} depends on non-existent node {dep}"
-                        )
+                        raise ValueError(f"Node {node.node_id} depends on non-existent node {dep}")
 
             # Store workflow
             self.workflows[workflow_id] = dag
@@ -288,8 +287,7 @@ class DAGWorkflowEngine:
 
                     node_exec.completed_at = datetime.utcnow()
                     node_exec.execution_time_ms = int(
-                        (node_exec.completed_at - node_exec.started_at).total_seconds()
-                        * 1000
+                        (node_exec.completed_at - node_exec.started_at).total_seconds() * 1000
                     )
 
                 except asyncio.TimeoutError:
@@ -357,8 +355,7 @@ class DAGWorkflowEngine:
             finally:
                 node_exec.completed_at = datetime.utcnow()
                 node_exec.execution_time_ms = int(
-                    (node_exec.completed_at - node_exec.started_at).total_seconds()
-                    * 1000
+                    (node_exec.completed_at - node_exec.started_at).total_seconds() * 1000
                 )
 
     async def _execute_priority(self, execution_id: str):
@@ -377,9 +374,7 @@ class DAGWorkflowEngine:
                 break
 
             # Sort by priority (higher first)
-            ready_nodes.sort(
-                key=lambda n: dag.nodes[n].get("priority", 0), reverse=True
-            )
+            ready_nodes.sort(key=lambda n: dag.nodes[n].get("priority", 0), reverse=True)
 
             # Execute highest priority node
             node_id = ready_nodes[0]
@@ -407,8 +402,7 @@ class DAGWorkflowEngine:
             finally:
                 node_exec.completed_at = datetime.utcnow()
                 node_exec.execution_time_ms = int(
-                    (node_exec.completed_at - node_exec.started_at).total_seconds()
-                    * 1000
+                    (node_exec.completed_at - node_exec.started_at).total_seconds() * 1000
                 )
 
     async def _execute_resource_aware(self, execution_id: str):
@@ -449,9 +443,7 @@ class DAGWorkflowEngine:
                 # Check condition if specified
                 node_data = dag.nodes[node_id]
                 if node_data.get("condition"):
-                    if not self._evaluate_condition(
-                        node_data["condition"], execution.context
-                    ):
+                    if not self._evaluate_condition(node_data["condition"], execution.context):
                         node_exec.status = NodeStatus.SKIPPED
                         completed.add(node_id)
                         continue
@@ -462,10 +454,7 @@ class DAGWorkflowEngine:
 
     def _has_running_nodes(self, execution: WorkflowExecution) -> bool:
         """Check if any nodes are currently running"""
-        return any(
-            node.status == NodeStatus.RUNNING
-            for node in execution.node_executions.values()
-        )
+        return any(node.status == NodeStatus.RUNNING for node in execution.node_executions.values())
 
     def _evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
         """Evaluate a condition expression"""
@@ -562,9 +551,7 @@ class DAGWorkflowEngine:
 
         total_duration = None
         if execution.completed_at and execution.started_at:
-            total_duration = (
-                execution.completed_at - execution.started_at
-            ).total_seconds()
+            total_duration = (execution.completed_at - execution.started_at).total_seconds()
 
         return {
             "total_nodes": len(execution.node_executions),

@@ -3,10 +3,10 @@ API Parser Module
 Parses and generates API specifications from requirements
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import re
-from enum import Enum
 from collections import defaultdict
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class HTTPMethod(Enum):
@@ -213,9 +213,7 @@ class APIParser:
 
         return apis
 
-    def _extract_operation_apis(
-        self, text: str, entities: Dict[str, Any]
-    ) -> List[Dict]:
+    def _extract_operation_apis(self, text: str, entities: Dict[str, Any]) -> List[Dict]:
         """Extract business operation APIs"""
         apis = []
         operations = []
@@ -321,9 +319,7 @@ class APIParser:
 
         return merged
 
-    async def _enhance_api(
-        self, api: Dict, text: str, entities: Dict[str, Any]
-    ) -> Dict:
+    async def _enhance_api(self, api: Dict, text: str, entities: Dict[str, Any]) -> Dict:
         """Enhance API with additional details"""
         # Add OpenAPI operation ID
         api["operationId"] = self._generate_operation_id(api)
@@ -426,9 +422,7 @@ class APIParser:
                         "schema": {
                             "type": "object",
                             "properties": fields,
-                            "required": [
-                                k for k, v in fields.items() if v.get("required")
-                            ],
+                            "required": [k for k, v in fields.items() if v.get("required")],
                         }
                     }
                 },
@@ -503,10 +497,7 @@ class APIParser:
                 break
 
         # Default to bearer for protected resources
-        if any(
-            word in context_lower
-            for word in ["authenticated", "authorized", "protected"]
-        ):
+        if any(word in context_lower for word in ["authenticated", "authorized", "protected"]):
             auth["type"] = APIAuthType.BEARER.value
 
         return auth
@@ -534,9 +525,7 @@ class APIParser:
 
         return parameters
 
-    def _get_request_body_for_method(
-        self, method: HTTPMethod, resource: str
-    ) -> Optional[Dict]:
+    def _get_request_body_for_method(self, method: HTTPMethod, resource: str) -> Optional[Dict]:
         """Get request body based on HTTP method"""
         if method in [HTTPMethod.POST, HTTPMethod.PUT, HTTPMethod.PATCH]:
             return {
@@ -727,10 +716,7 @@ class APIParser:
         # Body validation
         if api.get("request_body"):
             schema = (
-                api["request_body"]
-                .get("content", {})
-                .get("application/json", {})
-                .get("schema", {})
+                api["request_body"].get("content", {}).get("application/json", {}).get("schema", {})
             )
             for field in schema.get("required", []):
                 rules.append(
@@ -800,7 +786,9 @@ class APIParser:
                 if api.get("parameters"):
                     doc += "**Parameters:**\n"
                     for param in api["parameters"]:
-                        doc += f"- `{param['name']}` ({param['in']}): {param.get('description', '')}\n"
+                        doc += (
+                            f"- `{param['name']}` ({param['in']}): {param.get('description', '')}\n"
+                        )
                     doc += "\n"
 
                 if api.get("request_body"):
@@ -860,9 +848,7 @@ class APIParser:
 
         for api in apis:
             operation_id = api.get("operationId", "operation")
-            sdk += (
-                f"    public Response {operation_id}(Map<String, Object> params) {{\n"
-            )
+            sdk += f"    public Response {operation_id}(Map<String, Object> params) {{\n"
             sdk += f"        // {api.get('description', '')}\n"
             sdk += f"        return request(\"{api['method']}\", \"{api['path']}\", params);\n"
             sdk += "    }\n\n"
@@ -881,22 +867,16 @@ class APIParser:
             # Check for duplicate paths
             key = (api["method"], api["path"])
             if key in paths:
-                validation["errors"].append(
-                    f"Duplicate API: {api['method']} {api['path']}"
-                )
+                validation["errors"].append(f"Duplicate API: {api['method']} {api['path']}")
             paths.add(key)
 
             # Check for missing descriptions
             if not api.get("description"):
-                validation["warnings"].append(
-                    f"Missing description: {api['method']} {api['path']}"
-                )
+                validation["warnings"].append(f"Missing description: {api['method']} {api['path']}")
 
             # Check for missing responses
             if not api.get("responses"):
-                validation["warnings"].append(
-                    f"Missing responses: {api['method']} {api['path']}"
-                )
+                validation["warnings"].append(f"Missing responses: {api['method']} {api['path']}")
 
         validation["valid"] = len(validation["errors"]) == 0
 

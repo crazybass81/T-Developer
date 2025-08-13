@@ -3,14 +3,14 @@ Download Agent - Final stage of the 9-agent pipeline
 Provides secure download management and file delivery
 """
 
-from typing import Dict, List, Any, Optional
 import asyncio
+import hashlib
+import json
 import os
 import shutil
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import hashlib
-import json
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -97,22 +97,16 @@ class DownloadAgent:
             download_info = await self._prepare_download(package_path, context)
 
             # Generate download token
-            download_token = self._generate_download_token(
-                download_info["secure_path"], context
-            )
+            download_token = self._generate_download_token(download_info["secure_path"], context)
 
             # Calculate expiration
-            expires_at = datetime.now() + timedelta(
-                hours=self.download_config["expiration_hours"]
-            )
+            expires_at = datetime.now() + timedelta(hours=self.download_config["expiration_hours"])
 
             # Generate download URL
             download_url = self._generate_download_url(download_token, context)
 
             # Create download metadata
-            metadata = await self._create_download_metadata(
-                download_info, context, assembly_result
-            )
+            metadata = await self._create_download_metadata(download_info, context, assembly_result)
 
             # Schedule cleanup
             await self._schedule_cleanup(download_info["secure_path"], expires_at)
@@ -146,9 +140,7 @@ class DownloadAgent:
                 error=str(e),
             )
 
-    async def _prepare_download(
-        self, package_path: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _prepare_download(self, package_path: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare package for secure download"""
 
         # Validate file
@@ -170,9 +162,7 @@ class DownloadAgent:
             secure_filename += ext
 
         # Create secure path
-        secure_path = os.path.join(
-            self.download_config["base_download_path"], secure_filename
-        )
+        secure_path = os.path.join(self.download_config["base_download_path"], secure_filename)
 
         # Copy file to secure location
         shutil.copy2(package_path, secure_path)

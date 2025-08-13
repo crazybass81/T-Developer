@@ -3,14 +3,15 @@ Documentation Generator Module for Generation Agent
 Generates comprehensive documentation for generated projects
 """
 
-from typing import Dict, List, Any, Optional, Union
 import asyncio
 import json
 import re
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
 import markdown
 from markdown.extensions import codehilite, toc
 
@@ -210,9 +211,7 @@ If you have any questions or need help, please:
             description="Project overview and setup instructions",
         )
 
-    async def _generate_api_docs(
-        self, context: Dict[str, Any]
-    ) -> Optional[DocumentationFile]:
+    async def _generate_api_docs(self, context: Dict[str, Any]) -> Optional[DocumentationFile]:
         """Generate API documentation"""
 
         framework = context.get("target_framework", "react")
@@ -223,9 +222,7 @@ If you have any questions or need help, please:
 
         components = context.get("selected_components", [])
         api_components = [
-            c
-            for c in components
-            if c.get("category") == "api" or "api" in c.get("type", "")
+            c for c in components if c.get("category") == "api" or "api" in c.get("type", "")
         ]
 
         api_docs = f"""# API Documentation
@@ -331,9 +328,7 @@ Welcome to {project_name}! This guide will help you get started and make the mos
             description="End user documentation",
         )
 
-    async def _generate_developer_guide(
-        self, context: Dict[str, Any]
-    ) -> DocumentationFile:
+    async def _generate_developer_guide(self, context: Dict[str, Any]) -> DocumentationFile:
         """Generate developer guide"""
 
         framework = context.get("target_framework", "react")
@@ -419,9 +414,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             description="Project change history",
         )
 
-    async def _generate_contributing(
-        self, context: Dict[str, Any]
-    ) -> DocumentationFile:
+    async def _generate_contributing(self, context: Dict[str, Any]) -> DocumentationFile:
         """Generate contributing guide"""
 
         framework = context.get("target_framework", "react")
@@ -524,9 +517,7 @@ Thank you for contributing! 🎉
             description="Guidelines for contributing to the project",
         )
 
-    async def _generate_architecture(
-        self, context: Dict[str, Any]
-    ) -> DocumentationFile:
+    async def _generate_architecture(self, context: Dict[str, Any]) -> DocumentationFile:
         """Generate architecture documentation"""
 
         framework = context.get("target_framework", "react")
@@ -578,9 +569,7 @@ This document describes the architecture of the {context.get('project_name', 'Ge
             description="System architecture documentation",
         )
 
-    async def _generate_deployment_docs(
-        self, context: Dict[str, Any]
-    ) -> DocumentationFile:
+    async def _generate_deployment_docs(self, context: Dict[str, Any]) -> DocumentationFile:
         """Generate deployment documentation"""
 
         framework = context.get("target_framework", "react")
@@ -628,9 +617,7 @@ This guide covers deploying the {context.get('project_name', 'Generated Project'
             description="Deployment instructions and configuration",
         )
 
-    async def _generate_testing_docs(
-        self, context: Dict[str, Any]
-    ) -> DocumentationFile:
+    async def _generate_testing_docs(self, context: Dict[str, Any]) -> DocumentationFile:
         """Generate testing documentation"""
 
         framework = context.get("target_framework", "react")
@@ -680,9 +667,7 @@ This guide covers deploying the {context.get('project_name', 'Generated Project'
         return {}
 
     # Helper methods for generating specific sections
-    def _generate_features_list(
-        self, components: List[Dict[str, Any]], framework: str
-    ) -> str:
+    def _generate_features_list(self, components: List[Dict[str, Any]], framework: str) -> str:
         """Generate features list based on components"""
 
         features = []
@@ -722,9 +707,7 @@ This guide covers deploying the {context.get('project_name', 'Generated Project'
                 ]
             )
 
-        return "\n".join(
-            f"- {feature}" for feature in features[:10]
-        )  # Limit to 10 features
+        return "\n".join(f"- {feature}" for feature in features[:10])  # Limit to 10 features
 
     def _generate_prerequisites(self, framework: str) -> str:
         """Generate prerequisites section"""
@@ -805,9 +788,7 @@ python main.py
     def _generate_auth_docs(self, framework: str) -> str:
         return "Authentication documentation will be provided here."
 
-    def _generate_endpoint_docs(
-        self, components: List[Dict[str, Any]], framework: str
-    ) -> str:
+    def _generate_endpoint_docs(self, components: List[Dict[str, Any]], framework: str) -> str:
         return "API endpoint documentation will be generated here."
 
     def _generate_error_docs(self, framework: str) -> str:
@@ -817,39 +798,25 @@ python main.py
         return "Rate limiting documentation will be provided here."
 
     # Framework-specific documentation generators (simplified)
-    async def _get_react_docs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, DocumentationFile]:
+    async def _get_react_docs(self, context: Dict[str, Any]) -> Dict[str, DocumentationFile]:
         return {}
 
-    async def _get_vue_docs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, DocumentationFile]:
+    async def _get_vue_docs(self, context: Dict[str, Any]) -> Dict[str, DocumentationFile]:
         return {}
 
-    async def _get_angular_docs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, DocumentationFile]:
+    async def _get_angular_docs(self, context: Dict[str, Any]) -> Dict[str, DocumentationFile]:
         return {}
 
-    async def _get_express_docs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, DocumentationFile]:
+    async def _get_express_docs(self, context: Dict[str, Any]) -> Dict[str, DocumentationFile]:
         return {}
 
-    async def _get_fastapi_docs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, DocumentationFile]:
+    async def _get_fastapi_docs(self, context: Dict[str, Any]) -> Dict[str, DocumentationFile]:
         return {}
 
-    async def _get_django_docs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, DocumentationFile]:
+    async def _get_django_docs(self, context: Dict[str, Any]) -> Dict[str, DocumentationFile]:
         return {}
 
-    async def _get_flask_docs(
-        self, context: Dict[str, Any]
-    ) -> Dict[str, DocumentationFile]:
+    async def _get_flask_docs(self, context: Dict[str, Any]) -> Dict[str, DocumentationFile]:
         return {}
 
     async def _write_documentation_files(
@@ -929,9 +896,7 @@ python main.py
     def _generate_high_level_architecture(self, framework: str) -> str:
         return "High-level architecture documentation will be generated here."
 
-    def _generate_component_architecture(
-        self, framework: str, context: Dict[str, Any]
-    ) -> str:
+    def _generate_component_architecture(self, framework: str, context: Dict[str, Any]) -> str:
         return "Component architecture documentation will be generated here."
 
     def _generate_data_flow_diagram(self, framework: str) -> str:

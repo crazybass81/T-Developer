@@ -3,12 +3,14 @@ Authentication Middleware
 FastAPI 인증 미들웨어 및 의존성
 """
 
-from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Optional, Dict, Any
+import time
+from typing import Any, Dict, Optional
+
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
 from .jwt_handler import jwt_handler
 from .models import User
-import time
 
 # Bearer token scheme
 bearer_scheme = HTTPBearer()
@@ -56,9 +58,7 @@ class JWTAuthMiddleware:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers[
-            "Strict-Transport-Security"
-        ] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
         # Add request ID for tracing
         request_id = request.headers.get("X-Request-ID", str(time.time()))
@@ -118,9 +118,7 @@ async def get_current_active_user(
     """활성 사용자만 허용"""
 
     if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
 
     return current_user
 
@@ -129,9 +127,7 @@ async def get_admin_user(current_user: User = Depends(get_current_active_user)) 
     """관리자만 허용"""
 
     if "admin" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
 
     return current_user
 
@@ -168,9 +164,7 @@ class RateLimitMiddleware:
         # Clean old entries
         current_time = int(time.time() // 60)
         keys_to_delete = [
-            k
-            for k in self.request_counts.keys()
-            if int(k.split(":")[1]) < current_time - 1
+            k for k in self.request_counts.keys() if int(k.split(":")[1]) < current_time - 1
         ]
         for key in keys_to_delete:
             del self.request_counts[key]

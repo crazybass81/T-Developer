@@ -3,11 +3,11 @@ Search Analytics Module
 Advanced analytics and metrics collection for search operations
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import json
-from datetime import datetime, timedelta
-from collections import defaultdict, Counter
 import math
+from collections import Counter, defaultdict
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class SearchAnalytics:
@@ -68,9 +68,7 @@ class SearchAnalytics:
         result_analysis = self._analyze_result_quality(results, query)
 
         # Analyze search effectiveness
-        effectiveness_analysis = self._analyze_search_effectiveness(
-            query, results, search_event
-        )
+        effectiveness_analysis = self._analyze_search_effectiveness(query, results, search_event)
 
         # Generate performance insights
         performance_insights = self._generate_performance_insights(search_event)
@@ -117,9 +115,7 @@ class SearchAnalytics:
             "results": {
                 "total_count": len(results),
                 "top_scores": [r.get("score", 0) for r in results[:5]],
-                "categories": list(
-                    set(r.get("category") for r in results if r.get("category"))
-                ),
+                "categories": list(set(r.get("category") for r in results if r.get("category"))),
                 "technologies": list(
                     set(r.get("technology") for r in results if r.get("technology"))
                 ),
@@ -195,8 +191,7 @@ class SearchAnalytics:
 
         # Calculate quality metrics
         quality_metrics = {
-            "avg_relevance_score": sum(r.get("score", 0) for r in results)
-            / len(results),
+            "avg_relevance_score": sum(r.get("score", 0) for r in results) / len(results),
             "max_relevance_score": max(r.get("score", 0) for r in results),
             "min_relevance_score": min(r.get("score", 0) for r in results),
             "score_variance": self._calculate_score_variance(results),
@@ -213,9 +208,7 @@ class SearchAnalytics:
         # Calculate coverage
         coverage_metrics = {
             "query_term_coverage": self._calculate_term_coverage(query, results),
-            "requirement_coverage": self._calculate_requirement_coverage(
-                query, results
-            ),
+            "requirement_coverage": self._calculate_requirement_coverage(query, results),
             "domain_coverage": self._calculate_domain_coverage(results),
         }
 
@@ -260,18 +253,14 @@ class SearchAnalytics:
         if self.performance_metrics:
             effectiveness_metrics.update(
                 {
-                    "response_time_impact": self._assess_response_time_impact(
-                        search_event
-                    ),
+                    "response_time_impact": self._assess_response_time_impact(search_event),
                     "efficiency_score": self._calculate_efficiency_score(search_event),
                 }
             )
 
         return effectiveness_metrics
 
-    def _generate_performance_insights(
-        self, search_event: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _generate_performance_insights(self, search_event: Dict[str, Any]) -> Dict[str, Any]:
         """Generate performance insights"""
 
         # Record performance metrics
@@ -295,15 +284,13 @@ class SearchAnalytics:
 
         # Compare with historical data
         if len(self.performance_metrics) > 10:
-            insights[
-                "historical_comparison"
-            ] = self._compare_with_historical_performance(performance_data)
+            insights["historical_comparison"] = self._compare_with_historical_performance(
+                performance_data
+            )
 
         return insights
 
-    async def _update_realtime_stats(
-        self, query: Dict[str, Any], results: List[Dict[str, Any]]
-    ):
+    async def _update_realtime_stats(self, query: Dict[str, Any], results: List[Dict[str, Any]]):
         """Update real-time statistics"""
 
         current_minute = datetime.now().replace(second=0, microsecond=0)
@@ -323,9 +310,7 @@ class SearchAnalytics:
         }
 
         # Update current QPM
-        self.realtime_stats["queries_per_minute"] = (
-            sum(self._minute_queries.values()) / 5
-        )
+        self.realtime_stats["queries_per_minute"] = sum(self._minute_queries.values()) / 5
 
         # Update trending queries
         query_text = query.get("original_query", "")
@@ -404,9 +389,7 @@ class SearchAnalytics:
 
         return recommendations
 
-    def _calculate_search_metrics(
-        self, search_event: Dict[str, Any]
-    ) -> Dict[str, float]:
+    def _calculate_search_metrics(self, search_event: Dict[str, Any]) -> Dict[str, float]:
         """Calculate key search metrics"""
 
         return {
@@ -414,9 +397,7 @@ class SearchAnalytics:
             "result_density": len(search_event["results"]["categories"])
             / max(len(search_event["results"]["top_scores"]), 1),
             "score_consistency": 1.0
-            - self._calculate_score_variance_from_list(
-                search_event["results"]["top_scores"]
-            ),
+            - self._calculate_score_variance_from_list(search_event["results"]["top_scores"]),
             "category_coverage": len(search_event["results"]["categories"]),
             "technology_coverage": len(search_event["results"]["technologies"]),
         }
@@ -460,9 +441,7 @@ class SearchAnalytics:
 
     def _generate_search_id(self) -> str:
         """Generate unique search ID"""
-        return (
-            f"search_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self.search_logs)}"
-        )
+        return f"search_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self.search_logs)}"
 
     def _calculate_query_complexity(self, query: Dict[str, Any]) -> float:
         """Calculate query complexity score"""
@@ -562,9 +541,7 @@ class SearchAnalytics:
 
         for historical_query in self.query_patterns.keys():
             if historical_query != query_lower:
-                similarity = self._calculate_text_similarity(
-                    query_lower, historical_query
-                )
+                similarity = self._calculate_text_similarity(query_lower, historical_query)
                 if similarity > 0.6:
                     similar.append(historical_query)
 
@@ -659,9 +636,7 @@ class SearchAnalytics:
         unique_features = set(all_features)
         return len(unique_features) / len(all_features)
 
-    def _calculate_popularity_range(
-        self, results: List[Dict[str, Any]]
-    ) -> Dict[str, float]:
+    def _calculate_popularity_range(self, results: List[Dict[str, Any]]) -> Dict[str, float]:
         """Calculate range of popularity in results"""
 
         popularities = [r.get("popularity", 0) for r in results]
@@ -672,9 +647,7 @@ class SearchAnalytics:
         min_pop = min(popularities)
         max_pop = max(popularities)
         mean_pop = sum(popularities) / len(popularities)
-        std_pop = math.sqrt(
-            sum((p - mean_pop) ** 2 for p in popularities) / len(popularities)
-        )
+        std_pop = math.sqrt(sum((p - mean_pop) ** 2 for p in popularities) / len(popularities))
 
         return {
             "min": min_pop,
@@ -740,9 +713,7 @@ class SearchAnalytics:
 
         return coverage_score / coverage_count if coverage_count > 0 else 1.0
 
-    def _calculate_domain_coverage(
-        self, results: List[Dict[str, Any]]
-    ) -> Dict[str, int]:
+    def _calculate_domain_coverage(self, results: List[Dict[str, Any]]) -> Dict[str, int]:
         """Calculate domain coverage in results"""
 
         domains = defaultdict(int)
@@ -770,10 +741,7 @@ class SearchAnalytics:
 
         issues = []
 
-        if (
-            quality_metrics["avg_relevance_score"]
-            < self.thresholds["low_relevance_score"]
-        ):
+        if quality_metrics["avg_relevance_score"] < self.thresholds["low_relevance_score"]:
             issues.append("low_relevance_scores")
 
         if quality_metrics["score_variance"] > 0.5:
@@ -864,9 +832,7 @@ class SearchAnalytics:
         relevant_results = sum(1 for r in results if r.get("score", 0) >= 0.5)
         return relevant_results / len(results)
 
-    def _estimate_recall(
-        self, query: Dict[str, Any], results: List[Dict[str, Any]]
-    ) -> float:
+    def _estimate_recall(self, query: Dict[str, Any], results: List[Dict[str, Any]]) -> float:
         """Estimate recall (simplified)"""
         # This would require knowledge of total relevant documents
         # For now, return a heuristic based on result diversity
@@ -941,9 +907,7 @@ class SearchAnalytics:
             alignment = matched_terms / len(query_terms) if query_terms else 0
             alignment_scores.append(alignment)
 
-        avg_alignment = (
-            sum(alignment_scores) / len(alignment_scores) if alignment_scores else 0
-        )
+        avg_alignment = sum(alignment_scores) / len(alignment_scores) if alignment_scores else 0
         factors.append(avg_alignment * 0.6)
 
         # Calculate weighted average

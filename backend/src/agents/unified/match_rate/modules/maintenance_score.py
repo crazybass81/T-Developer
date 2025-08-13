@@ -3,7 +3,7 @@ Maintenance Score Module
 Calculates maintainability scores
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class MaintenanceScore:
@@ -28,11 +28,7 @@ class MaintenanceScore:
             }
 
             # Calculate overall maintainability
-            scores = [
-                v
-                for k, v in maintenance_analysis.items()
-                if k != "maintainability_score"
-            ]
+            scores = [v for k, v in maintenance_analysis.items() if k != "maintainability_score"]
             maintenance_analysis["maintainability_score"] = sum(scores) / len(scores)
 
             maintenance_results[component_id] = maintenance_analysis

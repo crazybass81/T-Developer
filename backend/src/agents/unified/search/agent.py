@@ -3,46 +3,36 @@ Search Agent - Production Implementation
 Searches component libraries for matching components based on requirements
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import asyncio
 import json
-from datetime import datetime
-from pathlib import Path
 import math
 
 # Import base classes
 import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.append("/home/ec2-user/T-DeveloperMVP/backend/src")
 
-from src.agents.unified.base import (
-    UnifiedBaseAgent,
-    AgentConfig,
-    AgentContext,
-    AgentResult,
-)
-from src.agents.unified.data_wrapper import (
-    AgentInput,
-    AgentContext,
-    wrap_input,
-    unwrap_result,
-)
-
-# from agents.phase2_enhancements import Phase2SearchResult  # Commented out - module not available
+from src.agents.unified.base import AgentConfig, AgentContext, AgentResult, UnifiedBaseAgent
+from src.agents.unified.data_wrapper import AgentContext, AgentInput, unwrap_result, wrap_input
+from src.agents.unified.search.modules.autocomplete_engine import AutocompleteEngine
+from src.agents.unified.search.modules.cache_manager import CacheManager
+from src.agents.unified.search.modules.faceted_search import FacetedSearch
+from src.agents.unified.search.modules.filter_manager import FilterManager
+from src.agents.unified.search.modules.index_manager import IndexManager
 
 # Import all specialized modules
 from src.agents.unified.search.modules.query_builder import QueryBuilder
-from src.agents.unified.search.modules.index_manager import IndexManager
-from src.agents.unified.search.modules.search_engine import SearchEngine
-from src.agents.unified.search.modules.result_ranker import ResultRanker
-from src.agents.unified.search.modules.filter_manager import FilterManager
-from src.agents.unified.search.modules.faceted_search import FacetedSearch
-from src.agents.unified.search.modules.semantic_search import SemanticSearch
 from src.agents.unified.search.modules.recommendation_search import RecommendationSearch
-from src.agents.unified.search.modules.cache_manager import CacheManager
+from src.agents.unified.search.modules.result_ranker import ResultRanker
 from src.agents.unified.search.modules.search_analytics import SearchAnalytics
-from src.agents.unified.search.modules.autocomplete_engine import AutocompleteEngine
+from src.agents.unified.search.modules.search_engine import SearchEngine
 from src.agents.unified.search.modules.search_optimizer import SearchOptimizer
+from src.agents.unified.search.modules.semantic_search import SemanticSearch
+
+# from agents.phase2_enhancements import Phase2SearchResult  # Commented out - module not available
 
 
 class EnhancedSearchResult:
@@ -217,9 +207,7 @@ class SearchAgent(UnifiedBaseAgent):
             )
 
             # Apply filters
-            filtered_results = await self.filter_manager.apply_filters(
-                merged_results, filters
-            )
+            filtered_results = await self.filter_manager.apply_filters(merged_results, filters)
 
             # Rank final results
             ranked_results = await self.result_ranker.rank(
@@ -282,9 +270,7 @@ class SearchAgent(UnifiedBaseAgent):
         """Validate input data structure"""
         # At minimum, we need either a query or some search criteria
         return bool(
-            input_data.get("query")
-            or input_data.get("filters")
-            or input_data.get("requirements")
+            input_data.get("query") or input_data.get("filters") or input_data.get("requirements")
         )
 
     def _merge_search_results(
@@ -321,9 +307,9 @@ class SearchAgent(UnifiedBaseAgent):
                 if component_id in all_results:
                     if "faceted" not in all_results[component_id]["search_methods"]:
                         all_results[component_id]["search_methods"].append("faceted")
-                    all_results[component_id][
-                        f"faceted_{facet_name}_score"
-                    ] = result.get("score", 0.5)
+                    all_results[component_id][f"faceted_{facet_name}_score"] = result.get(
+                        "score", 0.5
+                    )
                 else:
                     all_results[component_id] = result
                     result["search_methods"] = ["faceted"]
@@ -339,9 +325,7 @@ class SearchAgent(UnifiedBaseAgent):
 
             # Add faceted scores
             faceted_scores = [
-                v
-                for k, v in result.items()
-                if k.startswith("faceted_") and k.endswith("_score")
+                v for k, v in result.items() if k.startswith("faceted_") and k.endswith("_score")
             ]
             scores.extend(faceted_scores)
 
@@ -596,9 +580,7 @@ class SearchAgent(UnifiedBaseAgent):
     async def get_facets(self, query: str = "") -> Dict[str, List]:
         """Get available facets for search refinement"""
 
-        facets = await self.faceted_search.get_available_facets(
-            query, self.component_library
-        )
+        facets = await self.faceted_search.get_available_facets(query, self.component_library)
         return facets
 
     def get_search_statistics(self) -> Dict[str, Any]:

@@ -4,11 +4,11 @@ AWS Parameter Store와 Secrets Manager에서 환경변수를 로드하여
 os.environ에 설정하는 유틸리티
 """
 
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 # 프로젝트 루트 경로 추가
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -124,9 +124,7 @@ class EnvironmentLoader:
             if value is not None:
                 # os.environ에 설정
                 os.environ[param_name] = str(value)
-                logger.debug(
-                    f"  ✓ {param_name}: {'***' if 'PASSWORD' in param_name else value}"
-                )
+                logger.debug(f"  ✓ {param_name}: {'***' if 'PASSWORD' in param_name else value}")
                 return value
             else:
                 # 이미 환경변수에 있는지 확인
@@ -224,9 +222,7 @@ class EnvironmentLoader:
                 missing.append(var)
 
         if missing:
-            logger.error(
-                f"❌ Critical environment variables missing: {', '.join(missing)}"
-            )
+            logger.error(f"❌ Critical environment variables missing: {', '.join(missing)}")
             return False
 
         logger.info("✅ All critical environment variables are set")
@@ -239,8 +235,7 @@ class EnvironmentLoader:
         logger.info("\n📋 Loaded Environment Variables:")
         for key, value in sorted(loaded_vars.items()):
             if any(
-                sensitive in key.upper()
-                for sensitive in ["PASSWORD", "SECRET", "KEY", "TOKEN"]
+                sensitive in key.upper() for sensitive in ["PASSWORD", "SECRET", "KEY", "TOKEN"]
             ):
                 logger.info(f"  {key}: ***hidden***")
             else:

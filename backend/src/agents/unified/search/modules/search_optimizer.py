@@ -3,12 +3,12 @@ Search Optimizer Module
 Advanced search query optimization and performance tuning
 """
 
-from typing import Dict, List, Any, Optional, Tuple
-import re
-import math
-from collections import defaultdict, Counter
-from datetime import datetime
 import asyncio
+import math
+import re
+from collections import Counter, defaultdict
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class SearchOptimizer:
@@ -119,9 +119,7 @@ class SearchOptimizer:
         # Apply rewriting rules
         for pattern, replacement in self.rewriting_rules.items():
             if isinstance(replacement, str):
-                rewritten_query = re.sub(
-                    pattern, replacement, rewritten_query, flags=re.IGNORECASE
-                )
+                rewritten_query = re.sub(pattern, replacement, rewritten_query, flags=re.IGNORECASE)
             elif callable(replacement):
                 rewritten_query = replacement(rewritten_query)
 
@@ -163,17 +161,13 @@ class SearchOptimizer:
                 expanded_terms.append(expansion)
 
         # Add contextual expansions
-        contextual_expansions = self._get_contextual_expansions(
-            original_terms, analysis
-        )
+        contextual_expansions = self._get_contextual_expansions(original_terms, analysis)
         for expansion in contextual_expansions:
             if expansion not in expanded_terms:
                 expanded_terms.append(expansion)
 
         # Add domain-specific expansions
-        domain_expansions = self._get_domain_specific_expansions(
-            original_terms, analysis
-        )
+        domain_expansions = self._get_domain_specific_expansions(original_terms, analysis)
         for expansion in domain_expansions:
             if expansion not in expanded_terms:
                 expanded_terms.append(expansion)
@@ -187,17 +181,14 @@ class SearchOptimizer:
             ]
             scored_terms.sort(key=lambda x: x[1], reverse=True)
             expanded_terms = [
-                term
-                for term, score in scored_terms[: self.config["max_expanded_terms"]]
+                term for term, score in scored_terms[: self.config["max_expanded_terms"]]
             ]
 
         # Only return if terms were expanded
         if len(expanded_terms) > len(original_terms):
             optimized_query = query.copy()
             optimized_query["expanded_terms"] = expanded_terms
-            optimized_query["expansion_count"] = len(expanded_terms) - len(
-                original_terms
-            )
+            optimized_query["expansion_count"] = len(expanded_terms) - len(original_terms)
             return optimized_query
 
         return None
@@ -218,9 +209,7 @@ class SearchOptimizer:
             boost_adjustments = rule_func(query, analysis)
             for field, boost_value in boost_adjustments.items():
                 if boost_value > self.config["boost_threshold"]:
-                    optimized_boosts[field] = (
-                        optimized_boosts.get(field, 1.0) * boost_value
-                    )
+                    optimized_boosts[field] = optimized_boosts.get(field, 1.0) * boost_value
 
         # Domain-specific boost optimization
         domain_boosts = self._optimize_domain_boosts(query, analysis)
@@ -261,9 +250,7 @@ class SearchOptimizer:
         if filter_selectivity:
             # Reorder filters by selectivity
             ordered_filters = {}
-            for filter_name, selectivity in sorted(
-                filter_selectivity.items(), key=lambda x: x[1]
-            ):
+            for filter_name, selectivity in sorted(filter_selectivity.items(), key=lambda x: x[1]):
                 ordered_filters[filter_name] = current_filters[filter_name]
             optimized_filters = ordered_filters
             filter_optimizations.append("reordered_by_selectivity")
@@ -301,17 +288,13 @@ class SearchOptimizer:
         expected_precision = analysis.get("expected_precision", 0.5)
 
         # Calculate optimal result limit
-        optimal_limit = self._calculate_optimal_result_limit(
-            query_complexity, expected_precision
-        )
+        optimal_limit = self._calculate_optimal_result_limit(query_complexity, expected_precision)
         current_limit = query.get("result_limit", 50)
 
         if optimal_limit != current_limit:
             optimized_query = query.copy()
             optimized_query["result_limit"] = optimal_limit
-            optimized_query[
-                "limit_optimization_reason"
-            ] = self._get_limit_optimization_reason(
+            optimized_query["limit_optimization_reason"] = self._get_limit_optimization_reason(
                 current_limit, optimal_limit, query_complexity, expected_precision
             )
             return optimized_query
@@ -410,9 +393,7 @@ class SearchOptimizer:
 
         return None
 
-    def _analyze_query_optimization_needs(
-        self, query: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _analyze_query_optimization_needs(self, query: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze query to determine optimization needs"""
 
         original_query = query.get("original_query", "")
@@ -442,23 +423,18 @@ class SearchOptimizer:
 
         return analysis
 
-    def _should_apply_optimization(
-        self, strategy_name: str, analysis: Dict[str, Any]
-    ) -> bool:
+    def _should_apply_optimization(self, strategy_name: str, analysis: Dict[str, Any]) -> bool:
         """Determine if optimization strategy should be applied"""
 
         strategy_conditions = {
-            "query_rewriting": analysis.get("too_broad")
-            or analysis.get("typos_likely"),
-            "term_expansion": analysis["term_count"] <= 3
-            and not analysis.get("too_specific"),
+            "query_rewriting": analysis.get("too_broad") or analysis.get("typos_likely"),
+            "term_expansion": analysis["term_count"] <= 3 and not analysis.get("too_specific"),
             "boost_adjustment": analysis["complexity_score"] > 0.3,
             "filter_optimization": analysis["has_filters"],
             "result_limiting": True,  # Always consider result limiting
             "cache_optimization": analysis["complexity_score"] > 0.5,
             "performance_tuning": analysis.get("predicted_performance", 0) > 500,  # ms
-            "relevance_tuning": analysis["multi_term_query"]
-            or analysis["complexity_score"] > 0.4,
+            "relevance_tuning": analysis["multi_term_query"] or analysis["complexity_score"] > 0.4,
         }
 
         return strategy_conditions.get(strategy_name, False)
@@ -511,9 +487,7 @@ class SearchOptimizer:
                 "category": 1.5 if "category" in query.get("requirements", {}) else 1.0
             },
             "technology_boost": lambda query, analysis: {
-                "technology": 1.5
-                if "technology" in query.get("requirements", {})
-                else 1.0
+                "technology": 1.5 if "technology" in query.get("requirements", {}) else 1.0
             },
             "popularity_boost": lambda query, analysis: {
                 "popularity": 1.3 if analysis.get("complexity_score", 0) < 0.5 else 1.0
@@ -598,9 +572,7 @@ class SearchOptimizer:
         boost_fields = query.get("boost_fields", {})
         boost_time = len(boost_fields) * 10
 
-        return int(
-            base_time + complexity_time + expansion_time + filter_time + boost_time
-        )
+        return int(base_time + complexity_time + expansion_time + filter_time + boost_time)
 
     def _extract_domain_hints(self, query: Dict[str, Any]) -> List[str]:
         """Extract domain hints from query"""
@@ -707,9 +679,7 @@ class SearchOptimizer:
 
         return ", ".join(reasons) if reasons else "general_optimization"
 
-    def _get_semantic_expansions(
-        self, terms: List[str], analysis: Dict[str, Any]
-    ) -> List[str]:
+    def _get_semantic_expansions(self, terms: List[str], analysis: Dict[str, Any]) -> List[str]:
         """Get semantic expansions for terms"""
 
         expansions = []
@@ -722,9 +692,7 @@ class SearchOptimizer:
 
         return expansions
 
-    def _get_contextual_expansions(
-        self, terms: List[str], analysis: Dict[str, Any]
-    ) -> List[str]:
+    def _get_contextual_expansions(self, terms: List[str], analysis: Dict[str, Any]) -> List[str]:
         """Get contextual expansions based on domain hints"""
 
         expansions = []
@@ -835,9 +803,7 @@ class SearchOptimizer:
 
         return boosts
 
-    def _calculate_filter_selectivity(
-        self, filters: Dict[str, Any]
-    ) -> Dict[str, float]:
+    def _calculate_filter_selectivity(self, filters: Dict[str, Any]) -> Dict[str, float]:
         """Calculate selectivity of filters (lower = more selective)"""
 
         # Estimated selectivity based on filter type
@@ -852,9 +818,7 @@ class SearchOptimizer:
 
         filter_selectivity = {}
         for filter_name in filters:
-            filter_selectivity[filter_name] = selectivity_estimates.get(
-                filter_name, 0.5
-            )
+            filter_selectivity[filter_name] = selectivity_estimates.get(filter_name, 0.5)
 
         return filter_selectivity
 
@@ -869,9 +833,7 @@ class SearchOptimizer:
         non_range_filters = {}
 
         for filter_name, filter_value in filters.items():
-            if isinstance(filter_value, dict) and (
-                "min" in filter_value or "max" in filter_value
-            ):
+            if isinstance(filter_value, dict) and ("min" in filter_value or "max" in filter_value):
                 range_filters[filter_name] = filter_value
             else:
                 non_range_filters[filter_name] = filter_value
@@ -906,9 +868,7 @@ class SearchOptimizer:
 
         return non_redundant
 
-    def _is_category_redundant_with_technology(
-        self, category: str, technology: str
-    ) -> bool:
+    def _is_category_redundant_with_technology(self, category: str, technology: str) -> bool:
         """Check if category filter is redundant with technology filter"""
 
         # Simple redundancy check
@@ -922,9 +882,7 @@ class SearchOptimizer:
 
         return (category.lower(), technology.lower()) in redundant_pairs
 
-    def _calculate_optimal_result_limit(
-        self, complexity: float, precision: float
-    ) -> int:
+    def _calculate_optimal_result_limit(self, complexity: float, precision: float) -> int:
         """Calculate optimal result limit"""
 
         base_limit = 20
@@ -989,9 +947,7 @@ class SearchOptimizer:
 
         # Cache popular query patterns
         query_text = query.get("original_query", "").lower()
-        if any(
-            pattern in query_text for pattern in ["react", "vue", "angular", "popular"]
-        ):
+        if any(pattern in query_text for pattern in ["react", "vue", "angular", "popular"]):
             cachability["should_cache"] = True
             cachability["optimal_ttl"] = 3600  # 1 hour for popular queries
 
@@ -1154,7 +1110,5 @@ class SearchOptimizer:
         current_avg = self.optimization_stats["avg_improvement_ms"]
         total_queries = self.optimization_stats["queries_optimized"]
 
-        new_avg = (
-            (current_avg * (total_queries - 1)) + optimization_time
-        ) / total_queries
+        new_avg = ((current_avg * (total_queries - 1)) + optimization_time) / total_queries
         self.optimization_stats["avg_improvement_ms"] = new_avg

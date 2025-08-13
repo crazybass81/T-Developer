@@ -3,11 +3,12 @@
 Test Redis ElastiCache connection
 """
 
-import redis
-import boto3
 import json
-import pytest
 from typing import Optional
+
+import boto3
+import pytest
+import redis
 
 
 class TestRedisConnection:
@@ -25,9 +26,7 @@ class TestRedisConnection:
             )
 
             # Get Redis port
-            port_param = ssm.get_parameter(
-                Name="/t-developer/dev/redis/port", WithDecryption=False
-            )
+            port_param = ssm.get_parameter(Name="/t-developer/dev/redis/port", WithDecryption=False)
 
             return {
                 "host": endpoint_param["Parameter"]["Value"],

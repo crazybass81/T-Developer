@@ -3,10 +3,10 @@ Requirement Analyzer Module
 Analyzes and structures requirements from natural language
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import re
-from enum import Enum
 from collections import defaultdict
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class RequirementType(Enum):
@@ -280,10 +280,7 @@ class RequirementAnalyzer:
             return RequirementType.BUSINESS.value
 
         # Check for technical requirements
-        if any(
-            word in text_lower
-            for word in ["technical", "implementation", "architecture"]
-        ):
+        if any(word in text_lower for word in ["technical", "implementation", "architecture"]):
             return RequirementType.TECHNICAL.value
 
         # Check for interface requirements
@@ -332,9 +329,7 @@ class RequirementAnalyzer:
 
         return "general"
 
-    def _extract_requirement_entities(
-        self, text: str, entities: Dict[str, Any]
-    ) -> List[str]:
+    def _extract_requirement_entities(self, text: str, entities: Dict[str, Any]) -> List[str]:
         """Extract entities mentioned in requirement"""
         mentioned_entities = []
         text_lower = text.lower()
@@ -424,7 +419,9 @@ class RequirementAnalyzer:
         constraints = []
 
         # Numeric constraints
-        numeric_pattern = r"(\d+)\s*(?:seconds?|minutes?|hours?|days?|users?|items?|characters?|bytes?|MB|GB)"
+        numeric_pattern = (
+            r"(\d+)\s*(?:seconds?|minutes?|hours?|days?|users?|items?|characters?|bytes?|MB|GB)"
+        )
         matches = re.finditer(numeric_pattern, text, re.IGNORECASE)
         for match in matches:
             constraints.append(
@@ -439,9 +436,7 @@ class RequirementAnalyzer:
         range_pattern = r"between\s+(\d+)\s+and\s+(\d+)"
         matches = re.finditer(range_pattern, text, re.IGNORECASE)
         for match in matches:
-            constraints.append(
-                {"type": "range", "min": match.group(1), "max": match.group(2)}
-            )
+            constraints.append({"type": "range", "min": match.group(1), "max": match.group(2)})
 
         return constraints
 
@@ -485,9 +480,7 @@ class RequirementAnalyzer:
         metrics = []
 
         # Performance metrics
-        perf_pattern = (
-            r"(\d+)\s*(ms|milliseconds?|seconds?|minutes?)\s*(?:response time|latency)?"
-        )
+        perf_pattern = r"(\d+)\s*(ms|milliseconds?|seconds?|minutes?)\s*(?:response time|latency)?"
         matches = re.finditer(perf_pattern, text, re.IGNORECASE)
         for match in matches:
             metrics.append(
@@ -640,14 +633,10 @@ class RequirementAnalyzer:
         for req in requirements:
             # Check completeness
             if not req.get("action"):
-                validation["warnings"].append(
-                    f"Requirement '{req.get('id')}' lacks clear action"
-                )
+                validation["warnings"].append(f"Requirement '{req.get('id')}' lacks clear action")
 
             if not req.get("subject"):
-                validation["warnings"].append(
-                    f"Requirement '{req.get('id')}' lacks clear subject"
-                )
+                validation["warnings"].append(f"Requirement '{req.get('id')}' lacks clear subject")
 
             # Check for ambiguity
             ambiguous_terms = ["appropriate", "adequate", "as needed", "etc", "various"]

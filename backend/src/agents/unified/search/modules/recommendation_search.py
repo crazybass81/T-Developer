@@ -3,10 +3,10 @@ Recommendation Search Module
 AI-powered recommendation engine for component suggestions
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import math
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class RecommendationSearch:
@@ -58,24 +58,18 @@ class RecommendationSearch:
                 recommendation_sets[rec_type] = recommendations
 
         # Combine and rank recommendations
-        combined_recommendations = self._combine_recommendations(
-            recommendation_sets, context
-        )
+        combined_recommendations = self._combine_recommendations(recommendation_sets, context)
 
         # Add recommendation metadata
         for rec in combined_recommendations:
             rec["recommendation_score"] = rec.get("score", 0)
-            rec["recommendation_reasons"] = self._generate_recommendation_reasons(
-                rec, context
-            )
+            rec["recommendation_reasons"] = self._generate_recommendation_reasons(rec, context)
             rec["confidence"] = self._calculate_recommendation_confidence(rec, context)
             rec["recommendation_type"] = rec.get("primary_algorithm", "hybrid")
 
         return combined_recommendations
 
-    async def _collaborative_filtering(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def _collaborative_filtering(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Collaborative filtering based on user behavior patterns"""
 
         user_profile = context.get("user_profile", {})
@@ -111,9 +105,7 @@ class RecommendationSearch:
         recommendations.sort(key=lambda x: x["score"], reverse=True)
         return recommendations[:10]
 
-    async def _content_based_filtering(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def _content_based_filtering(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Content-based filtering using component features"""
 
         requirements = context.get("requirements", {})
@@ -121,9 +113,7 @@ class RecommendationSearch:
         user_preferences = context.get("user_preferences", {})
 
         # Build feature vector from requirements and preferences
-        target_features = self._build_feature_vector(
-            requirements, query_features, user_preferences
-        )
+        target_features = self._build_feature_vector(requirements, query_features, user_preferences)
 
         # Score all components based on feature similarity
         recommendations = []
@@ -148,9 +138,7 @@ class RecommendationSearch:
         recommendations.sort(key=lambda x: x["score"], reverse=True)
         return recommendations[:10]
 
-    async def _hybrid_recommendations(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def _hybrid_recommendations(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Hybrid approach combining multiple algorithms"""
 
         # Get recommendations from individual algorithms
@@ -195,9 +183,7 @@ class RecommendationSearch:
                 recommendation["score"] = score_data["score"]
                 recommendation["primary_algorithm"] = "hybrid"
                 recommendation["contributing_algorithms"] = score_data["algorithms"]
-                recommendation["algorithm_confidence"] = (
-                    len(score_data["algorithms"]) / 3.0
-                )
+                recommendation["algorithm_confidence"] = len(score_data["algorithms"]) / 3.0
                 hybrid_recommendations.append(recommendation)
 
         hybrid_recommendations.sort(key=lambda x: x["score"], reverse=True)
@@ -215,9 +201,7 @@ class RecommendationSearch:
 
         for component in all_components:
             # Apply domain/category filters
-            if not self._matches_context_filters(
-                component, domain_filter, category_filter
-            ):
+            if not self._matches_context_filters(component, domain_filter, category_filter):
                 continue
 
             # Calculate popularity score
@@ -228,17 +212,13 @@ class RecommendationSearch:
                 recommendation["score"] = popularity_score
                 recommendation["primary_algorithm"] = "popularity"
                 recommendation["algorithm_confidence"] = popularity_score
-                recommendation["popularity_factors"] = self._get_popularity_factors(
-                    component
-                )
+                recommendation["popularity_factors"] = self._get_popularity_factors(component)
                 recommendations.append(recommendation)
 
         recommendations.sort(key=lambda x: x["score"], reverse=True)
         return recommendations[:10]
 
-    async def _contextual_recommendations(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def _contextual_recommendations(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Contextual recommendations based on current project context"""
 
         project_context = context.get("project_context", {})
@@ -267,18 +247,14 @@ class RecommendationSearch:
         recommendations.sort(key=lambda x: x["score"], reverse=True)
         return recommendations[:10]
 
-    async def _trend_based_recommendations(
-        self, context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def _trend_based_recommendations(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Trend-based recommendations using trending components"""
 
         time_window = context.get("trend_window", 30)  # days
         category_filter = context.get("category_preference")
 
         # Get trending components
-        trending_components = self._get_trending_components(
-            time_window, category_filter
-        )
+        trending_components = self._get_trending_components(time_window, category_filter)
 
         recommendations = []
         for component_data in trending_components:
@@ -321,9 +297,7 @@ class RecommendationSearch:
 
         return context
 
-    def _find_similar_users(
-        self, user_profile: Dict[str, Any]
-    ) -> List[Tuple[str, float]]:
+    def _find_similar_users(self, user_profile: Dict[str, Any]) -> List[Tuple[str, float]]:
         """Find users with similar behavior patterns"""
 
         similar_users = []
@@ -342,9 +316,7 @@ class RecommendationSearch:
             total_tech = len(current_tech | user_tech)
 
             if total_interests > 0 and total_tech > 0:
-                similarity = (interest_overlap / total_interests) + (
-                    tech_overlap / total_tech
-                )
+                similarity = (interest_overlap / total_interests) + (tech_overlap / total_tech)
                 similarity /= 2  # Average
 
                 if similarity > 0.2:  # Minimum similarity threshold
@@ -389,9 +361,7 @@ class RecommendationSearch:
 
         return dict(features)
 
-    def _extract_component_features(
-        self, component: Dict[str, Any]
-    ) -> Dict[str, float]:
+    def _extract_component_features(self, component: Dict[str, Any]) -> Dict[str, float]:
         """Extract features from component"""
 
         features = defaultdict(float)
@@ -415,9 +385,7 @@ class RecommendationSearch:
         for term in name_terms:
             features[f"term:{term}"] = 0.7
 
-        desc_terms = (
-            component.get("description", "").lower().split()[:20]
-        )  # Limit terms
+        desc_terms = component.get("description", "").lower().split()[:20]  # Limit terms
         for term in desc_terms:
             features[f"term:{term}"] = 0.3
 
@@ -535,9 +503,7 @@ class RecommendationSearch:
                 if comp_id:
                     component_scores[comp_id]["total_score"] += rec["score"] * weight
                     component_scores[comp_id]["algorithms"].append(algorithm)
-                    component_scores[comp_id]["algorithm_scores"][algorithm] = rec[
-                        "score"
-                    ]
+                    component_scores[comp_id]["algorithm_scores"][algorithm] = rec["score"]
 
                     if component_scores[comp_id]["data"] is None:
                         component_scores[comp_id]["data"] = rec
@@ -556,9 +522,7 @@ class RecommendationSearch:
                 final_recommendations.append(recommendation)
 
         # Apply diversity and novelty factors
-        final_recommendations = self._apply_diversity_factors(
-            final_recommendations, context
-        )
+        final_recommendations = self._apply_diversity_factors(final_recommendations, context)
 
         # Sort by final score
         final_recommendations.sort(key=lambda x: x["score"], reverse=True)
@@ -1008,9 +972,7 @@ class RecommendationSearch:
 
         return activity_score
 
-    def _get_phase_alignment(
-        self, component: Dict[str, Any], development_phase: str
-    ) -> float:
+    def _get_phase_alignment(self, component: Dict[str, Any], development_phase: str) -> float:
         """Get alignment with development phase"""
 
         phase_mappings = {
@@ -1032,9 +994,7 @@ class RecommendationSearch:
 
         return min(alignment / len(phase_prefs), 1.0)
 
-    def _get_team_size_suitability(
-        self, component: Dict[str, Any], team_size: str
-    ) -> float:
+    def _get_team_size_suitability(self, component: Dict[str, Any], team_size: str) -> float:
         """Get suitability for team size"""
 
         if team_size == "small":

@@ -1,6 +1,8 @@
-import httpx
 import os
-from typing import AsyncIterator, Dict, Any, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+import httpx
+
 from .base_provider import ModelProvider, ModelResponse
 
 
@@ -10,9 +12,7 @@ class AI21Provider(ModelProvider):
     async def initialize(self) -> None:
         self.api_key = os.getenv("AI21_API_KEY")
         self.base_url = "https://api.ai21.com/studio/v1"
-        self.client = httpx.AsyncClient(
-            headers={"Authorization": f"Bearer {self.api_key}"}
-        )
+        self.client = httpx.AsyncClient(headers={"Authorization": f"Bearer {self.api_key}"})
 
     async def generate(
         self, prompt: str, options: Optional[Dict[str, Any]] = None

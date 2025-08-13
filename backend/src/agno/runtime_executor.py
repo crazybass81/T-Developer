@@ -4,9 +4,9 @@ Agno Framework Runtime Executor
 """
 
 import asyncio
-from typing import Dict, Any, List, Optional
-import time
 import json
+import time
+from typing import Any, Dict, List, Optional
 
 
 class AgnoRuntimeExecutor:
@@ -309,9 +309,7 @@ class TodoAppRuntime:
                     "completed": False,
                 }
             )
-            workflow_results["steps"].append(
-                {"step": "create_task", "result": create_result}
-            )
+            workflow_results["steps"].append({"step": "create_task", "result": create_result})
 
         # 2. 작업 목록 조회
         list_result = await self.get_filtered_tasks({})
@@ -319,24 +317,17 @@ class TodoAppRuntime:
 
         # 3. 통계 생성
         stats_result = await self.get_task_statistics()
-        workflow_results["steps"].append(
-            {"step": "generate_statistics", "result": stats_result}
-        )
+        workflow_results["steps"].append({"step": "generate_statistics", "result": stats_result})
 
         # 4. 성능 메트릭
         metrics = self.executor.get_performance_metrics()
         workflow_results["performance_metrics"] = metrics
 
         workflow_results["final_result"] = {
-            "tasks_count": len(list_result.get("result", []))
-            if list_result.get("success")
-            else 0,
-            "statistics": stats_result.get("result")
-            if stats_result.get("success")
-            else {},
+            "tasks_count": len(list_result.get("result", [])) if list_result.get("success") else 0,
+            "statistics": stats_result.get("result") if stats_result.get("success") else {},
             "success": all(
-                step["result"].get("success", False)
-                for step in workflow_results["steps"]
+                step["result"].get("success", False) for step in workflow_results["steps"]
             ),
         }
 

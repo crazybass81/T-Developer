@@ -5,24 +5,18 @@ Tests for Agent Registry
 """
 
 import asyncio
-import pytest
-import tempfile
-import shutil
-from pathlib import Path
-from datetime import datetime
-
-import sys
 import os
+import shutil
+import sys
+import tempfile
+from datetime import datetime
+from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from evolution.registry import (
-    AgentRegistry,
-    Agent,
-    AgentType,
-    AgentStatus,
-    AgentMetrics,
-)
+from evolution.registry import Agent, AgentMetrics, AgentRegistry, AgentStatus, AgentType
 
 
 class TestAgentRegistry:
@@ -391,8 +385,7 @@ def process_natural_language(text):
         most_common_tags = stats["most_common_tags"]
         assert len(most_common_tags) > 0
         assert all(
-            isinstance(tag_info, tuple) and len(tag_info) == 2
-            for tag_info in most_common_tags
+            isinstance(tag_info, tuple) and len(tag_info) == 2 for tag_info in most_common_tags
         )
 
     @pytest.mark.asyncio
@@ -408,12 +401,8 @@ def process_natural_language(text):
         )
 
         # When: 여러 버전 생성
-        await self.registry.update_agent_code(
-            agent.id, "def download_v2(): return 'v2'", "v2 업데이트"
-        )
-        await self.registry.update_agent_code(
-            agent.id, "def download_v3(): return 'v3'", "v3 업데이트"
-        )
+        await self.registry.update_agent_code(agent.id, "def download_v2(): return 'v2'", "v2 업데이트")
+        await self.registry.update_agent_code(agent.id, "def download_v3(): return 'v3'", "v3 업데이트")
 
         updated_agent = await self.registry.get_agent(agent.id)
 

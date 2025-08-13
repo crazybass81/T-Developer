@@ -5,21 +5,22 @@ Performance Benchmark System for T-Developer MVP
 """
 
 import asyncio
-import httpx
-import time
-import statistics
 import json
 import logging
+import os
+import statistics
+import sys
 import tempfile
+import threading
+import time
 import zipfile
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import httpx
 import psutil
-import threading
-import sys
-import os
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -168,9 +169,7 @@ class PerformanceBenchmark:
 
             except Exception as e:
                 print(f"❌ {scenario_name}: 벤치마크 실패 - {e}")
-                logger.error(
-                    f"Benchmark failed for {scenario_name}: {e}", exc_info=True
-                )
+                logger.error(f"Benchmark failed for {scenario_name}: {e}", exc_info=True)
 
         total_benchmark_time = time.time() - overall_start_time
 
@@ -278,9 +277,7 @@ class PerformanceBenchmark:
             }
         )
 
-    async def _benchmark_project_generation(
-        self, payload: Dict[str, Any]
-    ) -> PerformanceMetrics:
+    async def _benchmark_project_generation(self, payload: Dict[str, Any]) -> PerformanceMetrics:
         """프로젝트 생성 벤치마크 실행"""
 
         # 시스템 모니터링 시작
@@ -292,9 +289,7 @@ class PerformanceBenchmark:
             # 1. 프로젝트 생성 요청
             generation_start_time = time.time()
 
-            response = await self.client.post(
-                f"{self.base_url}/api/v1/generate", json=payload
-            )
+            response = await self.client.post(f"{self.base_url}/api/v1/generate", json=payload)
 
             generation_time = time.time() - generation_start_time
             response_time = generation_time
@@ -443,9 +438,7 @@ class PerformanceBenchmark:
             )
 
             if avg_memory > 500:  # 500MB 초과
-                recommendations.append(
-                    f"메모리 사용량이 높습니다 ({avg_memory:.1f}MB) - 메모리 최적화 필요"
-                )
+                recommendations.append(f"메모리 사용량이 높습니다 ({avg_memory:.1f}MB) - 메모리 최적화 필요")
 
             # CPU 사용률 분석
             avg_cpu = statistics.mean([m.cpu_usage for m in metrics])
@@ -457,15 +450,11 @@ class PerformanceBenchmark:
         # 파일 크기 분석
         avg_zip_size = statistics.mean([m.zip_size_mb for m in metrics])
         if avg_zip_size > 10:
-            recommendations.append(
-                f"ZIP 파일이 큽니다 ({avg_zip_size:.1f}MB) - 불필요한 파일 제거 검토"
-            )
+            recommendations.append(f"ZIP 파일이 큽니다 ({avg_zip_size:.1f}MB) - 불필요한 파일 제거 검토")
 
         return recommendations
 
-    def _analyze_overall_performance(
-        self, results: List[BenchmarkResult]
-    ) -> Dict[str, Any]:
+    def _analyze_overall_performance(self, results: List[BenchmarkResult]) -> Dict[str, Any]:
         """전체 성능 분석"""
 
         if not results:
@@ -489,9 +478,7 @@ class PerformanceBenchmark:
         overall_success_rate = statistics.mean(success_rates)
 
         # 성능 목표 달성률
-        target_met_count = sum(
-            1 for r in successful_results if r.performance_target_met
-        )
+        target_met_count = sum(1 for r in successful_results if r.performance_target_met)
         target_met_rate = (target_met_count / len(successful_results)) * 100
 
         # 등급 계산
@@ -541,9 +528,7 @@ class PerformanceBenchmark:
         print("=" * 60)
 
         print(f"Overall Grade: {results['overall_grade']}")
-        print(
-            f"Performance Target Met: {'✅ YES' if results['performance_met'] else '❌ NO'}"
-        )
+        print(f"Performance Target Met: {'✅ YES' if results['performance_met'] else '❌ NO'}")
         print(f"{results['summary']}")
 
         print("\n🎯 Scenario Results:")
@@ -620,9 +605,7 @@ async def run_performance_benchmark():
             print("\n🎉 Performance benchmark passed!")
             return 0
         else:
-            print(
-                f"\n💥 Performance benchmark failed (Grade: {results['overall_grade']})!"
-            )
+            print(f"\n💥 Performance benchmark failed (Grade: {results['overall_grade']})!")
             return 1
 
     except Exception as e:

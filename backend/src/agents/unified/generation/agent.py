@@ -3,33 +3,23 @@ Generation Agent - Production Implementation
 Generates complete project code from selected components and requirements
 """
 
-from typing import Dict, List, Any, Optional, Tuple
 import asyncio
 import json
-import os
-import tempfile
-import shutil
-from datetime import datetime
-from pathlib import Path
 import logging
+import os
+import shutil
 
 # Import base classes
 import sys
+import tempfile
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.append("/home/ec2-user/T-DeveloperMVP/backend/src")
 
-from src.agents.unified.base import (
-    UnifiedBaseAgent,
-    AgentConfig,
-    AgentContext,
-    AgentResult,
-)
-from src.agents.unified.data_wrapper import (
-    AgentInput,
-    AgentContext,
-    wrap_input,
-    unwrap_result,
-)
+from src.agents.unified.base import AgentConfig, AgentContext, AgentResult, UnifiedBaseAgent
+from src.agents.unified.data_wrapper import AgentContext, AgentInput, unwrap_result, wrap_input
 
 # Import AI service
 try:
@@ -44,22 +34,16 @@ except ImportError:
 
 # Import all specialized modules
 from src.agents.unified.generation.modules.code_generator import CodeGenerator
-from src.agents.unified.generation.modules.project_scaffolder import ProjectScaffolder
+from src.agents.unified.generation.modules.configuration_generator import ConfigurationGenerator
 from src.agents.unified.generation.modules.dependency_manager import DependencyManager
-from src.agents.unified.generation.modules.template_engine import TemplateEngine
-from src.agents.unified.generation.modules.configuration_generator import (
-    ConfigurationGenerator,
-)
+from src.agents.unified.generation.modules.deployment_generator import DeploymentGenerator
+from src.agents.unified.generation.modules.documentation_generator import DocumentationGenerator
 from src.agents.unified.generation.modules.integration_builder import IntegrationBuilder
-from src.agents.unified.generation.modules.documentation_generator import (
-    DocumentationGenerator,
-)
-from src.agents.unified.generation.modules.testing_generator import TestingGenerator
-from src.agents.unified.generation.modules.deployment_generator import (
-    DeploymentGenerator,
-)
-from src.agents.unified.generation.modules.quality_checker import QualityChecker
 from src.agents.unified.generation.modules.optimization_engine import OptimizationEngine
+from src.agents.unified.generation.modules.project_scaffolder import ProjectScaffolder
+from src.agents.unified.generation.modules.quality_checker import QualityChecker
+from src.agents.unified.generation.modules.template_engine import TemplateEngine
+from src.agents.unified.generation.modules.testing_generator import TestingGenerator
 from src.agents.unified.generation.modules.version_manager import VersionManager
 
 
@@ -228,9 +212,7 @@ class GenerationAgent(UnifiedBaseAgent):
                 data = input_data
 
             # Use Universal Agent Factory for ALL requests
-            from src.agents.unified.generation.universal_agent_factory import (
-                UniversalAgentFactory,
-            )
+            from src.agents.unified.generation.universal_agent_factory import UniversalAgentFactory
 
             factory = UniversalAgentFactory()
 
@@ -238,13 +220,11 @@ class GenerationAgent(UnifiedBaseAgent):
             agent_result = await factory.analyze_and_create_agents(data)
 
             # Generate complete Todo app with dynamic agents
-            generated_files = await self._generate_todo_app_with_agents(
-                data, factory, agent_result
-            )
+            generated_files = await self._generate_todo_app_with_agents(data, factory, agent_result)
 
             # Save files to workspace
-            import os
             import json
+            import os
             from pathlib import Path
 
             # Create workspace directory
@@ -317,9 +297,7 @@ class GenerationAgent(UnifiedBaseAgent):
             )
 
             if not scaffold_result.success:
-                return self._create_error_result(
-                    f"Scaffolding failed: {scaffold_result.error}"
-                )
+                return self._create_error_result(f"Scaffolding failed: {scaffold_result.error}")
 
             # Phase 2: Dependency Management
             await self.log_event("dependency_resolution_start", {})
@@ -332,9 +310,7 @@ class GenerationAgent(UnifiedBaseAgent):
             # Phase 3: Code Generation
             await self.log_event("code_generation_start", {})
             code_tasks = [
-                self.code_generator.generate_core_files(
-                    self.generation_context, workspace_path
-                ),
+                self.code_generator.generate_core_files(self.generation_context, workspace_path),
                 self.code_generator.generate_component_integration(
                     self.generation_context["selected_components"], workspace_path
                 ),
@@ -354,9 +330,7 @@ class GenerationAgent(UnifiedBaseAgent):
                 self.documentation_generator.generate_documentation(
                     self.generation_context, workspace_path
                 ),
-                self.testing_generator.generate_tests(
-                    self.generation_context, workspace_path
-                ),
+                self.testing_generator.generate_tests(self.generation_context, workspace_path),
                 self.deployment_generator.generate_deployment_configs(
                     self.generation_context, workspace_path
                 ),
@@ -393,9 +367,7 @@ class GenerationAgent(UnifiedBaseAgent):
                     "project_name": self.generation_context["project_name"],
                     "framework": self.generation_context["target_framework"],
                     "language": self.generation_context["target_language"],
-                    "components_count": len(
-                        self.generation_context["selected_components"]
-                    ),
+                    "components_count": len(self.generation_context["selected_components"]),
                     "files_generated": len(generated_files),
                     "workspace_path": workspace_path,
                 },
@@ -404,29 +376,21 @@ class GenerationAgent(UnifiedBaseAgent):
             # Populate enhanced result fields
             result.generated_files = generated_files
             result.project_structure = scaffold_result.data.get("structure", {})
-            result.dependencies = (
-                dependency_result.data if dependency_result.success else {}
-            )
+            result.dependencies = dependency_result.data if dependency_result.success else {}
             result.configurations = (
                 generation_results[2].data if len(generation_results) > 2 else {}
             )
-            result.documentation = (
-                doc_test_results[0].data if len(doc_test_results) > 0 else {}
-            )
+            result.documentation = doc_test_results[0].data if len(doc_test_results) > 0 else {}
             result.tests = doc_test_results[1].data if len(doc_test_results) > 1 else {}
             result.deployment_configs = (
                 doc_test_results[2].data if len(doc_test_results) > 2 else {}
             )
-            result.quality_metrics = (
-                quality_result.data if quality_result.success else {}
-            )
+            result.quality_metrics = quality_result.data if quality_result.success else {}
             result.optimization_report = (
                 optimization_result.data if optimization_result.success else {}
             )
             result.version_info = version_result.data if version_result.success else {}
-            result.generation_stats = self._calculate_generation_stats(
-                start_time, generated_files
-            )
+            result.generation_stats = self._calculate_generation_stats(start_time, generated_files)
             result.build_instructions = self._generate_build_instructions()
             result.setup_commands = self._generate_setup_commands()
 
@@ -488,9 +452,7 @@ class GenerationAgent(UnifiedBaseAgent):
             files["package.json"] = self._generate_todo_package_json(project_name)
 
             # Generate main App component with agent integration
-            files["src/App.js"] = self._generate_todo_app_component(
-                agent_result["agent_names"]
-            )
+            files["src/App.js"] = self._generate_todo_app_component(agent_result["agent_names"])
 
             # Generate agent files
             for agent_name in agent_result["agent_names"]:
@@ -507,9 +469,7 @@ class GenerationAgent(UnifiedBaseAgent):
             files["src/components/TodoForm.js"] = self._generate_todo_form_component()
 
             # Generate TodoFilter component
-            files[
-                "src/components/TodoFilter.js"
-            ] = self._generate_todo_filter_component()
+            files["src/components/TodoFilter.js"] = self._generate_todo_filter_component()
 
             # Generate TodoStats component
             files["src/components/TodoStats.js"] = self._generate_todo_stats_component()
@@ -564,9 +524,7 @@ class GenerationAgent(UnifiedBaseAgent):
         agent_imports = "\n".join(
             [f"import {name} from './agents/{name}';" for name in agent_names]
         )
-        agent_init = "\n  ".join(
-            [f"const {name.lower()} = new {name}();" for name in agent_names]
-        )
+        agent_init = "\n  ".join([f"const {name.lower()} = new {name}();" for name in agent_names])
 
         return f"""import React, {{ useState, useEffect }} from 'react';
 import './App.css';
@@ -1274,9 +1232,7 @@ Generated with ❤️ by T-Developer Platform"""
 
         # Auto-detect framework and language from components if not specified
         if context["target_framework"] == "auto":
-            context["target_framework"] = self._detect_framework(
-                context["selected_components"]
-            )
+            context["target_framework"] = self._detect_framework(context["selected_components"])
 
         if context["target_language"] == "auto":
             context["target_language"] = self._detect_language(
@@ -1311,9 +1267,7 @@ Generated with ❤️ by T-Developer Platform"""
                 except UnicodeDecodeError:
                     # Handle binary files
                     with open(file_path, "rb") as f:
-                        generated_files[
-                            relative_path
-                        ] = f"<binary file: {len(f.read())} bytes>"
+                        generated_files[relative_path] = f"<binary file: {len(f.read())} bytes>"
                 except Exception as e:
                     generated_files[relative_path] = f"<error reading file: {str(e)}>"
 
@@ -1330,19 +1284,13 @@ Generated with ❤️ by T-Developer Platform"""
 
             # Count framework indicators
             if technology in ["react", "vue", "angular", "svelte"]:
-                framework_indicators[technology] = (
-                    framework_indicators.get(technology, 0) + 1
-                )
+                framework_indicators[technology] = framework_indicators.get(technology, 0) + 1
             elif "react" in category or "react" in component.get("name", "").lower():
                 framework_indicators["react"] = framework_indicators.get("react", 0) + 1
             elif "vue" in category or "vue" in component.get("name", "").lower():
                 framework_indicators["vue"] = framework_indicators.get("vue", 0) + 1
-            elif (
-                "angular" in category or "angular" in component.get("name", "").lower()
-            ):
-                framework_indicators["angular"] = (
-                    framework_indicators.get("angular", 0) + 1
-                )
+            elif "angular" in category or "angular" in component.get("name", "").lower():
+                framework_indicators["angular"] = framework_indicators.get("angular", 0) + 1
 
         # Return most common framework or default to React
         if framework_indicators:
@@ -1374,13 +1322,9 @@ Generated with ❤️ by T-Developer Platform"""
         for component in components:
             tags = component.get("tags", [])
             if "typescript" in tags or "ts" in tags:
-                language_indicators["typescript"] = (
-                    language_indicators.get("typescript", 0) + 1
-                )
+                language_indicators["typescript"] = language_indicators.get("typescript", 0) + 1
             elif "javascript" in tags or "js" in tags:
-                language_indicators["javascript"] = (
-                    language_indicators.get("javascript", 0) + 1
-                )
+                language_indicators["javascript"] = language_indicators.get("javascript", 0) + 1
             elif "python" in tags:
                 language_indicators["python"] = language_indicators.get("python", 0) + 1
 
@@ -1418,14 +1362,10 @@ Generated with ❤️ by T-Developer Platform"""
             "generation_speed_lines_per_second": total_lines / processing_time
             if processing_time > 0
             else 0,
-            "estimated_project_size": self._estimate_project_size(
-                total_lines, file_types
-            ),
+            "estimated_project_size": self._estimate_project_size(total_lines, file_types),
         }
 
-    def _estimate_project_size(
-        self, total_lines: int, file_types: Dict[str, int]
-    ) -> str:
+    def _estimate_project_size(self, total_lines: int, file_types: Dict[str, int]) -> str:
         """Estimate project size category"""
 
         if total_lines < 1000:
@@ -1508,9 +1448,7 @@ Generated with ❤️ by T-Developer Platform"""
             )
 
             if framework == "django":
-                commands.extend(
-                    ["python manage.py migrate", "python manage.py runserver"]
-                )
+                commands.extend(["python manage.py migrate", "python manage.py runserver"])
             elif framework == "fastapi":
                 commands.append("uvicorn main:app --reload")
 
@@ -1550,9 +1488,7 @@ Generated with ❤️ by T-Developer Platform"""
                     "success": True,
                     "data": generated_files,
                     "metadata": {
-                        "processing_time": (
-                            datetime.now() - start_time
-                        ).total_seconds(),
+                        "processing_time": (datetime.now() - start_time).total_seconds(),
                         "project_name": project_name,
                         "framework": framework,
                         "files_generated": len(generated_files),
@@ -1637,9 +1573,7 @@ Generate the main application file (App.js for React, App.vue for Vue, etc.) wit
             generated_files["src/main.js"] = main_code
 
         # Generate package.json
-        package_json = await self._generate_package_json_with_ai(
-            project_name, framework, features
-        )
+        package_json = await self._generate_package_json_with_ai(project_name, framework, features)
         generated_files["package.json"] = package_json
 
         # Generate README
@@ -1685,8 +1619,9 @@ Generate the main application file (App.js for React, App.vue for Vue, etc.) wit
 
         # Import OpenAI
         try:
-            from openai import AsyncOpenAI
             import os
+
+            from openai import AsyncOpenAI
 
             # Get API key from environment or AWS Secrets
             api_key = os.getenv("OPENAI_API_KEY")
@@ -1756,30 +1691,20 @@ Generate the main application file (App.js for React, App.vue for Vue, etc.) wit
 
             # Ensure we have essential files
             if "package.json" not in files:
-                files["package.json"] = self._generate_default_package_json(
-                    project_name, framework
-                )
+                files["package.json"] = self._generate_default_package_json(project_name, framework)
 
-            if (
-                framework == "react"
-                and "src/App.js" not in files
-                and "src/App.tsx" not in files
-            ):
+            if framework == "react" and "src/App.js" not in files and "src/App.tsx" not in files:
                 files["src/App.js"] = self._generate_default_react_app(project_name)
 
             if "README.md" not in files:
-                files["README.md"] = self._generate_readme(
-                    project_name, description, framework
-                )
+                files["README.md"] = self._generate_readme(project_name, description, framework)
 
             return files
 
         except Exception as e:
             self.logger.error(f"GPT generation failed: {e}")
             # Fallback to simple templates
-            return self._generate_simple_project(
-                project_name, description, framework, features
-            )
+            return self._generate_simple_project(project_name, description, framework, features)
 
     def _generate_simple_project(
         self, project_name: str, description: str, framework: str, features: List[str]
@@ -1788,9 +1713,7 @@ Generate the main application file (App.js for React, App.vue for Vue, etc.) wit
         files = {}
 
         if framework.lower() == "react":
-            files["package.json"] = self._generate_default_package_json(
-                project_name, framework
-            )
+            files["package.json"] = self._generate_default_package_json(project_name, framework)
             files["src/App.js"] = self._generate_default_react_app(project_name)
             files["src/index.js"] = self._generate_react_index()
             files["src/App.css"] = self._generate_default_css()
@@ -1937,9 +1860,7 @@ root.render(
   </body>
 </html>"""
 
-    def _generate_readme(
-        self, project_name: str, description: str, framework: str
-    ) -> str:
+    def _generate_readme(self, project_name: str, description: str, framework: str) -> str:
         """Generate README.md"""
         return f"""# {project_name}
 
@@ -2037,9 +1958,7 @@ yarn-error.log*
             current[parts[-1]] = "file"
         return structure
 
-    async def _generate_with_templates(
-        self, data: Dict[str, Any]
-    ) -> EnhancedGenerationResult:
+    async def _generate_with_templates(self, data: Dict[str, Any]) -> EnhancedGenerationResult:
         """Fallback template-based generation"""
         # Use existing process logic
         return await self._original_process(data)
@@ -2145,9 +2064,7 @@ yarn-error.log*
             ],
         }
 
-    async def estimate_generation_time(
-        self, input_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def estimate_generation_time(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Estimate generation time and complexity"""
 
         components_count = len(input_data.get("selected_components", []))

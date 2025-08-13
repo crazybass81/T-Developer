@@ -3,9 +3,10 @@ Filter Manager Module
 Applies filters to search results with advanced filtering capabilities
 """
 
-from typing import Dict, List, Any, Optional, Callable
 import re
 from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, List, Optional
+
 from dateutil.parser import parse as parse_date
 
 
@@ -126,18 +127,12 @@ class FilterManager:
 
         if "include" in filter_config:
             included_categories = [cat.lower() for cat in filter_config["include"]]
-            results = [
-                r
-                for r in results
-                if r.get("category", "").lower() in included_categories
-            ]
+            results = [r for r in results if r.get("category", "").lower() in included_categories]
 
         if "exclude" in filter_config:
             excluded_categories = [cat.lower() for cat in filter_config["exclude"]]
             results = [
-                r
-                for r in results
-                if r.get("category", "").lower() not in excluded_categories
+                r for r in results if r.get("category", "").lower() not in excluded_categories
             ]
 
         if "pattern" in filter_config:
@@ -153,26 +148,16 @@ class FilterManager:
 
         if "include" in filter_config:
             included_techs = [tech.lower() for tech in filter_config["include"]]
-            results = [
-                r for r in results if r.get("technology", "").lower() in included_techs
-            ]
+            results = [r for r in results if r.get("technology", "").lower() in included_techs]
 
         if "exclude" in filter_config:
             excluded_techs = [tech.lower() for tech in filter_config["exclude"]]
-            results = [
-                r
-                for r in results
-                if r.get("technology", "").lower() not in excluded_techs
-            ]
+            results = [r for r in results if r.get("technology", "").lower() not in excluded_techs]
 
         if "version_range" in filter_config:
             # Filter by technology version if available
             version_filter = filter_config["version_range"]
-            results = [
-                r
-                for r in results
-                if self._check_version_compatibility(r, version_filter)
-            ]
+            results = [r for r in results if self._check_version_compatibility(r, version_filter)]
 
         return results
 
@@ -188,8 +173,7 @@ class FilterManager:
                 r
                 for r in results
                 if any(
-                    tag.lower() in [t.lower() for t in r.get("tags", [])]
-                    for tag in required_tags
+                    tag.lower() in [t.lower() for t in r.get("tags", [])] for tag in required_tags
                 )
             ]
 
@@ -200,8 +184,7 @@ class FilterManager:
                 r
                 for r in results
                 if all(
-                    tag.lower() in [t.lower() for t in r.get("tags", [])]
-                    for tag in required_tags
+                    tag.lower() in [t.lower() for t in r.get("tags", [])] for tag in required_tags
                 )
             ]
 
@@ -212,8 +195,7 @@ class FilterManager:
                 r
                 for r in results
                 if not any(
-                    tag.lower() in [t.lower() for t in r.get("tags", [])]
-                    for tag in excluded_tags
+                    tag.lower() in [t.lower() for t in r.get("tags", [])] for tag in excluded_tags
                 )
             ]
 
@@ -272,9 +254,7 @@ class FilterManager:
             coverage_filter = filter_config["test_coverage"]
             if "min" in coverage_filter:
                 min_coverage = coverage_filter["min"]
-                results = [
-                    r for r in results if r.get("test_coverage", 0) >= min_coverage
-                ]
+                results = [r for r in results if r.get("test_coverage", 0) >= min_coverage]
 
         if "documentation" in filter_config:
             doc_filter = filter_config["documentation"]
@@ -294,26 +274,18 @@ class FilterManager:
 
         if "include" in filter_config:
             allowed_licenses = [lic.lower() for lic in filter_config["include"]]
-            results = [
-                r for r in results if r.get("license", "").lower() in allowed_licenses
-            ]
+            results = [r for r in results if r.get("license", "").lower() in allowed_licenses]
 
         if "exclude" in filter_config:
             excluded_licenses = [lic.lower() for lic in filter_config["exclude"]]
-            results = [
-                r
-                for r in results
-                if r.get("license", "").lower() not in excluded_licenses
-            ]
+            results = [r for r in results if r.get("license", "").lower() not in excluded_licenses]
 
         if "commercial_use" in filter_config:
             # Filter by commercial use compatibility
             commercial_friendly = ["mit", "apache-2.0", "bsd-3-clause", "bsd-2-clause"]
             if filter_config["commercial_use"]:
                 results = [
-                    r
-                    for r in results
-                    if r.get("license", "").lower() in commercial_friendly
+                    r for r in results if r.get("license", "").lower() in commercial_friendly
                 ]
 
         return results
@@ -329,27 +301,19 @@ class FilterManager:
             after_date = self._parse_date(filter_config["after"])
             if after_date:
                 results = [
-                    r
-                    for r in results
-                    if self._get_component_date(r, date_field) >= after_date
+                    r for r in results if self._get_component_date(r, date_field) >= after_date
                 ]
 
         if "before" in filter_config:
             before_date = self._parse_date(filter_config["before"])
             if before_date:
                 results = [
-                    r
-                    for r in results
-                    if self._get_component_date(r, date_field) <= before_date
+                    r for r in results if self._get_component_date(r, date_field) <= before_date
                 ]
 
         if "last_n_days" in filter_config:
             cutoff_date = datetime.now() - timedelta(days=filter_config["last_n_days"])
-            results = [
-                r
-                for r in results
-                if self._get_component_date(r, date_field) >= cutoff_date
-            ]
+            results = [r for r in results if self._get_component_date(r, date_field) >= cutoff_date]
 
         return results
 
@@ -364,8 +328,7 @@ class FilterManager:
                 r
                 for r in results
                 if all(
-                    feat in [f.lower() for f in r.get("features", [])]
-                    for feat in required_features
+                    feat in [f.lower() for f in r.get("features", [])] for feat in required_features
                 )
             ]
 
@@ -378,9 +341,7 @@ class FilterManager:
                     for feat in preferred_features
                     if feat in [f.lower() for f in result.get("features", [])]
                 )
-                result["feature_preference_score"] = feature_matches / len(
-                    preferred_features
-                )
+                result["feature_preference_score"] = feature_matches / len(preferred_features)
 
         if "exclude" in filter_config:
             excluded_features = [feat.lower() for feat in filter_config["exclude"]]
@@ -388,8 +349,7 @@ class FilterManager:
                 r
                 for r in results
                 if not any(
-                    feat in [f.lower() for f in r.get("features", [])]
-                    for feat in excluded_features
+                    feat in [f.lower() for f in r.get("features", [])] for feat in excluded_features
                 )
             ]
 
@@ -425,9 +385,7 @@ class FilterManager:
             benchmark_filter = filter_config["benchmarks"]
             for metric, threshold in benchmark_filter.items():
                 results = [
-                    r
-                    for r in results
-                    if r.get("benchmarks", {}).get(metric, 0) >= threshold
+                    r for r in results if r.get("benchmarks", {}).get(metric, 0) >= threshold
                 ]
 
         return results
@@ -440,9 +398,7 @@ class FilterManager:
         if "status" in filter_config:
             required_status = filter_config["status"].lower()
             results = [
-                r
-                for r in results
-                if r.get("maintenance_status", "").lower() == required_status
+                r for r in results if r.get("maintenance_status", "").lower() == required_status
             ]
 
         if "min_commit_frequency" in filter_config:
@@ -452,9 +408,7 @@ class FilterManager:
 
         if "active_maintainers" in filter_config:
             min_maintainers = filter_config["active_maintainers"]
-            results = [
-                r for r in results if r.get("active_maintainers", 0) >= min_maintainers
-            ]
+            results = [r for r in results if r.get("active_maintainers", 0) >= min_maintainers]
 
         return results
 
@@ -467,18 +421,14 @@ class FilterManager:
             score_filter = filter_config["score"]
             if "min" in score_filter:
                 min_security = score_filter["min"]
-                results = [
-                    r for r in results if r.get("security_score", 0) >= min_security
-                ]
+                results = [r for r in results if r.get("security_score", 0) >= min_security]
 
         if "vulnerabilities" in filter_config:
             vuln_filter = filter_config["vulnerabilities"]
             if "max_critical" in vuln_filter:
                 max_critical = vuln_filter["max_critical"]
                 results = [
-                    r
-                    for r in results
-                    if r.get("critical_vulnerabilities", 0) <= max_critical
+                    r for r in results if r.get("critical_vulnerabilities", 0) <= max_critical
                 ]
 
         if "security_audit" in filter_config:
@@ -494,25 +444,17 @@ class FilterManager:
 
         if "node_version" in filter_config:
             node_version = filter_config["node_version"]
-            results = [
-                r for r in results if self._check_node_compatibility(r, node_version)
-            ]
+            results = [r for r in results if self._check_node_compatibility(r, node_version)]
 
         if "browser_support" in filter_config:
             browser_requirements = filter_config["browser_support"]
             results = [
-                r
-                for r in results
-                if self._check_browser_compatibility(r, browser_requirements)
+                r for r in results if self._check_browser_compatibility(r, browser_requirements)
             ]
 
         if "python_version" in filter_config:
             python_version = filter_config["python_version"]
-            results = [
-                r
-                for r in results
-                if self._check_python_compatibility(r, python_version)
-            ]
+            results = [r for r in results if self._check_python_compatibility(r, python_version)]
 
         return results
 
@@ -530,9 +472,7 @@ class FilterManager:
         if "expression" in filter_config:
             # Custom filter expression
             expression = filter_config["expression"]
-            results = [
-                r for r in results if self._evaluate_filter_expression(r, expression)
-            ]
+            results = [r for r in results if self._evaluate_filter_expression(r, expression)]
 
         return results
 
@@ -557,9 +497,7 @@ class FilterManager:
         parsed_date = self._parse_date(str(date_value))
         return parsed_date if parsed_date else datetime.min
 
-    def _check_version_compatibility(
-        self, component: Dict[str, Any], version_range: str
-    ) -> bool:
+    def _check_version_compatibility(self, component: Dict[str, Any], version_range: str) -> bool:
         """Check if component version is compatible"""
 
         # Simplified version checking - in production use semantic versioning
@@ -581,9 +519,7 @@ class FilterManager:
         else:
             return component_version == version_range
 
-    def _check_node_compatibility(
-        self, component: Dict[str, Any], node_version: str
-    ) -> bool:
+    def _check_node_compatibility(self, component: Dict[str, Any], node_version: str) -> bool:
         """Check Node.js compatibility"""
 
         supported_versions = component.get("node_versions", [])
@@ -611,9 +547,7 @@ class FilterManager:
 
         return True
 
-    def _check_python_compatibility(
-        self, component: Dict[str, Any], python_version: str
-    ) -> bool:
+    def _check_python_compatibility(self, component: Dict[str, Any], python_version: str) -> bool:
         """Check Python compatibility"""
 
         supported_versions = component.get("python_versions", [])
@@ -622,9 +556,7 @@ class FilterManager:
 
         return any(python_version.startswith(v) for v in supported_versions)
 
-    def _evaluate_filter_expression(
-        self, component: Dict[str, Any], expression: str
-    ) -> bool:
+    def _evaluate_filter_expression(self, component: Dict[str, Any], expression: str) -> bool:
         """Evaluate custom filter expression"""
 
         # Simple expression evaluator - in production use safe evaluation
@@ -649,24 +581,16 @@ class FilterManager:
         except:
             return True  # Default to include if expression fails
 
-    async def get_available_filter_options(
-        self, results: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    async def get_available_filter_options(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Get available filter options based on current results"""
 
         if not results:
             return {}
 
         options = {
-            "categories": list(
-                set(r.get("category") for r in results if r.get("category"))
-            ),
-            "technologies": list(
-                set(r.get("technology") for r in results if r.get("technology"))
-            ),
-            "licenses": list(
-                set(r.get("license") for r in results if r.get("license"))
-            ),
+            "categories": list(set(r.get("category") for r in results if r.get("category"))),
+            "technologies": list(set(r.get("technology") for r in results if r.get("technology"))),
+            "licenses": list(set(r.get("license") for r in results if r.get("license"))),
             "tags": list(set(tag for r in results for tag in r.get("tags", []))),
             "popularity_range": {
                 "min": min(r.get("popularity", 0) for r in results),

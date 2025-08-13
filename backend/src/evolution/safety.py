@@ -6,15 +6,15 @@ Ensures all evolved agents remain safe and within constraints.
 """
 
 import asyncio
+import hashlib
 import json
 import logging
-import hashlib
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
-from enum import Enum
 
 logger = logging.getLogger(__name__)
 
@@ -231,8 +231,7 @@ class EvolutionSafety:
 
             # Determine if agent is safe
             is_safe = all(
-                v.threat_level not in [ThreatLevel.HIGH, ThreatLevel.CRITICAL]
-                for v in violations
+                v.threat_level not in [ThreatLevel.HIGH, ThreatLevel.CRITICAL] for v in violations
             )
 
             # Auto-quarantine if configured and unsafe
@@ -241,9 +240,7 @@ class EvolutionSafety:
 
             return is_safe, violations
 
-    async def check_runtime_behavior(
-        self, agent_id: str, metrics: Dict[str, Any]
-    ) -> bool:
+    async def check_runtime_behavior(self, agent_id: str, metrics: Dict[str, Any]) -> bool:
         """
         Check runtime behavior metrics for safety
 
@@ -296,10 +293,7 @@ class EvolutionSafety:
             )
 
         # Check execution time
-        if (
-            metrics.get("execution_time_seconds", 0)
-            > self.config.max_execution_time_seconds
-        ):
+        if metrics.get("execution_time_seconds", 0) > self.config.max_execution_time_seconds:
             violations.append(
                 SafetyViolation(
                     timestamp=datetime.now(),
@@ -352,8 +346,7 @@ class EvolutionSafety:
             }
 
             quarantine_file = (
-                self.quarantine_dir
-                / f"{agent_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                self.quarantine_dir / f"{agent_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
             )
             with open(quarantine_file, "w") as f:
                 json.dump(quarantine_data, f, indent=2)
@@ -412,9 +405,7 @@ class EvolutionSafety:
         critical_violations = sum(
             1 for v in self.violations if v.threat_level == ThreatLevel.CRITICAL
         )
-        high_violations = sum(
-            1 for v in self.violations if v.threat_level == ThreatLevel.HIGH
-        )
+        high_violations = sum(1 for v in self.violations if v.threat_level == ThreatLevel.HIGH)
 
         report = {
             "timestamp": datetime.now().isoformat(),
@@ -492,9 +483,7 @@ class EvolutionSafety:
 
         for from_module, import_names in imports:
             module = (
-                from_module
-                if from_module
-                else import_names.split(",")[0].strip().split(" ")[0]
+                from_module if from_module else import_names.split(",")[0].strip().split(" ")[0]
             )
             base_module = module.split(".")[0]
 
@@ -512,9 +501,7 @@ class EvolutionSafety:
                 ]
 
                 threat_level = (
-                    ThreatLevel.HIGH
-                    if base_module in dangerous_modules
-                    else ThreatLevel.MEDIUM
+                    ThreatLevel.HIGH if base_module in dangerous_modules else ThreatLevel.MEDIUM
                 )
 
                 violations.append(
@@ -531,9 +518,7 @@ class EvolutionSafety:
 
         return violations
 
-    async def _check_resource_patterns(
-        self, agent_id: str, code: str
-    ) -> List[SafetyViolation]:
+    async def _check_resource_patterns(self, agent_id: str, code: str) -> List[SafetyViolation]:
         """Check for resource usage patterns"""
         violations = []
 

@@ -3,9 +3,9 @@ Business Rule Extractor Module
 Extracts business rules and logic from requirements
 """
 
-from typing import Dict, List, Any, Optional
 import re
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class RuleType(Enum):

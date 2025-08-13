@@ -3,8 +3,8 @@ Technical Compatibility Module
 Assesses technical compatibility between components and requirements
 """
 
-from typing import Dict, List, Any, Optional
 import re
+from typing import Any, Dict, List, Optional
 
 
 class TechnicalCompatibility:
@@ -58,15 +58,11 @@ class TechnicalCompatibility:
             compatibility_results[component_id] = {
                 "compatibility_score": compatibility_score,
                 "detailed_assessments": assessments,
-                "compatibility_issues": self._identify_compatibility_issues(
-                    assessments
-                ),
+                "compatibility_issues": self._identify_compatibility_issues(assessments),
                 "migration_complexity": self._assess_migration_complexity(
                     tech_specs, tech_requirements
                 ),
-                "recommendations": self._generate_compatibility_recommendations(
-                    assessments
-                ),
+                "recommendations": self._generate_compatibility_recommendations(assessments),
             }
 
         return compatibility_results
@@ -155,9 +151,7 @@ class TechnicalCompatibility:
 
         return specs
 
-    def _assess_platform_compatibility(
-        self, specs: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _assess_platform_compatibility(self, specs: Dict, requirements: Dict) -> Dict[str, Any]:
         """Assess platform compatibility"""
 
         required_platforms = set(requirements.get("platforms", []))
@@ -187,9 +181,7 @@ class TechnicalCompatibility:
             else "incompatible",
         }
 
-    def _assess_language_compatibility(
-        self, specs: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _assess_language_compatibility(self, specs: Dict, requirements: Dict) -> Dict[str, Any]:
         """Assess programming language compatibility"""
 
         required_languages = set(requirements.get("languages", []))
@@ -207,9 +199,7 @@ class TechnicalCompatibility:
         )
 
         direct_score = len(compatible_languages) / len(required_languages)
-        combined_score = max(
-            direct_score, interoperable_score * 0.7
-        )  # Interop gets 70% weight
+        combined_score = max(direct_score, interoperable_score * 0.7)  # Interop gets 70% weight
 
         return {
             "score": combined_score,
@@ -218,9 +208,7 @@ class TechnicalCompatibility:
             "status": self._determine_language_status(combined_score),
         }
 
-    def _calculate_language_interoperability(
-        self, required: set, supported: set
-    ) -> float:
+    def _calculate_language_interoperability(self, required: set, supported: set) -> float:
         """Calculate language interoperability score"""
 
         # Language interoperability matrix
@@ -234,9 +222,9 @@ class TechnicalCompatibility:
         interop_score = 0
         for req_lang in required:
             for supp_lang in supported:
-                if supp_lang in interop_matrix.get(
-                    req_lang, []
-                ) or req_lang in interop_matrix.get(supp_lang, []):
+                if supp_lang in interop_matrix.get(req_lang, []) or req_lang in interop_matrix.get(
+                    supp_lang, []
+                ):
                     interop_score += 1
                     break
 
@@ -254,9 +242,7 @@ class TechnicalCompatibility:
         else:
             return "incompatible"
 
-    def _assess_framework_compatibility(
-        self, specs: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _assess_framework_compatibility(self, specs: Dict, requirements: Dict) -> Dict[str, Any]:
         """Assess framework compatibility"""
 
         required_frameworks = set(requirements.get("frameworks", []))
@@ -287,9 +273,7 @@ class TechnicalCompatibility:
             else "incompatible",
         }
 
-    def _assess_framework_family_compatibility(
-        self, required: set, supported: set
-    ) -> float:
+    def _assess_framework_family_compatibility(self, required: set, supported: set) -> float:
         """Assess compatibility within framework families"""
 
         framework_families = {
@@ -309,9 +293,7 @@ class TechnicalCompatibility:
 
         return compatibility_count / len(required) if required else 0
 
-    def _assess_database_compatibility(
-        self, specs: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _assess_database_compatibility(self, specs: Dict, requirements: Dict) -> Dict[str, Any]:
         """Assess database compatibility"""
 
         required_dbs = set(requirements.get("databases", []))
@@ -324,9 +306,7 @@ class TechnicalCompatibility:
         compatible = required_dbs.intersection(supported_dbs)
 
         # Type compatibility (SQL vs NoSQL)
-        type_compatibility = self._assess_database_type_compatibility(
-            required_dbs, supported_dbs
-        )
+        type_compatibility = self._assess_database_type_compatibility(required_dbs, supported_dbs)
 
         direct_score = len(compatible) / len(required_dbs)
         final_score = max(direct_score, type_compatibility * 0.6)
@@ -339,9 +319,7 @@ class TechnicalCompatibility:
             "status": self._determine_db_status(final_score),
         }
 
-    def _assess_database_type_compatibility(
-        self, required: set, supported: set
-    ) -> float:
+    def _assess_database_type_compatibility(self, required: set, supported: set) -> float:
         """Assess database type compatibility"""
 
         db_types = {
@@ -379,9 +357,7 @@ class TechnicalCompatibility:
         else:
             return "incompatible"
 
-    def _assess_deployment_compatibility(
-        self, specs: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _assess_deployment_compatibility(self, specs: Dict, requirements: Dict) -> Dict[str, Any]:
         """Assess deployment compatibility"""
 
         required_deployment = requirements.get("deployment", [])
@@ -420,9 +396,7 @@ class TechnicalCompatibility:
         overlap = len(required_set.intersection(supported_set))
         return overlap / len(required_set) if required_set else 1.0
 
-    def _assess_dependency_compatibility(
-        self, specs: Dict, requirements: Dict
-    ) -> Dict[str, Any]:
+    def _assess_dependency_compatibility(self, specs: Dict, requirements: Dict) -> Dict[str, Any]:
         """Assess dependency compatibility"""
 
         component_deps = specs.get("dependencies", [])
@@ -510,9 +484,7 @@ class TechnicalCompatibility:
 
         # Simple heuristic based on technology differences
         spec_techs = set(str(v).lower() for v in specs.values() if isinstance(v, str))
-        req_techs = set(
-            str(v).lower() for v in requirements.values() if isinstance(v, str)
-        )
+        req_techs = set(str(v).lower() for v in requirements.values() if isinstance(v, str))
 
         overlap = len(spec_techs.intersection(req_techs))
         total = len(spec_techs.union(req_techs))
@@ -539,14 +511,10 @@ class TechnicalCompatibility:
                     f"Address {category.replace('_', ' ')} issues before proceeding"
                 )
             elif score < 0.8:
-                recommendations.append(
-                    f"Review {category.replace('_', ' ')} requirements"
-                )
+                recommendations.append(f"Review {category.replace('_', ' ')} requirements")
 
         if not recommendations:
-            recommendations.append(
-                "Good technical compatibility - proceed with implementation"
-            )
+            recommendations.append("Good technical compatibility - proceed with implementation")
 
         return recommendations
 

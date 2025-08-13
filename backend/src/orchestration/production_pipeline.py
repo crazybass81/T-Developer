@@ -7,18 +7,18 @@ import asyncio
 import json
 import logging
 import os
-import time
 import shutil
-from typing import Dict, Any, Optional, List, Tuple
-from datetime import datetime
-from dataclasses import dataclass, asdict
-from pathlib import Path
 import sys
+import time
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 # AWS SDK 및 모니터링 (선택적)
 try:
     import boto3
-    from aws_lambda_powertools import Logger, Tracer, Metrics
+    from aws_lambda_powertools import Logger, Metrics, Tracer
     from aws_lambda_powertools.metrics import MetricUnit
 
     AWS_AVAILABLE = True
@@ -57,9 +57,7 @@ def load_agent_class_dynamic(agent_name: str):
         agent_path = Path(__file__).parent.parent / "agents" / "unified" / agent_name
         if not agent_path.exists():
             # Fallback to ecs-integrated directory
-            agent_path = (
-                Path(__file__).parent.parent / "agents" / "ecs-integrated" / agent_name
-            )
+            agent_path = Path(__file__).parent.parent / "agents" / "ecs-integrated" / agent_name
             if not agent_path.exists():
                 # Fallback to implementations directory
                 agent_path = Path(__file__).parent.parent / "agents" / "implementations"
@@ -161,15 +159,11 @@ memory_optimizer = None
 
 try:
     # 절대 경로로 메모리 옵티마이저 로딩
-    optimization_path = (
-        Path(__file__).parent.parent / "optimization" / "memory_optimizer.py"
-    )
+    optimization_path = Path(__file__).parent.parent / "optimization" / "memory_optimizer.py"
     if optimization_path.exists():
         import importlib.util
 
-        spec = importlib.util.spec_from_file_location(
-            "memory_optimizer", optimization_path
-        )
+        spec = importlib.util.spec_from_file_location("memory_optimizer", optimization_path)
         if spec and spec.loader:
             memory_opt_module = importlib.util.module_from_spec(spec)
             sys.modules["memory_optimizer"] = memory_opt_module
@@ -328,33 +322,19 @@ class ProductionECSPipeline:
                     except TypeError as e:
                         # 초기화 파라미터 문제 시 다시 시도
                         try:
-                            self.agents[agent_name] = AGENT_CLASSES[agent_name](
-                                config=None
-                            )
-                            logger.info(
-                                f"✅ Real agent loaded with config=None: {agent_name}"
-                            )
+                            self.agents[agent_name] = AGENT_CLASSES[agent_name](config=None)
+                            logger.info(f"✅ Real agent loaded with config=None: {agent_name}")
                         except Exception as e2:
-                            logger.warning(
-                                f"Failed to initialize real agent {agent_name}: {e2}"
-                            )
+                            logger.warning(f"Failed to initialize real agent {agent_name}: {e2}")
                             # 폴백으로 프록시 사용
-                            self.agent_proxies[agent_name] = self._create_agent_proxy(
-                                agent_name
-                            )
+                            self.agent_proxies[agent_name] = self._create_agent_proxy(agent_name)
                     except Exception as e:
-                        logger.warning(
-                            f"Failed to initialize real agent {agent_name}: {e}"
-                        )
+                        logger.warning(f"Failed to initialize real agent {agent_name}: {e}")
                         # 폴백으로 프록시 사용
-                        self.agent_proxies[agent_name] = self._create_agent_proxy(
-                            agent_name
-                        )
+                        self.agent_proxies[agent_name] = self._create_agent_proxy(agent_name)
                 else:
                     # 프록시 사용 (실제 에이전트 없는 경우)
-                    self.agent_proxies[agent_name] = self._create_agent_proxy(
-                        agent_name
-                    )
+                    self.agent_proxies[agent_name] = self._create_agent_proxy(agent_name)
                     logger.info(f"⚠️ Using proxy for agent: {agent_name}")
 
             self.initialized = True
@@ -376,9 +356,7 @@ class ProductionECSPipeline:
 
             try:
                 # 실제 에이전트 로직 시뮬레이션 - 속도 개선
-                processing_time = min(
-                    config.get("timeout", 30) * 0.01, 0.2
-                )  # 최대 0.2초로 단축
+                processing_time = min(config.get("timeout", 30) * 0.01, 0.2)  # 최대 0.2초로 단축
                 await asyncio.sleep(processing_time)
 
                 # 에이전트별 출력 생성
@@ -419,9 +397,7 @@ class ProductionECSPipeline:
 
         return agent_proxy
 
-    def _generate_agent_output(
-        self, agent_name: str, input_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _generate_agent_output(self, agent_name: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """에이전트별 출력 데이터 생성"""
 
         if agent_name == "nl_input":
@@ -483,9 +459,7 @@ class ProductionECSPipeline:
                             "description": description[:100],
                             "dependencies": {
                                 "react": "^18.2.0" if framework == "react" else None,
-                                "react-dom": "^18.2.0"
-                                if framework == "react"
-                                else None,
+                                "react-dom": "^18.2.0" if framework == "react" else None,
                                 "vue": "^3.3.0" if framework == "vue" else None,
                                 "next": "^14.0.0" if framework == "nextjs" else None,
                                 "axios": "^1.6.0",
@@ -635,9 +609,7 @@ build/
                 if generated_files.get("package.json"):
                     package_data = json.loads(generated_files["package.json"])
                     package_data["dependencies"] = {
-                        k: v
-                        for k, v in package_data["dependencies"].items()
-                        if v is not None
+                        k: v for k, v in package_data["dependencies"].items() if v is not None
                     }
                     generated_files["package.json"] = json.dumps(package_data, indent=2)
 
@@ -650,8 +622,8 @@ build/
                 "project_name": project_name,
             }
         elif agent_name == "assembly":
-            import zipfile
             import tempfile
+            import zipfile
             from pathlib import Path
 
             # Get generated files from previous stage
@@ -673,8 +645,7 @@ build/
 
                 # Create ZIP file
                 zip_path = (
-                    Path("/home/ec2-user/T-DeveloperMVP/backend/downloads")
-                    / f"{project_id}.zip"
+                    Path("/home/ec2-user/T-DeveloperMVP/backend/downloads") / f"{project_id}.zip"
                 )
                 zip_path.parent.mkdir(exist_ok=True, parents=True)
 
@@ -694,9 +665,7 @@ build/
                     "dependencies_resolved": True,
                     "build_config": "optimized",
                     "zip_created": True,
-                    "zip_size_bytes": zip_path.stat().st_size
-                    if zip_path.exists()
-                    else 0,
+                    "zip_size_bytes": zip_path.stat().st_size if zip_path.exists() else 0,
                 }
             else:
                 # No files to assemble
@@ -786,9 +755,7 @@ build/
         if MEMORY_OPTIMIZER_AVAILABLE and memory_optimizer:
             if hasattr(memory_optimizer, "profiler"):
                 initial_memory = memory_optimizer.profiler.take_snapshot()
-                logger.info(
-                    f"🧠 Initial memory: {initial_memory.process_memory_mb:.1f}MB"
-                )
+                logger.info(f"🧠 Initial memory: {initial_memory.process_memory_mb:.1f}MB")
 
         # 초기화 확인
         if not self.initialized:
@@ -802,7 +769,9 @@ build/
             if isinstance(user_input, dict)
             else str(user_input)
         )
-        project_id = f"prod_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(hash_input) % 10000:04d}"
+        project_id = (
+            f"prod_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(hash_input) % 10000:04d}"
+        )
 
         logger.info(f"🚀 Starting production pipeline: {project_id}")
 
@@ -872,9 +841,7 @@ build/
                         elif agent_name == "generation":
                             # Generation의 생성된 파일들을 최상위로
                             if "files" in result.output_data:
-                                pipeline_data["generated_files"] = result.output_data[
-                                    "files"
-                                ]
+                                pipeline_data["generated_files"] = result.output_data["files"]
                             if "generated_files" in result.output_data:
                                 pipeline_data["generated_files"] = result.output_data[
                                     "generated_files"
@@ -883,9 +850,7 @@ build/
                         elif agent_name == "assembly":
                             # Assembly의 패키지 경로를 최상위로
                             if "package_path" in result.output_data:
-                                pipeline_data["package_path"] = result.output_data[
-                                    "package_path"
-                                ]
+                                pipeline_data["package_path"] = result.output_data["package_path"]
                             if "assembled_project" in result.output_data:
                                 pipeline_data["assembled_project"] = result.output_data[
                                     "assembled_project"
@@ -894,20 +859,14 @@ build/
                         elif agent_name == "download":
                             # Download의 다운로드 정보를 최상위로
                             if "download_url" in result.output_data:
-                                pipeline_data["download_url"] = result.output_data[
-                                    "download_url"
-                                ]
+                                pipeline_data["download_url"] = result.output_data["download_url"]
                                 pipeline_data["download_id"] = result.output_data.get(
                                     "download_id", ""
                                 )
                             if "processed_data" in result.output_data:
                                 download_info = result.output_data["processed_data"]
-                                pipeline_data["download_url"] = download_info.get(
-                                    "download_url"
-                                )
-                                pipeline_data["download_id"] = download_info.get(
-                                    "download_id"
-                                )
+                                pipeline_data["download_url"] = download_info.get("download_url")
+                                pipeline_data["download_id"] = download_info.get("download_id")
                                 pipeline_data["generated_code"] = {
                                     "status": "packaged",
                                     "download_url": download_info.get("download_url"),
@@ -961,9 +920,7 @@ build/
                 # 중요한 단계 실패시 중단 여부 결정
                 critical_agents = ["generation", "assembly"]
                 if not result.success and agent_name in critical_agents:
-                    logger.error(
-                        f"💥 Critical agent {agent_name} failed, stopping pipeline"
-                    )
+                    logger.error(f"💥 Critical agent {agent_name} failed, stopping pipeline")
                     break
 
             # 실행 시간 계산
@@ -987,10 +944,7 @@ build/
             if MEMORY_OPTIMIZER_AVAILABLE and memory_optimizer and initial_memory:
                 if hasattr(memory_optimizer, "profiler"):
                     final_memory = memory_optimizer.profiler.take_snapshot()
-                    memory_diff = (
-                        final_memory.process_memory_mb
-                        - initial_memory.process_memory_mb
-                    )
+                    memory_diff = final_memory.process_memory_mb - initial_memory.process_memory_mb
                 else:
                     memory_diff = 0
                 memory_stats = {
@@ -998,9 +952,7 @@ build/
                     "final_memory_mb": final_memory.process_memory_mb,
                     "memory_diff_mb": memory_diff,
                     "peak_memory_mb": getattr(memory_optimizer, "peak_memory_mb", 0),
-                    "gc_collections": getattr(
-                        memory_optimizer, "get_gc_stats", lambda: {}
-                    )(),
+                    "gc_collections": getattr(memory_optimizer, "get_gc_stats", lambda: {})(),
                 }
                 logger.info(
                     f"🧠 Final memory: {final_memory.process_memory_mb:.1f}MB ({memory_diff:+.1f}MB)"
@@ -1011,9 +963,7 @@ build/
                 "total_execution_time": execution_time,
                 "successful_agents": successful_agents,
                 "failed_agents": len(agent_results) - successful_agents,
-                "agent_timings": {
-                    r.agent_name: r.execution_time for r in agent_results
-                },
+                "agent_timings": {r.agent_name: r.execution_time for r in agent_results},
                 "pipeline_efficiency": successful_agents / len(self.agent_pipeline),
                 "memory_stats": memory_stats,
             }
@@ -1083,9 +1033,7 @@ build/
                     )
                 else:
                     # 프록시 실행
-                    result = await asyncio.wait_for(
-                        agent_proxy(data, context), timeout=timeout
-                    )
+                    result = await asyncio.wait_for(agent_proxy(data, context), timeout=timeout)
 
                 if result.success:
                     return result
@@ -1155,9 +1103,7 @@ build/
                 wrapped_data = {
                     "data": data,
                     "context": {
-                        "pipeline_id": context.get(
-                            "pipeline_id", f"pipeline_{int(time.time())}"
-                        ),
+                        "pipeline_id": context.get("pipeline_id", f"pipeline_{int(time.time())}"),
                         "project_id": data.get("project_id", "unknown"),
                         "timestamp": datetime.now().isoformat(),
                     },
@@ -1219,9 +1165,7 @@ build/
                         else:
                             # auto_fix도 실패하면 fallback wrapper 사용
                             try:
-                                from src.agents.unified.fallback_wrapper import (
-                                    safe_agent_execute,
-                                )
+                                from src.agents.unified.fallback_wrapper import safe_agent_execute
 
                                 result = await asyncio.wait_for(
                                     safe_agent_execute(agent_instance, wrapped_data),
@@ -1232,9 +1176,7 @@ build/
                     else:
                         # Data Transformer 없으면 fallback wrapper 사용
                         try:
-                            from src.agents.unified.fallback_wrapper import (
-                                safe_agent_execute,
-                            )
+                            from src.agents.unified.fallback_wrapper import safe_agent_execute
 
                             result = await asyncio.wait_for(
                                 safe_agent_execute(agent_instance, wrapped_data),
@@ -1256,9 +1198,7 @@ build/
                 elif hasattr(result, "__dict__") and not hasattr(result, "data"):
                     # If it's an object without data attribute, use its dict
                     output_data = {
-                        k: v
-                        for k, v in result.__dict__.items()
-                        if not k.startswith("_")
+                        k: v for k, v in result.__dict__.items() if not k.startswith("_")
                     }
                 elif isinstance(result, dict):
                     output_data = result
@@ -1278,9 +1218,7 @@ build/
 
             elif hasattr(agent_instance, "execute"):
                 # 레거시 인터페이스
-                result = await asyncio.wait_for(
-                    agent_instance.execute(data), timeout=timeout
-                )
+                result = await asyncio.wait_for(agent_instance.execute(data), timeout=timeout)
 
                 execution_time = time.time() - start_time
                 return AgentExecutionResult(

@@ -3,7 +3,7 @@ Accessibility Checker Module
 Ensures UI components meet accessibility standards
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class AccessibilityChecker:
@@ -124,9 +124,7 @@ class AccessibilityChecker:
         if "text" in color_palette and "background" in color_palette:
             # This would normally calculate actual contrast ratios
             # For now, we'll provide recommendations
-            results["warnings"].append(
-                "Verify text color contrast meets WCAG standards"
-            )
+            results["warnings"].append("Verify text color contrast meets WCAG standards")
 
         # Check UI component contrast
         results["warnings"].append("Ensure UI components have 3:1 contrast ratio")
@@ -184,9 +182,7 @@ class AccessibilityChecker:
 
         return results
 
-    def _check_keyboard_navigation(
-        self, components: List[str], layout: Dict
-    ) -> Dict[str, Any]:
+    def _check_keyboard_navigation(self, components: List[str], layout: Dict) -> Dict[str, Any]:
         """Check keyboard navigation requirements"""
         results = {
             "tab_order": "logical",

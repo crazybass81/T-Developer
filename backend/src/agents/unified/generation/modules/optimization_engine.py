@@ -3,15 +3,15 @@ Optimization Engine Module for Generation Agent
 Optimizes generated code for performance, bundle size, and efficiency
 """
 
-from typing import Dict, List, Any, Optional, Tuple, Set, Union
+import ast
 import asyncio
+import hashlib
 import json
 import re
-import ast
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
-import hashlib
+from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 
 class OptimizationType(Enum):
@@ -132,12 +132,8 @@ class OptimizationEngine:
                 ],
             },
             "vue": {
-                "unnecessary_watchers": [
-                    r"watch\(\s*\(\)\s*=>\s*.*,\s*\(\)\s*=>\s*.*\)"
-                ],
-                "inefficient_computed": [
-                    r"computed\(\(\)\s*=>\s*.*\.filter\(.*\)\.map\(.*\)\)"
-                ],
+                "unnecessary_watchers": [r"watch\(\s*\(\)\s*=>\s*.*,\s*\(\)\s*=>\s*.*\)"],
+                "inefficient_computed": [r"computed\(\(\)\s*=>\s*.*\.filter\(.*\)\.map\(.*\)\)"],
             },
             "node": {
                 "synchronous_operations": [
@@ -845,8 +841,6 @@ const fetchUserData = async (userId) => {
 
         # Caching recommendations
         if not any(a.type == OptimizationType.CACHING for a in actions):
-            recommendations.append(
-                "Implement caching strategy for improved response times"
-            )
+            recommendations.append("Implement caching strategy for improved response times")
 
         return recommendations[:8]  # Limit to top 8 recommendations

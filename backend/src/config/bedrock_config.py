@@ -2,9 +2,9 @@
 Bedrock and AgentCore Configuration
 """
 import os
-from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, Optional
 
 
 class BedrockModel(Enum):
@@ -35,9 +35,7 @@ class BedrockConfig:
     timeout: int
 
     @classmethod
-    def from_env(
-        cls, model: BedrockModel = BedrockModel.CLAUDE_3_SONNET
-    ) -> "BedrockConfig":
+    def from_env(cls, model: BedrockModel = BedrockModel.CLAUDE_3_SONNET) -> "BedrockConfig":
         """Create config from environment variables"""
         return cls(
             region=os.getenv("AWS_REGION", "us-east-1"),
@@ -89,9 +87,7 @@ class BedrockClient:
 
         self.config = config or BedrockConfig.from_env()
         self.client = boto3.client("bedrock-runtime", region_name=self.config.region)
-        self.agent_client = boto3.client(
-            "bedrock-agent-runtime", region_name=self.config.region
-        )
+        self.agent_client = boto3.client("bedrock-agent-runtime", region_name=self.config.region)
 
     def invoke_model(self, prompt: str, **kwargs) -> Dict[str, Any]:
         """Invoke Bedrock model"""
@@ -106,9 +102,7 @@ class BedrockClient:
                 "temperature": kwargs.get("temperature", self.config.temperature),
                 "top_p": kwargs.get("top_p", self.config.top_p),
                 "top_k": kwargs.get("top_k", self.config.top_k),
-                "stop_sequences": kwargs.get(
-                    "stop_sequences", self.config.stop_sequences
-                ),
+                "stop_sequences": kwargs.get("stop_sequences", self.config.stop_sequences),
             }
         elif "titan" in self.config.model_id:
             body = {
@@ -117,9 +111,7 @@ class BedrockClient:
                     "maxTokenCount": kwargs.get("max_tokens", self.config.max_tokens),
                     "temperature": kwargs.get("temperature", self.config.temperature),
                     "topP": kwargs.get("top_p", self.config.top_p),
-                    "stopSequences": kwargs.get(
-                        "stop_sequences", self.config.stop_sequences
-                    ),
+                    "stopSequences": kwargs.get("stop_sequences", self.config.stop_sequences),
                 },
             }
         else:
@@ -129,9 +121,7 @@ class BedrockClient:
                 "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
                 "temperature": kwargs.get("temperature", self.config.temperature),
                 "top_p": kwargs.get("top_p", self.config.top_p),
-                "stop_sequences": kwargs.get(
-                    "stop_sequences", self.config.stop_sequences
-                ),
+                "stop_sequences": kwargs.get("stop_sequences", self.config.stop_sequences),
             }
 
         # Invoke model
@@ -211,8 +201,7 @@ class AgentCoreRuntime:
         self.sessions[session_id] = {
             "user_id": user_id,
             "created_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow()
-            + timedelta(seconds=self.config.session_ttl),
+            "expires_at": datetime.utcnow() + timedelta(seconds=self.config.session_ttl),
             "memory": [],
             "context": {},
         }

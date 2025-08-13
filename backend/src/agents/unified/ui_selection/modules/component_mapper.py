@@ -3,7 +3,7 @@ Component Mapper Module
 Maps abstract component requirements to concrete framework implementations
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 
 class ComponentMapper:
@@ -319,9 +319,7 @@ class ComponentMapper:
         framework_map = self.framework_components.get(framework, {})
 
         # Map each component
-        mappings = self._create_mappings(
-            components, framework_map, ui_library, custom_mappings
-        )
+        mappings = self._create_mappings(components, framework_map, ui_library, custom_mappings)
 
         # Get component properties
         properties = self._get_component_properties(components)
@@ -418,9 +416,7 @@ class ComponentMapper:
 
         return properties
 
-    def _generate_imports(
-        self, mappings: Dict, ui_library: str
-    ) -> Dict[str, List[str]]:
+    def _generate_imports(self, mappings: Dict, ui_library: str) -> Dict[str, List[str]]:
         """Generate import statements"""
         imports = {"components": [], "styles": [], "utilities": []}
 
@@ -433,9 +429,7 @@ class ComponentMapper:
                     imports["components"].append(
                         f"import {component} from '{mapping['implementation']}';"
                     )
-            imports["styles"].append(
-                "import { ThemeProvider } from '@mui/material/styles';"
-            )
+            imports["styles"].append("import { ThemeProvider } from '@mui/material/styles';")
         elif ui_library == "antd":
             components_to_import = []
             for component, mapping in mappings.items():
@@ -459,23 +453,15 @@ class ComponentMapper:
             props = properties.get(component, {})
 
             if framework == "react":
-                templates[component] = self._generate_react_template(
-                    component, mapping, props
-                )
+                templates[component] = self._generate_react_template(component, mapping, props)
             elif framework == "vue":
-                templates[component] = self._generate_vue_template(
-                    component, mapping, props
-                )
+                templates[component] = self._generate_vue_template(component, mapping, props)
             elif framework == "angular":
-                templates[component] = self._generate_angular_template(
-                    component, mapping, props
-                )
+                templates[component] = self._generate_angular_template(component, mapping, props)
 
         return templates
 
-    def _generate_react_template(
-        self, component: str, mapping: Dict, props: Dict
-    ) -> str:
+    def _generate_react_template(self, component: str, mapping: Dict, props: Dict) -> str:
         """Generate React component template"""
         impl = mapping["implementation"].split("/")[-1]
 
@@ -514,9 +500,7 @@ export default {{
 """
         return template
 
-    def _generate_angular_template(
-        self, component: str, mapping: Dict, props: Dict
-    ) -> str:
+    def _generate_angular_template(self, component: str, mapping: Dict, props: Dict) -> str:
         """Generate Angular component template"""
         impl = mapping["implementation"]
 
@@ -537,9 +521,7 @@ export class {component}Component {{
 """
         return template
 
-    def _configure_styling(
-        self, approach: str, components: List[str]
-    ) -> Dict[str, Any]:
+    def _configure_styling(self, approach: str, components: List[str]) -> Dict[str, Any]:
         """Configure styling approach"""
         config = {
             "approach": approach,

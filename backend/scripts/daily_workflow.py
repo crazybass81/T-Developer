@@ -9,15 +9,16 @@ T-Developer 일일 작업 자동 검증 및 완료 시스템
 4. Git 커밋 및 푸시
 """
 
-import os
-import sys
 import json
+import os
+import re
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
+
 import yaml
-import re
 
 # 프로젝트 루트 경로 설정
 PROJECT_ROOT = Path("/home/ec2-user/T-DeveloperMVP")
@@ -91,9 +92,7 @@ class DailyWorkflowValidator:
                         r"- \*\*산출물\*\*\n(.*?)(?=####|$)", day_content, re.DOTALL
                     )
                     if deliverables_match:
-                        deliverables = re.findall(
-                            r"  - `(.+?)`", deliverables_match.group(1)
-                        )
+                        deliverables = re.findall(r"  - `(.+?)`", deliverables_match.group(1))
                         plan_data["deliverables"] = deliverables
 
         # 주간 TODO 파일에서 추가 정보 로드
@@ -236,10 +235,7 @@ class DailyWorkflowValidator:
         if registry_file.exists():
             with open(registry_file, "r") as f:
                 content = f.read()
-                return (
-                    "validate_memory_constraint" in content
-                    or "check_agent_size" in content
-                )
+                return "validate_memory_constraint" in content or "check_agent_size" in content
         return False
 
     def _check_speed_benchmark(self) -> bool:
@@ -292,9 +288,7 @@ class DailyWorkflowValidator:
         updates = []
 
         # 1. 일일 진행 상황 문서 업데이트
-        progress_file = (
-            DOCS_DIR / f"00_planning/progress/day{self.day_number:02d}_summary.md"
-        )
+        progress_file = DOCS_DIR / f"00_planning/progress/day{self.day_number:02d}_summary.md"
         progress_file.parent.mkdir(parents=True, exist_ok=True)
 
         progress_content = f"""---
@@ -355,9 +349,7 @@ completion_rate: {self.results['completion_rate']:.1f}%
                 for keyword in task_keywords:
                     if len(keyword) > 3:
                         pattern = rf"- \[ \] (.*{re.escape(keyword)}.*)"
-                        content = re.sub(
-                            pattern, r"- [x] \1", content, flags=re.IGNORECASE
-                        )
+                        content = re.sub(pattern, r"- [x] \1", content, flags=re.IGNORECASE)
 
             with open(week_file, "w", encoding="utf-8") as f:
                 f.write(content)
@@ -566,14 +558,10 @@ T-Developer Day {self.day_number} 작업 완료 보고서
         print(report)
 
         # 8. 결과 저장
-        report_file = (
-            DOCS_DIR / f"00_planning/reports/day{self.day_number:02d}_report.json"
-        )
+        report_file = DOCS_DIR / f"00_planning/reports/day{self.day_number:02d}_report.json"
         report_file.parent.mkdir(parents=True, exist_ok=True)
 
-        self.results["status"] = (
-            "completed" if self.results["completion_rate"] >= 90 else "partial"
-        )
+        self.results["status"] = "completed" if self.results["completion_rate"] >= 90 else "partial"
         with open(report_file, "w", encoding="utf-8") as f:
             json.dump(self.results, f, indent=2, ensure_ascii=False)
 
@@ -586,9 +574,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="T-Developer Daily Workflow Validator")
     parser.add_argument("--day", type=int, required=True, help="Day number (1-80)")
-    parser.add_argument(
-        "--auto-fix", action="store_true", help="Automatically fix missing items"
-    )
+    parser.add_argument("--auto-fix", action="store_true", help="Automatically fix missing items")
     parser.add_argument("--skip-git", action="store_true", help="Skip git operations")
 
     args = parser.parse_args()

@@ -5,11 +5,11 @@ CLAUDE.md 규칙 자동 체크 스크립트
 """
 
 import os
-import sys
-import subprocess
 import re
+import subprocess
+import sys
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
 
 class RuleChecker:
@@ -42,9 +42,7 @@ class RuleChecker:
         """프로덕션 준비 상태 확인"""
         # Error handling 체크
         try_catch_count = self._count_pattern(r"try\s*{", [".ts", ".tsx", ".js"])
-        error_handling_count = self._count_pattern(
-            r"catch\s*\(", [".ts", ".tsx", ".js"]
-        )
+        error_handling_count = self._count_pattern(r"catch\s*\(", [".ts", ".tsx", ".js"])
 
         if try_catch_count < 10:
             self.warnings.append("⚠️  Error handling 부족 (try-catch 블록이 10개 미만)")
@@ -74,9 +72,7 @@ class RuleChecker:
             last_commit = result.stdout.strip()
 
             # Conventional Commits 형식 체크
-            if re.match(
-                r"^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+", last_commit
-            ):
+            if re.match(r"^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+", last_commit):
                 self.successes.append(f"✅ 올바른 커밋 메시지 형식: {last_commit[:50]}")
             else:
                 self.warnings.append(f"⚠️  커밋 메시지 형식 확인 필요: {last_commit[:50]}")
@@ -100,15 +96,9 @@ class RuleChecker:
         """언어 사용 규칙 확인"""
         # Python 우선 규칙 체크
         py_agents = len(
-            list(
-                Path(self.project_root / "backend/src/agents/implementations").glob(
-                    "*.py"
-                )
-            )
+            list(Path(self.project_root / "backend/src/agents/implementations").glob("*.py"))
         )
-        ts_agents = len(
-            list(Path(self.project_root / "backend/src/agents").glob("*.ts"))
-        )
+        ts_agents = len(list(Path(self.project_root / "backend/src/agents").glob("*.ts")))
 
         if py_agents > 0:
             self.successes.append(f"✅ Python Agent 구현: {py_agents}개")

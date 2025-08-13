@@ -5,16 +5,16 @@ T-Developer Evolution System의 모든 제약 조건과 안전성을 검증합�
 """
 
 import asyncio
-import sys
 import os
+import sys
 import time
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from evolution.engine import EvolutionEngine, EvolutionConfig
-from evolution.safety import EvolutionSafety, SafetyConfig
+from evolution.engine import EvolutionConfig, EvolutionEngine
 from evolution.registry import AgentRegistry, AgentType
+from evolution.safety import EvolutionSafety, SafetyConfig
 
 
 async def validate_constraints():

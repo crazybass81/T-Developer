@@ -3,25 +3,26 @@ Agent Database Models
 SQLAlchemy models for agent registry and evolution tracking
 """
 
+import uuid
+from datetime import datetime
+
 from sqlalchemy import (
-    Column,
-    String,
-    Integer,
-    Float,
-    DateTime,
-    Text,
     JSON,
     Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
     ForeignKey,
     Index,
+    Integer,
+    String,
+    Text,
     UniqueConstraint,
-    CheckConstraint,
 )
-from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from datetime import datetime
-import uuid
 
 Base = declarative_base()
 
@@ -143,13 +144,9 @@ class AgentExecutionModel(Base):
     )
 
     # Execution details
-    started_at = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    started_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     completed_at = Column(DateTime(timezone=True))
-    status = Column(
-        String(50), nullable=False
-    )  # pending, running, success, failed, timeout
+    status = Column(String(50), nullable=False)  # pending, running, success, failed, timeout
 
     # Input/Output
     input_data = Column(JSON)
@@ -172,7 +169,9 @@ class AgentExecutionModel(Base):
     agent = relationship("AgentModel", back_populates="executions")
 
     def __repr__(self):
-        return f"<AgentExecution(id={self.execution_id}, agent={self.agent_id}, status={self.status})>"
+        return (
+            f"<AgentExecution(id={self.execution_id}, agent={self.agent_id}, status={self.status})>"
+        )
 
 
 class AgentEvolutionModel(Base):
@@ -283,18 +282,12 @@ class WorkflowExecutionModel(Base):
     execution_id = Column(
         String(100), unique=True, nullable=False, default=lambda: str(uuid.uuid4())
     )
-    workflow_id = Column(
-        String(100), ForeignKey("workflows.workflows.workflow_id"), nullable=False
-    )
+    workflow_id = Column(String(100), ForeignKey("workflows.workflows.workflow_id"), nullable=False)
 
     # Execution details
-    started_at = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    started_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     completed_at = Column(DateTime(timezone=True))
-    status = Column(
-        String(50), nullable=False
-    )  # pending, running, success, failed, timeout
+    status = Column(String(50), nullable=False)  # pending, running, success, failed, timeout
 
     # Execution state
     current_step = Column(String(100))

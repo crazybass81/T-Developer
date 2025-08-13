@@ -3,14 +3,14 @@ Integration Builder Module for Generation Agent
 Builds integrations between components and manages inter-component communication
 """
 
-from typing import Dict, List, Any, Optional, Tuple, Set, Callable
 import asyncio
 import json
 import re
 from dataclasses import dataclass, field
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 
 class IntegrationType(Enum):
@@ -156,9 +156,7 @@ class IntegrationBuilder:
                     generated_files.update(result["files"])
 
             # Generate dependency graph
-            dependency_graph = await self._generate_dependency_graph(
-                components, integrations
-            )
+            dependency_graph = await self._generate_dependency_graph(components, integrations)
 
             # Create integration map
             integration_map = await self._create_integration_map(integrations)
@@ -230,9 +228,7 @@ class IntegrationBuilder:
                 if component.id != other_component.id:
                     relation = self._determine_relationship(component, other_component)
                     if relation:
-                        relationships[component.id].append(
-                            (other_component.id, relation)
-                        )
+                        relationships[component.id].append((other_component.id, relation))
 
         return relationships
 
@@ -262,16 +258,11 @@ class IntegrationBuilder:
             return ComponentRelation.DEPENDENCY
 
         # Check composite relationship (based on naming patterns)
-        if (
-            comp1.name.lower() in comp2.name.lower()
-            or comp2.name.lower() in comp1.name.lower()
-        ):
+        if comp1.name.lower() in comp2.name.lower() or comp2.name.lower() in comp1.name.lower():
             return ComponentRelation.COMPOSITE
 
         # Check master-detail relationship
-        if any(
-            keyword in comp1.type.lower() for keyword in ["list", "table", "grid"]
-        ) and any(
+        if any(keyword in comp1.type.lower() for keyword in ["list", "table", "grid"]) and any(
             keyword in comp2.type.lower() for keyword in ["detail", "form", "edit"]
         ):
             return ComponentRelation.MASTER_DETAIL
@@ -381,17 +372,14 @@ class IntegrationBuilder:
                 {
                     "method": "GET",
                     "endpoint": f"/api/{target.name.lower()}",
-                    "auth_required": "authentication"
-                    in [source.category, target.category],
+                    "auth_required": "authentication" in [source.category, target.category],
                 }
             )
 
         elif integration_type == IntegrationType.STATE_INTEGRATION:
             config.update(
                 {
-                    "state_manager": self._get_state_manager(
-                        context.get("target_framework")
-                    ),
+                    "state_manager": self._get_state_manager(context.get("target_framework")),
                     "shared_state": True,
                     "reactive": True,
                 }
@@ -659,9 +647,7 @@ export class {target.name.title()}Repository extends Repository<{target.name.tit
   }}
 }}"""
 
-            files[
-                f"src/repositories/{target.name.title()}Repository.ts"
-            ] = repository_file
+            files[f"src/repositories/{target.name.title()}Repository.ts"] = repository_file
 
         elif framework == "fastapi":
             # SQLAlchemy model

@@ -1,7 +1,9 @@
-import boto3
 import json
 import os
-from typing import AsyncIterator, Dict, Any, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+import boto3
+
 from ..base import ModelProvider, ModelResponse
 
 
@@ -66,9 +68,7 @@ class BedrockProvider(ModelProvider):
         embeddings = []
         for text in texts:
             body = json.dumps({"inputText": text})
-            response = self.client.invoke_model(
-                modelId="amazon.titan-embed-text-v1", body=body
-            )
+            response = self.client.invoke_model(modelId="amazon.titan-embed-text-v1", body=body)
             result = json.loads(response["body"].read())
             embeddings.append(result["embedding"])
         return embeddings

@@ -2,10 +2,10 @@
 Base AI Model Interface
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
 import asyncio
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -66,9 +66,7 @@ class BaseAIModel(ABC):
         pass
 
     @abstractmethod
-    async def chat(
-        self, messages: List[Dict[str, str]], temperature: float = 0.7, **kwargs
-    ) -> str:
+    async def chat(self, messages: List[Dict[str, str]], temperature: float = 0.7, **kwargs) -> str:
         """
         대화형 완성
 

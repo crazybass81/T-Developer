@@ -3,8 +3,8 @@ Entity Recognizer Module
 Extracts named entities and key concepts
 """
 
-from typing import Dict, Any, List
 import re
+from typing import Any, Dict, List
 
 
 class EntityRecognizer:

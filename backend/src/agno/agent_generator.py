@@ -4,12 +4,12 @@ Agno Framework Agent Generator
 """
 
 import asyncio
-import time
-import inspect
-from typing import Dict, Any, Optional, Callable, List
-from dataclasses import dataclass
-import json
 import hashlib
+import inspect
+import json
+import time
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 
 
 @dataclass
@@ -83,9 +83,7 @@ class AgnoAgentGenerator:
 
             # Agno 목표: 3μs 이내 생성
             if generation_time > 3.0:
-                print(
-                    f"Warning: Agent generation took {generation_time:.2f}μs (target: 3μs)"
-                )
+                print(f"Warning: Agent generation took {generation_time:.2f}μs (target: 3μs)")
 
             return agent
 
@@ -95,7 +93,9 @@ class AgnoAgentGenerator:
 
     def _get_cache_key(self, blueprint: AgentBlueprint) -> str:
         """블루프린트의 고유 캐시 키 생성"""
-        key_data = f"{blueprint.name}:{blueprint.type}:{json.dumps(blueprint.config, sort_keys=True)}"
+        key_data = (
+            f"{blueprint.name}:{blueprint.type}:{json.dumps(blueprint.config, sort_keys=True)}"
+        )
         return hashlib.md5(key_data.encode()).hexdigest()
 
     async def _data_manager_template(self, blueprint: AgentBlueprint) -> Any:
@@ -121,15 +121,9 @@ class AgnoAgentGenerator:
 
                     if field in data:
                         value = data[field]
-                        if (
-                            "minLength" in rules
-                            and len(str(value)) < rules["minLength"]
-                        ):
+                        if "minLength" in rules and len(str(value)) < rules["minLength"]:
                             raise ValueError(f"{field} is too short")
-                        if (
-                            "maxLength" in rules
-                            and len(str(value)) > rules["maxLength"]
-                        ):
+                        if "maxLength" in rules and len(str(value)) > rules["maxLength"]:
                             raise ValueError(f"{field} is too long")
 
                 # 엔티티 생성
@@ -151,9 +145,7 @@ class AgnoAgentGenerator:
                         return item
                 return None
 
-            async def update(
-                self, id: str, updates: Dict[str, Any]
-            ) -> Optional[Dict[str, Any]]:
+            async def update(self, id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 """데이터 업데이트"""
                 for i, item in enumerate(self.data_store):
                     if item.get("id") == id:
@@ -212,21 +204,13 @@ class AgnoAgentGenerator:
             async def execute(self, method_name: str, params: Dict[str, Any]) -> Any:
                 """메소드 실행"""
                 if method_name == "setPriority":
-                    return self._set_priority(
-                        params.get("taskId"), params.get("priority")
-                    )
+                    return self._set_priority(params.get("taskId"), params.get("priority"))
                 elif method_name == "sortByPriority":
-                    return self._sort_by_priority(
-                        params.get("tasks"), params.get("order")
-                    )
+                    return self._sort_by_priority(params.get("tasks"), params.get("order"))
                 elif method_name == "getHighPriorityTasks":
-                    return self._get_high_priority(
-                        params.get("tasks"), params.get("threshold")
-                    )
+                    return self._get_high_priority(params.get("tasks"), params.get("threshold"))
                 elif method_name == "autoAssignPriority":
-                    return self._auto_assign_priority(
-                        params.get("task"), params.get("rules")
-                    )
+                    return self._auto_assign_priority(params.get("task"), params.get("rules"))
                 else:
                     return {"error": f"Unknown method: {method_name}"}
 
@@ -239,29 +223,19 @@ class AgnoAgentGenerator:
                 return {
                     "taskId": task_id,
                     "priority": priority,
-                    "label": next(
-                        (k for k, v in levels.items() if v == priority), "medium"
-                    ),
+                    "label": next((k for k, v in levels.items() if v == priority), "medium"),
                 }
 
-            def _sort_by_priority(
-                self, tasks: List[Dict], order: str = "desc"
-            ) -> List[Dict]:
+            def _sort_by_priority(self, tasks: List[Dict], order: str = "desc") -> List[Dict]:
                 """우선순위로 정렬"""
                 reverse = order.lower() == "desc"
-                return sorted(
-                    tasks, key=lambda x: x.get("priority", 0), reverse=reverse
-                )
+                return sorted(tasks, key=lambda x: x.get("priority", 0), reverse=reverse)
 
-            def _get_high_priority(
-                self, tasks: List[Dict], threshold: int = 3
-            ) -> List[Dict]:
+            def _get_high_priority(self, tasks: List[Dict], threshold: int = 3) -> List[Dict]:
                 """높은 우선순위 작업 필터링"""
                 return [t for t in tasks if t.get("priority", 0) >= threshold]
 
-            def _auto_assign_priority(
-                self, task: Dict, rules: Dict = None
-            ) -> Dict[str, Any]:
+            def _auto_assign_priority(self, task: Dict, rules: Dict = None) -> Dict[str, Any]:
                 """자동 우선순위 할당"""
                 if not rules:
                     rules = {"urgent": 5, "important": 4, "normal": 3, "low": 2}
@@ -326,9 +300,7 @@ class AgnoAgentGenerator:
 
                 return results
 
-            def _sort(
-                self, data: List[Dict], field: str, order: str = "asc"
-            ) -> List[Dict]:
+            def _sort(self, data: List[Dict], field: str, order: str = "asc") -> List[Dict]:
                 """데이터 정렬"""
                 if not field:
                     return data
@@ -377,9 +349,7 @@ class AgnoAgentGenerator:
                         headers = list(data[0].keys())
                         csv_lines = [",".join(headers)]
                         for item in data:
-                            csv_lines.append(
-                                ",".join(str(item.get(h, "")) for h in headers)
-                            )
+                            csv_lines.append(",".join(str(item.get(h, "")) for h in headers))
                         return "\n".join(csv_lines)
                 return str(data)
 
@@ -393,9 +363,7 @@ class AgnoAgentGenerator:
                 operations = {
                     "save": lambda: self.save(params.get("key"), params.get("data")),
                     "load": lambda: self.load(params.get("key")),
-                    "export": lambda: self.export(
-                        params.get("data"), params.get("format")
-                    ),
+                    "export": lambda: self.export(params.get("data"), params.get("format")),
                     "sync": lambda: self.sync(),
                 }
 
@@ -460,9 +428,7 @@ class AgnoAgentGenerator:
                 if operation == "metrics":
                     return await self.calculate_metrics(params.get("data", []))
                 elif operation == "report":
-                    return await self.generate_report(
-                        params.get("data", []), params.get("type")
-                    )
+                    return await self.generate_report(params.get("data", []), params.get("type"))
                 return {}
 
         return DynamicAnalytics()
@@ -536,9 +502,7 @@ class AgnoAgentGenerator:
 
                 return True
 
-            async def schedule(
-                self, notification: Dict[str, Any], trigger: str
-            ) -> bool:
+            async def schedule(self, notification: Dict[str, Any], trigger: str) -> bool:
                 """알림 예약"""
                 # 예약 로직
                 return True
@@ -548,9 +512,7 @@ class AgnoAgentGenerator:
                 if operation == "send":
                     return await self.send(params)
                 elif operation == "schedule":
-                    return await self.schedule(
-                        params.get("notification"), params.get("trigger")
-                    )
+                    return await self.schedule(params.get("notification"), params.get("trigger"))
                 elif operation == "getHistory":
                     return self.notifications
                 return False

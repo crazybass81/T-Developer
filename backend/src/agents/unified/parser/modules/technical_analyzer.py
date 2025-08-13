@@ -3,8 +3,8 @@ Technical Analyzer Module
 Analyzes technical requirements and constraints
 """
 
-from typing import Dict, List, Any, Optional
 import re
+from typing import Any, Dict, List, Optional
 
 
 class TechnicalAnalyzer:
@@ -176,9 +176,7 @@ class TechnicalAnalyzer:
         }
 
         # Response time
-        response_pattern = (
-            r"(\d+)\s*(?:ms|milliseconds?|seconds?)\s*(?:response|latency)"
-        )
+        response_pattern = r"(\d+)\s*(?:ms|milliseconds?|seconds?)\s*(?:response|latency)"
         match = re.search(response_pattern, text)
         if match:
             performance["response_time"] = {
@@ -303,9 +301,7 @@ class TechnicalAnalyzer:
         else:
             return "low"
 
-    def _generate_recommendations(
-        self, tech_stack: Dict, architecture: str
-    ) -> List[str]:
+    def _generate_recommendations(self, tech_stack: Dict, architecture: str) -> List[str]:
         """Generate technical recommendations"""
         recommendations = []
 

@@ -3,27 +3,29 @@ Test suite for T-Developer Main API
 완전한 프로덕션 레벨 테스트 구현
 """
 
-import pytest
 import asyncio
 import json
-import tempfile
-import shutil
-from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock, MagicMock
-from datetime import datetime
-import sys
 import os
+import shutil
+import sys
+import tempfile
+from datetime import datetime
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
 
 # 프로젝트 경로 추가
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import httpx
+from fastapi import WebSocket
+
 # FastAPI 테스트 클라이언트
 from fastapi.testclient import TestClient
-from fastapi import WebSocket
-import httpx
 
 # 메인 API 임포트
-from src.main_api import app, ConnectionManager, GenerateRequest
+from src.main_api import ConnectionManager, GenerateRequest, app
 
 
 class TestMainAPI:
@@ -486,8 +488,9 @@ class TestPerformance:
     @pytest.mark.asyncio
     async def test_concurrent_requests(self, client):
         """동시 요청 처리 테스트"""
-        import aiohttp
         import asyncio
+
+        import aiohttp
 
         async def make_request(session, index):
             """비동기 요청"""
@@ -527,8 +530,8 @@ class TestPerformance:
     @pytest.mark.asyncio
     async def test_memory_leak_prevention(self):
         """메모리 누수 방지 테스트"""
-        import tracemalloc
         import gc
+        import tracemalloc
 
         tracemalloc.start()
 

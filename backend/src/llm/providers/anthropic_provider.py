@@ -1,6 +1,8 @@
-import anthropic
 import os
-from typing import AsyncIterator, Dict, Any, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+import anthropic
+
 from ..base import ModelProvider, ModelResponse
 
 

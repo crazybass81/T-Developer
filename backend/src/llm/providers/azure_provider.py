@@ -1,6 +1,8 @@
-import openai
 import os
-from typing import AsyncIterator, Dict, Any, Optional, List
+from typing import Any, AsyncIterator, Dict, List, Optional
+
+import openai
+
 from .base_provider import ModelProvider, ModelResponse
 
 
@@ -45,9 +47,7 @@ class AzureProvider(ModelProvider):
                 yield chunk.choices[0].delta.content
 
     async def embed(self, texts: List[str]) -> List[List[float]]:
-        response = await self.client.embeddings.create(
-            model="text-embedding-ada-002", input=texts
-        )
+        response = await self.client.embeddings.create(model="text-embedding-ada-002", input=texts)
         return [data.embedding for data in response.data]
 
     def estimate_tokens(self, text: str) -> int:

@@ -3,12 +3,12 @@
 프로덕션 레벨 로깅 with CloudWatch 통합
 """
 
+import json
 import logging
 import sys
-import json
 from datetime import datetime
-from typing import Optional, Dict, Any
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 
 class CloudWatchFormatter(logging.Formatter):
@@ -71,9 +71,7 @@ class Logger:
             console_handler.setFormatter(CloudWatchFormatter())
         else:
             console_handler.setFormatter(
-                logging.Formatter(
-                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-                )
+                logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             )
 
         root_logger.addHandler(console_handler)

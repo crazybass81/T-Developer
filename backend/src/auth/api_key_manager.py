@@ -3,15 +3,16 @@ API Key Management System
 엔터프라이즈 API 키 관리
 """
 
-import secrets
 import hashlib
 import json
+import secrets
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 import redis
-from pydantic import BaseModel
-from fastapi import HTTPException, status, Request, Depends
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import APIKeyHeader, APIKeyQuery
+from pydantic import BaseModel
 
 
 class APIKey(BaseModel):
@@ -81,9 +82,7 @@ class APIKeyManager:
         key_hash = hashlib.sha256(api_key.encode()).hexdigest()
 
         # Create key ID
-        key_id = hashlib.md5(
-            f"{user_id}:{name}:{datetime.now().isoformat()}".encode()
-        ).hexdigest()
+        key_id = hashlib.md5(f"{user_id}:{name}:{datetime.now().isoformat()}".encode()).hexdigest()
 
         # Calculate expiry
         expires_at = None
@@ -160,9 +159,7 @@ class APIKeyManager:
 
         # Check domain restrictions
         if api_key_obj.allowed_domains and domain:
-            if not any(
-                domain.endswith(allowed) for allowed in api_key_obj.allowed_domains
-            ):
+            if not any(domain.endswith(allowed) for allowed in api_key_obj.allowed_domains):
                 return None
 
         # Check required scopes
@@ -197,9 +194,7 @@ class APIKeyManager:
 
         return True
 
-    def list_user_api_keys(
-        self, user_id: str, include_revoked: bool = False
-    ) -> List[APIKey]:
+    def list_user_api_keys(self, user_id: str, include_revoked: bool = False) -> List[APIKey]:
         """사용자의 모든 API 키 조회"""
 
         pattern = f"api_key:*"
@@ -276,9 +271,7 @@ class APIKeyManager:
 
         # Check monthly limit
         if api_key.monthly_limit:
-            monthly_key = (
-                f"api_usage:monthly:{api_key.id}:{datetime.now().strftime('%Y-%m')}"
-            )
+            monthly_key = f"api_usage:monthly:{api_key.id}:{datetime.now().strftime('%Y-%m')}"
             monthly_count = int(self.redis_client.get(monthly_key) or 0)
             if monthly_count >= api_key.monthly_limit:
                 return False
@@ -301,9 +294,7 @@ class APIKeyManager:
 
         # Update monthly counter
         if api_key.monthly_limit:
-            monthly_key = (
-                f"api_usage:monthly:{api_key.id}:{datetime.now().strftime('%Y-%m')}"
-            )
+            monthly_key = f"api_usage:monthly:{api_key.id}:{datetime.now().strftime('%Y-%m')}"
             self.redis_client.incr(monthly_key)
             self.redis_client.expire(monthly_key, 2592000)  # Expire after 30 days
 
@@ -328,11 +319,7 @@ async def get_api_key(
 
     # Get client info
     client_ip = request.client.host if request else None
-    domain = (
-        request.headers.get("Origin") or request.headers.get("Referer")
-        if request
-        else None
-    )
+    domain = request.headers.get("Origin") or request.headers.get("Referer") if request else None
 
     # Validate key
     manager = APIKeyManager()
@@ -352,9 +339,7 @@ def require_api_key_scopes(*scopes: str):
 
     async def dependency(api_key: APIKey = Depends(get_api_key)):
         if not api_key:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="API key required")
 
         if not all(scope in api_key.scopes for scope in scopes):
             raise HTTPException(

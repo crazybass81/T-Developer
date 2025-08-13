@@ -6,15 +6,15 @@ Provides CRUD operations for evolved agents.
 """
 
 import asyncio
+import hashlib
 import json
 import logging
-import hashlib
-from dataclasses import dataclass, field, asdict
+import uuid
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
-from enum import Enum
-import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -183,9 +183,7 @@ class AgentRegistry:
 
     def __init__(self, data_dir: Optional[Path] = None):
         """Initialize agent registry"""
-        self.data_dir = data_dir or Path(
-            "/home/ec2-user/T-DeveloperMVP/backend/data/agents"
-        )
+        self.data_dir = data_dir or Path("/home/ec2-user/T-DeveloperMVP/backend/data/agents")
         self.registry_file = self.data_dir / "registry.json"
         self.agents_dir = self.data_dir / "agents"
 
@@ -544,10 +542,7 @@ class AgentRegistry:
             registry_data = {
                 "version": "1.0",
                 "updated_at": datetime.now().isoformat(),
-                "agents": [
-                    self._serialize_agent_metadata(agent)
-                    for agent in self.agents.values()
-                ],
+                "agents": [self._serialize_agent_metadata(agent) for agent in self.agents.values()],
             }
 
             with open(self.registry_file, "w") as f:
@@ -611,9 +606,7 @@ class AgentRegistry:
         if "metrics" in data and data["metrics"]:
             metrics_data = data["metrics"]
             if "last_updated" in metrics_data:
-                metrics_data["last_updated"] = datetime.fromisoformat(
-                    metrics_data["last_updated"]
-                )
+                metrics_data["last_updated"] = datetime.fromisoformat(metrics_data["last_updated"])
             data["metrics"] = AgentMetrics(**metrics_data)
 
         # Handle versions
@@ -624,9 +617,7 @@ class AgentRegistry:
                 if "metrics" in v_data and v_data["metrics"]:
                     m_data = v_data["metrics"]
                     if "last_updated" in m_data:
-                        m_data["last_updated"] = datetime.fromisoformat(
-                            m_data["last_updated"]
-                        )
+                        m_data["last_updated"] = datetime.fromisoformat(m_data["last_updated"])
                     v_data["metrics"] = AgentMetrics(**m_data)
                 versions.append(AgentVersion(**v_data))
             data["versions"] = versions

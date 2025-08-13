@@ -1,11 +1,12 @@
 """
 Pipeline integration tests
 """
-import pytest
 import asyncio
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Load test fixtures
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -71,9 +72,7 @@ class TestPipelineIntegration:
         agno_orchestrator.create_pipeline("test_pipeline", agent_names)
 
         # Execute pipeline
-        results = await agno_orchestrator.execute_pipeline(
-            "test_pipeline", {"query": "test"}
-        )
+        results = await agno_orchestrator.execute_pipeline("test_pipeline", {"query": "test"})
 
         # Verify sequence
         assert len(results) == 9
@@ -123,14 +122,10 @@ class TestPipelineIntegration:
         agno_orchestrator.register_agent(failing_agent)
 
         # Create pipeline
-        agno_orchestrator.create_pipeline(
-            "test_pipeline", ["success_agent", "failing_agent"]
-        )
+        agno_orchestrator.create_pipeline("test_pipeline", ["success_agent", "failing_agent"])
 
         # Execute pipeline
-        results = await agno_orchestrator.execute_pipeline(
-            "test_pipeline", {"query": "test"}
-        )
+        results = await agno_orchestrator.execute_pipeline("test_pipeline", {"query": "test"})
 
         # Verify partial success
         assert len(results) == 2

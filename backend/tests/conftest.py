@@ -3,14 +3,15 @@ Pytest Configuration
 엔터프라이즈 테스트 설정 및 픽스처
 """
 
-import pytest
 import asyncio
 import os
-from typing import Generator, AsyncGenerator
-from fastapi.testclient import TestClient
-from unittest.mock import Mock, AsyncMock, patch
-import jwt
 from datetime import datetime, timedelta
+from typing import AsyncGenerator, Generator
+from unittest.mock import AsyncMock, Mock, patch
+
+import jwt
+import pytest
+from fastapi.testclient import TestClient
 
 # Set test environment
 os.environ["ENVIRONMENT"] = "testing"
@@ -35,9 +36,7 @@ def mock_dynamodb():
     with patch("boto3.resource") as mock_resource:
         # Create mock DynamoDB table
         mock_table = Mock()
-        mock_table.put_item = AsyncMock(
-            return_value={"ResponseMetadata": {"HTTPStatusCode": 200}}
-        )
+        mock_table.put_item = AsyncMock(return_value={"ResponseMetadata": {"HTTPStatusCode": 200}})
         mock_table.get_item = AsyncMock(return_value={"Item": {"id": "test_id"}})
         mock_table.query = AsyncMock(return_value={"Items": []})
         mock_table.scan = AsyncMock(return_value={"Items": []})
@@ -53,18 +52,12 @@ def mock_dynamodb():
 def dynamodb_client():
     """Mock DynamoDB client with common operations"""
     client = Mock()
-    client.put_item = AsyncMock(
-        return_value={"ResponseMetadata": {"HTTPStatusCode": 200}}
-    )
+    client.put_item = AsyncMock(return_value={"ResponseMetadata": {"HTTPStatusCode": 200}})
     client.get_item = AsyncMock(return_value={"Item": {}})
     client.query = AsyncMock(return_value={"Items": [], "Count": 0})
     client.scan = AsyncMock(return_value={"Items": [], "Count": 0})
-    client.delete_item = AsyncMock(
-        return_value={"ResponseMetadata": {"HTTPStatusCode": 200}}
-    )
-    client.create_table = AsyncMock(
-        return_value={"TableDescription": {"TableStatus": "ACTIVE"}}
-    )
+    client.delete_item = AsyncMock(return_value={"ResponseMetadata": {"HTTPStatusCode": 200}})
+    client.create_table = AsyncMock(return_value={"TableDescription": {"TableStatus": "ACTIVE"}})
     return client
 
 

@@ -4,12 +4,12 @@ Implements pub/sub pattern for decoupled agent messaging
 """
 import asyncio
 import json
-from typing import Dict, Any, List, Callable, Optional, Set
+import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-import uuid
-import logging
+from typing import Any, Callable, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -232,9 +232,7 @@ class EventBus:
             # Add to history
             self._add_to_history(event)
 
-            logger.debug(
-                f"Published event: {event.event_id} ({event.event_type.value})"
-            )
+            logger.debug(f"Published event: {event.event_id} ({event.event_type.value})")
             return event.event_id
 
         except asyncio.QueueFull:
@@ -406,9 +404,7 @@ class EventBus:
             "handlers_registered": len(self._handlers),
             "event_history_size": len(self._event_history),
             "dead_letter_queue_size": len(self._dead_letter_queue),
-            "handler_stats": [
-                handler.get_stats() for handler in self._handlers.values()
-            ],
+            "handler_stats": [handler.get_stats() for handler in self._handlers.values()],
         }
 
 

@@ -1,9 +1,9 @@
 # backend/src/agents/framework/parallel_coordinator.py
-from typing import Dict, Any, List, Optional, Callable, Set
-from dataclasses import dataclass
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional, Set
 
 
 @dataclass
@@ -38,9 +38,7 @@ class ParallelCoordinator:
     def register_task_handler(self, agent_id: str, handler: Callable):
         self.task_handlers[agent_id] = handler
 
-    async def execute_parallel_tasks(
-        self, tasks: List[ParallelTask]
-    ) -> Dict[str, TaskResult]:
+    async def execute_parallel_tasks(self, tasks: List[ParallelTask]) -> Dict[str, TaskResult]:
         # Sort by priority and resolve dependencies
         sorted_tasks = self._resolve_dependencies(tasks)
 
@@ -52,9 +50,7 @@ class ParallelCoordinator:
 
         return results
 
-    def _resolve_dependencies(
-        self, tasks: List[ParallelTask]
-    ) -> List[List[ParallelTask]]:
+    def _resolve_dependencies(self, tasks: List[ParallelTask]) -> List[List[ParallelTask]]:
         task_map = {task.id: task for task in tasks}
         batches = []
         remaining_tasks = set(task.id for task in tasks)
@@ -178,8 +174,7 @@ class ParallelCoordinator:
             "successful_tasks": len(successful),
             "failed_tasks": len(failed),
             "success_rate": len(successful) / len(completed) if completed else 0,
-            "avg_execution_time": sum(t.execution_time for t in successful)
-            / len(successful)
+            "avg_execution_time": sum(t.execution_time for t in successful) / len(successful)
             if successful
             else 0,
             "active_tasks": len(self.active_tasks),

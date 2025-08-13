@@ -1,10 +1,10 @@
 # backend/src/agents/framework/workflow_engine.py
-from typing import Dict, Any, List, Optional, Callable
-from dataclasses import dataclass
-from enum import Enum
 import asyncio
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 
 class WorkflowStatus(Enum):
@@ -57,9 +57,7 @@ class WorkflowEngine:
 
     async def create_workflow(self, name: str, steps: List[WorkflowStep]) -> str:
         workflow_id = str(uuid.uuid4())
-        workflow = Workflow(
-            id=workflow_id, name=name, steps=steps, created_at=datetime.utcnow()
-        )
+        workflow = Workflow(id=workflow_id, name=name, steps=steps, created_at=datetime.utcnow())
         self.workflows[workflow_id] = workflow
         return workflow_id
 
@@ -96,9 +94,7 @@ class WorkflowEngine:
             step = next(s for s in workflow.steps if s.id == step_id)
 
             # Check condition
-            if step.condition and not self._evaluate_condition(
-                step.condition, step_results
-            ):
+            if step.condition and not self._evaluate_condition(step.condition, step_results):
                 continue
 
             # Execute step
@@ -115,9 +111,7 @@ class WorkflowEngine:
 
         return step_results
 
-    def _build_dependency_graph(
-        self, steps: List[WorkflowStep]
-    ) -> Dict[str, List[str]]:
+    def _build_dependency_graph(self, steps: List[WorkflowStep]) -> Dict[str, List[str]]:
         graph = {step.id: step.dependencies or [] for step in steps}
         return graph
 

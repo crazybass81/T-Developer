@@ -3,13 +3,14 @@ AWS Configuration Manager
 AWS Secrets Manager와 Parameter Store를 통한 환경변수 관리
 """
 
-import os
-import json
-import boto3
-from typing import Dict, Any, Optional
-from functools import lru_cache
-from datetime import datetime, timedelta
 import asyncio
+import json
+import os
+from datetime import datetime, timedelta
+from functools import lru_cache
+from typing import Any, Dict, Optional
+
+import boto3
 from botocore.exceptions import ClientError
 
 
@@ -108,9 +109,7 @@ class AWSConfigManager:
             full_param_name = f"{self.param_prefix}{param_name}"
 
             # Parameter Store에서 조회
-            response = self.ssm_client.get_parameter(
-                Name=full_param_name, WithDecryption=decrypt
-            )
+            response = self.ssm_client.get_parameter(Name=full_param_name, WithDecryption=decrypt)
 
             value = response["Parameter"]["Value"]
 
@@ -140,9 +139,7 @@ class AWSConfigManager:
             full_path = f"{self.param_prefix}{path}" if path else self.param_prefix
 
             paginator = self.ssm_client.get_paginator("get_parameters_by_path")
-            page_iterator = paginator.paginate(
-                Path=full_path, Recursive=True, WithDecryption=True
-            )
+            page_iterator = paginator.paginate(Path=full_path, Recursive=True, WithDecryption=True)
 
             parameters = {}
             for page in page_iterator:
