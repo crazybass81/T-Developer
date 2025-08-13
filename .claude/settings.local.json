@@ -1,5 +1,13 @@
 {
   "permissions": {
+    "deny": [
+      "Bash(pip:*)",
+      "Bash(pip3:*)",
+      "Bash(python -m pip:*)",
+      "Bash(python3 -m pip:*)",
+      "Bash(pip install:*)",
+      "Bash(pip3 install:*)"
+    ],
     "allow": [
       "Bash(chmod:*)",
       "Bash(npm install:*)",
@@ -63,7 +71,14 @@
       "Bash(NODE_ENV=development timeout 5s npx ts-node src/main.ts)",
       "Bash(python -m pytest tests/test_nl_input_agent.py -v --tb=short)",
       "Bash(python3 -m pytest tests/test_nl_input_agent.py -v --tb=short)",
-      "Bash(python3 -m pip install:*)",
+      "Bash(uv:*)",
+      "Bash(uv pip:*)",
+      "Bash(uv pip install:*)",
+      "Bash(uv pip sync:*)",
+      "Bash(uv venv:*)",
+      "Bash(uv add:*)",
+      "Bash(uv remove:*)",
+      "Bash(uv run:*)",
       "Bash(./deploy-local.sh:*)",
       "Bash(docker system prune:*)",
       "Bash(docker stop:*)",
@@ -74,7 +89,6 @@
       "Bash(/home/ec2-user/T-DeveloperMVP/backend/setup-aws-env.sh:*)",
       "Bash(source:*)",
       "Bash(sam:*)",
-      "Bash(pip3 install:*)",
       "Bash(export SAM_CLI_TELEMETRY=0)",
       "Bash(aws ec2 describe-vpcs:*)",
       "Bash(aws ec2 describe-subnets:*)",
@@ -161,7 +175,6 @@
       "Bash(aws ssm put-parameter:*)",
       "Bash(ENVIRONMENT=development python3 src/config/env_loader.py)",
       "Bash(export ENVIRONMENT=development)",
-      "Bash(pip install:*)",
       "Bash(pre-commit:*)",
       "Bash(git config:*)",
       "Bash(python test:*)",
