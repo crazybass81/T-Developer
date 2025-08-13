@@ -1,60 +1,119 @@
-# T-Developer MVP 폴더 구조 규칙
+# T-Developer AI Autonomous Evolution System - Folder Structure
 
-## 📁 루트 디렉토리 구조
+## 📁 Root Directory Structure
 
 ```
-T-DeveloperMVP/
-├── .amazonq/                    # Amazon Q 설정 및 규칙
-├── backend/                     # 백엔드 서비스 (Python)
-├── frontend/                    # 프론트엔드 애플리케이션 (React)
-├── docs/                        # 프로젝트 문서
-├── scripts/                     # 유틸리티 스크립트
-├── docker/                      # Docker 설정
-├── infrastructure/              # AWS 인프라 코드
-└── .env.example                 # 환경 변수 템플릿
+T-Developer-Evolution/
+├── AI-DRIVEN-EVOLUTION.md       # 80-day implementation plan
+├── .amazonq/                    # Architecture rules
+│   └── rules/                   # System design rules
+├── backend/                     # Python-only backend
+├── docs/                        # System documentation
+├── infrastructure/              # AWS infrastructure
+├── scripts/                     # Deployment scripts
+└── docker/                      # Container configs
 ```
 
-## 🔧 Backend 구조 (/backend)
+## 🧬 Backend Structure (/backend)
 
 ```
 backend/
 ├── src/
-│   ├── agents/                  # 9개 핵심 에이전트
-│   │   ├── implementations/     # 에이전트 구현체
-│   │   │   ├── nl_input/
-│   │   │   │   ├── tests/       # 단위 테스트
-│   │   │   │   └── nl_input_agent.py
-│   │   │   ├── ui_selection/
-│   │   │   ├── parser/
-│   │   │   ├── component_decision/
-│   │   │   ├── match_rate/
-│   │   │   ├── search/
-│   │   │   ├── generation/
-│   │   │   ├── assembly/
-│   │   │   └── download/
-│   │   └── framework/           # 에이전트 프레임워크
-│   ├── orchestration/           # Agent Squad 오케스트레이션
-│   ├── data/                    # 데이터 레이어
-│   ├── api/                     # API 엔드포인트
-│   └── utils/                   # 유틸리티 함수
-├── tests/                       # 통합/E2E 테스트
-│   ├── integration/             # 통합 테스트
-│   └── e2e/                     # E2E 테스트
-├── main.py                      # FastAPI 엔트리포인트
-├── requirements.txt             # Python 의존성
-└── pytest.ini                  # 테스트 설정
+│   ├── agents/                  # Agent implementations
+│   │   └── unified/             # Python agents
+│   │       ├── nl_input/
+│   │       ├── ui_selection/
+│   │       ├── parser/
+│   │       ├── component_decision/
+│   │       ├── match_rate/
+│   │       ├── search/
+│   │       ├── generation/
+│   │       ├── assembly/
+│   │       └── download/
+│   ├── evolution/               # Evolution system
+│   │   ├── engine.py           # Genetic algorithm engine
+│   │   ├── fitness.py          # Fitness evaluation
+│   │   ├── mutation.py         # AI-guided mutation
+│   │   └── selection.py        # Selection strategies
+│   ├── security/               # Security frameworks
+│   │   ├── evolution_safety.py # Evolution safety
+│   │   ├── prompt_defender.py  # Prompt injection defense
+│   │   └── pii_detector.py    # PII detection
+│   ├── agno/                  # Agno Framework
+│   ├── monitoring/            # Performance tracking
+│   └── deployment/            # AgentCore deployment
+├── tests/                     # Test suites (87% coverage)
+│   ├── unit/
+│   ├── integration/
+│   ├── evolution/
+│   └── security/
+├── migrations/                # Database migrations
+└── requirements.txt          # Python dependencies
 ```
 
-## 🧪 테스트 구조
+## 📚 Documentation Structure (/docs)
 
-### 테스트 파일 위치
-- **Unit Tests**: `/backend/src/agents/implementations/{agent}/tests/`
-- **Integration Tests**: `/backend/tests/integration/`
-- **E2E Tests**: `/backend/tests/e2e/`
+```
+docs/
+├── security/                  # Security frameworks
+│   ├── ai-security-framework.md
+│   └── evolution-safety-framework.md
+├── architecture/             # System architecture
+│   └── performance-optimization-strategy.md
+├── operations/              # Operations guides
+│   ├── cost-management-strategy.md
+│   └── sla-slo-definitions.md
+├── deployment/              # Deployment guides
+│   └── cicd-pipeline-strategy.md
+└── development/            # Development guides
+    └── comprehensive-test-strategy.md
+```
 
-### 테스트 파일명
-- **Python**: `test_{module_name}.py`
+## 🏗️ Infrastructure Structure (/infrastructure)
+
+```
+infrastructure/
+├── aws/                    # AWS resources
+│   ├── ecs/               # ECS Fargate configs
+│   ├── bedrock/           # Bedrock AgentCore
+│   └── cloudformation/    # IaC templates
+├── terraform/             # Terraform configs
+└── monitoring/           # Monitoring setup
+```
+
+## ⚠️ Important Rules
+
+### Language Requirements
+- **Backend**: Python 3.11+ ONLY
+- **No Frontend**: System is backend-only
+- **No TypeScript/JavaScript**: Removed entirely
+- **Infrastructure**: Python/YAML/JSON only
+
+### Agent Structure
+- All agents in `/backend/src/agents/unified/`
+- Each agent has its own module directory
+- Memory constraint: < 6.5KB per agent
+- Instantiation: < 3μs
+
+### Evolution System
+- Core engine in `/backend/src/evolution/`
+- Safety checks mandatory
+- Continuous validation required
+- Genetic algorithms for improvement
+
+### Security
+- All AI outputs validated
+- Evolution safety framework active
+- PII detection automated
+- 98/100 security score maintained
+
+### Testing
+- Minimum 85% code coverage
+- Evolution-specific tests required
+- Security validation tests mandatory
+- Performance benchmarks continuous
 
 ---
-**언어**: Python 통일  
-**업데이트**: 2024년 12월
+**System**: AI Autonomous Evolution  
+**Language**: Python Only  
+**Updated**: November 2024

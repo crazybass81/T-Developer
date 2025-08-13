@@ -23,24 +23,6 @@ services:
     networks:
       - t-developer-network
 
-  # Frontend
-  frontend:
-    build:
-      context: .
-      dockerfile: docker/frontend/Dockerfile
-    container_name: t-developer-frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - REACT_APP_API_URL=http://localhost:8000
-    depends_on:
-      - backend
-    volumes:
-      - "./frontend:/app"
-    networks:
-      - t-developer-network
-
   # PostgreSQL
   postgres:
     image: postgres:15-alpine
