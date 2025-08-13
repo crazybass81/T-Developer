@@ -1,5 +1,5 @@
 {
-  "last_validated": "2025-08-13T11:08:14.994395",
+  "last_validated": "2025-08-13T11:35:23.865898",
   "completed_tasks": [],
   "pending_tasks": [
     {
@@ -39,6 +39,16 @@
     },
     {
       "name": "Evolution system",
+      "status": "failed",
+      "completion_rate": 75.0
+    },
+    {
+      "name": "Agent Registry",
+      "status": "failed",
+      "completion_rate": 75.0
+    },
+    {
+      "name": "Agent Registry",
       "status": "failed",
       "completion_rate": 75.0
     }

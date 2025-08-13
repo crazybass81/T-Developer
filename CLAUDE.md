@@ -19,6 +19,8 @@
 - ❌ Evolution system (75%) - 2025-08-13 11:01
 - ❌ Evolution system (75%) - 2025-08-13 11:06
 - ❌ Evolution system (75%) - 2025-08-13 11:08
+- ❌ Agent Registry (75%) - 2025-08-13 11:18
+- ❌ Agent Registry (75%) - 2025-08-13 11:35
 
 ### 📊 전체 진행률
 - **Phase 1 (Foundation)**: Day 5/20 완료 ✅ (25%)

@@ -6,7 +6,6 @@ Generated: 2024-11-18
 Manage genetic diversity and selection in agent evolution
 """
 
-import math
 from typing import Dict, List, Optional
 
 

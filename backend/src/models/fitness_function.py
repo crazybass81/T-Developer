@@ -6,7 +6,6 @@ Generated: 2024-11-18
 Calculate and track fitness scores for agent evolution
 """
 
-import math
 from typing import Dict, List
 
 

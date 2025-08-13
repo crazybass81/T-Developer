@@ -11,9 +11,7 @@ Testing requirements:
 """
 
 import json
-import uuid
 from datetime import datetime
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -195,11 +193,11 @@ class TestEvolutionHistory:
         lineage = EvolutionLineage(root_agent_id="original_001")
 
         # Add evolution steps
-        child1 = lineage.add_evolution(
+        lineage.add_evolution(
             parent_id="original_001", child_id="evolved_001", generation=1, fitness_improvement=0.1
         )
 
-        child2 = lineage.add_evolution(
+        lineage.add_evolution(
             parent_id="evolved_001", child_id="evolved_002", generation=2, fitness_improvement=0.15
         )
 
@@ -424,10 +422,10 @@ class TestAgentRegistryIntegration:
         assert agent.meets_constraints() is True
 
         # Create version
-        version = AgentVersion(agent_id=agent.id, version_number="1.0.0", code_hash="initial_hash")
+        AgentVersion(agent_id=agent.id, version_number="1.0.0", code_hash="initial_hash")
 
         # Evolve agent
-        evolution = EvolutionRecord(
+        EvolutionRecord(
             agent_id=agent.id, generation=1, mutations=["optimize_memory"], fitness_score=0.85
         )
 

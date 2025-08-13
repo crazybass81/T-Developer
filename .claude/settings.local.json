@@ -194,7 +194,11 @@
       "Bash(python -m pytest tests/evolution/ -v --tb=short)",
       "Bash(python -m pytest tests/evolution/test_engine.py::TestEvolutionEngine::test_crossover_operation tests/evolution/test_safety.py::TestEvolutionSafety::test_pattern_extraction tests/evolution/test_registry.py::TestAgentRegistry::test_persistence -v)",
       "Bash(python:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(pytest:*)",
+      "Bash(PYTHONPATH=backend python -m pytest backend/tests/analysis/test_ai_analysis_engine.py::TestAIAnalysisEngine::test_performance_scoring -v)",
+      "Bash(PYTHONPATH=backend python -m pytest backend/tests/analysis/test_ai_analysis_engine.py::TestAIAnalysisEngine::test_multi_model_consensus -v)",
+      "Bash(PYTHONPATH=backend python -m pytest backend/tests/analysis/test_ai_analysis_engine.py -v --tb=line)"
     ],
     "deny": []
   }
