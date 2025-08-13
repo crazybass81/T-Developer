@@ -125,3 +125,4 @@ pids/
 
 # Next.js build files
 frontend/.next/
+.task_state.json
