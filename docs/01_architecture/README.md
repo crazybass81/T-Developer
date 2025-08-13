@@ -6,13 +6,11 @@ Complete architectural documentation for the T-Developer AI Autonomous Evolution
 ## 📁 Structure
 
 ### System Architecture
-- [**00-evolution-architecture.md**](system/00-evolution-architecture.md) - Core evolution system architecture
-- [**architecture.md**](system/architecture.md) - Overall system architecture
+- [**UNIFIED_ARCHITECTURE.md**](system/UNIFIED_ARCHITECTURE.md) - 🎯 Complete system architecture (통합 문서)
+- [**ARCHITECTURE_RULES.md**](system/ARCHITECTURE_RULES.md) - Architecture rules and guidelines
 - [**folder-structure.md**](system/folder-structure.md) - Project folder organization
 - [**backend-structure.md**](system/backend-structure.md) - Backend project structure
-- [**enterprise-architecture.md**](system/enterprise-architecture.md) - Enterprise integration
 - [**performance-optimization-strategy.md**](system/performance-optimization-strategy.md) - Performance strategy
-- [**system-architecture.md**](system/system-architecture.md) - Detailed system design
 
 ### Agent Architecture
 - [**agent-overview.md**](agents/agent-overview.md) - Agent system overview
