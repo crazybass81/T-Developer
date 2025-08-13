@@ -1,0 +1,176 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: T-Developer AgentCore Lambda Functions
+
+Parameters:
+  Environment:
+    Type: String
+    Default: development
+    AllowedValues:
+      - development
+      - production
+    Description: Environment name
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 512
+    Runtime: python3.11
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        BEDROCK_AGENT_ID: NYZHMLSDOJ
+        BEDROCK_AGENT_ALIAS_ID: IBQK7SYNGG
+
+Resources:
+  # NL Input Agent Lambda
+  NLInputAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub t-developer-nl-input-agent-${Environment}
+      Description: Natural Language Input Processing Agent
+      CodeUri: ../../src/agents/agentcore/nl_input/
+      Handler: main.handler
+      Tags:
+        Project: T-Developer
+        Agent: NLInput
+        Environment: !Ref Environment
+
+  # UI Selection Agent Lambda
+  UISelectionAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub t-developer-ui-selection-agent-${Environment}
+      Description: UI Component Selection Agent
+      CodeUri: ../../src/agents/agentcore/ui_selection/
+      Handler: main.handler
+      Tags:
+        Project: T-Developer
+        Agent: UISelection
+        Environment: !Ref Environment
+
+  # Parser Agent Lambda
+  ParserAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub t-developer-parser-agent-${Environment}
+      Description: Requirement Parser Agent
+      CodeUri: ../../src/agents/agentcore/parser/
+      Handler: main.handler
+      Tags:
+        Project: T-Developer
+        Agent: Parser
+        Environment: !Ref Environment
+
+  # Component Decision Agent Lambda
+  ComponentDecisionAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub t-developer-component-decision-agent-${Environment}
+      Description: Component Architecture Decision Agent
+      CodeUri: ../../src/agents/agentcore/component_decision/
+      Handler: main.handler
+      Tags:
+        Project: T-Developer
+        Agent: ComponentDecision
+        Environment: !Ref Environment
+
+  # Match Rate Agent Lambda
+  MatchRateAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub t-developer-match-rate-agent-${Environment}
+      Description: Solution Matching and Scoring Agent
+      CodeUri: ../../src/agents/agentcore/match_rate/
+      Handler: main.handler
+      Tags:
+        Project: T-Developer
+        Agent: MatchRate
+        Environment: !Ref Environment
+
+  # Search Agent Lambda
+  SearchAgentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub t-developer-search-agent-${Environment}
+      Description: Intelligent Search and Retrieval Agent
+      CodeUri: ../../src/agents/agentcore/search/
+      Handler: main.handler
+      Tags:
+        Project: T-Developer
+        Agent: Search
+        Environment: !Ref Environment
+
+  # IAM Role for Lambda functions
+  AgentLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - bedrock.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: BedrockAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeAgent
+                  - bedrock:GetAgent
+                  - bedrock-agent:*
+                Resource: '*'
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+Outputs:
+  NLInputAgentArn:
+    Description: ARN of NL Input Agent Lambda
+    Value: !GetAtt NLInputAgentFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-NLInputAgentArn
+
+  UISelectionAgentArn:
+    Description: ARN of UI Selection Agent Lambda
+    Value: !GetAtt UISelectionAgentFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-UISelectionAgentArn
+
+  ParserAgentArn:
+    Description: ARN of Parser Agent Lambda
+    Value: !GetAtt ParserAgentFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-ParserAgentArn
+
+  ComponentDecisionAgentArn:
+    Description: ARN of Component Decision Agent Lambda
+    Value: !GetAtt ComponentDecisionAgentFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-ComponentDecisionAgentArn
+
+  MatchRateAgentArn:
+    Description: ARN of Match Rate Agent Lambda
+    Value: !GetAtt MatchRateAgentFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-MatchRateAgentArn
+
+  SearchAgentArn:
+    Description: ARN of Search Agent Lambda
+    Value: !GetAtt SearchAgentFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-SearchAgentArn
