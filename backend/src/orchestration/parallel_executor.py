@@ -1,10 +1,34 @@
 """Parallel Executor for Concurrent Agent Operations < 6.5KB"""
 import asyncio
+import functools
 import multiprocessing as mp
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+
+# Module-level function for multiprocessing compatibility
+def _execute_task_wrapper(task: "ExecutionTask") -> "ExecutionResult":
+    """Module-level wrapper for process pool execution to avoid pickling issues"""
+    import time
+
+    start_time = time.time()
+    try:
+        result = task.func(*task.args, **task.kwargs)
+        return ExecutionResult(
+            task_id=task.id,
+            success=True,
+            result=result,
+            execution_time=time.time() - start_time,
+        )
+    except Exception as e:
+        return ExecutionResult(
+            task_id=task.id,
+            success=False,
+            error=str(e),
+            execution_time=time.time() - start_time,
+        )
 
 
 @dataclass
@@ -69,10 +93,12 @@ class ParallelExecutor:
                         task.func(*task.args, **task.kwargs), timeout=task.timeout
                     )
                 else:
-                    # Run sync function in thread pool
+                    # Run sync function in thread pool with proper kwargs handling
                     loop = asyncio.get_event_loop()
+                    # Use functools.partial to properly pass both args and kwargs
+                    partial_func = functools.partial(task.func, *task.args, **task.kwargs)
                     result = await asyncio.wait_for(
-                        loop.run_in_executor(self.thread_pool, task.func, *task.args),
+                        loop.run_in_executor(self.thread_pool, partial_func),
                         timeout=task.timeout,
                     )
 
@@ -135,9 +161,10 @@ class ParallelExecutor:
         results = []
 
         # Note: Functions must be picklable for process pool
+        # Use module-level function to avoid pickling issues with bound methods
         for task in tasks:
             try:
-                result = self.process_pool.apply_async(self._execute_sync_wrapper, (task,))
+                result = self.process_pool.apply_async(_execute_task_wrapper, (task,))
                 res = result.get(timeout=task.timeout)
                 results.append(res)
             except Exception as e:

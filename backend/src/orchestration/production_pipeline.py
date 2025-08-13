@@ -1,262 +1,58 @@
-"""
-Production-grade ECS Pipeline Orchestrator
-AWS 통합 및 프로덕션 기능을 포함한 완전한 파이프라인
-"""
-
+"""🧬 T-Developer Production Pipeline - Optimized"""
 import asyncio
 import json
 import logging
-import os
-import shutil
-import sys
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-# AWS SDK 및 모니터링 (선택적)
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# AWS integration (optional)
 try:
     import boto3
-    from aws_lambda_powertools import Logger, Metrics, Tracer
-    from aws_lambda_powertools.metrics import MetricUnit
 
     AWS_AVAILABLE = True
 except ImportError:
     AWS_AVAILABLE = False
-    # Fallback logger
-    import logging
-
-    logger = logging.getLogger(__name__)
-
-# Path 설정
-sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # backend 디렉토리도 추가
-
-# 실제 에이전트 직접 임포트
-AGENTS_AVAILABLE = False
-AGENT_CLASSES = {}
-
-# Import agent loader
-try:
-    from src.orchestration.agent_loader import AGENT_CLASSES
-
-    AGENTS_AVAILABLE = len(AGENT_CLASSES) > 0
-    if AGENTS_AVAILABLE:
-        print(f"✅ Using {len(AGENT_CLASSES)} agents from agent_loader")
-except ImportError as e:
-    print(f"⚠️ Failed to import agent_loader: {e}")
-    AGENT_CLASSES = {}
-    AGENTS_AVAILABLE = False
-
-
-def load_agent_class_dynamic(agent_name: str):
-    """동적으로 에이전트 클래스 로딩 - 개선된 버전"""
-    try:
-        # Try unified directory first (where actual implementations are)
-        agent_path = Path(__file__).parent.parent / "agents" / "unified" / agent_name
-        if not agent_path.exists():
-            # Fallback to ecs-integrated directory
-            agent_path = Path(__file__).parent.parent / "agents" / "ecs-integrated" / agent_name
-            if not agent_path.exists():
-                # Fallback to implementations directory
-                agent_path = Path(__file__).parent.parent / "agents" / "implementations"
-                if not agent_path.exists():
-                    print(f"Agent path does not exist: {agent_path}")
-                    return None
-
-        # sys.path에 에이전트 디렉토리 추가
-        agent_str_path = str(agent_path.parent)
-        if agent_str_path not in sys.path:
-            sys.path.insert(0, agent_str_path)
-
-        # 에이전트별 경로도 추가
-        agent_specific_path = str(agent_path)
-        if agent_specific_path not in sys.path:
-            sys.path.insert(0, agent_specific_path)
-
-        # 동적 import
-        import importlib.util
-
-        # Try agent.py first (unified agents), then main.py (old format)
-        agent_file = agent_path / "agent.py"
-        if not agent_file.exists():
-            agent_file = agent_path / "main.py"
-            if not agent_file.exists():
-                print(f"Neither agent.py nor main.py found in {agent_path}")
-                return None
-
-        # sys.path에 backend 디렉토리 추가
-        backend_path = str(Path(__file__).parent.parent.parent)
-        if backend_path not in sys.path:
-            sys.path.insert(0, backend_path)
-
-        spec = importlib.util.spec_from_file_location(
-            f"src.agents.unified.{agent_name}.agent",
-            agent_file,
-            submodule_search_locations=[str(agent_path)],
-        )
-        if spec and spec.loader:
-            module = importlib.util.module_from_spec(spec)
-
-            # 모듈을 sys.modules에 등록 (정확한 패키지 경로로)
-            sys.modules[f"src.agents.unified.{agent_name}.agent"] = module
-
-            # 모듈 실행
-            spec.loader.exec_module(module)
-
-            # 에이전트 클래스 찾기 (더 정확한 조건)
-            for attr_name in dir(module):
-                attr = getattr(module, attr_name)
-                if (
-                    isinstance(attr, type)
-                    and hasattr(attr, "__init__")
-                    and attr_name.endswith("Agent")
-                    and attr_name != "BaseAgent"
-                    and not attr_name.startswith("Agent")
-                    and hasattr(attr, "process")  # AgentConfig 등 제외
-                ):  # Agent 인터페이스 확인
-                    print(f"✅ Found agent class: {attr_name} in {agent_name}")
-                    return attr
-
-            print(
-                f"⚠️ No agent class found in {agent_name}, available classes: {[name for name in dir(module) if isinstance(getattr(module, name), type)]}"
-            )
-        return None
-    except Exception as e:
-        print(f"❌ Failed to load agent {agent_name}: {type(e).__name__}: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return None
-
-
-# 동적 로딩이 필요한 경우에만 실행
-if not AGENTS_AVAILABLE:
-    agent_names = [
-        "nl_input",
-        "ui_selection",
-        "parser",
-        "component_decision",
-        "match_rate",
-        "search",
-        "generation",
-        "assembly",
-        "download",
-    ]
-
-    for agent_name in agent_names:
-        agent_class = load_agent_class_dynamic(agent_name)
-        if agent_class:
-            AGENT_CLASSES[agent_name] = agent_class
-            AGENTS_AVAILABLE = True
-
-print(f"Loaded {len(AGENT_CLASSES)} real agents: {list(AGENT_CLASSES.keys())}")
-
-# 메모리 관리 모듈 임포트 - 절대 경로로 수정
-MEMORY_OPTIMIZER_AVAILABLE = False
-memory_optimizer = None
-
-try:
-    # 절대 경로로 메모리 옵티마이저 로딩
-    optimization_path = Path(__file__).parent.parent / "optimization" / "memory_optimizer.py"
-    if optimization_path.exists():
-        import importlib.util
-
-        spec = importlib.util.spec_from_file_location("memory_optimizer", optimization_path)
-        if spec and spec.loader:
-            memory_opt_module = importlib.util.module_from_spec(spec)
-            sys.modules["memory_optimizer"] = memory_opt_module
-            spec.loader.exec_module(memory_opt_module)
-
-            MemoryOptimizer = getattr(memory_opt_module, "MemoryOptimizer", None)
-            MemorySnapshot = getattr(memory_opt_module, "MemorySnapshot", None)
-
-            if MemoryOptimizer:
-                memory_optimizer = MemoryOptimizer()
-                MEMORY_OPTIMIZER_AVAILABLE = True
-                print("✅ Memory optimizer loaded successfully")
-            else:
-                print("⚠️ MemoryOptimizer class not found in module")
-    else:
-        print(f"⚠️ Memory optimizer file not found at: {optimization_path}")
-
-except Exception as e:
-    MEMORY_OPTIMIZER_AVAILABLE = False
-    memory_optimizer = None
-    print(f"❌ Memory optimizer failed to load: {type(e).__name__}: {e}")
-    import traceback
-
-    traceback.print_exc()
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ProductionPipelineResult:
-    """프로덕션 파이프라인 실행 결과"""
+class PipelineConfig:
+    """Pipeline configuration"""
 
-    success: bool
-    project_id: str
-    project_path: Optional[str]
-    metadata: Dict[str, Any]
-    errors: List[str]
-    execution_time: float
-    aws_resources: Optional[Dict[str, Any]] = None
-    monitoring_data: Optional[Dict[str, Any]] = None
-
-    def get(self, key: str, default=None):
-        """Dict-like interface for compatibility"""
-        if hasattr(self, key):
-            return getattr(self, key)
-        elif key in self.metadata:
-            return self.metadata[key]
-        return default
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary"""
-        return {
-            "success": self.success,
-            "project_id": self.project_id,
-            "project_path": self.project_path,
-            "metadata": self.metadata,
-            "errors": self.errors,
-            "execution_time": self.execution_time,
-            "aws_resources": self.aws_resources,
-            "monitoring_data": self.monitoring_data,
-        }
+    max_workers: int = 3
+    timeout: int = 300
+    retry_count: int = 2
+    enable_metrics: bool = True
+    aws_region: str = "us-east-1"
 
 
 @dataclass
-class AgentExecutionResult:
-    """개별 에이전트 실행 결과"""
+class PipelineResult:
+    """Pipeline execution result"""
 
-    agent_name: str
     success: bool
+    pipeline_id: str
     execution_time: float
-    output_data: Any
+    stages_completed: List[str]
+    final_output: Dict
     error: Optional[str] = None
-    metrics: Optional[Dict[str, Any]] = None
+    metrics: Optional[Dict] = None
 
 
-class ProductionECSPipeline:
-    """프로덕션급 ECS 파이프라인"""
+class ProductionPipeline:
+    """Production-grade ECS pipeline orchestrator"""
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        self.config = config or {}
-        self.initialized = False
-        self.aws_clients = {}
-
-        # AWS 클라이언트 초기화 (사용 가능한 경우)
-        if AWS_AVAILABLE:
-            try:
-                self._init_aws_clients()
-            except Exception as e:
-                logger.warning(f"AWS clients not available: {e}")
-                # AWS_AVAILABLE는 글로벌 변수이므로 수정하지 않음
-
-        # 에이전트 실행 순서 정의
-        self.agent_pipeline = [
+    def __init__(self, config: PipelineConfig = None):
+        self.config = config or PipelineConfig()
+        self.pipeline_id = None
+        self.start_time = None
+        self.stages = [
             "nl_input",
             "ui_selection",
             "parser",
@@ -268,988 +64,265 @@ class ProductionECSPipeline:
             "download",
         ]
 
-        # 에이전트별 설정
-        self.agent_configs = {
-            "nl_input": {"timeout": 30, "retry_count": 2},
-            "ui_selection": {"timeout": 20, "retry_count": 2},
-            "parser": {"timeout": 45, "retry_count": 1},
-            "component_decision": {"timeout": 60, "retry_count": 1},
-            "match_rate": {"timeout": 30, "retry_count": 2},
-            "search": {"timeout": 90, "retry_count": 2},
-            "generation": {"timeout": 300, "retry_count": 1},  # 5분
-            "assembly": {"timeout": 180, "retry_count": 1},  # 3분
-            "download": {"timeout": 60, "retry_count": 1},
-        }
-
-    def _init_aws_clients(self):
-        """AWS 클라이언트 초기화"""
-        try:
-            self.aws_clients = {
-                "stepfunctions": boto3.client("stepfunctions"),
-                "sns": boto3.client("sns"),
-                "sqs": boto3.client("sqs"),
-                "dynamodb": boto3.resource("dynamodb"),
-                "s3": boto3.client("s3"),
-                "cloudwatch": boto3.client("cloudwatch"),
-            }
-            logger.info("AWS clients initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize AWS clients: {e}")
-            raise
-
-    async def initialize(self):
-        """파이프라인 초기화"""
-        if self.initialized:
-            return
-
-        logger.info("Initializing Production ECS Pipeline...")
-
-        try:
-            # AWS 리소스 확인 (선택적)
-            if AWS_AVAILABLE and self.aws_clients:
-                await self._verify_aws_resources()
-
-            # 실제 에이전트 또는 프록시 초기화
-            self.agents = {}
-            self.agent_proxies = {}
-            for agent_name in self.agent_pipeline:
-                if agent_name in AGENT_CLASSES:
-                    # 실제 에이전트 사용
-                    try:
-                        # 에이전트 설정 생성 - unified agents는 config 필요 없음
-                        self.agents[agent_name] = AGENT_CLASSES[agent_name]()
-                        logger.info(f"✅ Real agent loaded: {agent_name}")
-                    except TypeError as e:
-                        # 초기화 파라미터 문제 시 다시 시도
-                        try:
-                            self.agents[agent_name] = AGENT_CLASSES[agent_name](config=None)
-                            logger.info(f"✅ Real agent loaded with config=None: {agent_name}")
-                        except Exception as e2:
-                            logger.warning(f"Failed to initialize real agent {agent_name}: {e2}")
-                            # 폴백으로 프록시 사용
-                            self.agent_proxies[agent_name] = self._create_agent_proxy(agent_name)
-                    except Exception as e:
-                        logger.warning(f"Failed to initialize real agent {agent_name}: {e}")
-                        # 폴백으로 프록시 사용
-                        self.agent_proxies[agent_name] = self._create_agent_proxy(agent_name)
-                else:
-                    # 프록시 사용 (실제 에이전트 없는 경우)
-                    self.agent_proxies[agent_name] = self._create_agent_proxy(agent_name)
-                    logger.info(f"⚠️ Using proxy for agent: {agent_name}")
-
-            self.initialized = True
-            logger.info("✅ Production ECS Pipeline initialized")
-
-        except Exception as e:
-            logger.error(f"❌ Pipeline initialization failed: {e}")
-            raise
-
-    def _create_agent_proxy(self, agent_name: str):
-        """에이전트 프록시 생성 (실제 에이전트 연결 전까지 시뮬레이션)"""
-
-        async def agent_proxy(
-            data: Dict[str, Any], context: Dict[str, Any]
-        ) -> AgentExecutionResult:
-            """에이전트 프록시 실행"""
-            start_time = time.time()
-            config = self.agent_configs.get(agent_name, {})
-
+        # AWS clients (if available)
+        if AWS_AVAILABLE:
             try:
-                # 실제 에이전트 로직 시뮬레이션 - 속도 개선
-                processing_time = min(config.get("timeout", 30) * 0.01, 0.2)  # 최대 0.2초로 단축
-                await asyncio.sleep(processing_time)
-
-                # 에이전트별 출력 생성
-                output_data = self._generate_agent_output(agent_name, data)
-
-                execution_time = time.time() - start_time
-
-                # 메트릭 수집
-                metrics = {
-                    "execution_time": execution_time,
-                    "data_size": len(json.dumps(data)),
-                    "timestamp": datetime.now().isoformat(),
-                }
-
-                # AWS CloudWatch 메트릭 전송 (선택적)
-                if AWS_AVAILABLE and "cloudwatch" in self.aws_clients:
-                    await self._send_metrics(agent_name, metrics)
-
-                return AgentExecutionResult(
-                    agent_name=agent_name,
-                    success=True,
-                    execution_time=execution_time,
-                    output_data=output_data,
-                    metrics=metrics,
-                )
-
+                self.cloudwatch = boto3.client("cloudwatch", region_name=self.config.aws_region)
+                self.s3 = boto3.client("s3", region_name=self.config.aws_region)
+                logger.info("AWS services initialized")
             except Exception as e:
-                execution_time = time.time() - start_time
-                logger.error(f"Agent {agent_name} failed: {e}")
-
-                return AgentExecutionResult(
-                    agent_name=agent_name,
-                    success=False,
-                    execution_time=execution_time,
-                    output_data=None,
-                    error=str(e),
-                )
-
-        return agent_proxy
-
-    def _generate_agent_output(self, agent_name: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """에이전트별 출력 데이터 생성"""
-
-        if agent_name == "nl_input":
-            return {
-                "requirements": input_data.get("user_input", ""),
-                "project_type": "web_app",
-                "extracted_entities": ["User", "Project"],
-                "confidence_score": 0.85,
-            }
-        elif agent_name == "ui_selection":
-            return {
-                "framework": "react",
-                "ui_library": "material-ui",
-                "design_system": "material",
-                "responsive": True,
-            }
-        elif agent_name == "parser":
-            return {
-                "file_structure": ["src/", "public/", "package.json"],
-                "entry_points": ["src/index.js"],
-                "dependencies": ["react", "react-dom"],
-            }
-        elif agent_name == "component_decision":
-            return {
-                "components": ["App", "Header", "Main", "Footer"],
-                "architecture": "component-based",
-                "state_management": "hooks",
-            }
-        elif agent_name == "match_rate":
-            return {
-                "template_match_score": 0.78,
-                "component_reuse_score": 0.82,
-                "overall_confidence": 0.80,
-            }
-        elif agent_name == "search":
-            return {
-                "templates": ["react-starter", "material-template"],
-                "libraries": ["@mui/material", "react-router-dom"],
-                "best_practices": ["folder-structure", "component-patterns"],
-            }
-        elif agent_name == "generation":
-            # Generate actual project files
-            project_name = input_data.get("project_name", "my-app")
-            description = input_data.get("user_input", "A modern web application")
-            features = input_data.get("features", [])
-            project_type = input_data.get("project_type", "react")
-            framework = input_data.get("framework", "react")
-
-            # Generate comprehensive project files based on framework
-            generated_files = {}
-
-            if framework in ["react", "vue", "nextjs"]:
-                # React/Vue/Next.js project structure
-                generated_files = {
-                    "package.json": json.dumps(
-                        {
-                            "name": project_name,
-                            "version": "1.0.0",
-                            "description": description[:100],
-                            "dependencies": {
-                                "react": "^18.2.0" if framework == "react" else None,
-                                "react-dom": "^18.2.0" if framework == "react" else None,
-                                "vue": "^3.3.0" if framework == "vue" else None,
-                                "next": "^14.0.0" if framework == "nextjs" else None,
-                                "axios": "^1.6.0",
-                                "react-router-dom": "^6.20.0"
-                                if framework == "react" and "routing" in str(features)
-                                else None,
-                            },
-                            "scripts": {
-                                "start": "react-scripts start"
-                                if framework == "react"
-                                else "vue-cli-service serve"
-                                if framework == "vue"
-                                else "next dev",
-                                "build": "react-scripts build"
-                                if framework == "react"
-                                else "vue-cli-service build"
-                                if framework == "vue"
-                                else "next build",
-                                "test": "jest",
-                            },
-                        },
-                        indent=2,
-                    ),
-                    "src/App.js"
-                    if framework != "vue"
-                    else "src/App.vue": f"""// Generated {framework.upper()} App for {project_name}
-{"import React from 'react';" if framework == "react" else ""}
-{"import './App.css';" if framework != "vue" else ""}
-
-{"function App() {" if framework == "react" else "<template>" if framework == "vue" else "export default function Home() {"}
-  {"return (" if framework == "react" else "  <div>" if framework == "vue" else "  return ("}
-    <div className="App">
-      <header className="App-header">
-        <h1>{project_name}</h1>
-        <p>{description[:100]}</p>
-        {"<nav>" if "routing" in str(features) else ""}
-        {"  <a href='/'>Home</a> | <a href='/about'>About</a>" if "routing" in str(features) else ""}
-        {"</nav>" if "routing" in str(features) else ""}
-      </header>
-      <main>
-        <h2>Features</h2>
-        <ul>
-          {chr(10).join(f"          <li>{feature}</li>" for feature in features[:5]) if features else "          <li>Basic setup</li>"}
-        </ul>
-      </main>
-    </div>
-  {");" if framework == "react" else "</div>" if framework == "vue" else ");"}
-{"}" if framework == "react" else "</template>" if framework == "vue" else "}"}
-
-{"export default App;" if framework == "react" else ""}
-""",
-                    "src/index.js"
-                    if framework != "vue"
-                    else "src/main.js": f"""// Entry point for {project_name}
-{"import React from 'react';" if framework == "react" else ""}
-{"import ReactDOM from 'react-dom/client';" if framework == "react" else "import { createApp } from 'vue';" if framework == "vue" else ""}
-{"import App from './App';" if framework != "nextjs" else ""}
-{"import './index.css';" if framework == "react" else ""}
-
-{"const root = ReactDOM.createRoot(document.getElementById('root'));" if framework == "react" else ""}
-{"root.render(<App />);" if framework == "react" else "createApp(App).mount('#app');" if framework == "vue" else ""}
-""",
-                    "src/index.css"
-                    if framework == "react"
-                    else "src/styles.css": """/* Global styles */
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.App {
-  text-align: center;
-  padding: 20px;
-}
-
-.App-header {
-  background-color: #282c34;
-  padding: 20px;
-  color: white;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-main {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  background: #f5f5f5;
-  border-radius: 8px;
-}
-""",
-                    "public/index.html": f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{project_name}</title>
-</head>
-<body>
-  <noscript>You need to enable JavaScript to run this app.</noscript>
-  <div id="{"root" if framework == "react" else "app"}"></div>
-</body>
-</html>
-""",
-                    "README.md": f"""# {project_name}
-
-{description}
-
-## Features
-{chr(10).join(f"- {feature}" for feature in features) if features else "- Basic setup"}
-
-## Getting Started
-
-\`\`\`bash
-# Install dependencies
-npm install
-
-# Start development server
-npm start
-
-# Build for production
-npm run build
-\`\`\`
-
-## Technology Stack
-- Framework: {framework.upper()}
-- Package Manager: npm
-- Build Tool: {"Create React App" if framework == "react" else "Vue CLI" if framework == "vue" else "Next.js"}
-
-Generated by T-Developer Production Pipeline
-""",
-                    ".gitignore": """node_modules/
-.env
-.env.local
-dist/
-build/
-.DS_Store
-*.log
-.idea/
-.vscode/
-""",
-                }
-
-                # Remove None values from package.json dependencies
-                if generated_files.get("package.json"):
-                    package_data = json.loads(generated_files["package.json"])
-                    package_data["dependencies"] = {
-                        k: v for k, v in package_data["dependencies"].items() if v is not None
-                    }
-                    generated_files["package.json"] = json.dumps(package_data, indent=2)
-
-            return {
-                "generated_files": generated_files,
-                "files": generated_files,  # Backward compatibility
-                "total_files": len(generated_files),
-                "framework": framework,
-                "features": features,
-                "project_name": project_name,
-            }
-        elif agent_name == "assembly":
-            import tempfile
-            import zipfile
-            from pathlib import Path
-
-            # Get generated files from previous stage
-            generated_files = input_data.get("generated_files", {})
-            project_id = input_data.get("project_id", "unknown")
-            project_name = input_data.get("project_name", "my-app")
-
-            if generated_files:
-                # Create temporary directory for project files
-                temp_dir = Path(tempfile.mkdtemp())
-                project_dir = temp_dir / project_name
-                project_dir.mkdir(exist_ok=True)
-
-                # Write all generated files to disk
-                for file_path, content in generated_files.items():
-                    full_path = project_dir / file_path
-                    full_path.parent.mkdir(parents=True, exist_ok=True)
-                    full_path.write_text(content)
-
-                # Create ZIP file
-                zip_path = (
-                    Path("/home/ec2-user/T-DeveloperMVP/backend/downloads") / f"{project_id}.zip"
-                )
-                zip_path.parent.mkdir(exist_ok=True, parents=True)
-
-                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-                    for file_path in project_dir.rglob("*"):
-                        if file_path.is_file():
-                            arcname = file_path.relative_to(temp_dir)
-                            zipf.write(file_path, arcname)
-
-                # Clean up temp directory
-                shutil.rmtree(temp_dir)
-
-                return {
-                    "assembled_project": str(zip_path),
-                    "package_path": str(zip_path),
-                    "project_structure": "validated",
-                    "dependencies_resolved": True,
-                    "build_config": "optimized",
-                    "zip_created": True,
-                    "zip_size_bytes": zip_path.stat().st_size if zip_path.exists() else 0,
-                }
-            else:
-                # No files to assemble
-                return {
-                    "assembled_project": None,
-                    "package_path": None,
-                    "project_structure": "no_files",
-                    "dependencies_resolved": False,
-                    "build_config": "none",
-                    "error": "No generated files to assemble",
-                }
-        elif agent_name == "download":
-            from pathlib import Path
-
-            project_id = input_data.get("project_id", "unknown")
-            package_path = input_data.get("package_path", None)
-
-            # Check if package exists
-            if package_path and Path(package_path).exists():
-                zip_size = Path(package_path).stat().st_size
-                size_mb = round(zip_size / (1024 * 1024), 2)
-
-                return {
-                    "download_path": package_path,
-                    "download_url": f"/api/v1/download/{project_id}",
-                    "download_id": project_id,
-                    "size_mb": size_mb,
-                    "size_bytes": zip_size,
-                    "url": f"/api/v1/download/{project_id}",
-                    "success": True,
-                    "processed_data": {
-                        "download_url": f"/api/v1/download/{project_id}",
-                        "download_id": project_id,
-                        "size_mb": size_mb,
-                    },
-                }
-            else:
-                # Fallback if no package path
-                return {
-                    "download_path": f"/home/ec2-user/T-DeveloperMVP/backend/downloads/{project_id}.zip",
-                    "download_url": f"/api/v1/download/{project_id}",
-                    "download_id": project_id,
-                    "size_mb": 0,
-                    "url": f"/api/v1/download/{project_id}",
-                    "success": False,
-                    "error": "Package not found or not created",
-                }
+                logger.warning(f"AWS initialization failed: {e}")
+                self.cloudwatch = None
+                self.s3 = None
         else:
-            return {"status": "processed", "agent": agent_name}
+            self.cloudwatch = None
+            self.s3 = None
 
-    async def _verify_aws_resources(self):
-        """AWS 리소스 상태 확인"""
-        try:
-            # Step Functions 상태 머신 확인 (선택적)
-            # DynamoDB 테이블 확인 (선택적)
-            # S3 버킷 확인 (선택적)
-            logger.info("AWS resources verified")
-        except Exception as e:
-            logger.warning(f"AWS resource verification failed: {e}")
+    async def execute(self, input_data: Dict) -> PipelineResult:
+        """Execute the production pipeline"""
+        self.pipeline_id = f"pipeline_{int(time.time())}"
+        self.start_time = time.time()
 
-    async def _send_metrics(self, agent_name: str, metrics: Dict[str, Any]):
-        """CloudWatch 메트릭 전송"""
-        try:
-            if "cloudwatch" in self.aws_clients:
-                # CloudWatch 메트릭 전송 로직
-                pass
-        except Exception as e:
-            logger.warning(f"Failed to send metrics for {agent_name}: {e}")
-
-    async def execute(
-        self,
-        user_input: str,
-        project_name: Optional[str] = None,
-        project_type: Optional[str] = None,
-        features: Optional[List[str]] = None,
-        context: Optional[Dict[str, Any]] = None,
-        ws_manager=None,  # WebSocket manager for real-time updates
-    ) -> ProductionPipelineResult:
-        """프로덕션 파이프라인 실행"""
-
-        start_time = time.time()
-        errors = []
-        agent_results = []
-
-        # 메모리 스냅샷 시작
-        initial_memory = None
-        if MEMORY_OPTIMIZER_AVAILABLE and memory_optimizer:
-            if hasattr(memory_optimizer, "profiler"):
-                initial_memory = memory_optimizer.profiler.take_snapshot()
-                logger.info(f"🧠 Initial memory: {initial_memory.process_memory_mb:.1f}MB")
-
-        # 초기화 확인
-        if not self.initialized:
-            await self.initialize()
-
-        # 프로젝트 ID 생성 (dict를 문자열로 변환하여 hash)
-        import json
-
-        hash_input = (
-            json.dumps(user_input, sort_keys=True)
-            if isinstance(user_input, dict)
-            else str(user_input)
-        )
-        project_id = (
-            f"prod_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hash(hash_input) % 10000:04d}"
-        )
-
-        logger.info(f"🚀 Starting production pipeline: {project_id}")
-
-        # 파이프라인 데이터 초기화
-        pipeline_data = {
-            "user_input": user_input,
-            "project_name": project_name or "my-app",
-            "project_type": project_type or "react",
-            "features": features or [],
-            "project_id": project_id,
-            "context": context or {},
-            "timestamp": datetime.now().isoformat(),
-        }
+        logger.info(f"Starting pipeline {self.pipeline_id}")
 
         try:
-            # 9-Agent Pipeline 순차 실행
-            for i, agent_name in enumerate(self.agent_pipeline, 1):
-                stage_start = time.time()
-                logger.info(f"Stage {i}/9: {agent_name.upper()}")
-
-                # WebSocket으로 진행상황 전송
-                if ws_manager and project_id:
-                    await ws_manager.send_progress(
-                        project_id=project_id,
-                        agent_id=i,
-                        progress=0,
-                        status="processing",
-                    )
-                    await ws_manager.send_log(
-                        project_id=project_id,
-                        message=f"🔄 {agent_name.upper()} 에이전트 시작...",
-                        level="info",
-                    )
-
-                # 에이전트 실행 (재시도 로직 포함)
-                result = await self._execute_agent_with_retry(
-                    agent_name, pipeline_data, {"stage": i, "total": 9}
-                )
-
-                agent_results.append(result)
-                stage_time = time.time() - stage_start
-
-                if result.success:
-                    # 성공시 데이터 업데이트 - 모든 결과를 pipeline_data에 통합
-                    pipeline_data[f"{agent_name}_result"] = result.output_data
-
-                    # 결과 데이터를 pipeline_data에 직접 병합 (다음 에이전트가 사용할 수 있도록)
-                    if result.output_data and isinstance(result.output_data, dict):
-                        # 특정 키들을 최상위로 올림
-                        if agent_name == "nl_input":
-                            # NL Input의 주요 데이터를 최상위로
-                            for key in [
-                                "requirements",
-                                "project_type",
-                                "intent",
-                                "features",
-                            ]:
-                                if key in result.output_data:
-                                    pipeline_data[key] = result.output_data[key]
-
-                        elif agent_name == "ui_selection":
-                            # UI Selection의 프레임워크 정보를 최상위로
-                            for key in ["framework", "ui_library", "components"]:
-                                if key in result.output_data:
-                                    pipeline_data[key] = result.output_data[key]
-
-                        elif agent_name == "generation":
-                            # Generation의 생성된 파일들을 최상위로
-                            if "files" in result.output_data:
-                                pipeline_data["generated_files"] = result.output_data["files"]
-                            if "generated_files" in result.output_data:
-                                pipeline_data["generated_files"] = result.output_data[
-                                    "generated_files"
-                                ]
-
-                        elif agent_name == "assembly":
-                            # Assembly의 패키지 경로를 최상위로
-                            if "package_path" in result.output_data:
-                                pipeline_data["package_path"] = result.output_data["package_path"]
-                            if "assembled_project" in result.output_data:
-                                pipeline_data["assembled_project"] = result.output_data[
-                                    "assembled_project"
-                                ]
-
-                        elif agent_name == "download":
-                            # Download의 다운로드 정보를 최상위로
-                            if "download_url" in result.output_data:
-                                pipeline_data["download_url"] = result.output_data["download_url"]
-                                pipeline_data["download_id"] = result.output_data.get(
-                                    "download_id", ""
-                                )
-                            if "processed_data" in result.output_data:
-                                download_info = result.output_data["processed_data"]
-                                pipeline_data["download_url"] = download_info.get("download_url")
-                                pipeline_data["download_id"] = download_info.get("download_id")
-                                pipeline_data["generated_code"] = {
-                                    "status": "packaged",
-                                    "download_url": download_info.get("download_url"),
-                                    "size_mb": download_info.get("size_mb", 0),
-                                }
-
-                    logger.info(f"✅ {agent_name} completed ({stage_time:.2f}s)")
-
-                    # WebSocket으로 성공 알림
-                    if ws_manager and project_id:
-                        await ws_manager.send_progress(
-                            project_id=project_id,
-                            agent_id=i,
-                            progress=100,
-                            status="completed",
-                        )
-                        await ws_manager.send_log(
-                            project_id=project_id,
-                            message=f"✅ {agent_name.upper()} 완료 ({stage_time:.2f}초)",
-                            level="success",
-                        )
-                else:
-                    # 실패시 에러 기록하지만 계속 진행
-                    errors.append(f"{agent_name}: {result.error}")
-                    logger.warning(f"⚠️ {agent_name} failed: {result.error}")
-
-                    # WebSocket으로 실패 알림
-                    if ws_manager and project_id:
-                        await ws_manager.send_progress(
-                            project_id=project_id,
-                            agent_id=i,
-                            progress=0,
-                            status="error",
-                        )
-                        await ws_manager.send_log(
-                            project_id=project_id,
-                            message=f"⚠️ {agent_name.upper()} 실패: {result.error}",
-                            level="error",
-                        )
-
-                # 메모리 정리 (3단계마다)
-                if MEMORY_OPTIMIZER_AVAILABLE and memory_optimizer and i % 3 == 0:
-                    if hasattr(memory_optimizer, "cleanup"):
-                        memory_optimizer.cleanup()
-                    if hasattr(memory_optimizer, "profiler"):
-                        current_memory = memory_optimizer.profiler.take_snapshot()
-                        logger.info(
-                            f"🧠 Memory after stage {i}: {current_memory.process_memory_mb:.1f}MB"
-                        )
-
-                # 중요한 단계 실패시 중단 여부 결정
-                critical_agents = ["generation", "assembly"]
-                if not result.success and agent_name in critical_agents:
-                    logger.error(f"💥 Critical agent {agent_name} failed, stopping pipeline")
-                    break
-
-            # 실행 시간 계산
-            execution_time = time.time() - start_time
-
-            # 성공 여부 판정 (7/9 이상 성공)
-            successful_agents = sum(1 for r in agent_results if r.success)
-            success = successful_agents >= 7 and len(errors) < 3
-
-            # 프로젝트 경로 생성 (generation 성공시)
-            project_path = None
-            generation_result = next(
-                (r for r in agent_results if r.agent_name == "generation"), None
-            )
-            if generation_result and generation_result.success:
-                project_path = f"/tmp/{project_id}"
-
-            # 최종 메모리 스냅샷
-            final_memory = None
-            memory_stats = {}
-            if MEMORY_OPTIMIZER_AVAILABLE and memory_optimizer and initial_memory:
-                if hasattr(memory_optimizer, "profiler"):
-                    final_memory = memory_optimizer.profiler.take_snapshot()
-                    memory_diff = final_memory.process_memory_mb - initial_memory.process_memory_mb
-                else:
-                    memory_diff = 0
-                memory_stats = {
-                    "initial_memory_mb": initial_memory.process_memory_mb,
-                    "final_memory_mb": final_memory.process_memory_mb,
-                    "memory_diff_mb": memory_diff,
-                    "peak_memory_mb": getattr(memory_optimizer, "peak_memory_mb", 0),
-                    "gc_collections": getattr(memory_optimizer, "get_gc_stats", lambda: {})(),
-                }
-                logger.info(
-                    f"🧠 Final memory: {final_memory.process_memory_mb:.1f}MB ({memory_diff:+.1f}MB)"
-                )
-
-            # 모니터링 데이터 수집
-            monitoring_data = {
-                "total_execution_time": execution_time,
-                "successful_agents": successful_agents,
-                "failed_agents": len(agent_results) - successful_agents,
-                "agent_timings": {r.agent_name: r.execution_time for r in agent_results},
-                "pipeline_efficiency": successful_agents / len(self.agent_pipeline),
-                "memory_stats": memory_stats,
+            # Initialize pipeline state
+            pipeline_state = {
+                "input": input_data,
+                "current_stage": 0,
+                "stage_results": {},
+                "metadata": {"start_time": self.start_time, "pipeline_id": self.pipeline_id},
             }
+
+            # Execute stages
+            stages_completed = []
+
+            for i, stage_name in enumerate(self.stages):
+                logger.info(f"Executing stage: {stage_name}")
+
+                try:
+                    # Execute stage with timeout
+                    stage_result = await asyncio.wait_for(
+                        self._execute_stage(stage_name, pipeline_state), timeout=self.config.timeout
+                    )
+
+                    pipeline_state["stage_results"][stage_name] = stage_result
+                    stages_completed.append(stage_name)
+
+                    # Update progress
+                    await self._update_progress(i + 1, len(self.stages))
+
+                except asyncio.TimeoutError:
+                    error_msg = f"Stage {stage_name} timed out"
+                    logger.error(error_msg)
+                    return self._create_error_result(stages_completed, error_msg)
+
+                except Exception as e:
+                    error_msg = f"Stage {stage_name} failed: {str(e)}"
+                    logger.error(error_msg)
+
+                    # Retry logic
+                    if self.config.retry_count > 0:
+                        for retry in range(self.config.retry_count):
+                            logger.info(f"Retrying {stage_name}, attempt {retry + 1}")
+                            try:
+                                stage_result = await asyncio.wait_for(
+                                    self._execute_stage(stage_name, pipeline_state),
+                                    timeout=self.config.timeout,
+                                )
+                                pipeline_state["stage_results"][stage_name] = stage_result
+                                stages_completed.append(stage_name)
+                                break
+                            except Exception as retry_e:
+                                if retry == self.config.retry_count - 1:
+                                    return self._create_error_result(stages_completed, str(retry_e))
+                                continue
+                    else:
+                        return self._create_error_result(stages_completed, error_msg)
+
+            # Create success result
+            execution_time = time.time() - self.start_time
+            final_output = self._compile_final_output(pipeline_state)
+
+            result = PipelineResult(
+                success=True,
+                pipeline_id=self.pipeline_id,
+                execution_time=execution_time,
+                stages_completed=stages_completed,
+                final_output=final_output,
+                metrics=self._collect_metrics(pipeline_state),
+            )
+
+            # Send metrics to CloudWatch
+            if self.config.enable_metrics and self.cloudwatch:
+                await self._send_metrics(result)
 
             logger.info(
-                f"🎯 Production pipeline completed: {successful_agents}/{len(self.agent_pipeline)} agents successful ({execution_time:.2f}s)"
+                f"Pipeline {self.pipeline_id} completed successfully in {execution_time:.2f}s"
             )
-
-            return ProductionPipelineResult(
-                success=success,
-                project_id=project_id,
-                project_path=project_path,
-                metadata={
-                    "pipeline_data": pipeline_data,
-                    "agent_results": [asdict(r) for r in agent_results],
-                    "timestamp": datetime.now().isoformat(),
-                    "version": "production-v1.0",
-                },
-                errors=errors,
-                execution_time=execution_time,
-                aws_resources=self.aws_clients.keys() if AWS_AVAILABLE else None,
-                monitoring_data=monitoring_data,
-            )
+            return result
 
         except Exception as e:
-            execution_time = time.time() - start_time
-            logger.error(f"💥 Production pipeline failed: {e}")
+            error_msg = f"Pipeline execution failed: {str(e)}"
+            logger.error(error_msg)
+            return self._create_error_result([], error_msg)
 
-            return ProductionPipelineResult(
-                success=False,
-                project_id=project_id,
-                project_path=None,
-                metadata={"error": str(e), "execution_time": execution_time},
-                errors=[str(e)],
-                execution_time=execution_time,
-            )
+    async def _execute_stage(self, stage_name: str, pipeline_state: Dict) -> Dict:
+        """Execute individual pipeline stage"""
+        # Import agents dynamically to reduce memory usage
+        agent_map = {
+            "nl_input": "src.agents.unified.nl_input.agent.NLInputAgent",
+            "ui_selection": "src.agents.unified.ui_selection.agent.UISelectionAgent",
+            "parser": "src.agents.unified.parser.agent.ParserAgent",
+            "component_decision": "src.agents.unified.component_decision.agent.ComponentDecisionAgent",
+            "match_rate": "src.agents.unified.match_rate.agent.MatchRateAgent",
+            "search": "src.agents.unified.search.agent.SearchAgent",
+            "generation": "src.agents.unified.generation.agent.GenerationAgent",
+            "assembly": "src.agents.unified.assembly.agent.AssemblyAgent",
+            "download": "src.agents.unified.download.agent.DownloadAgent",
+        }
 
-    async def _execute_agent_with_retry(
-        self, agent_name: str, data: Dict[str, Any], context: Dict[str, Any]
-    ) -> AgentExecutionResult:
-        """재시도 로직이 포함된 에이전트 실행"""
+        if stage_name not in agent_map:
+            raise ValueError(f"Unknown stage: {stage_name}")
 
-        config = self.agent_configs.get(agent_name, {})
-        retry_count = config.get("retry_count", 1)
-        timeout = config.get("timeout", 30)
-
-        # 실제 에이전트 우선, 없으면 프록시 사용
-        real_agent = self.agents.get(agent_name)
-        agent_proxy = self.agent_proxies.get(agent_name)
-
-        if not real_agent and not agent_proxy:
-            return AgentExecutionResult(
-                agent_name=agent_name,
-                success=False,
-                execution_time=0,
-                output_data=None,
-                error="Neither real agent nor proxy found",
-            )
-
-        for attempt in range(retry_count + 1):
-            try:
-                # 실제 에이전트 또는 프록시 실행
-                if real_agent:
-                    # 실제 에이전트 실행
-                    result = await self._execute_real_agent(
-                        real_agent, agent_name, data, context, timeout
-                    )
-                else:
-                    # 프록시 실행
-                    result = await asyncio.wait_for(agent_proxy(data, context), timeout=timeout)
-
-                if result.success:
-                    return result
-                else:
-                    logger.warning(
-                        f"Agent {agent_name} attempt {attempt + 1} failed: {result.error}"
-                    )
-                    if attempt == retry_count:
-                        return result
-
-            except asyncio.TimeoutError:
-                error_msg = f"Agent {agent_name} timed out after {timeout}s"
-                logger.error(error_msg)
-                if attempt == retry_count:
-                    return AgentExecutionResult(
-                        agent_name=agent_name,
-                        success=False,
-                        execution_time=timeout,
-                        output_data=None,
-                        error=error_msg,
-                    )
-            except Exception as e:
-                error_msg = f"Agent {agent_name} execution error: {str(e)}"
-                logger.error(error_msg)
-                if attempt == retry_count:
-                    return AgentExecutionResult(
-                        agent_name=agent_name,
-                        success=False,
-                        execution_time=0,
-                        output_data=None,
-                        error=error_msg,
-                    )
-
-        # 모든 재시도 실패
-        return AgentExecutionResult(
-            agent_name=agent_name,
-            success=False,
-            execution_time=0,
-            output_data=None,
-            error="All retry attempts failed",
-        )
-
-    async def _execute_real_agent(
-        self,
-        agent_instance: Any,
-        agent_name: str,
-        data: Dict[str, Any],
-        context: Dict[str, Any],
-        timeout: int,
-    ) -> AgentExecutionResult:
-        """실제 에이전트 실행 with Data Transformer"""
-
-        start_time = time.time()
+        # Dynamic import and execution
+        module_path = agent_map[stage_name]
+        module_name, class_name = module_path.rsplit(".", 1)
 
         try:
-            # 에이전트 초기화 (필요한 경우)
-            if hasattr(agent_instance, "initialize") and not getattr(
-                agent_instance, "_initialized", False
-            ):
-                await agent_instance.initialize()
-                agent_instance._initialized = True
+            module = __import__(module_name, fromlist=[class_name])
+            agent_class = getattr(module, class_name)
+            agent = agent_class()
 
-            # 에이전트 실행 (다양한 인터페이스 지원)
-            if hasattr(agent_instance, "process"):
-                # 에이전트가 기대하는 형식으로 데이터 준비
-                # 간단한 래퍼로 context 추가 (필수 속성)
-                wrapped_data = {
-                    "data": data,
-                    "context": {
-                        "pipeline_id": context.get("pipeline_id", f"pipeline_{int(time.time())}"),
-                        "project_id": data.get("project_id", "unknown"),
-                        "timestamp": datetime.now().isoformat(),
-                    },
-                }
+            # Prepare input for this stage
+            stage_input = self._prepare_stage_input(stage_name, pipeline_state)
 
-                # Data Transformer를 사용해서 데이터 형식 자동 변환
-                input_data = wrapped_data  # 기본값
-                transformer_available = False
+            # Execute agent
+            result = await agent.process(stage_input)
 
-                try:
-                    from src.agents.data_transformer.agent import data_transformer
-
-                    transformer_available = True
-                    logger.info(f"🔄 Data Transformer loaded for {agent_name}")
-
-                    # 먼저 데이터 변환 시도
-                    transform_result = await data_transformer.transform_for_agent(
-                        wrapped_data, agent_name
-                    )
-
-                    if transform_result.success:
-                        # 변환된 데이터로 에이전트 실행
-                        input_data = transform_result.transformed_data
-                        logger.info(
-                            f"✨ Data transformed for {agent_name}: {transform_result.original_format} → {transform_result.target_format}"
-                        )
-                    else:
-                        # 변환 실패 시 원본 데이터 사용
-                        input_data = wrapped_data
-                        logger.warning(
-                            f"⚠️ Data transformation failed for {agent_name}, using original"
-                        )
-                except ImportError as import_err:
-                    logger.warning(f"⚠️ Data Transformer not available: {import_err}")
-                    transformer_available = False
-                except Exception as e:
-                    logger.error(f"❌ Data Transformer error for {agent_name}: {e}")
-                    transformer_available = False
-
-                # 에이전트 실행
-                try:
-                    result = await asyncio.wait_for(
-                        agent_instance.process(input_data), timeout=timeout
-                    )
-                except AttributeError as attr_error:
-                    # 속성 에러 발생 시 auto_fix 시도
-                    logger.warning(f"AttributeError in {agent_name}: {attr_error}")
-
-                    if transformer_available:
-                        fixed_data = await data_transformer.auto_fix(
-                            attr_error, input_data, agent_name
-                        )
-
-                        if fixed_data:
-                            logger.info(f"🔧 Auto-fixed data format for {agent_name}")
-                            result = await asyncio.wait_for(
-                                agent_instance.process(fixed_data), timeout=timeout
-                            )
-                        else:
-                            # auto_fix도 실패하면 fallback wrapper 사용
-                            try:
-                                from src.agents.unified.fallback_wrapper import safe_agent_execute
-
-                                result = await asyncio.wait_for(
-                                    safe_agent_execute(agent_instance, wrapped_data),
-                                    timeout=timeout,
-                                )
-                            except ImportError:
-                                raise attr_error  # 원래 에러 재발생
-                    else:
-                        # Data Transformer 없으면 fallback wrapper 사용
-                        try:
-                            from src.agents.unified.fallback_wrapper import safe_agent_execute
-
-                            result = await asyncio.wait_for(
-                                safe_agent_execute(agent_instance, wrapped_data),
-                                timeout=timeout,
-                            )
-                        except ImportError:
-                            raise attr_error  # 원래 에러 재발생
-
-                execution_time = time.time() - start_time
-
-                # Handle different result formats
-                success = getattr(result, "success", True)
-
-                # Extract output data from various result formats
-                if hasattr(result, "data"):
-                    output_data = result.data
-                elif hasattr(result, "output_data"):
-                    output_data = result.output_data
-                elif hasattr(result, "__dict__") and not hasattr(result, "data"):
-                    # If it's an object without data attribute, use its dict
-                    output_data = {
-                        k: v for k, v in result.__dict__.items() if not k.startswith("_")
-                    }
-                elif isinstance(result, dict):
-                    output_data = result
-                else:
-                    output_data = {"result": str(result)}
-
-                # Extract error if present
-                error = getattr(result, "error", None)
-
-                return AgentExecutionResult(
-                    agent_name=agent_name,
-                    success=success,
-                    execution_time=execution_time,
-                    output_data=output_data if success else None,
-                    error=error if not success else None,
-                )
-
-            elif hasattr(agent_instance, "execute"):
-                # 레거시 인터페이스
-                result = await asyncio.wait_for(agent_instance.execute(data), timeout=timeout)
-
-                execution_time = time.time() - start_time
-                return AgentExecutionResult(
-                    agent_name=agent_name,
-                    success=True,
-                    execution_time=execution_time,
-                    output_data=result,
-                )
-
-            else:
-                # 인터페이스가 없는 경우
-                execution_time = time.time() - start_time
-                return AgentExecutionResult(
-                    agent_name=agent_name,
-                    success=False,
-                    execution_time=execution_time,
-                    output_data=None,
-                    error=f"Agent {agent_name} has no compatible interface (process/execute)",
-                )
+            return {
+                "success": True,
+                "output": result,
+                "execution_time": time.time() - pipeline_state["metadata"]["start_time"],
+            }
 
         except Exception as e:
-            execution_time = time.time() - start_time
-            logger.error(f"Real agent {agent_name} execution failed: {e}")
-            return AgentExecutionResult(
-                agent_name=agent_name,
-                success=False,
-                execution_time=execution_time,
-                output_data=None,
-                error=f"Execution failed: {str(e)}",
+            return {
+                "success": False,
+                "error": str(e),
+                "execution_time": time.time() - pipeline_state["metadata"]["start_time"],
+            }
+
+    def _prepare_stage_input(self, stage_name: str, pipeline_state: Dict) -> Any:
+        """Prepare input data for specific stage"""
+        if stage_name == "nl_input":
+            return pipeline_state["input"]
+
+        # For subsequent stages, use output from previous stage
+        stage_results = pipeline_state["stage_results"]
+
+        if stage_name == "ui_selection":
+            return stage_results.get("nl_input", {}).get("output", {})
+
+        # Chain outputs from previous stages
+        prev_stage_index = self.stages.index(stage_name) - 1
+        if prev_stage_index >= 0:
+            prev_stage = self.stages[prev_stage_index]
+            return stage_results.get(prev_stage, {}).get("output", {})
+
+        return {}
+
+    def _compile_final_output(self, pipeline_state: Dict) -> Dict:
+        """Compile final output from all stages"""
+        final_output = {
+            "pipeline_id": self.pipeline_id,
+            "execution_time": time.time() - self.start_time,
+            "stages": {},
+        }
+
+        # Collect outputs from all stages
+        for stage_name, stage_result in pipeline_state["stage_results"].items():
+            if stage_result.get("success"):
+                final_output["stages"][stage_name] = stage_result["output"]
+
+        # The final output is from the download stage
+        download_result = pipeline_state["stage_results"].get("download", {})
+        if download_result.get("success"):
+            final_output.update(download_result["output"])
+
+        return final_output
+
+    def _collect_metrics(self, pipeline_state: Dict) -> Dict:
+        """Collect execution metrics"""
+        metrics = {
+            "total_execution_time": time.time() - self.start_time,
+            "stages_executed": len(pipeline_state["stage_results"]),
+            "successful_stages": sum(
+                1 for r in pipeline_state["stage_results"].values() if r.get("success")
+            ),
+            "stage_timings": {},
+        }
+
+        for stage_name, result in pipeline_state["stage_results"].items():
+            metrics["stage_timings"][stage_name] = result.get("execution_time", 0)
+
+        return metrics
+
+    async def _update_progress(self, completed: int, total: int):
+        """Update pipeline progress"""
+        progress = (completed / total) * 100
+        logger.info(f"Pipeline progress: {progress:.1f}% ({completed}/{total})")
+
+    async def _send_metrics(self, result: PipelineResult):
+        """Send metrics to CloudWatch"""
+        if not self.cloudwatch:
+            return
+
+        try:
+            metrics_data = [
+                {
+                    "MetricName": "PipelineExecutionTime",
+                    "Value": result.execution_time,
+                    "Unit": "Seconds",
+                    "Dimensions": [{"Name": "PipelineId", "Value": result.pipeline_id}],
+                },
+                {
+                    "MetricName": "StagesCompleted",
+                    "Value": len(result.stages_completed),
+                    "Unit": "Count",
+                    "Dimensions": [{"Name": "PipelineId", "Value": result.pipeline_id}],
+                },
+            ]
+
+            self.cloudwatch.put_metric_data(
+                Namespace="T-Developer/Production", MetricData=metrics_data
             )
+        except Exception as e:
+            logger.warning(f"Failed to send metrics: {e}")
+
+    def _create_error_result(self, stages_completed: List[str], error_msg: str) -> PipelineResult:
+        """Create error result"""
+        execution_time = time.time() - self.start_time if self.start_time else 0
+
+        return PipelineResult(
+            success=False,
+            pipeline_id=self.pipeline_id or "unknown",
+            execution_time=execution_time,
+            stages_completed=stages_completed,
+            final_output={},
+            error=error_msg,
+        )
 
 
-# 싱글톤 인스턴스
-production_pipeline = ProductionECSPipeline()
+# Convenience functions
+async def run_production_pipeline(
+    input_data: Dict, config: PipelineConfig = None
+) -> PipelineResult:
+    """Run production pipeline with given input"""
+    pipeline = ProductionPipeline(config)
+    return await pipeline.execute(input_data)
+
+
+def create_pipeline_config(**kwargs) -> PipelineConfig:
+    """Create pipeline configuration"""
+    return PipelineConfig(**kwargs)

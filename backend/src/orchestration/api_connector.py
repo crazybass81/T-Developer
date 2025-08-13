@@ -75,14 +75,23 @@ class APIConnector:
         url = f"{self.base_url}/agents/{request.agent_name}/{request.endpoint}"
         start_time = time.time()
 
+        # Prepare request kwargs based on method
+        request_kwargs = {
+            "method": request.method,
+            "url": url,
+            "headers": request.headers or {},
+            "timeout": aiohttp.ClientTimeout(total=request.timeout),
+        }
+
+        # Only add body for methods that support it (exclude GET, HEAD, DELETE typically)
+        if request.method.upper() not in ["GET", "HEAD", "DELETE"] and request.data:
+            request_kwargs["json"] = request.data
+        elif request.method.upper() == "GET" and request.data:
+            # For GET requests, add data as query params instead of body
+            request_kwargs["params"] = request.data
+
         try:
-            async with self.session.request(
-                method=request.method,
-                url=url,
-                json=request.data,
-                headers=request.headers or {},
-                timeout=aiohttp.ClientTimeout(total=request.timeout),
-            ) as response:
+            async with self.session.request(**request_kwargs) as response:
                 latency = (time.time() - start_time) * 1000
 
                 if response.status == 200:
@@ -169,7 +178,17 @@ class APIConnector:
     async def batch_call(self, requests: List[APIRequest]) -> List[APIResponse]:
         """Execute multiple requests in parallel"""
         tasks = [self.call_agent(req) for req in requests]
-        return await asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Normalize exceptions to APIResponse for consistent return type
+        normalized_results = []
+        for result in results:
+            if isinstance(result, Exception):
+                normalized_results.append(APIResponse(status=500, error=str(result), latency_ms=0))
+            else:
+                normalized_results.append(result)
+
+        return normalized_results
 
     def get_metrics(self, agent_key: Optional[str] = None) -> Dict[str, Any]:
         """Get connector metrics"""
