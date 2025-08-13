@@ -186,7 +186,14 @@
       "Bash(PORT=3001 npm start)",
       "Bash(git checkout:*)",
       "Bash(python -m pytest tests/test_ai_capability_analyzer.py -v --tb=short)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(python -m pytest tests/evolution/test_engine.py::TestEvolutionEngine::test_engine_initialization -v)",
+      "Bash(python -m pytest tests/evolution/test_engine.py::TestEvolutionEngine::test_memory_constraint_validation -v)",
+      "Bash(python -m pytest tests/evolution/test_safety.py::TestEvolutionSafety::test_infinite_loop_detection -v)",
+      "Bash(python -m pytest tests/evolution/test_registry.py::TestAgentRegistry::test_agent_creation -v)",
+      "Bash(python -m pytest tests/evolution/ -v --tb=short)",
+      "Bash(python -m pytest tests/evolution/test_engine.py::TestEvolutionEngine::test_crossover_operation tests/evolution/test_safety.py::TestEvolutionSafety::test_pattern_extraction tests/evolution/test_registry.py::TestAgentRegistry::test_persistence -v)",
+      "Bash(python:*)"
     ],
     "deny": []
   }

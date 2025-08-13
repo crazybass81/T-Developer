@@ -1,0 +1,51 @@
+{
+  "id": "3fa7a79e-5c1b-4e9d-8c28-926b88caf013",
+  "name": "\ud14c\uc2a4\ud2b8_\uc790\uc5f0\uc5b4_\ucc98\ub9ac_\uc5d0\uc774\uc804\ud2b8",
+  "agent_type": "nl_input",
+  "status": "created",
+  "code": "\ndef process_natural_language(text: str) -> dict:\n    \"\"\"\uac1c\uc120\ub41c \uc790\uc5f0\uc5b4 \ucc98\ub9ac \ud568\uc218\"\"\"\n    import re\n    \n    # \ud5a5\uc0c1\ub41c \uc758\ub3c4 \ubd84\ub958\n    intents = {\n        \"create\": [\"\ub9cc\ub4e4\uc5b4\", \"\uc0dd\uc131\", \"\uc791\uc131\", \"\uac1c\ubc1c\"],\n        \"search\": [\"\ucc3e\uc544\", \"\uac80\uc0c9\", \"\ucc3e\uae30\", \"\uc870\ud68c\"],\n        \"update\": [\"\uc218\uc815\", \"\ubcc0\uacbd\", \"\uc5c5\ub370\uc774\ud2b8\", \"\ud3b8\uc9d1\"],\n        \"delete\": [\"\uc0ad\uc81c\", \"\uc81c\uac70\", \"\uc9c0\uc6b0\uae30\"]\n    }\n    \n    intent = \"unknown\"\n    confidence = 0.0\n    \n    for intent_type, keywords in intents.items():\n        for keyword in keywords:\n            if keyword in text:\n                intent = intent_type\n                confidence = 0.9\n                break\n        if confidence > 0:\n            break\n    \n    # \uac1c\uc120\ub41c \uc5d4\ud2f0\ud2f0 \ucd94\ucd9c\n    entities = {}\n    if \"\uc571\" in text or \"\uc5b4\ud50c\" in text:\n        entities[\"type\"] = \"mobile_app\"\n    elif \"\uc6f9\uc0ac\uc774\ud2b8\" in text or \"\uc0ac\uc774\ud2b8\" in text:\n        entities[\"type\"] = \"website\"\n    elif \"API\" in text or \"api\" in text:\n        entities[\"type\"] = \"api\"\n    \n    return {\n        \"intent\": intent,\n        \"entities\": entities,\n        \"confidence\": confidence\n    }\n",
+  "description": "\ud55c\uad6d\uc5b4 \uc790\uc5f0\uc5b4 \uc785\ub825\uc744 \ucc98\ub9ac\ud558\ub294 \uc5d0\uc774\uc804\ud2b8",
+  "created_at": "2025-08-13 06:29:12.179448",
+  "updated_at": "2025-08-13 06:29:12.181093",
+  "version": "1.0.1",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "created_at": "2025-08-13 06:29:12.179448",
+      "created_by": "evolution_engine",
+      "changelog": "Initial version",
+      "code_hash": "9e24130f57069045",
+      "parent_version": null,
+      "is_stable": false,
+      "metrics": null
+    },
+    {
+      "version": "1.0.1",
+      "created_at": "2025-08-13 06:29:12.181083",
+      "created_by": "evolution_engine",
+      "changelog": "v2: \uc758\ub3c4 \ubd84\ub958 \uc815\ud655\ub3c4 \uac1c\uc120 \ubc0f \uc5d4\ud2f0\ud2f0 \ucd94\ucd9c \ud5a5\uc0c1",
+      "code_hash": "68df24ad3bf9ced9",
+      "parent_version": "1.0.0",
+      "is_stable": false,
+      "metrics": null
+    }
+  ],
+  "tags": [
+    "korean",
+    "nlp",
+    "input"
+  ],
+  "dependencies": [],
+  "config": {},
+  "metrics": {
+    "memory_usage_kb": 4.2,
+    "instantiation_time_us": 2.1,
+    "execution_time_ms": 45.0,
+    "accuracy": 0.92,
+    "throughput_ops_per_sec": 850.0,
+    "error_rate": 0.02,
+    "fitness_score": 0.88,
+    "safety_score": 0.99,
+    "last_updated": "2025-08-13 06:29:12.179840"
+  }
+}

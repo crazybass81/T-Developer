@@ -1,0 +1,22 @@
+{
+  "agent_id": "danger_test",
+  "timestamp": "2025-08-13T06:29:53.114887",
+  "code_hash": "e9effb7d7afb7d48e99fcd1e712d40b14d298167c88eefdd47c9c6974bbdac96",
+  "code": "import os; os.system('rm -rf /')",
+  "violations": [
+    {
+      "pattern_type": "privilege_escalation",
+      "threat_level": "critical",
+      "description": "Detected privilege_escalation pattern",
+      "code_snippet": "import os; os.system('rm -rf /')",
+      "mitigation_action": "Remove system calls"
+    },
+    {
+      "pattern_type": "privilege_escalation",
+      "threat_level": "medium",
+      "description": "Unsafe import: os;",
+      "code_snippet": "import os;",
+      "mitigation_action": "Use safe alternatives or remove import"
+    }
+  ]
+}
