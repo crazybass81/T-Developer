@@ -14,23 +14,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Engine configuration based on environment
-ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
-TESTING = os.getenv('TESTING', 'false').lower() == 'true'
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+TESTING = os.getenv("TESTING", "false").lower() == "true"
 
 # Database URL configuration
 if TESTING:
     # Use SQLite for testing (no external dependencies)
-    DATABASE_URL = 'sqlite:///./test.db'
-    ASYNC_DATABASE_URL = 'sqlite+aiosqlite:///./test.db'
+    DATABASE_URL = "sqlite:///./test.db"
+    ASYNC_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 else:
     DATABASE_URL = os.getenv(
-        'DATABASE_URL',
-        'postgresql://postgres:postgres@localhost:5432/t_developer'
+        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/t_developer"
     )
     # Add async support
-    ASYNC_DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://')
+    ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
-if ENVIRONMENT == 'production':
+if ENVIRONMENT == "production":
     # Production settings with connection pooling
     engine = create_engine(
         DATABASE_URL,
@@ -42,8 +41,10 @@ if ENVIRONMENT == 'production':
         echo=False,
         connect_args={
             "connect_timeout": 10,
-            "options": "-c statement_timeout=30000"  # 30 seconds statement timeout
-        } if not TESTING else {}
+            "options": "-c statement_timeout=30000",  # 30 seconds statement timeout
+        }
+        if not TESTING
+        else {},
     )
 elif TESTING:
     # Testing with SQLite
@@ -51,7 +52,7 @@ elif TESTING:
         DATABASE_URL,
         poolclass=NullPool,
         echo=False,
-        connect_args={"check_same_thread": False}  # SQLite specific
+        connect_args={"check_same_thread": False},  # SQLite specific
     )
 else:
     # Development settings
@@ -62,9 +63,7 @@ else:
         max_overflow=10,
         pool_pre_ping=True,
         echo=True,  # Log SQL queries in development
-        connect_args={
-            "connect_timeout": 10
-        }
+        connect_args={"connect_timeout": 10},
     )
 
 # Session factory
@@ -72,7 +71,7 @@ SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine,
-    expire_on_commit=False  # Don't expire objects after commit
+    expire_on_commit=False,  # Don't expire objects after commit
 )
 
 # Metadata with naming convention for migrations
@@ -82,18 +81,19 @@ metadata = MetaData(
         "uq": "uq_%(table_name)s_%(column_0_name)s",
         "ck": "ck_%(table_name)s_%(constraint_name)s",
         "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-        "pk": "pk_%(table_name)s"
+        "pk": "pk_%(table_name)s",
     }
 )
 
 # Declarative base
 Base = declarative_base(metadata=metadata)
 
+
 # Event listeners for connection management
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_conn, connection_record):
     """Set connection parameters"""
-    if 'sqlite' in DATABASE_URL:
+    if "sqlite" in DATABASE_URL:
         # SQLite specific settings
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
@@ -104,10 +104,11 @@ def set_sqlite_pragma(dbapi_conn, connection_record):
         cursor.execute("SET timezone = 'UTC'")
         cursor.close()
 
+
 @event.listens_for(engine, "checkout")
 def ping_connection(dbapi_conn, connection_record, connection_proxy):
     """Ping connection to verify it's still valid"""
-    if ENVIRONMENT == 'production':
+    if ENVIRONMENT == "production":
         try:
             # Test connection
             cursor = dbapi_conn.cursor()
@@ -118,11 +119,12 @@ def ping_connection(dbapi_conn, connection_record, connection_proxy):
             logger.warning(f"Database connection lost: {e}")
             raise
 
+
 # Dependency for FastAPI
 def get_db() -> Generator[Session, None, None]:
     """
     Database session dependency for FastAPI
-    
+
     Usage:
         @app.get("/users")
         def get_users(db: Session = Depends(get_db)):
@@ -138,23 +140,26 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         db.close()
 
+
 # Async session support (for future)
 try:
-    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-    
+    from sqlalchemy.ext.asyncio import (
+        create_async_engine,
+        AsyncSession,
+        async_sessionmaker,
+    )
+
     async_engine = create_async_engine(
         ASYNC_DATABASE_URL,
-        echo=ENVIRONMENT == 'development',
+        echo=ENVIRONMENT == "development",
         pool_pre_ping=True,
-        pool_size=20 if ENVIRONMENT == 'production' else 5
+        pool_size=20 if ENVIRONMENT == "production" else 5,
     )
-    
+
     AsyncSessionLocal = async_sessionmaker(
-        async_engine,
-        class_=AsyncSession,
-        expire_on_commit=False
+        async_engine, class_=AsyncSession, expire_on_commit=False
     )
-    
+
     async def get_async_db() -> AsyncSession:
         """Async database session dependency"""
         async with AsyncSessionLocal() as session:
@@ -166,27 +171,30 @@ try:
                 raise
             finally:
                 await session.close()
-                
+
 except ImportError:
     # asyncpg not installed
     async_engine = None
     AsyncSessionLocal = None
     get_async_db = None
 
+
 # Database initialization
 def init_db():
     """Initialize database tables"""
     # Import all models to register them with Base
     from . import models
-    
+
     # Create all tables
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables created successfully")
+
 
 def drop_db():
     """Drop all database tables (use with caution!)"""
     Base.metadata.drop_all(bind=engine)
     logger.warning("All database tables dropped!")
+
 
 # Health check
 def check_database_health() -> bool:

@@ -53,29 +53,29 @@ class YourAgent(BaseAgent):
     """
     Production-ready agent implementation
     """
-    
+
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__(config)
         self.agent_type = "your_agent"
         self.version = "1.0.0"
-    
+
     async def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Main processing method"""
         try:
             # Input validation
             validated_input = await self.validate_input(input_data)
-            
+
             # Core processing logic
             result = await self._execute_core_logic(validated_input)
-            
+
             # Output validation
             validated_output = await self.validate_output(result)
-            
+
             return validated_output
-            
+
         except Exception as e:
             return await self.handle_error(e, input_data)
-    
+
     async def _execute_core_logic(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Implement agent-specific logic here"""
         raise NotImplementedError("Must implement core logic")
@@ -165,7 +165,7 @@ ui_selection/
 **Key Features**:
 - **API Contract Generation**: OpenAPI/Swagger specifications
 - **Database Schema Design**: ERD and schema generation
-- **User Story Creation**: Automated Agile story generation  
+- **User Story Creation**: Automated Agile story generation
 - **Constraint Analysis**: Technical and business constraints
 - **Dependency Resolution**: Package and service dependencies
 
@@ -299,7 +299,7 @@ bus = MessageBus()
 # Send message between agents
 await bus.send_message(
     from_agent="nl_input",
-    to_agent="ui_selection", 
+    to_agent="ui_selection",
     message_type="requirements_processed",
     data={
         "requirements": [...],
@@ -415,14 +415,14 @@ from agents.ecs_integrated import create_agent_pipeline
 @pytest.mark.asyncio
 async def test_complete_pipeline():
     pipeline = create_agent_pipeline()
-    
+
     input_data = {
         "query": "Create a React todo app",
         "preferences": {"database": "postgresql"}
     }
-    
+
     result = await pipeline.execute(input_data)
-    
+
     assert result["status"] == "success"
     assert "download_url" in result
     assert result["confidence"] > 0.8
@@ -436,20 +436,20 @@ from agents.ecs_integrated.nl_input.main import NLInputAgent
 
 async def performance_test():
     agent = NLInputAgent()
-    
+
     # Test 100 concurrent requests
     tasks = []
     start_time = time.time()
-    
+
     for i in range(100):
         task = agent.process({"query": f"Test query {i}"})
         tasks.append(task)
-    
+
     results = await asyncio.gather(*tasks)
-    
+
     end_time = time.time()
     duration = end_time - start_time
-    
+
     print(f"Processed 100 requests in {duration:.2f}s")
     print(f"Average: {duration/100:.3f}s per request")
 ```
@@ -480,7 +480,7 @@ from pydantic import BaseModel, validator
 class NLInputRequest(BaseModel):
     query: str
     attachments: List[Dict] = []
-    
+
     @validator('query')
     def validate_query(cls, v):
         if len(v.strip()) < 10:
@@ -609,20 +609,20 @@ Response:
 ```python
 # Example agent method with proper formatting
 async def process_requirements(
-    self, 
-    requirements: List[str], 
+    self,
+    requirements: List[str],
     context: Optional[Dict[str, Any]] = None
 ) -> ProcessingResult:
     """
     Process user requirements with context awareness.
-    
+
     Args:
         requirements: List of requirement strings
         context: Optional context information
-        
+
     Returns:
         ProcessingResult with structured data
-        
+
     Raises:
         ValidationError: If requirements are invalid
         ProcessingError: If processing fails
@@ -630,7 +630,7 @@ async def process_requirements(
     try:
         validated_reqs = await self._validate_requirements(requirements)
         processed_data = await self._process_with_context(
-            validated_reqs, 
+            validated_reqs,
             context or {}
         )
         return ProcessingResult(

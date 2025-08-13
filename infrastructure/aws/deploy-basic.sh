@@ -73,7 +73,7 @@ Parameters:
     Type: String
     Default: development
     AllowedValues: [development, staging, production]
-  
+
   ProjectName:
     Type: String
     Default: t-developer-mvp
@@ -319,43 +319,43 @@ Outputs:
     Value: !Ref ProjectsBucket
     Export:
       Name: !Sub "${AWS::StackName}-projects-bucket"
-  
+
   AssetsBucketName:
     Description: Name of the assets S3 bucket
     Value: !Ref AssetsBucket
     Export:
       Name: !Sub "${AWS::StackName}-assets-bucket"
-  
+
   AssetsBucketWebsiteURL:
     Description: URL of the assets bucket website
     Value: !GetAtt AssetsBucket.WebsiteURL
     Export:
       Name: !Sub "${AWS::StackName}-assets-website-url"
-  
+
   ProjectsTableName:
     Description: Name of the DynamoDB projects table
     Value: !Ref ProjectsTable
     Export:
       Name: !Sub "${AWS::StackName}-projects-table"
-  
+
   LambdaExecutionRoleArn:
     Description: ARN of the Lambda execution role
     Value: !GetAtt LambdaExecutionRole.Arn
     Export:
       Name: !Sub "${AWS::StackName}-lambda-role-arn"
-  
+
   ECSTaskRoleArn:
     Description: ARN of the ECS task role
     Value: !GetAtt ECSTaskRole.Arn
     Export:
       Name: !Sub "${AWS::StackName}-ecs-task-role-arn"
-  
+
   ECSExecutionRoleArn:
     Description: ARN of the ECS execution role
     Value: !GetAtt ECSExecutionRole.Arn
     Export:
       Name: !Sub "${AWS::StackName}-ecs-execution-role-arn"
-  
+
   ECSSecurityGroupId:
     Description: ID of the ECS security group
     Value: !Ref ECSSecurityGroup

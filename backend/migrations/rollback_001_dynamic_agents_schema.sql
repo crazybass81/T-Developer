@@ -69,16 +69,16 @@ DROP TABLE IF EXISTS schema_migrations CASCADE;
 -- VERIFICATION
 -- ============================================
 -- Run these queries to verify complete rollback:
--- SELECT table_name FROM information_schema.tables 
--- WHERE table_schema = 'public' 
+-- SELECT table_name FROM information_schema.tables
+-- WHERE table_schema = 'public'
 -- AND table_name LIKE 'agent_%' OR table_name LIKE 'meta_%' OR table_name LIKE 'evolution_%';
 
--- SELECT routine_name FROM information_schema.routines 
--- WHERE routine_schema = 'public' 
+-- SELECT routine_name FROM information_schema.routines
+-- WHERE routine_schema = 'public'
 -- AND routine_name IN ('calculate_agent_fitness', 'create_agent_audit_log', 'update_updated_at_column');
 
--- SELECT table_name, view_name FROM information_schema.views 
--- WHERE table_schema = 'public' 
+-- SELECT table_name, view_name FROM information_schema.views
+-- WHERE table_schema = 'public'
 -- AND view_name LIKE 'v_%agent%';
 
 COMMIT;

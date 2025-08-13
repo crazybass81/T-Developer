@@ -17,16 +17,16 @@ from .autocomplete_engine import AutocompleteEngine
 from .search_optimizer import SearchOptimizer
 
 __all__ = [
-    'QueryBuilder',
-    'IndexManager', 
-    'SearchEngine',
-    'ResultRanker',
-    'FilterManager',
-    'FacetedSearch',
-    'SemanticSearch',
-    'RecommendationSearch',
-    'CacheManager',
-    'SearchAnalytics',
-    'AutocompleteEngine',
-    'SearchOptimizer'
+    "QueryBuilder",
+    "IndexManager",
+    "SearchEngine",
+    "ResultRanker",
+    "FilterManager",
+    "FacetedSearch",
+    "SemanticSearch",
+    "RecommendationSearch",
+    "CacheManager",
+    "SearchAnalytics",
+    "AutocompleteEngine",
+    "SearchOptimizer",
 ]

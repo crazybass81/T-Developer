@@ -17,16 +17,16 @@ from .optimization_engine import OptimizationEngine
 from .version_manager import VersionManager
 
 __all__ = [
-    'CodeGenerator',
-    'ProjectScaffolder',
-    'DependencyManager',
-    'TemplateEngine',
-    'ConfigurationGenerator',
-    'IntegrationBuilder',
-    'DocumentationGenerator',
-    'TestingGenerator',
-    'DeploymentGenerator',
-    'QualityChecker',
-    'OptimizationEngine',
-    'VersionManager'
+    "CodeGenerator",
+    "ProjectScaffolder",
+    "DependencyManager",
+    "TemplateEngine",
+    "ConfigurationGenerator",
+    "IntegrationBuilder",
+    "DocumentationGenerator",
+    "TestingGenerator",
+    "DeploymentGenerator",
+    "QualityChecker",
+    "OptimizationEngine",
+    "VersionManager",
 ]

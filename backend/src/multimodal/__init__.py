@@ -15,11 +15,11 @@ from .audio_processor import AudioVideoProcessor
 from .unified_api import UnifiedMultiModalAPI
 
 __all__ = [
-    'MultiModalProcessor',
-    'MultiModalTextProcessor', 
-    'MultiModalImageProcessor',
-    'AudioVideoProcessor',
-    'UnifiedMultiModalAPI'
+    "MultiModalProcessor",
+    "MultiModalTextProcessor",
+    "MultiModalImageProcessor",
+    "AudioVideoProcessor",
+    "UnifiedMultiModalAPI",
 ]
 
-__version__ = '1.0.0'
+__version__ = "1.0.0"

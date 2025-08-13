@@ -10,22 +10,22 @@ jobs:
   rules-check:
     name: Check CLAUDE.md Rules
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      
+
       - name: Run rules check
         run: |
           echo "🔍 Checking CLAUDE.md rules compliance..."
           python3 check-rules.py || true
           echo ""
           echo "📊 Rules check completed (non-blocking)"
-      
+
       - name: Comment on PR if rules violations
         if: github.event_name == 'pull_request'
         continue-on-error: true

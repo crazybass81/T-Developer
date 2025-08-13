@@ -17,6 +17,7 @@ from ..agents.framework.core.agent_types import AgentType
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ProjectRequest:
     id: str
@@ -24,12 +25,13 @@ class ProjectRequest:
     requirements: Optional[List[str]] = None
     existing_code: Optional[str] = None
     language: Optional[str] = None
-    output_format: Optional[str] = 'zip'
+    output_format: Optional[str] = "zip"
     start_time: float = None
 
     def __post_init__(self):
         if self.start_time is None:
             self.start_time = time.time()
+
 
 @dataclass
 class ProjectResult:
@@ -38,6 +40,7 @@ class ProjectResult:
     download_url: Optional[str] = None
     error: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+
 
 class AgentOrchestrator:
     """Main orchestrator for T-Developer's 9 core agents"""
@@ -54,7 +57,7 @@ class AgentOrchestrator:
             AgentType.SEARCH,
             AgentType.GENERATION,
             AgentType.ASSEMBLY,
-            AgentType.DOWNLOAD
+            AgentType.DOWNLOAD,
         ]
 
     async def initialize(self) -> None:
@@ -74,7 +77,9 @@ class AgentOrchestrator:
         from ..agents.ecs_integrated.nl_input.main import NLInputAgent
         from ..agents.ecs_integrated.ui_selection.main import UISelectionAgent
         from ..agents.ecs_integrated.parser.main import ParserAgent
-        from ..agents.ecs_integrated.component_decision.main import ComponentDecisionAgent
+        from ..agents.ecs_integrated.component_decision.main import (
+            ComponentDecisionAgent,
+        )
         from ..agents.ecs_integrated.match_rate.main import MatchRateAgent
         from ..agents.ecs_integrated.search.main import SearchAgent
         from ..agents.ecs_integrated.generation.main import GenerationAgent
@@ -90,7 +95,7 @@ class AgentOrchestrator:
             AgentType.SEARCH: SearchAgent,
             AgentType.GENERATION: GenerationAgent,
             AgentType.ASSEMBLY: AssemblyAgent,
-            AgentType.DOWNLOAD: DownloadAgent
+            AgentType.DOWNLOAD: DownloadAgent,
         }
 
         for agent_type in self.agent_execution_order:
@@ -98,10 +103,10 @@ class AgentOrchestrator:
                 agent_class = agent_classes[agent_type]
                 agent = agent_class()
                 await agent.initialize()
-                
+
                 self.agents[agent_type.value] = agent
                 await self.agent_squad.register_agent(agent)
-                
+
                 logger.info(f"Initialized {agent_type.value} agent")
             except Exception as error:
                 logger.error(f"Failed to initialize {agent_type.value} agent: {error}")
@@ -113,88 +118,117 @@ class AgentOrchestrator:
 
         try:
             # Step 1: Natural Language Processing
-            nl_result = await self._execute_agent('nl-input', {
-                'description': project_request.description,
-                'requirements': project_request.requirements
-            })
+            nl_result = await self._execute_agent(
+                "nl-input",
+                {
+                    "description": project_request.description,
+                    "requirements": project_request.requirements,
+                },
+            )
 
             # Step 2: UI Framework Selection
-            ui_result = await self._execute_agent('ui-selection', {
-                'project_type': nl_result.get('project_type'),
-                'requirements': nl_result.get('requirements')
-            })
+            ui_result = await self._execute_agent(
+                "ui-selection",
+                {
+                    "project_type": nl_result.get("project_type"),
+                    "requirements": nl_result.get("requirements"),
+                },
+            )
 
             # Step 3: Code Parsing (if existing code provided)
             parse_result = None
             if project_request.existing_code:
-                parse_result = await self._execute_agent('parser', {
-                    'code': project_request.existing_code,
-                    'language': project_request.language
-                })
+                parse_result = await self._execute_agent(
+                    "parser",
+                    {
+                        "code": project_request.existing_code,
+                        "language": project_request.language,
+                    },
+                )
 
             # Step 4: Component Decision
-            decision_result = await self._execute_agent('component-decision', {
-                'requirements': nl_result.get('requirements'),
-                'framework': ui_result.get('selected_framework'),
-                'existing_components': parse_result.get('components') if parse_result else None
-            })
+            decision_result = await self._execute_agent(
+                "component-decision",
+                {
+                    "requirements": nl_result.get("requirements"),
+                    "framework": ui_result.get("selected_framework"),
+                    "existing_components": parse_result.get("components")
+                    if parse_result
+                    else None,
+                },
+            )
 
             # Step 5: Matching Rate Calculation
-            matching_result = await self._execute_agent('match-rate', {
-                'requirements': decision_result.get('component_requirements'),
-                'available_components': await self._get_available_components()
-            })
+            matching_result = await self._execute_agent(
+                "match-rate",
+                {
+                    "requirements": decision_result.get("component_requirements"),
+                    "available_components": await self._get_available_components(),
+                },
+            )
 
             # Step 6: Component Search
-            search_result = await self._execute_agent('search', {
-                'missing_components': matching_result.get('missing_components'),
-                'search_criteria': decision_result.get('search_criteria')
-            })
+            search_result = await self._execute_agent(
+                "search",
+                {
+                    "missing_components": matching_result.get("missing_components"),
+                    "search_criteria": decision_result.get("search_criteria"),
+                },
+            )
 
             # Step 7: Code Generation
-            generation_result = await self._execute_agent('generation', {
-                'components': [
-                    *matching_result.get('matched_components', []),
-                    *search_result.get('found_components', [])
-                ],
-                'architecture': decision_result.get('architecture'),
-                'requirements': nl_result.get('requirements')
-            })
+            generation_result = await self._execute_agent(
+                "generation",
+                {
+                    "components": [
+                        *matching_result.get("matched_components", []),
+                        *search_result.get("found_components", []),
+                    ],
+                    "architecture": decision_result.get("architecture"),
+                    "requirements": nl_result.get("requirements"),
+                },
+            )
 
             # Step 8: Service Assembly
-            assembly_result = await self._execute_agent('assembly', {
-                'generated_code': generation_result.get('code'),
-                'components': generation_result.get('components'),
-                'configuration': generation_result.get('configuration')
-            })
+            assembly_result = await self._execute_agent(
+                "assembly",
+                {
+                    "generated_code": generation_result.get("code"),
+                    "components": generation_result.get("components"),
+                    "configuration": generation_result.get("configuration"),
+                },
+            )
 
             # Step 9: Download Package Creation
-            download_result = await self._execute_agent('download', {
-                'assembled_project': assembly_result.get('project'),
-                'format': project_request.output_format
-            })
+            download_result = await self._execute_agent(
+                "download",
+                {
+                    "assembled_project": assembly_result.get("project"),
+                    "format": project_request.output_format,
+                },
+            )
 
             return ProjectResult(
                 success=True,
                 project_id=project_request.id,
-                download_url=download_result.get('download_url'),
+                download_url=download_result.get("download_url"),
                 metadata={
-                    'framework': ui_result.get('selected_framework'),
-                    'components': len(generation_result.get('components', [])),
-                    'generated_files': assembly_result.get('file_count', 0),
-                    'processing_time': time.time() - project_request.start_time
-                }
+                    "framework": ui_result.get("selected_framework"),
+                    "components": len(generation_result.get("components", [])),
+                    "generated_files": assembly_result.get("file_count", 0),
+                    "processing_time": time.time() - project_request.start_time,
+                },
             )
 
         except Exception as error:
             logger.error(f"Project processing failed: {error}")
             return ProjectResult(
-                success=False,
-                project_id=project_request.id,
-                error=str(error)
+                success=False, project_id=project_request.id, error=str(error)
             )
 
-    async def _execute_agent(self, agent_name: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_agent(
+        self, agent_name: str, input_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Execute a specific agent with input data"""
         agent = self.agents.get(agent_name)
         if not agent:
@@ -206,10 +240,12 @@ class AgentOrchestrator:
 
         logger.info(f"Agent {agent_name} executed in {duration:.2f}s")
 
-        if not result.get('success', False):
-            raise RuntimeError(f"Agent {agent_name} failed: {result.get('error', 'Unknown error')}")
+        if not result.get("success", False):
+            raise RuntimeError(
+                f"Agent {agent_name} failed: {result.get('error', 'Unknown error')}"
+            )
 
-        return result.get('data', {})
+        return result.get("data", {})
 
     async def _get_available_components(self) -> List[Dict[str, Any]]:
         """Get available components from registry"""
@@ -220,12 +256,12 @@ class AgentOrchestrator:
     async def shutdown(self) -> None:
         """Shutdown the orchestrator and all agents"""
         logger.info("Shutting down Agent Orchestrator...")
-        
+
         for agent in self.agents.values():
             try:
                 await agent.cleanup()
             except Exception as e:
                 logger.error(f"Error cleaning up agent: {e}")
-        
+
         await self.agent_squad.shutdown()
         logger.info("Agent Orchestrator shutdown complete")

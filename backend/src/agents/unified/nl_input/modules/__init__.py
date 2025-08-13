@@ -15,14 +15,14 @@ from .ambiguity_resolver import AmbiguityResolver
 from .template_matcher import TemplateMatcher
 
 __all__ = [
-    'ContextEnhancer',
-    'RequirementValidator',
-    'ProjectTypeClassifier',
-    'TechStackAnalyzer',
-    'RequirementExtractor',
-    'EntityRecognizer',
-    'MultilingualProcessor',
-    'IntentAnalyzer',
-    'AmbiguityResolver',
-    'TemplateMatcher'
+    "ContextEnhancer",
+    "RequirementValidator",
+    "ProjectTypeClassifier",
+    "TechStackAnalyzer",
+    "RequirementExtractor",
+    "EntityRecognizer",
+    "MultilingualProcessor",
+    "IntentAnalyzer",
+    "AmbiguityResolver",
+    "TemplateMatcher",
 ]

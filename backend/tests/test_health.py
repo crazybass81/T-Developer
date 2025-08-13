@@ -17,5 +17,6 @@ def test_health_check_placeholder():
 def test_environment_setup():
     """Test environment variables are set correctly"""
     import os
-    assert os.getenv('ENVIRONMENT') == 'testing'
-    assert os.getenv('TESTING') == 'true'
+
+    assert os.getenv("ENVIRONMENT") == "testing"
+    assert os.getenv("TESTING") == "true"

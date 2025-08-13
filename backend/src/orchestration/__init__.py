@@ -10,7 +10,8 @@ and Agent Squad integration.
 
 try:
     from .production_pipeline import ProductionECSPipeline, production_pipeline
-    __all__ = ['ProductionECSPipeline', 'production_pipeline']
+
+    __all__ = ["ProductionECSPipeline", "production_pipeline"]
 except ImportError as e:
     print(f"Production pipeline import failed: {e}")
     __all__ = []

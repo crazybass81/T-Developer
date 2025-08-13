@@ -12,25 +12,25 @@ jobs:
   backend-security:
     name: Backend Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-    
+
     - name: Install uv
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
-    
+
     - name: Install security tools
       run: |
         cd backend
         export PATH="$HOME/.cargo/bin:$PATH"
         uv pip install --system safety bandit semgrep
-    
+
     - name: Check for known vulnerabilities
       continue-on-error: true
       run: |
@@ -38,19 +38,19 @@ jobs:
         export PATH="$HOME/.cargo/bin:$PATH"
         uv pip install --system -r requirements.txt
         safety check --json
-    
+
     - name: Run Bandit security scan
       continue-on-error: true
       run: |
         cd backend
         bandit -r src/ -f json -o bandit-report.json
-    
+
     - name: Run Semgrep
       continue-on-error: true
       run: |
         cd backend
         semgrep --config=auto src/
-    
+
     - name: Upload security reports
       if: always()
       uses: actions/upload-artifact@v4
@@ -60,19 +60,19 @@ jobs:
           backend/bandit-report.json
           backend/safety-report.json
         retention-days: 30
-  
+
   frontend-security:
     name: Frontend Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-    
+
     - name: Check if frontend has package.json
       id: check_frontend
       run: |
@@ -81,20 +81,20 @@ jobs:
         else
           echo "has_package=false" >> $GITHUB_OUTPUT
         fi
-    
+
     - name: Install frontend dependencies
       if: steps.check_frontend.outputs.has_package == 'true'
       run: |
         cd frontend
         npm ci
-    
+
     - name: Run npm audit
       if: steps.check_frontend.outputs.has_package == 'true'
       continue-on-error: true
       run: |
         cd frontend
         npm audit --json > npm-audit-report.json
-    
+
     - name: Upload frontend security report
       if: steps.check_frontend.outputs.has_package == 'true'
       uses: actions/upload-artifact@v4

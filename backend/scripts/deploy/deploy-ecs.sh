@@ -102,7 +102,7 @@ else
     sed -e "s/ACCOUNT/${AWS_ACCOUNT}/g" \
         -e "s/REGION/${AWS_REGION}/g" \
         infrastructure/ecs/service-definition.json > /tmp/service-definition.json
-    
+
     aws ecs create-service --cli-input-json file:///tmp/service-definition.json --region ${AWS_REGION}
 fi
 

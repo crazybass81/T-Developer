@@ -9,9 +9,9 @@ wait_for_service() {
     local port=$2
     local max_tries=30
     local tries=0
-    
+
     echo "Waiting for $service on port $port..."
-    
+
     while ! nc -z $service $port; do
         tries=$((tries + 1))
         if [ $tries -gt $max_tries ]; then
@@ -21,7 +21,7 @@ wait_for_service() {
         echo "Attempt $tries/$max_tries: $service is not ready yet..."
         sleep 2
     done
-    
+
     echo "$service is ready!"
 }
 
@@ -43,7 +43,7 @@ case "$1" in
             --access-log \
             --use-colors
         ;;
-    
+
     "worker")
         echo "Starting T-Developer Celery Worker..."
         exec celery -A src.tasks worker \
@@ -51,23 +51,23 @@ case "$1" in
             --concurrency=4 \
             --max-tasks-per-child=100
         ;;
-    
+
     "beat")
         echo "Starting T-Developer Celery Beat..."
         exec celery -A src.tasks beat \
             --loglevel=$LOG_LEVEL
         ;;
-    
+
     "migrate")
         echo "Running database migrations..."
         exec alembic upgrade head
         ;;
-    
+
     "shell")
         echo "Starting Python shell..."
         exec python
         ;;
-    
+
     *)
         echo "Unknown command: $1"
         echo "Available commands: api, worker, beat, migrate, shell"

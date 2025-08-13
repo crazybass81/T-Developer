@@ -3,7 +3,7 @@
 
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -31,7 +31,7 @@ terraform {
 # AWS Provider 설정
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = var.tags
   }
@@ -70,14 +70,16 @@ resource "aws_s3_bucket_versioning" "evolution_versioning" {
   }
 }
 
-# Evolution 버킷 암호화 설정
+# Evolution 버킷 암호화 설정 (KMS 마스터 키 사용)
 resource "aws_s3_bucket_server_side_encryption_configuration" "evolution_encryption" {
   bucket = aws_s3_bucket.evolution_storage.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.t_developer_master.arn
     }
+    bucket_key_enabled = true  # 비용 최적화를 위한 Bucket Key 활성화
   }
 }
 
@@ -109,14 +111,16 @@ resource "aws_s3_bucket_versioning" "agents_versioning" {
   }
 }
 
-# Agents 버킷 암호화
+# Agents 버킷 암호화 (KMS 마스터 키 사용)
 resource "aws_s3_bucket_server_side_encryption_configuration" "agents_encryption" {
   bucket = aws_s3_bucket.agents_storage.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.t_developer_master.arn
     }
+    bucket_key_enabled = true  # 비용 최적화를 위한 Bucket Key 활성화
   }
 }
 
@@ -132,37 +136,43 @@ resource "aws_s3_bucket_public_access_block" "agents_pab" {
 
 # ===== CloudWatch Log Groups =====
 
-# Evolution Engine 로그 그룹
+# Evolution Engine 로그 그룹 (KMS 암호화)
 resource "aws_cloudwatch_log_group" "evolution_logs" {
   name              = "/aws/t-developer/evolution/${var.environment}"
   retention_in_days = 30
+  kms_key_id        = aws_kms_key.t_developer_master.arn
 
   tags = merge(var.tags, {
     Name = "T-Developer Evolution Logs"
     Type = "Logging"
+    Encryption = "KMS"
   })
 }
 
-# Safety System 로그 그룹
+# Safety System 로그 그룹 (최고 보안 KMS 암호화)
 resource "aws_cloudwatch_log_group" "safety_logs" {
   name              = "/aws/t-developer/safety/${var.environment}"
   retention_in_days = 90  # 안전 로그는 더 오래 보관
+  kms_key_id        = aws_kms_key.evolution_safety.arn
 
   tags = merge(var.tags, {
     Name = "T-Developer Safety Logs"
     Type = "SafetyLogging"
     CriticalityLevel = "High"
+    Encryption = "KMS-Safety"
   })
 }
 
-# Agent Registry 로그 그룹
+# Agent Registry 로그 그룹 (KMS 암호화)
 resource "aws_cloudwatch_log_group" "registry_logs" {
   name              = "/aws/t-developer/registry/${var.environment}"
   retention_in_days = 30
+  kms_key_id        = aws_kms_key.t_developer_master.arn
 
   tags = merge(var.tags, {
     Name = "T-Developer Registry Logs"
     Type = "RegistryLogging"
+    Encryption = "KMS"
   })
 }
 
@@ -191,7 +201,7 @@ resource "aws_sns_topic" "emergency_alerts" {
 
 # ===== DynamoDB Tables =====
 
-# Evolution 상태 관리 테이블
+# Evolution 상태 관리 테이블 (KMS 암호화 강화)
 resource "aws_dynamodb_table" "evolution_state" {
   name           = "${var.project_name}-evolution-state-${var.environment}"
   billing_mode   = "PAY_PER_REQUEST"
@@ -221,6 +231,11 @@ resource "aws_dynamodb_table" "evolution_state" {
     projection_type = "ALL"
   }
 
+  # KMS 암호화 설정
+  server_side_encryption {
+    enabled = true
+  }
+
   # 포인트 인 타임 복구 활성화
   point_in_time_recovery {
     enabled = true
@@ -229,6 +244,7 @@ resource "aws_dynamodb_table" "evolution_state" {
   tags = merge(var.tags, {
     Name = "T-Developer Evolution State"
     Type = "EvolutionData"
+    Encryption = "KMS"
   })
 }
 
@@ -238,7 +254,7 @@ resource "aws_dynamodb_table" "evolution_state" {
 resource "aws_ssm_parameter" "evolution_config" {
   name  = "/${var.project_name}/evolution/config"
   type  = "String"
-  
+
   value = jsonencode({
     ai_autonomy_level         = var.ai_autonomy_level
     max_agent_memory_kb       = var.max_agent_memory_kb
@@ -250,7 +266,7 @@ resource "aws_ssm_parameter" "evolution_config" {
   })
 
   description = "T-Developer Evolution Engine 설정"
-  
+
   tags = merge(var.tags, {
     Name = "T-Developer Evolution Config"
     Type = "Configuration"
@@ -261,7 +277,7 @@ resource "aws_ssm_parameter" "evolution_config" {
 resource "aws_ssm_parameter" "aws_resources" {
   name = "/${var.project_name}/aws/resources"
   type = "String"
-  
+
   value = jsonencode({
     vpc_id                    = data.aws_vpc.existing.id
     subnet_ids                = var.subnet_ids
@@ -274,7 +290,7 @@ resource "aws_ssm_parameter" "aws_resources" {
   })
 
   description = "T-Developer AWS 리소스 정보"
-  
+
   tags = merge(var.tags, {
     Name = "T-Developer AWS Resources"
     Type = "ResourceInfo"
@@ -314,13 +330,13 @@ output "next_steps" {
   description = "다음 단계 안내"
   value = <<-EOT
   🎉 T-Developer AWS 인프라가 성공적으로 배포되었습니다!
-  
+
   다음 단계:
   1. Bedrock AgentCore 활성화
   2. Evolution Engine 배포
   3. Safety System 설정
   4. Agent Registry 초기화
-  
+
   리소스 정보:
   - Evolution Role: ${aws_iam_role.t_developer_evolution_role.name}
   - S3 Buckets: ${aws_s3_bucket.evolution_storage.id}, ${aws_s3_bucket.agents_storage.id}

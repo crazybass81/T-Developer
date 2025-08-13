@@ -13,7 +13,7 @@
       "purpose": "complex_analysis"
     },
     {
-      "provider": "openai", 
+      "provider": "openai",
       "modelId": "gpt-4-turbo",
       "purpose": "code_generation"
     }

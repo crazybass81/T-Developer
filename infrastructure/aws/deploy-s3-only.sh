@@ -62,7 +62,7 @@ Parameters:
     Type: String
     Default: development
     AllowedValues: [development, staging, production]
-  
+
   ProjectName:
     Type: String
     Default: t-developer-mvp
@@ -126,13 +126,13 @@ Outputs:
     Value: !Ref ProjectsBucket
     Export:
       Name: !Sub "${AWS::StackName}-projects-bucket"
-  
+
   AssetsBucketName:
     Description: Name of the assets S3 bucket
     Value: !Ref AssetsBucket
     Export:
       Name: !Sub "${AWS::StackName}-assets-bucket"
-  
+
   AssetsBucketWebsiteURL:
     Description: URL of the assets bucket website
     Value: !GetAtt AssetsBucket.WebsiteURL

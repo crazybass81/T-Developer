@@ -5,7 +5,7 @@
       "scalableDimension": "ecs:service:DesiredCount",
       "minCapacity": 2,
       "maxCapacity": 10,
-      
+
       "targetTrackingScalingPolicies": [
         {
           "policyName": "cpu-scaling",
@@ -27,13 +27,13 @@
         }
       ]
     },
-    
+
     "decision-service": {
       "resourceId": "service/t-developer-cluster/decision-service",
       "scalableDimension": "ecs:service:DesiredCount",
       "minCapacity": 2,
       "maxCapacity": 8,
-      
+
       "targetTrackingScalingPolicies": [
         {
           "policyName": "cpu-scaling",
@@ -44,13 +44,13 @@
         }
       ]
     },
-    
+
     "generation-service": {
       "resourceId": "service/t-developer-cluster/generation-service",
       "scalableDimension": "ecs:service:DesiredCount",
       "minCapacity": 1,
       "maxCapacity": 5,
-      
+
       "targetTrackingScalingPolicies": [
         {
           "policyName": "cpu-scaling",
@@ -62,7 +62,7 @@
           "scaleInCooldown": 600
         }
       ],
-      
+
       "stepScalingPolicies": [
         {
           "policyName": "high-load-scaling",
@@ -88,7 +88,7 @@
       ]
     }
   },
-  
+
   "scheduledActions": [
     {
       "scheduledActionName": "scale-up-business-hours",

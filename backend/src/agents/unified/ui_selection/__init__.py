@@ -5,4 +5,4 @@ Selects UI components and layout based on requirements
 
 from .agent import UnifiedUISelectionAgent
 
-__all__ = ['UnifiedUISelectionAgent']
+__all__ = ["UnifiedUISelectionAgent"]

@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS agent_registry (
     parent_agent_id VARCHAR(100), -- For evolved/derived agents
     generation INTEGER DEFAULT 0, -- Evolution generation number
     fitness_score DECIMAL(5,4) DEFAULT 0.0, -- 0.0000 to 1.0000
-    
+
     -- Constraints
     CONSTRAINT check_fitness_range CHECK (fitness_score >= 0 AND fitness_score <= 1),
     CONSTRAINT check_valid_status CHECK (status IN ('active', 'inactive', 'deprecated', 'testing')),
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS agent_versions (
     deployment_status VARCHAR(20) DEFAULT 'draft', -- 'draft', 'testing', 'production', 'retired'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100),
-    
+
     -- Constraints
     CONSTRAINT unique_agent_version UNIQUE(agent_id, version),
     CONSTRAINT fk_agent_id FOREIGN KEY (agent_id) REFERENCES agent_registry(agent_id) ON DELETE CASCADE
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS agent_genomes (
     mutation_rate DECIMAL(5,4) DEFAULT 0.1,
     crossover_points JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     CONSTRAINT fk_genome_agent FOREIGN KEY (agent_id) REFERENCES agent_registry(agent_id) ON DELETE CASCADE,
     CONSTRAINT check_mutation_rate CHECK (mutation_rate >= 0 AND mutation_rate <= 1)
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS evolution_history (
     error_message TEXT,
     execution_time_ms INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     CONSTRAINT check_operation_type CHECK (operation_type IN ('mutation', 'crossover', 'selection', 'random'))
 );
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS meta_agent_tasks (
     started_at TIMESTAMP,
     completed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     CONSTRAINT check_priority CHECK (priority >= 1 AND priority <= 10),
     CONSTRAINT check_meta_type CHECK (meta_agent_type IN ('builder', 'improver', 'orchestrator'))
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS agent_performance_metrics (
     metric_unit VARCHAR(20), -- 'ms', 'req/s', 'percent', 'MB'
     context JSONB, -- Additional context for the metric
     measured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     CONSTRAINT fk_metrics_agent FOREIGN KEY (agent_id) REFERENCES agent_registry(agent_id) ON DELETE CASCADE
 );
@@ -170,7 +170,7 @@ CREATE TABLE IF NOT EXISTS agent_interactions (
     success BOOLEAN DEFAULT true,
     error_message TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     CONSTRAINT fk_interaction_source FOREIGN KEY (source_agent_id) REFERENCES agent_registry(agent_id) ON DELETE CASCADE,
     CONSTRAINT fk_interaction_target FOREIGN KEY (target_agent_id) REFERENCES agent_registry(agent_id) ON DELETE CASCADE
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS agent_capabilities (
     parameters JSONB,
     confidence_score DECIMAL(3,2) DEFAULT 1.0, -- 0.00 to 1.00
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     CONSTRAINT fk_capability_agent FOREIGN KEY (agent_id) REFERENCES agent_registry(agent_id) ON DELETE CASCADE,
     CONSTRAINT unique_agent_capability UNIQUE(agent_id, capability_name),
@@ -215,7 +215,7 @@ CREATE TABLE IF NOT EXISTS agent_dependencies (
     dependency_type VARCHAR(50) NOT NULL, -- 'required', 'optional', 'fallback'
     dependency_version VARCHAR(20),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     CONSTRAINT fk_dependency_agent FOREIGN KEY (agent_id) REFERENCES agent_registry(agent_id) ON DELETE CASCADE,
     CONSTRAINT fk_dependency_target FOREIGN KEY (depends_on_agent_id) REFERENCES agent_registry(agent_id) ON DELETE CASCADE,
@@ -275,7 +275,7 @@ BEGIN
         VALUES (NEW.agent_id, 'created', to_jsonb(NEW), NEW.created_by);
     ELSIF TG_OP = 'UPDATE' THEN
         INSERT INTO agent_audit_log (agent_id, action, changes, performed_by)
-        VALUES (NEW.agent_id, 'updated', 
+        VALUES (NEW.agent_id, 'updated',
                 jsonb_build_object('old', to_jsonb(OLD), 'new', to_jsonb(NEW)),
                 NEW.created_by);
     ELSIF TG_OP = 'DELETE' THEN
@@ -303,41 +303,41 @@ DECLARE
     v_capability_score DECIMAL(5,4);
 BEGIN
     -- Calculate performance score (based on latency and accuracy)
-    SELECT 
-        CASE 
+    SELECT
+        CASE
             WHEN AVG(CASE WHEN metric_type = 'latency' THEN metric_value END) IS NULL THEN 0.5
             ELSE 1.0 - (AVG(CASE WHEN metric_type = 'latency' THEN metric_value END) / 1000.0)
         END INTO v_performance_score
     FROM agent_performance_metrics
     WHERE agent_id = p_agent_id
     AND measured_at > CURRENT_TIMESTAMP - INTERVAL '24 hours';
-    
+
     -- Calculate interaction success rate
-    SELECT 
-        CASE 
+    SELECT
+        CASE
             WHEN COUNT(*) = 0 THEN 0.5
             ELSE SUM(CASE WHEN success THEN 1 ELSE 0 END)::DECIMAL / COUNT(*)
         END INTO v_interaction_score
     FROM agent_interactions
     WHERE source_agent_id = p_agent_id
     AND created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours';
-    
+
     -- Calculate capability confidence average
-    SELECT 
-        CASE 
+    SELECT
+        CASE
             WHEN AVG(confidence_score) IS NULL THEN 0.5
             ELSE AVG(confidence_score)
         END INTO v_capability_score
     FROM agent_capabilities
     WHERE agent_id = p_agent_id;
-    
+
     -- Weighted average of all scores
     v_fitness := (
         v_performance_score * 0.4 +
         v_interaction_score * 0.3 +
         v_capability_score * 0.3
     );
-    
+
     RETURN v_fitness;
 END;
 $$ LANGUAGE plpgsql;
@@ -348,7 +348,7 @@ $$ LANGUAGE plpgsql;
 
 -- View: Active agents with their latest version
 CREATE OR REPLACE VIEW v_active_agents AS
-SELECT 
+SELECT
     ar.agent_id,
     ar.name,
     ar.version,
@@ -365,14 +365,14 @@ LEFT JOIN agent_versions av ON ar.agent_id = av.agent_id AND ar.version = av.ver
 LEFT JOIN agent_capabilities ac ON ar.agent_id = ac.agent_id
 LEFT JOIN agent_dependencies ad ON ar.agent_id = ad.agent_id
 WHERE ar.status = 'active'
-GROUP BY ar.agent_id, ar.name, ar.version, ar.type, ar.status, 
+GROUP BY ar.agent_id, ar.name, ar.version, ar.type, ar.status,
          ar.fitness_score, ar.generation, av.code, av.deployment_status;
 
 -- View: Agent evolution lineage
 CREATE OR REPLACE VIEW v_agent_lineage AS
 WITH RECURSIVE agent_tree AS (
     -- Base case: agents with no parent
-    SELECT 
+    SELECT
         agent_id,
         name,
         parent_agent_id,
@@ -381,11 +381,11 @@ WITH RECURSIVE agent_tree AS (
         ARRAY[agent_id] as lineage_path
     FROM agent_registry
     WHERE parent_agent_id IS NULL
-    
+
     UNION ALL
-    
+
     -- Recursive case: agents with parents
-    SELECT 
+    SELECT
         ar.agent_id,
         ar.name,
         ar.parent_agent_id,
@@ -399,7 +399,7 @@ SELECT * FROM agent_tree;
 
 -- View: Recent agent performance summary
 CREATE OR REPLACE VIEW v_agent_performance_summary AS
-SELECT 
+SELECT
     agent_id,
     AVG(CASE WHEN metric_type = 'latency' THEN metric_value END) as avg_latency_ms,
     AVG(CASE WHEN metric_type = 'throughput' THEN metric_value END) as avg_throughput,
@@ -417,47 +417,47 @@ GROUP BY agent_id;
 
 -- Insert core agents into registry
 INSERT INTO agent_registry (agent_id, name, version, type, status, capabilities, input_schema, output_schema)
-VALUES 
-    ('nl_input_v1', 'NL Input Agent', '1.0.0', 'core', 'active', 
+VALUES
+    ('nl_input_v1', 'NL Input Agent', '1.0.0', 'core', 'active',
      '{"nlp": true, "entity_extraction": true, "intent_recognition": true}',
      '{"type": "object", "properties": {"text": {"type": "string"}}}',
      '{"type": "object", "properties": {"requirements": {"type": "array"}}}'),
-     
+
     ('ui_selection_v1', 'UI Selection Agent', '1.0.0', 'core', 'active',
      '{"framework_selection": true, "ui_library_recommendation": true}',
      '{"type": "object", "properties": {"requirements": {"type": "object"}}}',
      '{"type": "object", "properties": {"framework": {"type": "string"}}}'),
-     
+
     ('parser_v1', 'Parser Agent', '1.0.0', 'core', 'active',
      '{"requirement_parsing": true, "specification_building": true}',
      '{"type": "object", "properties": {"requirements": {"type": "array"}}}',
      '{"type": "object", "properties": {"specifications": {"type": "object"}}}'),
-     
+
     ('component_decision_v1', 'Component Decision Agent', '1.0.0', 'core', 'active',
      '{"architecture_design": true, "component_selection": true}',
      '{"type": "object", "properties": {"specifications": {"type": "object"}}}',
      '{"type": "object", "properties": {"components": {"type": "array"}}}'),
-     
+
     ('match_rate_v1', 'Match Rate Agent', '1.0.0', 'core', 'active',
      '{"scoring": true, "ranking": true, "recommendation": true}',
      '{"type": "object", "properties": {"components": {"type": "array"}}}',
      '{"type": "object", "properties": {"scores": {"type": "object"}}}'),
-     
+
     ('search_v1', 'Search Agent', '1.0.0', 'core', 'active',
      '{"semantic_search": true, "faceted_search": true, "caching": true}',
      '{"type": "object", "properties": {"query": {"type": "string"}}}',
      '{"type": "object", "properties": {"results": {"type": "array"}}}'),
-     
+
     ('generation_v1', 'Generation Agent', '1.0.0', 'core', 'active',
      '{"code_generation": true, "test_generation": true, "documentation": true}',
      '{"type": "object", "properties": {"components": {"type": "array"}}}',
      '{"type": "object", "properties": {"files": {"type": "object"}}}'),
-     
+
     ('assembly_v1', 'Assembly Agent', '1.0.0', 'core', 'active',
      '{"file_organization": true, "validation": true, "packaging": true}',
      '{"type": "object", "properties": {"files": {"type": "object"}}}',
      '{"type": "object", "properties": {"package": {"type": "string"}}}'),
-     
+
     ('download_v1', 'Download Agent', '1.0.0', 'core', 'active',
      '{"secure_download": true, "cdn_integration": true}',
      '{"type": "object", "properties": {"package": {"type": "string"}}}',

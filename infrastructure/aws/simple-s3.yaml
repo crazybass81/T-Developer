@@ -5,7 +5,7 @@ Parameters:
   Environment:
     Type: String
     Default: development
-  
+
   ProjectName:
     Type: String
     Default: t-developer-mvp
@@ -47,7 +47,7 @@ Outputs:
     Value: !Ref ProjectsBucket
     Export:
       Name: !Sub "${AWS::StackName}-projects-bucket"
-  
+
   AssetsBucketName:
     Description: Name of the assets S3 bucket
     Value: !Ref AssetsBucket

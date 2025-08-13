@@ -7,7 +7,7 @@ check_service() {
     local name=$1
     local url=$2
     local expected_code=${3:-200}
-    
+
     if curl -s -o /dev/null -w "%{http_code}" "$url" | grep -q "$expected_code"; then
         echo "✅ $name: 정상"
     else

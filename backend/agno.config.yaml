@@ -9,19 +9,19 @@ framework:
 performance:
   # Target: ~3μs agent instantiation
   instantiation_time_target_us: 3
-  
+
   # Target: 6.5KB memory footprint per agent
   memory_footprint_target_kb: 6.5
-  
+
   # Maximum concurrent agents
   max_concurrent_agents: 100
-  
+
   # Thread pool size
   thread_pool_size: 20
-  
+
   # Async execution
   enable_async: true
-  
+
   # Streaming responses
   enable_streaming: true
 
@@ -33,14 +33,14 @@ memory:
     index_type: "HNSW"
     metric: "cosine"
     max_elements: 100000
-  
+
   # Conversation memory
   conversation_memory:
     enabled: true
     storage: "dynamodb"
     table_prefix: "t-dev-agno-memory"
     ttl_days: 30
-  
+
   # Cache configuration
   cache:
     enabled: true
@@ -58,7 +58,7 @@ models:
     temperature: 0.2
     max_tokens: 4096
     top_p: 0.9
-  
+
   # Fallback model
   fallback:
     provider: "aws_bedrock"
@@ -73,13 +73,13 @@ monitoring:
     enabled: true
     sample_rate: 0.1
     metrics_namespace: "TDeveloper/Agno"
-  
+
   # Error tracking
   error_tracking:
     enabled: true
     service: "sentry"
     dsn: "${SENTRY_DSN}"
-  
+
   # Logging
   logging:
     level: "INFO"
@@ -95,14 +95,14 @@ agents:
       - requirement_extractor
       - context_enhancer
       - clarification_generator
-  
+
   ui_selection:
     max_retries: 2
     timeout_seconds: 20
     tools:
       - framework_analyzer
       - performance_benchmarker
-  
+
   parser:
     max_retries: 3
     timeout_seconds: 40
@@ -110,28 +110,28 @@ agents:
       - requirement_parser
       - user_story_generator
       - data_model_parser
-  
+
   component_decision:
     max_retries: 2
     timeout_seconds: 30
     tools:
       - component_analyzer
       - mcdm_calculator
-  
+
   match_rate:
     max_retries: 2
     timeout_seconds: 25
     tools:
       - matching_engine
       - similarity_calculator
-  
+
   search:
     max_retries: 3
     timeout_seconds: 60
     tools:
       - component_searcher
       - quality_analyzer
-  
+
   generation:
     max_retries: 2
     timeout_seconds: 120
@@ -139,14 +139,14 @@ agents:
       - code_generator
       - test_generator
       - documentation_generator
-  
+
   assembly:
     max_retries: 2
     timeout_seconds: 90
     tools:
       - project_assembler
       - build_orchestrator
-  
+
   download:
     max_retries: 2
     timeout_seconds: 60
@@ -160,7 +160,7 @@ tools:
     enabled: true
     auto_discover: true
     path: "src/agents/production/*/tools"
-  
+
   # Tool execution
   execution:
     parallel: true
@@ -173,14 +173,14 @@ optimization:
     minification: true
     tree_shaking: true
     dead_code_elimination: true
-  
+
   # Network optimization
   network:
     compression: "gzip"
     keep_alive: true
     connection_pooling: true
     max_connections: 100
-  
+
   # Resource optimization
   resources:
     lazy_loading: true
@@ -193,19 +193,19 @@ security:
     enabled: true
     provider: "cognito"
     user_pool_id: "${COGNITO_USER_POOL_ID}"
-  
+
   # Authorization
   authorization:
     enabled: true
     type: "rbac"
     default_role: "user"
-  
+
   # Encryption
   encryption:
     at_rest: true
     in_transit: true
     kms_key_id: "${KMS_KEY_ID}"
-  
+
   # Rate limiting
   rate_limiting:
     enabled: true
@@ -219,12 +219,12 @@ deployment:
       memory: 1024
       timeout: 300
       reserved_concurrency: 10
-    
+
     - type: "ecs"
       cpu: 512
       memory: 1024
       desired_count: 2
-    
+
     - type: "ec2"
       instance_type: "t3.medium"
       auto_scaling:

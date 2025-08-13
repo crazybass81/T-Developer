@@ -2,6 +2,7 @@
 import boto3
 import json
 
+
 def create_iam_policy():
     """T-Developer에 필요한 IAM 정책 생성"""
     policy_document = {
@@ -16,19 +17,20 @@ def create_iam_policy():
                     "s3:*",
                     "cloudwatch:*",
                     "logs:*",
-                    "iam:PassRole"
+                    "iam:PassRole",
                 ],
-                "Resource": "*"
+                "Resource": "*",
             }
-        ]
+        ],
     }
-    
+
     return json.dumps(policy_document, indent=2)
+
 
 def setup_aws_profile():
     """AWS 프로필 설정 확인"""
     try:
-        sts = boto3.client('sts')
+        sts = boto3.client("sts")
         identity = sts.get_caller_identity()
         print(f"✅ AWS 계정 확인: {identity['Account']}")
         print(f"✅ 사용자 ARN: {identity['Arn']}")
@@ -38,9 +40,10 @@ def setup_aws_profile():
         print("💡 해결 방법: aws configure 명령으로 자격 증명을 설정하세요")
         return False
 
+
 if __name__ == "__main__":
     print("🔍 AWS 계정 설정 확인 중...")
-    
+
     if setup_aws_profile():
         print("\n📋 필요한 IAM 정책:")
         print(create_iam_policy())

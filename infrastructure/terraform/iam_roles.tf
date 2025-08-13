@@ -44,7 +44,7 @@ resource "aws_iam_policy" "bedrock_access_policy" {
           "bedrock:ListFoundationModels",
           "bedrock:GetFoundationModel",
           "bedrock:CreateAgent",
-          "bedrock:GetAgent", 
+          "bedrock:GetAgent",
           "bedrock:UpdateAgent",
           "bedrock:DeleteAgent",
           "bedrock:ListAgents",
@@ -81,7 +81,7 @@ resource "aws_iam_policy" "s3_access_policy" {
         Effect = "Allow"
         Action = [
           "s3:GetObject",
-          "s3:PutObject", 
+          "s3:PutObject",
           "s3:DeleteObject",
           "s3:ListBucket"
         ]
@@ -110,7 +110,7 @@ resource "aws_iam_policy" "cloudwatch_logs_policy" {
         Effect = "Allow"
         Action = [
           "logs:CreateLogGroup",
-          "logs:CreateLogStream", 
+          "logs:CreateLogStream",
           "logs:PutLogEvents",
           "logs:DescribeLogGroups",
           "logs:DescribeLogStreams",
@@ -215,7 +215,7 @@ resource "aws_iam_policy" "evolution_safety_policy" {
         Resource = "arn:aws:sns:${var.aws_region}:*:${var.project_name}-safety-alerts-*"
       },
       {
-        Effect = "Allow"  
+        Effect = "Allow"
         Action = [
           "dynamodb:GetItem",
           "dynamodb:PutItem",

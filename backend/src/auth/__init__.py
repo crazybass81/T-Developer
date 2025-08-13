@@ -9,13 +9,13 @@ from .permissions import Permission, require_permissions
 from .models import User, UserRole
 
 __all__ = [
-    'JWTHandler',
-    'create_access_token',
-    'verify_token',
-    'JWTAuthMiddleware',
-    'get_current_user',
-    'Permission',
-    'require_permissions',
-    'User',
-    'UserRole'
+    "JWTHandler",
+    "create_access_token",
+    "verify_token",
+    "JWTAuthMiddleware",
+    "get_current_user",
+    "Permission",
+    "require_permissions",
+    "User",
+    "UserRole",
 ]

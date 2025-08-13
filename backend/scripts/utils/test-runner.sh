@@ -62,16 +62,16 @@ case $TEST_TYPE in
         ;;
     "all")
         print_status "Running all tests..."
-        
+
         print_status "1/3 - Unit tests"
         npm run test:unit
-        
+
         print_status "2/3 - Integration tests"
         npm run test:integration
-        
+
         print_status "3/3 - E2E tests"
         npm run test:e2e
-        
+
         if [ "$COVERAGE" = "true" ]; then
             print_status "Generating coverage report..."
             npm run test:coverage

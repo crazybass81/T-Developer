@@ -6,15 +6,15 @@ Parameters:
     Type: String
     Default: production
     AllowedValues: [development, staging, production]
-    
+
   VpcId:
     Type: AWS::EC2::VPC::Id
     Description: VPC ID for the ECS cluster
-    
+
   SubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
     Description: Subnet IDs for the ECS cluster
-    
+
   SecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
     Description: Security Group ID for ECS tasks

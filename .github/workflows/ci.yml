@@ -15,37 +15,37 @@ jobs:
   backend-lint:
     name: Backend Linting
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          
+
       - name: Install linting tools
         run: |
           cd backend
           export PATH="$HOME/.cargo/bin:$PATH"
           uv pip install --system flake8 black isort pylint
-          
+
       - name: Run Black (formatter check)
         continue-on-error: true
         run: |
           cd backend
           black --check src/
-          
+
       - name: Run isort (import sort check)
         continue-on-error: true
         run: |
           cd backend
           isort --check-only src/
-          
+
       - name: Run Flake8
         continue-on-error: true
         run: |
@@ -57,14 +57,14 @@ jobs:
     name: Backend Tests
     runs-on: ubuntu-latest
     needs: backend-lint
-    
+
     services:
       # Local DynamoDB for testing
       dynamodb:
         image: amazon/dynamodb-local:latest
         ports:
           - 8000:8000
-      
+
       # Redis for caching
       redis:
         image: redis:7-alpine
@@ -75,19 +75,19 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          
+
       - name: Install dependencies
         run: |
           cd backend
@@ -96,7 +96,7 @@ jobs:
           sed -i '/psycopg2-binary/d' requirements.txt
           uv pip install --system -r requirements.txt
           uv pip install --system pytest pytest-cov pytest-asyncio pytest-mock boto3
-          
+
       - name: Run unit tests
         continue-on-error: true
         run: |
@@ -113,7 +113,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: test
           AWS_REGION: us-east-1
           PORT: 8080
-          
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -125,10 +125,10 @@ jobs:
   frontend-checks:
     name: Frontend Checks
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Check if frontend exists
         id: check_frontend
         run: |
@@ -137,26 +137,26 @@ jobs:
           else
             echo "has_package=false" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Setup Node.js
         if: steps.check_frontend.outputs.has_package == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      
+
       - name: Install dependencies
         if: steps.check_frontend.outputs.has_package == 'true'
         run: |
           cd frontend
           npm ci
-      
+
       - name: Type check
         if: steps.check_frontend.outputs.has_package == 'true'
         continue-on-error: true
         run: |
           cd frontend
           npm run type-check || true
-      
+
       - name: Build
         if: steps.check_frontend.outputs.has_package == 'true'
         continue-on-error: true
@@ -168,25 +168,25 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: backend-lint
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          
+
       - name: Install security tools
         run: |
           cd backend
           export PATH="$HOME/.cargo/bin:$PATH"
           uv pip install --system safety bandit
-          
+
       - name: Run Safety check (known vulnerabilities)
         continue-on-error: true
         run: |
@@ -196,7 +196,7 @@ jobs:
           sed -i '/psycopg2-binary/d' requirements.txt
           uv pip install --system -r requirements.txt
           safety check || true
-          
+
       - name: Run Bandit (security issues in code)
         continue-on-error: true
         run: |
@@ -207,26 +207,26 @@ jobs:
     name: Build Validation
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-checks]
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          
+
       - name: Install backend dependencies
         run: |
           cd backend
           export PATH="$HOME/.cargo/bin:$PATH"
           sed -i '/psycopg2-binary/d' requirements.txt
           uv pip install --system -r requirements.txt
-          
+
       - name: Validate Python imports
         run: |
           cd backend
@@ -245,7 +245,7 @@ jobs:
           EOF
           python test_imports.py
           rm test_imports.py
-          
+
       - name: Test API startup
         run: |
           cd backend
@@ -261,17 +261,17 @@ jobs:
     name: Docker Build Test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Build Backend Docker Image
         run: |
           cd backend
           # Remove PostgreSQL dependency from requirements.txt for Docker build
           sed -i '/psycopg2-binary/d' requirements.txt
           docker build -t t-developer-backend:test .
-      
+
       - name: Test Docker Image
         run: |
           docker run --rm -e TESTING=true -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test t-developer-backend:test python -c "print('Docker image works!')"

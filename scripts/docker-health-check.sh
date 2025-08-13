@@ -21,7 +21,7 @@ ports=("8000:DynamoDB" "6379:Redis" "4566:LocalStack" "9200:Elasticsearch")
 for port_service in "${ports[@]}"; do
     port=$(echo $port_service | cut -d: -f1)
     service=$(echo $port_service | cut -d: -f2)
-    
+
     if nc -z localhost $port 2>/dev/null; then
         echo "✅ $service (포트 $port) 연결 가능"
     else

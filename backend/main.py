@@ -15,7 +15,7 @@ import os
 app = FastAPI(
     title="T-Developer MVP",
     description="AI Multi-Agent Development Platform",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 app.add_middleware(
@@ -26,18 +26,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     return {"message": "T-Developer MVP Backend"}
+
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
+
 if __name__ == "__main__":
     uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=int(os.getenv("PORT", 8000)),
-        reload=True
+        "main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)), reload=True
     )

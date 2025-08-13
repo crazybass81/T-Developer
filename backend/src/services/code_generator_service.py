@@ -11,38 +11,39 @@ import shutil
 import zipfile
 from datetime import datetime
 
+
 class CodeGeneratorService:
     """프로덕션 코드 생성 서비스"""
-    
+
     def __init__(self):
         self.templates_dir = Path(__file__).parent.parent / "templates"
         self.output_dir = Path("/tmp/generated_projects")
         self.output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     def generate_project(
         self,
         project_id: str,
         project_type: str,
         project_name: str,
         description: str,
-        features: List[str]
+        features: List[str],
     ) -> Dict[str, Any]:
         """
         실제 작동하는 프로젝트 생성
-        
+
         Args:
             project_id: 프로젝트 고유 ID
             project_type: 프로젝트 타입 (react, vue, nextjs, etc.)
             project_name: 프로젝트 이름
             description: 프로젝트 설명
             features: 요구되는 기능 목록
-            
+
         Returns:
             생성된 프로젝트 정보
         """
         project_path = self.output_dir / project_id
         project_path.mkdir(parents=True, exist_ok=True)
-        
+
         # 프로젝트 타입별 생성
         if project_type == "react":
             files = self._generate_react_project(project_name, description, features)
@@ -56,89 +57,96 @@ class CodeGeneratorService:
             files = self._generate_fastapi_project(project_name, description, features)
         else:
             # 기본 웹 프로젝트
-            files = self._generate_basic_web_project(project_name, description, features)
-        
+            files = self._generate_basic_web_project(
+                project_name, description, features
+            )
+
         # 파일 생성
         for file_path, content in files.items():
             full_path = project_path / file_path
             full_path.parent.mkdir(parents=True, exist_ok=True)
             full_path.write_text(content)
-        
+
         # ZIP 파일 생성
         zip_path = self._create_zip(project_path, project_id)
-        
+
         return {
             "project_id": project_id,
             "project_path": str(project_path),
             "zip_path": str(zip_path),
             "files_count": len(files),
-            "project_type": project_type
+            "project_type": project_type,
         }
-    
+
     def _generate_react_project(
-        self,
-        name: str,
-        description: str,
-        features: List[str]
+        self, name: str, description: str, features: List[str]
     ) -> Dict[str, str]:
         """React 프로젝트 생성 - 프로덕션 레벨"""
-        
+
         files = {}
-        
+
         # package.json
-        files["package.json"] = json.dumps({
-            "name": name.lower().replace(" ", "-"),
-            "version": "1.0.0",
-            "description": description,
-            "private": True,
-            "dependencies": {
-                "react": "^18.2.0",
-                "react-dom": "^18.2.0",
-                "react-router-dom": "^6.20.0",
-                "axios": "^1.6.0"
+        files["package.json"] = json.dumps(
+            {
+                "name": name.lower().replace(" ", "-"),
+                "version": "1.0.0",
+                "description": description,
+                "private": True,
+                "dependencies": {
+                    "react": "^18.2.0",
+                    "react-dom": "^18.2.0",
+                    "react-router-dom": "^6.20.0",
+                    "axios": "^1.6.0",
+                },
+                "devDependencies": {
+                    "@types/react": "^18.2.0",
+                    "@types/react-dom": "^18.2.0",
+                    "@vitejs/plugin-react": "^4.2.0",
+                    "vite": "^5.0.0",
+                    "typescript": "^5.3.0",
+                    "eslint": "^8.55.0",
+                    "prettier": "^3.1.0",
+                },
+                "scripts": {
+                    "dev": "vite",
+                    "build": "vite build",
+                    "preview": "vite preview",
+                    "lint": "eslint src --ext ts,tsx",
+                    "format": "prettier --write src/**/*.{ts,tsx,css}",
+                },
             },
-            "devDependencies": {
-                "@types/react": "^18.2.0",
-                "@types/react-dom": "^18.2.0",
-                "@vitejs/plugin-react": "^4.2.0",
-                "vite": "^5.0.0",
-                "typescript": "^5.3.0",
-                "eslint": "^8.55.0",
-                "prettier": "^3.1.0"
-            },
-            "scripts": {
-                "dev": "vite",
-                "build": "vite build",
-                "preview": "vite preview",
-                "lint": "eslint src --ext ts,tsx",
-                "format": "prettier --write src/**/*.{ts,tsx,css}"
-            }
-        }, indent=2)
-        
+            indent=2,
+        )
+
         # tsconfig.json
-        files["tsconfig.json"] = json.dumps({
-            "compilerOptions": {
-                "target": "ES2020",
-                "lib": ["ES2020", "DOM", "DOM.Iterable"],
-                "module": "ESNext",
-                "skipLibCheck": True,
-                "moduleResolution": "bundler",
-                "allowImportingTsExtensions": True,
-                "resolveJsonModule": True,
-                "isolatedModules": True,
-                "noEmit": True,
-                "jsx": "react-jsx",
-                "strict": True,
-                "noUnusedLocals": True,
-                "noUnusedParameters": True,
-                "noFallthroughCasesInSwitch": True
+        files["tsconfig.json"] = json.dumps(
+            {
+                "compilerOptions": {
+                    "target": "ES2020",
+                    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+                    "module": "ESNext",
+                    "skipLibCheck": True,
+                    "moduleResolution": "bundler",
+                    "allowImportingTsExtensions": True,
+                    "resolveJsonModule": True,
+                    "isolatedModules": True,
+                    "noEmit": True,
+                    "jsx": "react-jsx",
+                    "strict": True,
+                    "noUnusedLocals": True,
+                    "noUnusedParameters": True,
+                    "noFallthroughCasesInSwitch": True,
+                },
+                "include": ["src"],
+                "references": [{"path": "./tsconfig.node.json"}],
             },
-            "include": ["src"],
-            "references": [{"path": "./tsconfig.node.json"}]
-        }, indent=2)
-        
+            indent=2,
+        )
+
         # vite.config.ts
-        files["vite.config.ts"] = """import { defineConfig } from 'vite'
+        files[
+            "vite.config.ts"
+        ] = """import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
@@ -152,9 +160,11 @@ export default defineConfig({
     sourcemap: true
   }
 })"""
-        
+
         # index.html
-        files["index.html"] = f"""<!DOCTYPE html>
+        files[
+            "index.html"
+        ] = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -167,9 +177,11 @@ export default defineConfig({
     <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>"""
-        
+
         # src/main.tsx
-        files["src/main.tsx"] = """import React from 'react'
+        files[
+            "src/main.tsx"
+        ] = """import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
@@ -179,13 +191,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>
 )"""
-        
+
         # src/App.tsx
         app_component = self._generate_react_app_component(name, features)
         files["src/App.tsx"] = app_component
-        
+
         # src/index.css
-        files["src/index.css"] = """* {
+        files[
+            "src/index.css"
+        ] = """* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -230,19 +244,21 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }"""
-        
+
         # 기능별 컴포넌트 생성
         if "authentication" in features or "auth" in features or "login" in features:
             files["src/components/Auth.tsx"] = self._generate_auth_component()
-            
+
         if "database" in features or "data" in features:
             files["src/services/api.ts"] = self._generate_api_service()
-            
+
         if "routing" in features or "navigation" in features:
             files["src/routes/Routes.tsx"] = self._generate_routes_component()
-        
+
         # README.md
-        files["README.md"] = f"""# {name}
+        files[
+            "README.md"
+        ] = f"""# {name}
 
 {description}
 
@@ -294,20 +310,20 @@ npm run build
 ## 📝 라이선스
 MIT
 """
-        
+
         return files
-    
+
     def _generate_react_app_component(self, name: str, features: List[str]) -> str:
         """React App 컴포넌트 생성"""
-        
+
         imports = ["import React, { useState, useEffect } from 'react'"]
-        
+
         if "routing" in features:
             imports.append("import { BrowserRouter as Router } from 'react-router-dom'")
-        
+
         if "auth" in features or "authentication" in features:
             imports.append("import Auth from './components/Auth'")
-        
+
         component_code = f"""
 {chr(10).join(imports)}
 
@@ -334,8 +350,8 @@ const App: React.FC = () => {{
     try {{
       // 실제 데이터 로드 로직
       await new Promise(resolve => setTimeout(resolve, 1000))
-      setState(prev => ({{ 
-        ...prev, 
+      setState(prev => ({{
+        ...prev,
         loading: false,
         data: []
       }}))
@@ -351,7 +367,7 @@ const App: React.FC = () => {{
         <h1>{name}</h1>
         <p>Production-ready React Application</p>
       </header>
-      
+
       {{state.loading ? (
         <div className="loading">Loading...</div>
       ) : (
@@ -362,7 +378,7 @@ const App: React.FC = () => {{
               {chr(10).join([f'<li>{feature}</li>' for feature in features])}
             </ul>
           </section>
-          
+
           <section className="actions">
             <button className="button" onClick={{loadInitialData}}>
               Refresh Data
@@ -377,7 +393,7 @@ const App: React.FC = () => {{
 export default App
 """
         return component_code.strip()
-    
+
     def _generate_auth_component(self) -> str:
         """인증 컴포넌트 생성"""
         return """import React, { useState } from 'react'
@@ -405,7 +421,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       })
 
       if (!response.ok) throw new Error('Authentication failed')
-      
+
       const user = await response.json()
       onLogin(user)
     } catch (err) {
@@ -417,9 +433,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     <div className="auth-container">
       <form onSubmit={handleSubmit} className="auth-form">
         <h2>{isLogin ? 'Login' : 'Register'}</h2>
-        
+
         {error && <div className="error">{error}</div>}
-        
+
         <input
           type="email"
           placeholder="Email"
@@ -427,7 +443,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        
+
         <input
           type="password"
           placeholder="Password"
@@ -435,11 +451,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        
+
         <button type="submit" className="button">
           {isLogin ? 'Login' : 'Register'}
         </button>
-        
+
         <p onClick={() => setIsLogin(!isLogin)} className="toggle-auth">
           {isLogin ? 'Need an account? Register' : 'Have an account? Login'}
         </p>
@@ -449,7 +465,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 }
 
 export default Auth"""
-    
+
     def _generate_api_service(self) -> str:
         """API 서비스 생성"""
         return """import axios from 'axios'
@@ -493,7 +509,7 @@ export const apiService = {
   login: (credentials: any) => api.post('/auth/login', credentials),
   register: (userData: any) => api.post('/auth/register', userData),
   logout: () => api.post('/auth/logout'),
-  
+
   // Data
   getData: () => api.get('/data'),
   createData: (data: any) => api.post('/data', data),
@@ -502,7 +518,7 @@ export const apiService = {
 }
 
 export default api"""
-    
+
     def _generate_routes_component(self) -> str:
         """라우팅 컴포넌트 생성"""
         return """import React from 'react'
@@ -527,66 +543,53 @@ const AppRoutes: React.FC = () => {
 }
 
 export default AppRoutes"""
-    
+
     def _generate_vue_project(
-        self,
-        name: str,
-        description: str,
-        features: List[str]
+        self, name: str, description: str, features: List[str]
     ) -> Dict[str, str]:
         """Vue 프로젝트 생성"""
         # Vue 프로젝트 구현
         files = {}
         # ... Vue 프로젝트 파일 생성 로직
         return files
-    
+
     def _generate_nextjs_project(
-        self,
-        name: str,
-        description: str,
-        features: List[str]
+        self, name: str, description: str, features: List[str]
     ) -> Dict[str, str]:
         """Next.js 프로젝트 생성"""
         # Next.js 프로젝트 구현
         files = {}
         # ... Next.js 프로젝트 파일 생성 로직
         return files
-    
+
     def _generate_express_project(
-        self,
-        name: str,
-        description: str,
-        features: List[str]
+        self, name: str, description: str, features: List[str]
     ) -> Dict[str, str]:
         """Express 프로젝트 생성"""
         # Express 프로젝트 구현
         files = {}
         # ... Express 프로젝트 파일 생성 로직
         return files
-    
+
     def _generate_fastapi_project(
-        self,
-        name: str,
-        description: str,
-        features: List[str]
+        self, name: str, description: str, features: List[str]
     ) -> Dict[str, str]:
         """FastAPI 프로젝트 생성"""
         # FastAPI 프로젝트 구현
         files = {}
         # ... FastAPI 프로젝트 파일 생성 로직
         return files
-    
+
     def _generate_basic_web_project(
-        self,
-        name: str,
-        description: str,
-        features: List[str]
+        self, name: str, description: str, features: List[str]
     ) -> Dict[str, str]:
         """기본 웹 프로젝트 생성"""
         files = {}
-        
+
         # index.html
-        files["index.html"] = f"""<!DOCTYPE html>
+        files[
+            "index.html"
+        ] = f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -607,9 +610,11 @@ export default AppRoutes"""
     <script src="app.js"></script>
 </body>
 </html>"""
-        
+
         # style.css
-        files["style.css"] = """/* Production CSS */
+        files[
+            "style.css"
+        ] = """/* Production CSS */
 * {
     margin: 0;
     padding: 0;
@@ -643,20 +648,21 @@ main {
     border-radius: 8px;
     min-height: 400px;
 }"""
-        
+
         # app.js
-        files["app.js"] = """// Production JavaScript
+        files["app.js"] = (
+            """// Production JavaScript
 class App {
     constructor() {
         this.init()
     }
-    
+
     init() {
         console.log('App initialized')
         this.loadContent()
         this.setupEventListeners()
     }
-    
+
     loadContent() {
         const content = document.getElementById('content')
         content.innerHTML = `
@@ -670,12 +676,14 @@ class App {
             </div>
         `
     }
-    
+
     getFeaturesList() {
-        const features = """ + json.dumps(features) + """
+        const features = """
+            + json.dumps(features)
+            + """
         return features.map(f => `<li>${f}</li>`).join('')
     }
-    
+
     setupEventListeners() {
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM loaded')
@@ -685,17 +693,18 @@ class App {
 
 // Initialize app
 const app = new App()"""
-        
+        )
+
         return files
-    
+
     def _create_zip(self, project_path: Path, project_id: str) -> Path:
         """프로젝트를 ZIP 파일로 압축"""
         zip_path = self.output_dir / f"{project_id}.zip"
-        
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for file_path in project_path.rglob('*'):
+
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            for file_path in project_path.rglob("*"):
                 if file_path.is_file():
                     arcname = file_path.relative_to(project_path)
                     zipf.write(file_path, arcname)
-        
+
         return zip_path

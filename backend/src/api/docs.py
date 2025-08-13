@@ -103,44 +103,17 @@ Official SDKs available for:
 TAGS_METADATA = [
     {
         "name": "Authentication",
-        "description": "User authentication and authorization endpoints"
+        "description": "User authentication and authorization endpoints",
     },
-    {
-        "name": "Projects",
-        "description": "Project generation and management"
-    },
-    {
-        "name": "Agents",
-        "description": "AI agent operations and status"
-    },
-    {
-        "name": "Users",
-        "description": "User profile and settings management"
-    },
-    {
-        "name": "Organizations",
-        "description": "Organization and team management"
-    },
-    {
-        "name": "API Keys",
-        "description": "API key management for programmatic access"
-    },
-    {
-        "name": "Billing",
-        "description": "Subscription and billing management"
-    },
-    {
-        "name": "Admin",
-        "description": "Administrative endpoints (requires admin role)"
-    },
-    {
-        "name": "Health",
-        "description": "System health and status checks"
-    },
-    {
-        "name": "WebSocket",
-        "description": "WebSocket connection and real-time events"
-    }
+    {"name": "Projects", "description": "Project generation and management"},
+    {"name": "Agents", "description": "AI agent operations and status"},
+    {"name": "Users", "description": "User profile and settings management"},
+    {"name": "Organizations", "description": "Organization and team management"},
+    {"name": "API Keys", "description": "API key management for programmatic access"},
+    {"name": "Billing", "description": "Subscription and billing management"},
+    {"name": "Admin", "description": "Administrative endpoints (requires admin role)"},
+    {"name": "Health", "description": "System health and status checks"},
+    {"name": "WebSocket", "description": "WebSocket connection and real-time events"},
 ]
 
 # Security schemes
@@ -149,14 +122,14 @@ SECURITY_SCHEMES = {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "JWT Bearer token authentication"
+        "description": "JWT Bearer token authentication",
     },
     "ApiKeyAuth": {
         "type": "apiKey",
         "in": "header",
         "name": "X-API-Key",
-        "description": "API Key authentication for server-to-server communication"
-    }
+        "description": "API Key authentication for server-to-server communication",
+    },
 }
 
 # Response examples
@@ -169,12 +142,12 @@ RESPONSE_EXAMPLES = {
                     "success": True,
                     "data": {
                         "id": "123e4567-e89b-12d3-a456-426614174000",
-                        "status": "completed"
+                        "status": "completed",
                     },
-                    "message": "Operation successful"
+                    "message": "Operation successful",
                 }
             }
-        }
+        },
     },
     "400": {
         "description": "Bad request",
@@ -185,14 +158,11 @@ RESPONSE_EXAMPLES = {
                     "error": {
                         "code": "INVALID_REQUEST",
                         "message": "Invalid request parameters",
-                        "details": {
-                            "field": "email",
-                            "issue": "Invalid email format"
-                        }
-                    }
+                        "details": {"field": "email", "issue": "Invalid email format"},
+                    },
                 }
             }
-        }
+        },
     },
     "401": {
         "description": "Unauthorized",
@@ -202,11 +172,11 @@ RESPONSE_EXAMPLES = {
                     "success": False,
                     "error": {
                         "code": "UNAUTHORIZED",
-                        "message": "Authentication required"
-                    }
+                        "message": "Authentication required",
+                    },
                 }
             }
-        }
+        },
     },
     "403": {
         "description": "Forbidden",
@@ -216,11 +186,11 @@ RESPONSE_EXAMPLES = {
                     "success": False,
                     "error": {
                         "code": "FORBIDDEN",
-                        "message": "Insufficient permissions"
-                    }
+                        "message": "Insufficient permissions",
+                    },
                 }
             }
-        }
+        },
     },
     "404": {
         "description": "Not found",
@@ -228,13 +198,10 @@ RESPONSE_EXAMPLES = {
             "application/json": {
                 "example": {
                     "success": False,
-                    "error": {
-                        "code": "NOT_FOUND",
-                        "message": "Resource not found"
-                    }
+                    "error": {"code": "NOT_FOUND", "message": "Resource not found"},
                 }
             }
-        }
+        },
     },
     "429": {
         "description": "Too many requests",
@@ -244,11 +211,11 @@ RESPONSE_EXAMPLES = {
                     "success": False,
                     "error": {
                         "code": "RATE_LIMIT_EXCEEDED",
-                        "message": "Rate limit exceeded. Please try again later."
-                    }
+                        "message": "Rate limit exceeded. Please try again later.",
+                    },
                 }
             }
-        }
+        },
     },
     "500": {
         "description": "Internal server error",
@@ -258,90 +225,80 @@ RESPONSE_EXAMPLES = {
                     "success": False,
                     "error": {
                         "code": "INTERNAL_ERROR",
-                        "message": "An unexpected error occurred"
-                    }
+                        "message": "An unexpected error occurred",
+                    },
                 }
             }
-        }
-    }
+        },
+    },
 }
+
 
 def custom_openapi(app: FastAPI) -> Dict[str, Any]:
     """Generate custom OpenAPI schema"""
-    
+
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title=API_TITLE,
         version=API_VERSION,
         description=API_DESCRIPTION,
         routes=app.routes,
-        tags=TAGS_METADATA
+        tags=TAGS_METADATA,
     )
-    
+
     # Add security schemes
     openapi_schema["components"]["securitySchemes"] = SECURITY_SCHEMES
-    
+
     # Add global security requirement
-    openapi_schema["security"] = [
-        {"BearerAuth": []},
-        {"ApiKeyAuth": []}
-    ]
-    
+    openapi_schema["security"] = [{"BearerAuth": []}, {"ApiKeyAuth": []}]
+
     # Add servers
     openapi_schema["servers"] = [
-        {
-            "url": "https://api.t-developer.com",
-            "description": "Production server"
-        },
-        {
-            "url": "https://staging-api.t-developer.com",
-            "description": "Staging server"
-        },
-        {
-            "url": "http://localhost:8000",
-            "description": "Development server"
-        }
+        {"url": "https://api.t-developer.com", "description": "Production server"},
+        {"url": "https://staging-api.t-developer.com", "description": "Staging server"},
+        {"url": "http://localhost:8000", "description": "Development server"},
     ]
-    
+
     # Add external documentation
     openapi_schema["externalDocs"] = {
         "description": "Full API Documentation",
-        "url": "https://docs.t-developer.com/api"
+        "url": "https://docs.t-developer.com/api",
     }
-    
+
     # Add license
     openapi_schema["info"]["license"] = {
         "name": "Enterprise License",
-        "url": "https://t-developer.com/license"
+        "url": "https://t-developer.com/license",
     }
-    
+
     # Add contact
     openapi_schema["info"]["contact"] = {
         "name": "API Support",
         "url": "https://support.t-developer.com",
-        "email": "api@t-developer.com"
+        "email": "api@t-developer.com",
     }
-    
+
     # Add terms of service
     openapi_schema["info"]["termsOfService"] = "https://t-developer.com/terms"
-    
+
     # Add x-logo for ReDoc
     openapi_schema["info"]["x-logo"] = {
         "url": "https://t-developer.com/logo.png",
-        "altText": "T-Developer Logo"
+        "altText": "T-Developer Logo",
     }
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
+
 def setup_documentation(app: FastAPI):
     """Setup API documentation endpoints"""
-    
+
     # Custom OpenAPI schema
     app.openapi = lambda: custom_openapi(app)
-    
+
     # Custom Swagger UI
     @app.get("/docs", include_in_schema=False)
     async def custom_swagger_ui():
@@ -350,9 +307,9 @@ def setup_documentation(app: FastAPI):
             title=f"{API_TITLE} - Swagger UI",
             swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui-bundle.js",
             swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.9.0/swagger-ui.css",
-            swagger_favicon_url="https://t-developer.com/favicon.ico"
+            swagger_favicon_url="https://t-developer.com/favicon.ico",
         )
-    
+
     # Custom ReDoc
     @app.get("/redoc", include_in_schema=False)
     async def custom_redoc():
@@ -360,55 +317,48 @@ def setup_documentation(app: FastAPI):
             openapi_url="/openapi.json",
             title=f"{API_TITLE} - ReDoc",
             redoc_js_url="https://cdn.jsdelivr.net/npm/redoc@2.0.0/bundles/redoc.standalone.js",
-            redoc_favicon_url="https://t-developer.com/favicon.ico"
+            redoc_favicon_url="https://t-developer.com/favicon.ico",
         )
-    
+
     # API specification download
     @app.get("/api-spec", include_in_schema=False)
     async def download_api_spec():
         """Download OpenAPI specification as JSON"""
         return custom_openapi(app)
-    
+
     # Postman collection export
     @app.get("/postman-collection", include_in_schema=False)
     async def export_postman_collection():
         """Export API as Postman collection"""
         # Convert OpenAPI to Postman format
         openapi = custom_openapi(app)
-        
+
         # Simplified Postman collection structure
         postman_collection = {
             "info": {
                 "name": API_TITLE,
                 "description": API_DESCRIPTION,
-                "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+                "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
             },
             "auth": {
                 "type": "bearer",
                 "bearer": [
-                    {
-                        "key": "token",
-                        "value": "{{access_token}}",
-                        "type": "string"
-                    }
-                ]
+                    {"key": "token", "value": "{{access_token}}", "type": "string"}
+                ],
             },
             "item": [],
             "variable": [
                 {
                     "key": "base_url",
                     "value": "https://api.t-developer.com",
-                    "type": "string"
+                    "type": "string",
                 },
-                {
-                    "key": "access_token",
-                    "value": "",
-                    "type": "string"
-                }
-            ]
+                {"key": "access_token", "value": "", "type": "string"},
+            ],
         }
-        
+
         return postman_collection
+
 
 # API Examples for documentation
 API_EXAMPLES = {
@@ -419,9 +369,9 @@ API_EXAMPLES = {
             "requirements": {
                 "features": ["authentication", "real-time updates", "drag-and-drop"],
                 "framework": "react",
-                "styling": "tailwind"
-            }
-        }
+                "styling": "tailwind",
+            },
+        },
     },
     "project_response": {
         "summary": "Successful project creation",
@@ -431,8 +381,8 @@ API_EXAMPLES = {
                 "project_id": "123e4567-e89b-12d3-a456-426614174000",
                 "status": "processing",
                 "estimated_time": 30,
-                "download_url": "/api/v1/download/123e4567-e89b-12d3-a456-426614174000"
-            }
-        }
-    }
+                "download_url": "/api/v1/download/123e4567-e89b-12d3-a456-426614174000",
+            },
+        },
+    },
 }

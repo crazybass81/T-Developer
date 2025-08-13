@@ -6,7 +6,7 @@
   "memory": "8192",
   "taskRoleArn": "arn:aws:iam::ACCOUNT:role/t-developer-task-role",
   "executionRoleArn": "arn:aws:iam::ACCOUNT:role/t-developer-execution-role",
-  
+
   "containerDefinitions": [
     {
       "name": "analysis-agents",
@@ -45,7 +45,7 @@
         "retries": 3
       }
     },
-    
+
     {
       "name": "decision-agents",
       "image": "ACCOUNT.dkr.ecr.REGION.amazonaws.com/t-developer/decision:latest",
@@ -77,7 +77,7 @@
         }
       }
     },
-    
+
     {
       "name": "generation-agents",
       "image": "ACCOUNT.dkr.ecr.REGION.amazonaws.com/t-developer/generation:latest",
@@ -116,7 +116,7 @@
       }
     }
   ],
-  
+
   "volumes": [
     {
       "name": "efs-volume",

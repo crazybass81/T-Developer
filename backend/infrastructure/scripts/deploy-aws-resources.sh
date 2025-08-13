@@ -47,9 +47,9 @@ deploy_stack() {
     local stack_name=$1
     local template_file=$2
     local parameters=$3
-    
+
     echo "Deploying $stack_name..."
-    
+
     if aws cloudformation describe-stacks --stack-name "$stack_name" --region "$AWS_REGION" &> /dev/null; then
         echo "Stack exists, updating..."
         aws cloudformation update-stack \
@@ -74,7 +74,7 @@ deploy_stack() {
             --capabilities CAPABILITY_NAMED_IAM \
             --region "$AWS_REGION"
     fi
-    
+
     # Wait for stack to complete
     echo "Waiting for stack operation to complete..."
     aws cloudformation wait stack-create-complete \
@@ -83,7 +83,7 @@ deploy_stack() {
     aws cloudformation wait stack-update-complete \
         --stack-name "$stack_name" \
         --region "$AWS_REGION" 2>/dev/null || true
-    
+
     print_status "$stack_name deployed successfully"
 }
 
@@ -107,7 +107,7 @@ create_parameter() {
     local name=$1
     local value=$2
     local type=${3:-String}
-    
+
     aws ssm put-parameter \
         --name "$name" \
         --value "$value" \
@@ -134,7 +134,7 @@ echo "Creating Secrets Manager entries..."
 create_secret() {
     local name=$1
     local value=$2
-    
+
     if aws secretsmanager describe-secret --secret-id "$name" --region "$AWS_REGION" &> /dev/null; then
         aws secretsmanager update-secret \
             --secret-id "$name" \

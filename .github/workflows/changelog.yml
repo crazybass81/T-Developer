@@ -8,12 +8,12 @@ on:
 jobs:
   changelog:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Generate Changelog
         uses: orhun/git-cliff-action@v2
         with:
@@ -21,7 +21,7 @@ jobs:
           args: --verbose
         env:
           OUTPUT: CHANGELOG.md
-      
+
       - name: Commit Changelog
         run: |
           git config user.name "github-actions[bot]"

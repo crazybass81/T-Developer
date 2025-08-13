@@ -7,12 +7,13 @@ from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
+
 class CORSConfig:
     """CORS 설정 관리"""
-    
+
     def __init__(self):
-        self.environment = os.getenv('ENVIRONMENT', 'development')
-        
+        self.environment = os.getenv("ENVIRONMENT", "development")
+
         # Environment-specific origins
         self.allowed_origins = self._get_allowed_origins()
         self.allow_credentials = True
@@ -23,7 +24,7 @@ class CORSConfig:
             "X-Request-ID",
             "X-API-Key",
             "X-Client-Version",
-            "X-Tenant-ID"
+            "X-Tenant-ID",
         ]
         self.expose_headers = [
             "X-Request-ID",
@@ -31,31 +32,31 @@ class CORSConfig:
             "X-RateLimit-Remaining",
             "X-RateLimit-Reset",
             "X-Process-Time",
-            "Content-Disposition"
+            "Content-Disposition",
         ]
         self.max_age = 86400  # 24 hours
-    
+
     def _get_allowed_origins(self) -> List[str]:
         """환경별 허용 Origin 설정"""
-        
-        if self.environment == 'production':
+
+        if self.environment == "production":
             # Production origins only
             return [
                 "https://t-developer.com",
                 "https://www.t-developer.com",
                 "https://app.t-developer.com",
-                "https://api.t-developer.com"
+                "https://api.t-developer.com",
             ]
-        
-        elif self.environment == 'staging':
+
+        elif self.environment == "staging":
             # Staging origins
             return [
                 "https://staging.t-developer.com",
                 "https://staging-app.t-developer.com",
                 "http://localhost:3000",
-                "http://localhost:5173"
+                "http://localhost:5173",
             ]
-        
+
         else:  # development
             # Allow all common development origins
             return [
@@ -71,19 +72,19 @@ class CORSConfig:
                 "http://frontend:3000",
                 "http://backend:8000",
                 # Allow all in dev (careful!)
-                "*"
+                "*",
             ]
-    
+
     def add_origin(self, origin: str):
         """동적으로 Origin 추가"""
         if origin not in self.allowed_origins:
             self.allowed_origins.append(origin)
-    
+
     def remove_origin(self, origin: str):
         """Origin 제거"""
         if origin in self.allowed_origins:
             self.allowed_origins.remove(origin)
-    
+
     def get_middleware(self) -> CORSMiddleware:
         """FastAPI CORS Middleware 생성"""
         return CORSMiddleware(
@@ -93,31 +94,32 @@ class CORSConfig:
             allow_methods=self.allowed_methods,
             allow_headers=self.allowed_headers,
             expose_headers=self.expose_headers,
-            max_age=self.max_age
+            max_age=self.max_age,
         )
-    
+
     def validate_origin(self, origin: Optional[str]) -> bool:
         """Origin 검증"""
         if not origin:
             return False
-        
+
         # Allow all in development
-        if self.environment == 'development' and '*' in self.allowed_origins:
+        if self.environment == "development" and "*" in self.allowed_origins:
             return True
-        
+
         # Check exact match
         if origin in self.allowed_origins:
             return True
-        
+
         # Check wildcard patterns
         for allowed in self.allowed_origins:
-            if '*' in allowed:
+            if "*" in allowed:
                 # Simple wildcard matching
-                pattern = allowed.replace('*', '.*')
+                pattern = allowed.replace("*", ".*")
                 import re
+
                 if re.match(pattern, origin):
                     return True
-        
+
         return False
 
 
@@ -134,5 +136,5 @@ def setup_cors(app):
         allow_methods=cors_config.allowed_methods,
         allow_headers=cors_config.allowed_headers,
         expose_headers=cors_config.expose_headers,
-        max_age=cors_config.max_age
+        max_age=cors_config.max_age,
     )

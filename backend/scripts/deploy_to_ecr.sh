@@ -32,7 +32,7 @@ if ! aws ecr describe-repositories --repository-names ${IMAGE_NAME} --region ${A
         --image-scanning-configuration scanOnPush=true \
         --encryption-configuration encryptionType=AES256 \
         --tags Key=Project,Value=TDeveloper Key=Environment,Value=${ENVIRONMENT}
-    
+
     # Set lifecycle policy
     aws ecr put-lifecycle-policy \
         --repository-name ${IMAGE_NAME} \
@@ -102,6 +102,6 @@ if [ "${UPDATE_ECS_SERVICE}" = "true" ]; then
         --service t-developer-backend \
         --force-new-deployment \
         --region ${AWS_REGION}
-    
+
     echo -e "${GREEN}✓ ECS service update triggered${NC}"
 fi

@@ -17,16 +17,16 @@ from .risk_analyzer import RiskAnalyzer
 from .recommendation_engine import RecommendationEngine
 
 __all__ = [
-    'SimilarityCalculator',
-    'SemanticMatcher', 
-    'FunctionalScorer',
-    'TechnicalCompatibility',
-    'PerformanceMatcher',
-    'SecurityCompliance',
-    'CostEfficiency',
-    'MaintenanceScore',
-    'PopularityMetrics',
-    'QualityAssessor',
-    'RiskAnalyzer',
-    'RecommendationEngine'
+    "SimilarityCalculator",
+    "SemanticMatcher",
+    "FunctionalScorer",
+    "TechnicalCompatibility",
+    "PerformanceMatcher",
+    "SecurityCompliance",
+    "CostEfficiency",
+    "MaintenanceScore",
+    "PopularityMetrics",
+    "QualityAssessor",
+    "RiskAnalyzer",
+    "RecommendationEngine",
 ]

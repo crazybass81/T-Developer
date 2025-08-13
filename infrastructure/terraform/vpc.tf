@@ -25,7 +25,7 @@ resource "aws_security_group" "t_developer_evolution" {
   description = "T-Developer Evolution Engine Security Group"
 
   # Inbound Rules (인바운드 규칙)
-  
+
   # HTTP/HTTPS 접근 (Evolution Dashboard)
   ingress {
     description = "HTTP access for Evolution Dashboard"
@@ -71,7 +71,7 @@ resource "aws_security_group" "t_developer_evolution" {
   }
 
   # Outbound Rules (아웃바운드 규칙)
-  
+
   # 모든 아웃바운드 트래픽 허용 (AWS 서비스 접근용)
   egress {
     description = "All outbound traffic"
@@ -94,7 +94,7 @@ resource "aws_security_group" "t_developer_agents" {
   description = "T-Developer Agents Runtime Security Group"
 
   # Inbound Rules
-  
+
   # Agent API 포트 (Evolution Engine에서 접근)
   ingress {
     description     = "Agent API from Evolution Engine"
@@ -135,7 +135,7 @@ resource "aws_security_group" "t_developer_database" {
   description = "T-Developer Database Security Group (Registry, Metrics)"
 
   # Inbound Rules
-  
+
   # PostgreSQL/MySQL (Agent Registry용)
   ingress {
     description     = "Database access from Evolution Engine"
@@ -182,7 +182,7 @@ resource "aws_security_group" "t_developer_safety" {
   description = "Evolution Safety Monitoring and Quarantine System"
 
   # Inbound Rules - 매우 제한적
-  
+
   # Safety API (Evolution Engine에서만 접근)
   ingress {
     description     = "Safety API access"

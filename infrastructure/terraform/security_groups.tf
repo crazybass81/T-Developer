@@ -295,6 +295,6 @@ output "security_group_monitoring" {
 }
 
 output "security_group_emergency" {
-  description = "Emergency System Security Group ID"  
+  description = "Emergency System Security Group ID"
   value       = aws_security_group.t_developer_emergency.id
 }

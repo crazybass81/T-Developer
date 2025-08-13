@@ -56,7 +56,7 @@ variable "ai_autonomy_level" {
   description = "AI 자율성 수준 (0.0 ~ 1.0)"
   type        = number
   default     = 0.85
-  
+
   validation {
     condition     = var.ai_autonomy_level >= 0 && var.ai_autonomy_level <= 1
     error_message = "AI 자율성 수준은 0.0과 1.0 사이여야 합니다."
@@ -68,8 +68,14 @@ variable "tags" {
   type        = map(string)
   default = {
     Project     = "T-Developer"
-    Environment = "development" 
+    Environment = "development"
     ManagedBy   = "Terraform"
     Purpose     = "AI-Autonomous-Evolution"
   }
+}
+
+variable "enable_multi_region_secrets" {
+  description = "다중 리전 비밀 복제 활성화 여부 (재해 복구용)"
+  type        = bool
+  default     = false
 }

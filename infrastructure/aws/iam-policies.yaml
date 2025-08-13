@@ -48,7 +48,7 @@ Resources:
                 Resource:
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/t-developer-*'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/t-developer-*/index/*'
-              
+
               # S3 permissions
               - Effect: Allow
                 Action:
@@ -59,7 +59,7 @@ Resources:
                 Resource:
                   - !Sub 'arn:aws:s3:::t-developer-${Environment}-*'
                   - !Sub 'arn:aws:s3:::t-developer-${Environment}-*/*'
-              
+
               # Bedrock permissions
               - Effect: Allow
                 Action:
@@ -68,7 +68,7 @@ Resources:
                   - bedrock:GetFoundationModel
                   - bedrock:ListFoundationModels
                 Resource: '*'
-              
+
               # Agent Suite permissions
               - Effect: Allow
                 Action:
@@ -77,7 +77,7 @@ Resources:
                   - bedrock-agent:GetAgent
                   - bedrock-agent:ListAgents
                 Resource: '*'
-              
+
               # EventBridge permissions
               - Effect: Allow
                 Action:
@@ -86,7 +86,7 @@ Resources:
                 Resource:
                   - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/t-developer-*'
                   - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/t-developer-*'
-              
+
               # SQS permissions
               - Effect: Allow
                 Action:
@@ -96,7 +96,7 @@ Resources:
                   - sqs:GetQueueAttributes
                 Resource:
                   - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:t-developer-*'
-              
+
               # CloudWatch permissions
               - Effect: Allow
                 Action:
@@ -107,7 +107,7 @@ Resources:
                   - logs:DescribeLogGroups
                   - logs:DescribeLogStreams
                 Resource: '*'
-              
+
               # Secrets Manager permissions
               - Effect: Allow
                 Action:
@@ -115,7 +115,7 @@ Resources:
                   - secretsmanager:DescribeSecret
                 Resource:
                   - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:t-developer/*'
-              
+
               # Systems Manager Parameter Store
               - Effect: Allow
                 Action:

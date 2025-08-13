@@ -18,11 +18,11 @@ aws_config:
             values: ["arn:aws:s3:::t-developer-*/*"]
           - type: AWS::RDS::DBCluster
             values: ["arn:aws:rds:*:*:cluster:t-developer-*"]
-    
+
   guardduty:
     enabled: true
     finding_publishing_frequency: FIFTEEN_MINUTES
-    
+
   security_hub:
     enabled: true
     standards:
@@ -42,7 +42,7 @@ iam_policies:
     max_password_age: 90
     password_reuse_prevention: 24
     hard_expiry: false
-    
+
   mfa_enforcement:
     required_for:
       - console_access: true
@@ -51,7 +51,7 @@ iam_policies:
     exemptions:
       - service_accounts
       - ci_cd_roles
-      
+
   session_policy:
     max_session_duration: 3600  # 1 hour
     require_mfa_for_role_assumption: true
@@ -61,13 +61,13 @@ network_security:
     enabled: true
     traffic_type: ALL
     destination: s3
-    
+
   security_groups:
     default_rules:
       - deny_all_inbound: true
       - allow_required_only: true
       - log_denied_connections: true
-      
+
   network_acls:
     deny_known_bad_ips: true
     rate_limiting: true
@@ -84,16 +84,16 @@ data_protection:
       ebs:
         encrypted: true
         kms_key_id: alias/t-developer-ebs
-    
+
     in_transit:
       enforce_tls: true
       minimum_tls_version: "1.2"
-      
+
   backup:
     enabled: true
     retention_days: 30
     cross_region_backup: true
-    
+
   data_loss_prevention:
     enabled: true
     sensitive_data_discovery: true
@@ -105,22 +105,22 @@ monitoring_and_alerting:
       metric: UnauthorizedAPICalls
       threshold: 5
       period: 300
-      
+
     - name: RootAccountUsageAlarm
       metric: RootAccountUsage
       threshold: 1
       period: 60
-      
+
     - name: IAMPolicyChangesAlarm
       metric: IAMPolicyEventCount
       threshold: 1
       period: 300
-      
+
     - name: NetworkGatewayChangesAlarm
       metric: NetworkGatewayEventCount
       threshold: 1
       period: 300
-      
+
   sns_topics:
     security_alerts:
       name: t-developer-security-alerts
@@ -129,16 +129,16 @@ monitoring_and_alerting:
           endpoint: security@t-developer.com
         - protocol: sms
           endpoint: "+1234567890"
-          
+
 compliance:
   standards:
     - GDPR
     - HIPAA
     - SOC2
     - ISO27001
-    
+
   audit_frequency: quarterly
-  
+
   reports:
     - type: compliance_report
       frequency: monthly
@@ -149,20 +149,20 @@ compliance:
 
 incident_response:
   runbook_location: s3://t-developer-runbooks/incident-response/
-  
+
   escalation_chain:
     - level: 1
       contact: oncall@t-developer.com
       response_time: 15_minutes
-      
+
     - level: 2
       contact: security-team@t-developer.com
       response_time: 30_minutes
-      
+
     - level: 3
       contact: ciso@t-developer.com
       response_time: 1_hour
-      
+
   automated_responses:
     - trigger: suspicious_activity
       action: isolate_resource

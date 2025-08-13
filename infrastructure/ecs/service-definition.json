@@ -3,7 +3,7 @@
   "taskDefinition": "t-developer-agents:latest",
   "desiredCount": 2,
   "launchType": "FARGATE",
-  
+
   "networkConfiguration": {
     "awsvpcConfiguration": {
       "subnets": [
@@ -16,7 +16,7 @@
       "assignPublicIp": "DISABLED"
     }
   },
-  
+
   "loadBalancers": [
     {
       "targetGroupArn": "arn:aws:elasticloadbalancing:REGION:ACCOUNT:targetgroup/t-developer-tg/xxx",
@@ -24,7 +24,7 @@
       "containerPort": 8000
     }
   ],
-  
+
   "serviceRegistries": [
     {
       "registryArn": "arn:aws:servicediscovery:REGION:ACCOUNT:service/srv-xxx",
@@ -32,7 +32,7 @@
       "containerPort": 8000
     }
   ],
-  
+
   "deploymentConfiguration": {
     "deploymentCircuitBreaker": {
       "enable": true,
@@ -41,7 +41,7 @@
     "maximumPercent": 200,
     "minimumHealthyPercent": 100
   },
-  
+
   "capacityProviderStrategy": [
     {
       "capacityProvider": "FARGATE_SPOT",
@@ -54,10 +54,10 @@
       "base": 1
     }
   ],
-  
+
   "enableECSManagedTags": true,
   "propagateTags": "SERVICE",
-  
+
   "tags": [
     {
       "key": "Environment",

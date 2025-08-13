@@ -7,9 +7,9 @@ from .dynamodb_client import DynamoDBClient, get_dynamodb_client
 from .dynamodb_models import ProjectModel, UserModel, AgentModel
 
 __all__ = [
-    'DynamoDBClient',
-    'get_dynamodb_client',
-    'ProjectModel',
-    'UserModel',
-    'AgentModel'
+    "DynamoDBClient",
+    "get_dynamodb_client",
+    "ProjectModel",
+    "UserModel",
+    "AgentModel",
 ]

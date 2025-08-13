@@ -65,60 +65,60 @@ graph TB
         API[FastAPI Python Backend]
         WS[WebSocket Real-time]
     end
-    
+
     subgraph "🧬 AI Evolution Core"
         EVOLUTION[AI Evolution Engine]
         SAFETY[Evolution Safety Framework]
         GENETIC[Genetic Algorithm Engine]
         META[Meta-Learning System]
     end
-    
+
     subgraph "🤖 9-Agent Pipeline (ECS Fargate)"
         GROUP1[Analysis Group<br/>NL Input • UI Selection • Parser]
         GROUP2[Decision Group<br/>Component • Match Rate • Search]
         GROUP3[Generation Group<br/>Generation • Assembly • Download]
     end
-    
+
     subgraph "🛡️ AI Safety & Security"
         PROMPT[Prompt Injection Defense]
         OUTPUT[AI Output Validation]
         PII[PII Detection & Masking]
         MONITOR[Real-time Monitoring]
     end
-    
+
     subgraph "☁️ AWS Bedrock AgentCore"
         AGENTCORE[AgentCore Runtime]
         BEDROCK[Bedrock Models]
         LAMBDA[Utility Functions]
     end
-    
+
     subgraph "📊 Operations & Analytics"
         COST[Cost Management]
         SLA[SLA/SLO Monitoring]
         METRICS[Performance Analytics]
         ALERTS[Intelligent Alerting]
     end
-    
+
     UI <--> WS
     UI --> API
     API --> EVOLUTION
     EVOLUTION --> SAFETY
     EVOLUTION --> GENETIC
     GENETIC --> META
-    
+
     API --> GROUP1
     GROUP1 --> GROUP2
     GROUP2 --> GROUP3
-    
+
     GROUP1 -.-> PROMPT
     GROUP2 -.-> OUTPUT
     GROUP3 -.-> PII
-    
+
     GROUP1 --> AGENTCORE
     GROUP2 --> AGENTCORE
     GROUP3 --> AGENTCORE
     AGENTCORE --> BEDROCK
-    
+
     MONITOR --> COST
     MONITOR --> SLA
     SLA --> METRICS
