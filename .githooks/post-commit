@@ -1,0 +1,15 @@
+#!/bin/bash
+# 작업 완료 후 자동 검증 트리거
+
+# 커밋 메시지에서 작업 이름 추출
+COMMIT_MSG=$(git log -1 --pretty=%B)
+
+# task() 패턴에서 작업 이름 추출
+if [[ $COMMIT_MSG =~ task\(([^)]+)\) ]]; then
+    TASK_NAME="${BASH_REMATCH[1]}"
+    echo "🔍 작업 검증 트리거: $TASK_NAME"
+    
+    # 백그라운드에서 검증 실행
+    nohup python backend/scripts/task_validator.py --recent > /tmp/task_validation.log 2>&1 &
+    echo "검증이 백그라운드에서 실행 중입니다. 로그: /tmp/task_validation.log"
+fi
