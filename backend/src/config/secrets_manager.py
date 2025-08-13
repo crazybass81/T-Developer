@@ -137,5 +137,14 @@ class SecretsManager:
         try:
             response = self.sm_client.create_secret(
                 Name=f't-developer/{secret_name}',
-                Description=description or f'Secret for {secret_name}'
+                Description=description or f'Secret for {secret_name}',
+                SecretString=secret_value
             )
+            print(f"✅ Created secret: {response['ARN']}")
+            return True
+        except self.sm_client.exceptions.ResourceExistsException:
+            print(f"Secret already exists: {secret_name}")
+            return False
+        except Exception as e:
+            print(f"Error creating secret: {e}")
+            return False

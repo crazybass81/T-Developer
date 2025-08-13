@@ -14,12 +14,28 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.agents.unified.ui_selection.agent import (
-    UISelectionAgent,
-    FrameworkCategory,
-    FrameworkInfo,
-    UIStack,
+    UnifiedUISelectionAgent as UISelectionAgent,
     UISelectionResult,
+    EnhancedUISelectionResult,
 )
+
+# 테스트용 더미 클래스 정의
+class FrameworkCategory:
+    MOBILE = "mobile"
+    DESKTOP = "desktop"
+    WEB = "web"
+    
+class FrameworkInfo:
+    def __init__(self, name=None, category=None, popularity=None):
+        self.name = name
+        self.category = category
+        self.popularity = popularity
+
+class UIStack:
+    def __init__(self, framework=None, styling=None, components=None):
+        self.framework = framework
+        self.styling = styling
+        self.components = components
 
 
 class TestUISelectionAgent:
@@ -28,7 +44,7 @@ class TestUISelectionAgent:
     @pytest.fixture
     def agent(self):
         """테스트용 에이전트 인스턴스"""
-        with patch("src.lambda.agents.ui_selection_agent.ssm") as mock_ssm:
+        with patch("src.agents.unified.ui_selection.agent.ssm") as mock_ssm:
             mock_ssm.get_parameters_by_path.return_value = {
                 "Parameters": [
                     {
