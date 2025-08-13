@@ -1,0 +1,13 @@
+{
+  "agent_id": "nl_input",
+  "name": "NL Input Agent",
+  "description": "Natural Language Input Processing Agent",
+  "version": "1.0.0",
+  "size_kb": 4.4287109375,
+  "capabilities": [
+    "intent_analysis",
+    "entity_extraction",
+    "requirement_extraction"
+  ],
+  "created_at": "2025-08-15T00:00:00Z"
+}

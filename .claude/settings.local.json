@@ -204,6 +204,7 @@
       "Bash(export EVOLUTION_MODE=enabled)",
       "Bash(export AI_AUTONOMY_LEVEL=0.85)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }
