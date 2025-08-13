@@ -17,7 +17,7 @@
 
 ### 📁 Documentation Structure
 
-#### 00_planning/ - Strategic Planning
+#### [00_planning/](00_planning/) - Strategic Planning
 - [Agent Evolution Plan](00_planning/AGENT_EVOLUTION_PLAN.md)
 - [Daily Todos Day 1-20](00_planning/daily_todos/day01-20.md)
 - [Daily Todos Day 21-40](00_planning/daily_todos/day21-40.md)
