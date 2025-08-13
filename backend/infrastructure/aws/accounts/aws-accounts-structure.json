@@ -1,0 +1,61 @@
+{
+  "organization": {
+    "name": "T-Developer Organization",
+    "master_account_id": "123456789012",
+    "organizational_units": [
+      {
+        "name": "Development",
+        "id": "ou-dev-001",
+        "accounts": [
+          {
+            "name": "t-developer-dev",
+            "id": "234567890123",
+            "email": "dev@t-developer.com",
+            "role_name": "OrganizationAccountAccessRole"
+          }
+        ]
+      },
+      {
+        "name": "Staging",
+        "id": "ou-staging-001",
+        "accounts": [
+          {
+            "name": "t-developer-staging",
+            "id": "345678901234",
+            "email": "staging@t-developer.com",
+            "role_name": "OrganizationAccountAccessRole"
+          }
+        ]
+      },
+      {
+        "name": "Production",
+        "id": "ou-prod-001",
+        "accounts": [
+          {
+            "name": "t-developer-prod",
+            "id": "456789012345",
+            "email": "prod@t-developer.com",
+            "role_name": "OrganizationAccountAccessRole"
+          }
+        ]
+      }
+    ],
+    "service_control_policies": [
+      {
+        "name": "DenyHighRiskServices",
+        "description": "Deny access to high-risk services",
+        "targets": ["ou-dev-001", "ou-staging-001"]
+      },
+      {
+        "name": "RequireMFA",
+        "description": "Require MFA for all operations",
+        "targets": ["ou-prod-001"]
+      }
+    ]
+  },
+  "metadata": {
+    "created_at": "2024-12-08",
+    "version": "1.0.0",
+    "region": "us-east-1"
+  }
+}
