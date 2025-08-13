@@ -3,8 +3,6 @@
 ## 📋 Overview
 This document defines the architecture for T-Developer's AI Autonomous Evolution System, where AI drives 85% of system evolution through genetic algorithms and meta-learning.
 
-> **Note**: Full documentation available at `/docs/01_architecture/system/00-evolution-architecture.md`
-
 ## 🎯 Core Architecture
 
 ```yaml

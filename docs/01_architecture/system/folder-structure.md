@@ -1,7 +1,5 @@
 # T-Developer AI Autonomous Evolution System - Folder Structure
 
-> **Note**: Full documentation available at `/docs/01_architecture/system/folder-structure.md`
-
 ## 📁 Root Directory Structure
 
 ```

@@ -1,7 +1,5 @@
 # 🚀 T-Developer 자율진화 시스템 - 80일 엔터프라이즈 구현 계획 (보완 버전)
 
-> **Note**: This is the master reference. Full documentation available at `/docs/00_planning/master-evolution-plan.md`
-
 ## 시스템 아키텍처 개요
 ```yaml
 핵심 흐름:
