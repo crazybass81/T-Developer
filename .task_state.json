@@ -1,5 +1,5 @@
 {
-  "last_validated": "2025-08-13T23:43:42.259406",
+  "last_validated": "2025-08-14T00:07:11.721262",
   "completed_tasks": [],
   "pending_tasks": [
     {
@@ -124,6 +124,26 @@
     },
     {
       "name": "Agent Registry",
+      "status": "failed",
+      "completion_rate": 75.0
+    },
+    {
+      "name": "Recent changes",
+      "status": "failed",
+      "completion_rate": 75.0
+    },
+    {
+      "name": "Recent changes",
+      "status": "failed",
+      "completion_rate": 75.0
+    },
+    {
+      "name": "Recent changes",
+      "status": "failed",
+      "completion_rate": 75.0
+    },
+    {
+      "name": "Recent changes",
       "status": "failed",
       "completion_rate": 75.0
     },

@@ -3,7 +3,6 @@ Natural Language Input Processing Agent
 AgentCore-compatible wrapper
 Size: < 6.5KB
 """
-import json
 from typing import Any, Dict
 
 
@@ -73,40 +72,98 @@ class NLInputAgent:
         }
 
     def _analyze_intent(self, text: str) -> str:
-        """Analyze user intent"""
+        """Analyze user intent using keyword matching and patterns"""
         text_lower = text.lower()
-        if any(word in text_lower for word in ["create", "build", "make", "develop"]):
-            return "create_application"
-        elif any(word in text_lower for word in ["update", "modify", "change"]):
-            return "modify_application"
-        elif any(word in text_lower for word in ["fix", "debug", "repair"]):
-            return "fix_issue"
-        else:
-            return "general_query"
+
+        # Intent patterns
+        intents = {
+            "create": ["create", "build", "make", "develop"],
+            "modify": ["update", "modify", "change", "edit"],
+            "fix": ["fix", "debug", "repair", "solve"],
+            "deploy": ["deploy", "release", "publish"],
+            "analyze": ["analyze", "review", "audit"],
+            "test": ["test", "validate", "verify"],
+        }
+
+        # Score each intent
+        scores = {}
+        for intent, keywords in intents.items():
+            score = sum(1 for kw in keywords if kw in text_lower)
+            if score > 0:
+                scores[intent] = score
+
+        # Return highest scoring intent
+        if scores:
+            return max(scores, key=scores.get)
+        return "general_query"
 
     def _extract_entities(self, text: str) -> list:
-        """Extract entities from text"""
+        """Extract entities using pattern matching"""
         entities = []
-        # Simple entity extraction
-        if "web" in text.lower() or "website" in text.lower():
-            entities.append({"type": "platform", "value": "web"})
-        if "mobile" in text.lower() or "app" in text.lower():
-            entities.append({"type": "platform", "value": "mobile"})
-        if "api" in text.lower():
-            entities.append({"type": "component", "value": "api"})
-        if "database" in text.lower() or "db" in text.lower():
-            entities.append({"type": "component", "value": "database"})
+        text_lower = text.lower()
+
+        # Entity patterns (compact)
+        patterns = {
+            "platform": {
+                "web": ["web", "website"],
+                "mobile": ["mobile", "app", "ios", "android"],
+                "cloud": ["cloud", "aws", "azure"],
+            },
+            "tech": {
+                "python": ["python", "django", "flask"],
+                "js": ["javascript", "js", "react", "node"],
+                "db": ["database", "db", "sql", "mongo"],
+                "api": ["api", "rest", "graphql"],
+            },
+        }
+
+        # Extract entities by pattern matching
+        for entity_type, values in patterns.items():
+            for entity_name, keywords in values.items():
+                if any(kw in text_lower for kw in keywords):
+                    entities.append({"type": entity_type, "value": entity_name})
+
         return entities
 
     def _extract_requirements(self, text: str) -> list:
-        """Extract requirements from text"""
+        """Extract and categorize requirements"""
         requirements = []
-        sentences = text.split(".")
+
+        # Split into sentences (simple approach)
+        sentences = [
+            s.strip() for s in text.replace("!", ".").replace("?", ".").split(".") if s.strip()
+        ]
+
+        # Keywords (compact)
+        hi_pri = ["must", "critical", "urgent"]
+        lo_pri = ["optional", "maybe"]
+        perf = ["fast", "performance", "speed"]
+        sec = ["secure", "encrypt", "auth"]
+        ui = ["ui", "ux", "design"]
+
         for sentence in sentences:
-            if sentence.strip():
-                requirements.append(
-                    {"text": sentence.strip(), "priority": "medium", "type": "functional"}
-                )
+            sent_lower = sentence.lower()
+
+            # Determine priority
+            if any(kw in sent_lower for kw in hi_pri):
+                p = "high"
+            elif any(kw in sent_lower for kw in lo_pri):
+                p = "low"
+            else:
+                p = "medium"
+
+            # Determine type
+            if any(kw in sent_lower for kw in perf):
+                t = "perf"
+            elif any(kw in sent_lower for kw in sec):
+                t = "sec"
+            elif any(kw in sent_lower for kw in ui):
+                t = "ui"
+            else:
+                t = "func"
+
+            requirements.append({"text": sentence, "priority": p, "type": t})
+
         return requirements
 
     def _get_capabilities(self) -> list:

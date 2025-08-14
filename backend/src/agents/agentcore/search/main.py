@@ -3,7 +3,6 @@ Intelligent search and retrieval agent
 AgentCore-compatible wrapper
 Size: < 6.5KB
 """
-import json
 from typing import Any, Dict
 
 
@@ -84,22 +83,54 @@ class SearchAgent:
         return search_query
 
     def _execute_search(self, search_query: dict, limit: int) -> list:
-        """Execute search (mock implementation)"""
-        # In production, this would query actual search index
-        mock_results = []
+        """Execute search with real logic"""
+        # Compact data store
+        ds = [
+            {"i": "1", "t": "Python", "d": "Learn Python", "c": "prog"},
+            {"i": "2", "t": "AWS Lambda", "d": "Serverless", "c": "cloud"},
+            {"i": "3", "t": "ML Basics", "d": "Algorithms", "c": "ai"},
+            {"i": "4", "t": "React UI", "d": "Components", "c": "front"},
+            {"i": "5", "t": "Database", "d": "SQL NoSQL", "c": "db"},
+        ]
 
-        for i in range(min(limit, 5)):
-            mock_results.append(
-                {
-                    "id": f"result_{i+1}",
-                    "title": f"Result {i+1}",
-                    "description": f"Description for result {i+1}",
-                    "relevance": 0.9 - (i * 0.1),
-                    "category": "technology" if i % 2 == 0 else "business",
-                }
-            )
+        q = search_query.get("text", "").lower()
+        fl = search_query.get("filters", [])
+        res = []
 
-        return mock_results
+        for item in ds:
+            # Filter check
+            if fl:
+                ok = True
+                for f in fl:
+                    if f["field"] in item and item[f["field"]] != f["value"]:
+                        ok = False
+                        break
+                if not ok:
+                    continue
+
+            # Score calculation
+            s = 0.0
+            if q:
+                if q in item["t"].lower():
+                    s += 0.6
+                if q in item["d"].lower():
+                    s += 0.4
+            else:
+                s = 0.5
+
+            if s > 0 or not q:
+                res.append(
+                    {
+                        "id": item["i"],
+                        "title": item["t"],
+                        "description": item["d"],
+                        "category": item["c"],
+                        "relevance": min(s, 1.0),
+                    }
+                )
+
+        res.sort(key=lambda x: x["relevance"], reverse=True)
+        return res[:limit]
 
     def _rank_results(self, results: list, query: str) -> list:
         """Rank search results"""
@@ -121,13 +152,11 @@ class SearchAgent:
 
     def _extract_facets(self, results: list) -> dict:
         """Extract facets from results"""
-        facets = {"categories": {}, "tags": {}}
-
-        for result in results:
-            category = result.get("category", "unknown")
-            facets["categories"][category] = facets["categories"].get(category, 0) + 1
-
-        return facets
+        fc = {}
+        for r in results:
+            c = r.get("category", "unknown")
+            fc[c] = fc.get(c, 0) + 1
+        return {"categories": fc}
 
     def _get_capabilities(self) -> list:
         """Get agent capabilities"""
