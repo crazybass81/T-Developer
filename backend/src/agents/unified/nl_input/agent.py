@@ -1,4 +1,7 @@
 """NL Input Agent - Compact < 6.5KB"""
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 from src.agents.unified.base.mini_base_agent import B
 
 
@@ -72,3 +75,33 @@ def get_agent():
     if not agent:
         agent = NLInputAgent()
     return agent
+
+
+@dataclass
+class NLInputResult:
+    """Basic NL input processing result"""
+
+    intent: str
+    entities: List[Dict[str, Any]]
+    confidence: float
+    requirements: List[str]
+
+
+@dataclass
+class EnhancedNLInputResult:
+    """Enhanced NL input processing result with metadata"""
+
+    intent: str
+    entities: List[Dict[str, Any]]
+    confidence: float
+    requirements: List[str]
+    metadata: Dict[str, Any]
+    context: Optional[Dict[str, Any]] = None
+
+
+class UnifiedNLInputAgent(NLInputAgent):
+    """Unified version of NL Input Agent for compatibility"""
+
+    def p(self, i: Any) -> Dict[str, Any]:
+        """Process method for mini base interface"""
+        return {"intent": "process", "input": i, "status": "success"}

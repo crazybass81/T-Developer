@@ -1,4 +1,7 @@
 """Download Agent - Compact < 6.5KB"""
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
+
 from src.agents.unified.base.mini_base_agent import B
 
 
@@ -45,3 +48,24 @@ class DownloadAgent(B):
 
     def get_metrics(s):
         return {"size_kb": 1.4, "init_us": 0.7, "mem_mb": 0.1}
+
+
+agent = None
+
+
+def get_agent():
+    global agent
+    if not agent:
+        agent = DownloadAgent()
+    return agent
+
+
+@dataclass
+class DownloadResult:
+    """Download operation result"""
+
+    success: bool
+    url: str
+    data: Any
+    size: int
+    error: Optional[str] = None

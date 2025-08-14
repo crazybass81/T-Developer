@@ -3,6 +3,6 @@ Unified NL Input Agent Module
 Production-ready implementation with Phase 2 and ECS integration
 """
 
-from .agent import UnifiedNLInputAgent
+from .agent import NLInputAgent, UnifiedNLInputAgent
 
-__all__ = ["UnifiedNLInputAgent"]
+__all__ = ["NLInputAgent", "UnifiedNLInputAgent"]

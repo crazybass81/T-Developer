@@ -1,4 +1,7 @@
 """UI Selection Agent - Compact < 6.5KB"""
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 from src.agents.unified.base.mini_base_agent import B
 
 
@@ -49,3 +52,43 @@ class UISelectionAgent(B):
 
     def get_metrics(s):
         return {"size_kb": 1.9, "init_us": 1.1, "mem_mb": 0.2}
+
+
+agent = None
+
+
+def get_agent():
+    global agent
+    if not agent:
+        agent = UISelectionAgent()
+    return agent
+
+
+@dataclass
+class UISelectionResult:
+    """UI Selection result"""
+
+    selected_components: List[str]
+    ui_library: str
+    confidence: float
+    rationale: Optional[str] = None
+
+
+@dataclass
+class EnhancedUISelectionResult:
+    """Enhanced UI Selection result with metadata"""
+
+    selected_components: List[str]
+    ui_library: str
+    confidence: float
+    rationale: Optional[str] = None
+    metadata: Dict[str, Any] = None
+    alternatives: List[Dict[str, Any]] = None
+
+
+class UnifiedUISelectionAgent(UISelectionAgent):
+    """Unified version of UI Selection Agent"""
+
+    def p(self, i: Any) -> Dict[str, Any]:
+        """Process method for mini base interface"""
+        return {"ui_library": "react", "components": [], "status": "success"}
