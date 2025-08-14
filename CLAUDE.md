@@ -2,12 +2,12 @@
 
 ## 📋 프로젝트 개요
 
-**T-Developer**는 AI가 스스로 진화하는 자율 개발 시스템입니다.
-- **85% AI 자율성**: AI가 시스템의 85%를 자율적으로 진화
-- **6.5KB 초경량 에이전트**: 메모리 효율 극대화
-- **3μs 초고속 인스턴스화**: 마이크로초 단위 성능
-- **유전 알고리즘**: 지속적 자가 개선
-- **Evolution Safety**: 악성 진화 방지 시스템
+**T-Developer**는 자기 자신을 진화시키는 자율 개발 시스템입니다.
+- **자기진화 시스템**: T-Developer가 T-Developer를 개선
+- **4대 핵심 에이전트**: Research, Planner, Refactor, Evaluator
+- **계층적 계획**: 목표→대분류→중분류→소분류→4시간 작업단위
+- **무한 개선 루프**: 평가→계획→실행→검증 사이클
+- **재사용 가능 에이전트**: 모든 에이전트는 독립 모듈로 재사용 가능
 
 ## 📚 핵심 문서
 
@@ -19,20 +19,27 @@
 - [Phase 3 Week 1 Report](docs/00_planning/progress/phase3_week1_summary.md) - **Phase 3 평가 시스템** 🆕
 - [Complete Documentation (Day 1-12)](docs/00_planning/reports/COMPLETE_DOCUMENTATION_DAY1-12.md) - **종합 문서**
 
-## 🎯 현재 상태 (2025-08-14)
-- ✅ **Phase 2 완료** (Day 21-40) - 100% 달성 🎉🎉🎉
-- ✅ **Phase 3 Week 1 완료** (Day 41-45) - 100% 달성 🆕 🎉
-  - Day 41: 메트릭 수집 인프라 ✅
-  - Day 42: 다차원 평가 시스템 ✅
-  - Day 43: AI 기반 평가 엔진 ✅
-  - Day 44: 피트니스 점수 계산 ✅
-  - Day 45: 평가 대시보드 ✅
-- ✅ Evolution Engine 평가 시스템 구현 완료
-- ✅ 10개 평가 컴포넌트 통합
-- ✅ 7개 평가 차원 구현 (Performance, Quality, Business, Evolution, Adaptation, Innovation, Reliability)
-- ❌ Security implementation (50%) - 2025-08-14 07:44
-- ❌ Security implementation (50%) - 2025-08-14 08:12
-- ❌ Security implementation (50%) - 2025-08-14 08:13
+## 🎯 현재 상태 (2025-08-14) - MVP 재설계 진행중
+
+### 🔄 자기진화 시스템 구축 (Day 46)
+- **✅ 핵심 아키텍처 재정의 완료**
+  - 4대 에이전트 시스템 설계
+  - 자기진화 루프 구조 확정
+  - 재사용 가능한 에이전트 모듈 구조
+
+- **🚧 구현 진행중**
+  - ✅ BaseEvolutionAgent 인터페이스
+  - ✅ PlannerAgent (계층적 계획 수립)
+  - ✅ ResearchAgent (정보 수집 & 분석)
+  - ⏳ RefactorAgent (코드 개선)
+  - ⏳ EvaluatorAgent (평가 & 피드백)
+  - ⏳ Agent Registry (에이전트 관리)
+
+### 📌 MVP 목표
+1. **자기진화**: T-Developer가 자신의 코드를 개선
+2. **계층적 계획**: 4시간 이하 작업 단위로 분해
+3. **연구 기반**: 유사 프로젝트와 최신 기술 조사
+4. **재사용성**: 모든 에이전트는 독립 모듈
 
 ### ✅ Phase 2 Week 4 완료 (Day 36-40) - 100% 달성 🎉
 - **Day 36**: Meta Agent 코디네이터 ✅ (100%)
@@ -214,19 +221,26 @@
 
 ## 💡 Context for Claude
 
-### Core Architecture
-- **Agno**: Agent generation (6.5KB size limit)
-- **Bedrock AgentCore**: Production deployment
-- **Agent Squad**: Multi-agent orchestration
-- **Evolution Engine**: Self-improvement system
-- All agents MUST auto-deploy to AgentCore
+### 🎯 Core Architecture - 자기진화 시스템
+- **목표**: T-Developer가 자기 자신을 진화시키는 시스템
+- **방법**: 4대 핵심 에이전트의 무한 루프
+- **계획**: 목표→대분류→중분류→소분류→4시간 작업단위
+- **특징**: 모든 기능은 최소 단위 에이전트로 등록/재사용
 
-### Critical Constraints
-- Agent size: **< 6.5KB** (non-negotiable)
-- Instantiation: **< 3μs**
-- AI autonomy: **85%**
-- Test coverage: **85%**
-- Python ONLY (no JS/TS in backend)
+### 🤖 4대 핵심 에이전트
+1. **ResearchAgent**: 유사 프로젝트, 최신 기술, MCP 도구 조사
+2. **PlannerAgent**: 계층적 계획 수립 (4시간 단위까지 분해)
+3. **RefactorAgent**: 코드 개선 및 구현
+4. **EvaluatorAgent**: 평가 및 피드백
+
+### 📦 Agent Registry
+- **계층 구조**: 메타 에이전트 → 최소 단위 에이전트
+- **재사용성**: 모든 에이전트는 독립 모듈
+- **디스커버리**: 능력 기반 에이전트 자동 탐색
+- **버전 관리**: 에이전트별 버전 관리 및 A/B 테스트
+
+### 📄 핵심 문서
+- [자기진화 아키텍처](docs/SELF_EVOLUTION_ARCHITECTURE.md)
 
 ## 📊 현재 메트릭
 

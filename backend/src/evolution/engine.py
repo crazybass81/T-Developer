@@ -15,6 +15,26 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+# Import genetic algorithm components
+try:
+    from ..genetic.crossover.ai_crossover import AICrossover
+    from ..genetic.crossover.effect_analyzer import CrossoverEffectAnalyzer
+    from ..genetic.crossover.multi_point import MultiPointCrossover
+    from ..genetic.mutation.ai_mutator import AIMutator
+    from ..genetic.mutation.rate_controller import MutationRateController
+    from ..genetic.mutation.validator import MutationValidator
+    from ..genetic.selection.tournament import TournamentSelection
+except ImportError:
+    # Fallback for development
+    AIMutator = None
+    MutationRateController = None
+    MutationValidator = None
+    AICrossover = None
+    MultiPointCrossover = None
+    CrossoverEffectAnalyzer = None
+    TournamentSelection = None
+    logger.warning("Genetic algorithm components not available")
+
 logger = logging.getLogger(__name__)
 
 
@@ -86,6 +106,9 @@ class EvolutionEngine:
         self.checkpoint_dir = self.evolution_dir / "checkpoints"
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
+        # Initialize genetic algorithm components
+        self._initialize_genetic_components()
+
         logger.info(f"Evolution Engine initialized with config: {self.config}")
 
     async def initialize(self) -> bool:
@@ -119,6 +142,83 @@ class EvolutionEngine:
                 logger.error(f"Initialization failed: {str(e)}")
                 self.status = EvolutionStatus.FAILED
                 return False
+
+    def _initialize_genetic_components(self):
+        """Initialize genetic algorithm components"""
+        try:
+            if AIMutator:
+                self.ai_mutator = AIMutator(
+                    {
+                        "memory_limit_kb": self.config.memory_limit_kb,
+                        "speed_limit_us": self.config.instantiation_limit_us,
+                    }
+                )
+            else:
+                self.ai_mutator = None
+
+            if MutationRateController:
+                self.rate_controller = MutationRateController(
+                    {"base_rate": self.config.mutation_rate, "min_rate": 0.01, "max_rate": 0.5}
+                )
+            else:
+                self.rate_controller = None
+
+            if MutationValidator:
+                self.mutation_validator = MutationValidator(
+                    {
+                        "memory_limit_kb": self.config.memory_limit_kb,
+                        "speed_limit_us": self.config.instantiation_limit_us,
+                    }
+                )
+            else:
+                self.mutation_validator = None
+
+            if AICrossover:
+                self.ai_crossover = AICrossover(
+                    {
+                        "memory_limit_kb": self.config.memory_limit_kb,
+                        "speed_limit_us": self.config.instantiation_limit_us,
+                    }
+                )
+            else:
+                self.ai_crossover = None
+
+            if MultiPointCrossover:
+                self.multi_point_crossover = MultiPointCrossover(
+                    {"num_points": 2, "crossover_probability": self.config.crossover_rate}
+                )
+            else:
+                self.multi_point_crossover = None
+
+            if CrossoverEffectAnalyzer:
+                self.crossover_analyzer = CrossoverEffectAnalyzer()
+            else:
+                self.crossover_analyzer = None
+
+            if TournamentSelection:
+                self.tournament_selection = TournamentSelection(
+                    {
+                        "tournament_size": int(self.config.selection_pressure * 2),
+                        "pressure": self.config.selection_pressure,
+                    }
+                )
+            else:
+                self.tournament_selection = None
+
+            logger.info("Genetic algorithm components initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize genetic components: {e}")
+            # Set all components to None for fallback
+            for attr in [
+                "ai_mutator",
+                "rate_controller",
+                "mutation_validator",
+                "ai_crossover",
+                "multi_point_crossover",
+                "crossover_analyzer",
+                "tournament_selection",
+            ]:
+                setattr(self, attr, None)
 
     async def start_evolution(self, target_fitness: float = 0.95) -> bool:
         """
@@ -361,19 +461,36 @@ class EvolutionEngine:
         """Get the best fitness score in current population"""
         if not self.population:
             return 0.0
-        return max(g["fitness"] for g in self.population)
+        return max(g.get("fitness", 0.0) for g in self.population)
 
     async def _selection(self) -> List[Dict[str, Any]]:
         """
-        Select parents for next generation using tournament selection
+        Select parents for next generation using enhanced selection
         """
+        try:
+            if self.tournament_selection:
+                # Use advanced tournament selection
+                parents = await self.tournament_selection.select(
+                    population=self.population,
+                    num_parents=self.config.population_size,
+                    fitness_key="fitness",
+                )
+                return parents
+            else:
+                # Fallback to simple tournament selection
+                return await self._fallback_selection()
+        except Exception as e:
+            logger.error(f"Advanced selection failed: {e}")
+            return await self._fallback_selection()
+
+    async def _fallback_selection(self) -> List[Dict[str, Any]]:
+        """Fallback selection method"""
         import random
 
         parents = []
         tournament_size = max(2, int(self.config.selection_pressure * 2))
 
         for _ in range(self.config.population_size):
-            # Tournament selection
             tournament = random.sample(self.population, min(tournament_size, len(self.population)))
             winner = max(tournament, key=lambda x: x["fitness"])
             parents.append(winner.copy())
@@ -382,8 +499,95 @@ class EvolutionEngine:
 
     async def _crossover(self, parents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Perform crossover between parents to create offspring
+        Perform intelligent crossover between parents to create offspring
         """
+        try:
+            offspring = []
+
+            # Calculate adaptive crossover rate if rate controller is available
+            current_rate = self.config.crossover_rate
+            if self.rate_controller:
+                population_history = [
+                    {
+                        "generation": self.current_generation,
+                        "best_fitness": self._get_best_fitness(),
+                        "avg_fitness": self._get_average_fitness(),
+                    }
+                ]
+                # Note: Rate controller is for mutation, but principle applies
+                # Here we would need a crossover rate controller
+
+            for i in range(0, len(parents) - 1, 2):
+                parent1, parent2 = parents[i], parents[i + 1]
+
+                if self._should_crossover(parent1, parent2, current_rate):
+                    # Try AI-guided crossover first
+                    if self.ai_crossover:
+                        try:
+                            child1, child2 = await self.ai_crossover.intelligent_crossover(
+                                parent1, parent2
+                            )
+                            offspring.extend([child1, child2])
+
+                            # Record crossover for analysis
+                            if self.crossover_analyzer:
+                                crossover_example = {
+                                    "parent1": parent1,
+                                    "parent2": parent2,
+                                    "offspring": [child1, child2],
+                                    "strategy": "ai_guided",
+                                }
+                                self.crossover_analyzer.learn_from_crossover(crossover_example)
+
+                        except Exception as e:
+                            logger.warning(f"AI crossover failed, using fallback: {e}")
+                            child1, child2 = await self._fallback_crossover(parent1, parent2)
+                            offspring.extend([child1, child2])
+                    else:
+                        # Use multi-point crossover
+                        child1, child2 = await self._fallback_crossover(parent1, parent2)
+                        offspring.extend([child1, child2])
+                else:
+                    # No crossover, keep parents
+                    offspring.extend([parent1.copy(), parent2.copy()])
+
+            # Handle odd number of parents
+            if len(parents) % 2 == 1:
+                offspring.append(parents[-1].copy())
+
+            return offspring
+
+        except Exception as e:
+            logger.error(f"Advanced crossover failed: {e}")
+            return await self._fallback_crossover_list(parents)
+
+    def _should_crossover(self, parent1: Dict, parent2: Dict, rate: float) -> bool:
+        """Determine if crossover should be performed"""
+        import random
+
+        # Basic probability check
+        if random.random() >= rate:
+            return False
+
+        # Additional checks could be added here
+        # e.g., fitness similarity, diversity considerations
+        return True
+
+    async def _fallback_crossover(
+        self, parent1: Dict[str, Any], parent2: Dict[str, Any]
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Fallback crossover method"""
+        if self.multi_point_crossover:
+            try:
+                return await self.multi_point_crossover.crossover(parent1, parent2)
+            except Exception as e:
+                logger.warning(f"Multi-point crossover failed: {e}")
+
+        # Ultimate fallback - single point crossover
+        return self._single_point_crossover(parent1, parent2)
+
+    async def _fallback_crossover_list(self, parents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Fallback crossover for entire parent list"""
         import random
 
         offspring = []
@@ -392,14 +596,11 @@ class EvolutionEngine:
             parent1, parent2 = parents[i], parents[i + 1]
 
             if random.random() < self.config.crossover_rate:
-                # Perform crossover
                 child1, child2 = self._single_point_crossover(parent1, parent2)
                 offspring.extend([child1, child2])
             else:
-                # No crossover, keep parents
                 offspring.extend([parent1.copy(), parent2.copy()])
 
-        # Handle odd number of parents
         if len(parents) % 2 == 1:
             offspring.append(parents[-1].copy())
 
@@ -438,43 +639,137 @@ class EvolutionEngine:
 
     async def _mutation(self, offspring: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Apply mutation to offspring
+        Apply intelligent mutation to offspring
         """
+        try:
+            # Calculate adaptive mutation rate
+            current_rate = self.config.mutation_rate
+            if self.rate_controller:
+                population_history = self._build_population_history()
+                current_rate = self.rate_controller.calculate_adaptive_rate(population_history)
+                logger.debug(f"Adaptive mutation rate: {current_rate:.4f}")
+
+            mutated_offspring = []
+
+            for genome in offspring:
+                if self._should_mutate(genome, current_rate):
+                    # Try AI-guided mutation first
+                    if self.ai_mutator:
+                        try:
+                            mutated_genome = await self.ai_mutator.guided_mutation(genome)
+
+                            # Validate mutation if validator available
+                            if mutated_genome and self.mutation_validator:
+                                validation_result = await self.mutation_validator.validate_mutation(
+                                    mutated_genome
+                                )
+                                if validation_result.is_valid:
+                                    mutated_offspring.append(mutated_genome)
+                                else:
+                                    logger.warning(
+                                        f"Mutation validation failed: {validation_result.violations}"
+                                    )
+                                    # Try fallback mutation
+                                    fallback_mutated = await self._fallback_mutation(genome)
+                                    mutated_offspring.append(fallback_mutated)
+                            elif mutated_genome:
+                                mutated_offspring.append(mutated_genome)
+                            else:
+                                # AI mutation failed, use fallback
+                                fallback_mutated = await self._fallback_mutation(genome)
+                                mutated_offspring.append(fallback_mutated)
+
+                        except Exception as e:
+                            logger.warning(f"AI mutation failed, using fallback: {e}")
+                            fallback_mutated = await self._fallback_mutation(genome)
+                            mutated_offspring.append(fallback_mutated)
+                    else:
+                        # Use fallback mutation
+                        fallback_mutated = await self._fallback_mutation(genome)
+                        mutated_offspring.append(fallback_mutated)
+                else:
+                    # No mutation
+                    mutated_offspring.append(genome)
+
+            return mutated_offspring
+
+        except Exception as e:
+            logger.error(f"Advanced mutation failed: {e}")
+            return await self._fallback_mutation_list(offspring)
+
+    def _should_mutate(self, genome: Dict, rate: float) -> bool:
+        """Determine if mutation should be applied"""
         import random
 
+        return random.random() < rate
+
+    async def _fallback_mutation(self, genome: Dict[str, Any]) -> Dict[str, Any]:
+        """Fallback mutation method"""
+        import random
+
+        mutated = genome.copy()
+
+        genes = mutated["genes"]
+        gene_key = random.choice(list(genes.keys()))
+
+        if gene_key == "layer_sizes":
+            if random.random() < 0.5 and len(genes["layer_sizes"]) > 2:
+                genes["layer_sizes"].pop(random.randint(0, len(genes["layer_sizes"]) - 1))
+            else:
+                if random.random() < 0.5:
+                    genes["layer_sizes"].append(random.randint(8, 32))
+                else:
+                    idx = random.randint(0, len(genes["layer_sizes"]) - 1)
+                    genes["layer_sizes"][idx] = random.randint(8, 32)
+
+        elif gene_key == "learning_rate":
+            genes["learning_rate"] *= random.uniform(0.5, 2.0)
+            genes["learning_rate"] = max(0.0001, min(0.1, genes["learning_rate"]))
+
+        elif gene_key == "dropout_rate":
+            genes["dropout_rate"] = random.uniform(0.1, 0.5)
+
+        elif gene_key == "activation":
+            genes["activation"] = random.choice(["relu", "tanh", "sigmoid"])
+
+        elif gene_key == "optimizer":
+            genes["optimizer"] = random.choice(["adam", "sgd", "rmsprop"])
+
+        # Update ID and reset fitness
+        mutated["id"] = f"mutated_{int(time.time() * 1000000) % 1000000:06d}"
+        mutated["fitness"] = 0.0
+
+        return mutated
+
+    async def _fallback_mutation_list(
+        self, offspring: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Fallback mutation for entire offspring list"""
+        mutated = []
         for genome in offspring:
-            if random.random() < self.config.mutation_rate:
-                # Mutate random gene
-                genes = genome["genes"]
-                gene_key = random.choice(list(genes.keys()))
+            if self._should_mutate(genome, self.config.mutation_rate):
+                mutated_genome = await self._fallback_mutation(genome)
+                mutated.append(mutated_genome)
+            else:
+                mutated.append(genome)
+        return mutated
 
-                if gene_key == "layer_sizes":
-                    # Mutate layer sizes
-                    if random.random() < 0.5 and len(genes["layer_sizes"]) > 2:
-                        # Remove a layer
-                        genes["layer_sizes"].pop(random.randint(0, len(genes["layer_sizes"]) - 1))
-                    else:
-                        # Add or modify a layer
-                        if random.random() < 0.5:
-                            genes["layer_sizes"].append(random.randint(8, 32))
-                        else:
-                            idx = random.randint(0, len(genes["layer_sizes"]) - 1)
-                            genes["layer_sizes"][idx] = random.randint(8, 32)
+    def _build_population_history(self) -> List[Dict]:
+        """Build population history for rate adaptation"""
+        return [
+            {
+                "generation": self.current_generation,
+                "best_fitness": self._get_best_fitness(),
+                "avg_fitness": self._get_average_fitness(),
+            }
+        ]
 
-                elif gene_key == "learning_rate":
-                    genes["learning_rate"] *= random.uniform(0.5, 2.0)
-                    genes["learning_rate"] = max(0.0001, min(0.1, genes["learning_rate"]))
-
-                elif gene_key == "dropout_rate":
-                    genes["dropout_rate"] = random.uniform(0.1, 0.5)
-
-                elif gene_key == "activation":
-                    genes["activation"] = random.choice(["relu", "tanh", "sigmoid"])
-
-                elif gene_key == "optimizer":
-                    genes["optimizer"] = random.choice(["adam", "sgd", "rmsprop"])
-
-        return offspring
+    def _get_average_fitness(self) -> float:
+        """Get average fitness of current population"""
+        if not self.population:
+            return 0.0
+        fitnesses = [g.get("fitness", 0.0) for g in self.population]
+        return sum(fitnesses) / len(fitnesses)
 
     async def _update_metrics(self) -> None:
         """Update evolution metrics"""

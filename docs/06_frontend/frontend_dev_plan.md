@@ -1,524 +1,665 @@
-# 🎨 T-Developer AI 자율진화 시스템 - 프론트엔드 작업계획
+# 🚀 T-Developer Frontend Development Plan (Next.js MVP)
 
-## 📋 작업 구조 체계
+## 📋 프로젝트 개요
+
 ```yaml
-Phase → Task → Subtask → Unit
-- Phase: 주요 단계 (6개 Phase)
-- Task: 핵심 작업 (Phase당 4-5개)
-- Subtask: 세부 작업 (Task당 3-4개)
-- Unit: 실행 단위 (Subtask당 2-3개)
+목표: T-Developer 백엔드 시스템의 완전한 시각화 및 관리 인터페이스
+기간: 15일 (3주)
+기술 스택:
+  - Framework: Next.js 14 (App Router)
+  - Language: TypeScript 5.x
+  - Styling: TailwindCSS + shadcn/ui
+  - State: TanStack Query + Zustand
+  - Charts: Chart.js + D3.js (lightweight)
+  - WebSocket: Socket.io-client
+  - Testing: Jest + React Testing Library
+  
+백엔드 연동:
+  - FastAPI REST API (포트 8000)
+  - WebSocket 실시간 통신
+  - 445개 Python 모듈 활용
+  - 247개 에이전트 시스템
 ```
 
 ---
 
-## Phase 1: 디자인 시스템 구축 (Day 1-10)
-
-### Task 1.1: Design Tokens 자동 생성 시스템
-#### Subtask 1.1.1: 색상 토큰 체계 구축
-- **Unit 1.1.1.1**: AI/Evolution 테마 색상 정의
-  - Primary, Evolution, Performance, Dark 팔레트 생성
-  - 그라디언트 및 상태별 색상 매핑
-  - 접근성 대비율 검증 (WCAG AAA)
-
-- **Unit 1.1.1.2**: 자동 색상 변형 생성
-  - 다크모드 자동 변환 로직
-  - 색맹 친화적 팔레트 생성
-  - 브랜드 일관성 유지 알고리즘
-
-#### Subtask 1.1.2: 타이포그래피 시스템
-- **Unit 1.1.2.1**: 폰트 스케일 정의
-  - Inter Display/Inter/JetBrains Mono 설정
-  - 8단계 타입 스케일 (xs-4xl)
-  - 반응형 폰트 크기 계산
-
-- **Unit 1.1.2.2**: 타이포그래피 용도별 매핑
-  - 제목/본문/코드 스타일 정의
-  - 줄간격/자간 최적화
-  - 가독성 테스트 자동화
-
-#### Subtask 1.1.3: 스페이싱 & 애니메이션
-- **Unit 1.1.3.1**: 8px 그리드 시스템
-  - 11단계 스페이싱 스케일 구현
-  - 컴포넌트 간격 자동 계산
-  - 레이아웃 일관성 검증
-
-- **Unit 1.1.3.2**: 마이크로 인터랙션 정의
-  - 5단계 속도 (instant-evolution)
-  - Easing 함수 라이브러리
-  - 진화 애니메이션 특수 효과
-
-#### Subtask 1.1.4: 토큰 내보내기 자동화
-- **Unit 1.1.4.1**: CSS 변수 생성기
-  - CSS Custom Properties 자동 생성
-  - 네임스페이스 관리 시스템
-  - 브라우저 호환성 처리
-
-- **Unit 1.1.4.2**: Tailwind 설정 생성
-  - tailwind.config.js 자동 생성
-  - 커스텀 유틸리티 클래스
-  - PurgeCSS 최적화 설정
-
-### Task 1.2: 컴포넌트 라이브러리 구축
-#### Subtask 1.2.1: Atomic 컴포넌트
-- **Unit 1.2.1.1**: 기본 요소 컴포넌트
-  - Button, Input, Label 컴포넌트
-  - 상태별 변형 (default/hover/active/disabled)
-  - 접근성 속성 자동 추가
-
-- **Unit 1.2.1.2**: 데이터 표시 컴포넌트
-  - MetricCard, Badge, Tooltip
-  - 실시간 데이터 바인딩 지원
-  - 애니메이션 트랜지션
-
-#### Subtask 1.2.2: Molecule 컴포넌트
-- **Unit 1.2.2.1**: AgentCard 컴포넌트
-  - 3가지 크기 변형 (compact/default/expanded)
-  - 4가지 상태 (default/hover/selected/evolving)
-  - 메트릭 시각화 통합
-
-- **Unit 1.2.2.2**: WorkflowNode 컴포넌트
-  - 4가지 노드 타입 (agent/decision/parallel/loop)
-  - 드래그 앤 드롭 기능
-  - 커넥터 자동 연결
-
-#### Subtask 1.2.3: Organism 컴포넌트
-- **Unit 1.2.3.1**: EvolutionVisualizer
-  - 4가지 뷰 모드 (tree/timeline/graph/3d)
-  - WebGL 3D 렌더링
-  - 실시간 데이터 스트리밍
-
-- **Unit 1.2.3.2**: PerformanceChart
-  - 다중 메트릭 오버레이
-  - 줌/팬 인터랙션
-  - 데이터 포인트 툴팁
-
-#### Subtask 1.2.4: 컴포넌트 문서화
-- **Unit 1.2.4.1**: Storybook 설정
-  - 컴포넌트별 스토리 생성
-  - 인터랙션 테스트
-  - 접근성 검증
-
-- **Unit 1.2.4.2**: API 문서 자동 생성
-  - Props 타입 문서화
-  - 사용 예제 코드
-  - 베스트 프랙티스 가이드
-
-### Task 1.3: 피그마 MCP 통합
-#### Subtask 1.3.1: 피그마 API 연동
-- **Unit 1.3.1.1**: API 클라이언트 설정
-  - 인증 토큰 관리
-  - Rate limiting 처리
-  - 에러 핸들링
-
-- **Unit 1.3.1.2**: 파일 구조 동기화
-  - 페이지/프레임 매핑
-  - 버전 관리 시스템
-  - 변경사항 추적
-
-#### Subtask 1.3.2: 자동 동기화 시스템
-- **Unit 1.3.2.1**: 양방향 동기화
-  - 피그마 → 코드 변환
-  - 코드 → 피그마 업데이트
-  - 충돌 해결 메커니즘
-
-- **Unit 1.3.2.2**: 실시간 미러링
-  - WebSocket 연결 관리
-  - 변경사항 즉시 반영
-  - 동기화 상태 모니터링
-
----
-
-## Phase 2: 핵심 화면 설계 (Day 11-20)
-
-### Task 2.1: Executive Dashboard
-#### Subtask 2.1.1: 레이아웃 구조
-- **Unit 2.1.1.1**: 그리드 시스템 구현
-  - 1920x1080 기준 레이아웃
-  - 반응형 그리드 정의
-  - 섹션별 영역 분할
-
-- **Unit 2.1.1.2**: 컴포넌트 배치
-  - KPI 카드 상단 배치
-  - 메인 시각화 영역 구성
-  - 사이드바 활동 피드
-
-#### Subtask 2.1.2: 실시간 데이터 연동
-- **Unit 2.1.2.1**: WebSocket 연결
-  - 실시간 메트릭 스트리밍
-  - 자동 재연결 로직
-  - 데이터 버퍼링
-
-- **Unit 2.1.2.2**: 차트 업데이트
-  - 성능 트렌드 실시간 갱신
-  - 애니메이션 트랜지션
-  - 데이터 포인트 제한
-
-#### Subtask 2.1.3: 인터랙션 구현
-- **Unit 2.1.3.1**: 키보드 단축키
-  - 커맨드 팔레트 (Cmd+K)
-  - 뷰 전환 단축키
-  - AI 어시스턴트 호출
-
-- **Unit 2.1.3.2**: 마우스 인터랙션
-  - 호버 효과
-  - 드래그 선택
-  - 컨텍스트 메뉴
-
-### Task 2.2: Evolution Control Center
-#### Subtask 2.2.1: 3D 계보 트리
-- **Unit 2.2.1.1**: WebGL 렌더링
-  - Three.js 통합
-  - 노드/엣지 렌더링
-  - 카메라 컨트롤
-
-- **Unit 2.2.1.2**: 인터랙션 구현
-  - 줌/회전/팬
-  - 노드 선택/비교
-  - 라벨 토글
-
-#### Subtask 2.2.2: 컨트롤 패널
-- **Unit 2.2.2.1**: 파라미터 조정
-  - 변이율/교차율 슬라이더
-  - 개체수 입력
-  - 선택 전략 드롭다운
-
-- **Unit 2.2.2.2**: 안전 제어
-  - 진화 한계 설정
-  - 체크포인트 관리
-  - 긴급 정지 버튼
-
-#### Subtask 2.2.3: 진화 애니메이션
-- **Unit 2.2.3.1**: 세대 전환 효과
-  - 페이드 인/아웃
-  - 경로 모핑
-  - 점수 카운트업
-
-- **Unit 2.2.3.2**: 실시간 업데이트
-  - 진행률 표시
-  - 피트니스 차트
-  - 다양성 지수
-
-### Task 2.3: Workflow Orchestration Studio
-#### Subtask 2.3.1: 캔버스 시스템
-- **Unit 2.3.1.1**: 무한 캔버스
-  - 패닝/줌 구현
-  - 그리드 스냅
-  - 미니맵 네비게이션
-
-- **Unit 2.3.1.2**: 노드 관리
-  - 드래그 앤 드롭
-  - 다중 선택
-  - 자동 레이아웃
-
-#### Subtask 2.3.2: 에이전트 라이브러리
-- **Unit 2.3.2.1**: 카테고리 관리
-  - 아코디언 메뉴
-  - 검색 필터링
-  - 즐겨찾기 기능
-
-- **Unit 2.3.2.2**: 템플릿 시스템
-  - 사전정의 워크플로우
-  - 커스텀 템플릿 저장
-  - 템플릿 공유
-
-#### Subtask 2.3.3: 실행 환경
-- **Unit 2.3.3.1**: 실행 콘솔
-  - 로그 스트리밍
-  - 디버그 출력
-  - 성능 메트릭
-
-- **Unit 2.3.3.2**: 테스트 도구
-  - 테스트 데이터 입력
-  - 단계별 실행
-  - 결과 검증
-
----
-
-## Phase 3: AI 기반 자동화 (Day 21-30)
-
-### Task 3.1: 디자인 진화 시스템
-#### Subtask 3.1.1: 사용자 행동 분석
-- **Unit 3.1.1.1**: 메트릭 수집
-  - 클릭 히트맵
-  - 스크롤 깊이
-  - 체류 시간
-
-- **Unit 3.1.1.2**: 패턴 인식
-  - 사용 패턴 분석
-  - 이탈률 계산
-  - 작업 완료율
-
-#### Subtask 3.1.2: AI 변형 생성
-- **Unit 3.1.2.1**: 유전자 알고리즘
-  - 디자인 DNA 인코딩
-  - 변이/교차 연산
-  - 적합도 평가
-
-- **Unit 3.1.2.2**: 제약 조건 적용
-  - 브랜드 가이드라인
-  - 접근성 표준
-  - 성능 기준
-
-#### Subtask 3.1.3: A/B 테스트 자동화
-- **Unit 3.1.3.1**: 실험 설정
-  - 트래픽 분할
-  - 샘플 크기 계산
-  - 메트릭 정의
-
-- **Unit 3.1.3.2**: 결과 분석
-  - 통계적 유의성
-  - 승자 선택
-  - 자동 배포
-
-### Task 3.2: 실시간 데이터 바인딩
-#### Subtask 3.2.1: WebSocket 통신
-- **Unit 3.2.1.1**: 연결 관리
-  - 자동 재연결
-  - 하트비트 체크
-  - 에러 복구
-
-- **Unit 3.2.1.2**: 이벤트 처리
-  - 에이전트 업데이트
-  - 진화 진행상황
-  - 성능 메트릭
-
-#### Subtask 3.2.2: 컴포넌트 업데이트
-- **Unit 3.2.2.1**: 상태 동기화
-  - Redux/MobX 통합
-  - 옵티미스틱 업데이트
-  - 충돌 해결
-
-- **Unit 3.2.2.2**: 애니메이션 트리거
-  - 트랜지션 효과
-  - 강조 애니메이션
-  - 진행률 표시
-
----
-
-## Phase 4: 멀티플랫폼 대응 (Day 31-40)
-
-### Task 4.1: 반응형 디자인 시스템
-#### Subtask 4.1.1: 브레이크포인트 정의
-- **Unit 4.1.1.1**: 디바이스 타겟팅
-  - 5단계 브레이크포인트
-  - 컨테이너 쿼리
-  - 뷰포트 단위 활용
-
-- **Unit 4.1.1.2**: 레이아웃 변형
-  - 그리드 재구성
-  - 컴포넌트 재배치
-  - 콘텐츠 우선순위
-
-#### Subtask 4.1.2: 적응형 컴포넌트
-- **Unit 4.1.2.1**: 크기 변형
-  - 터치 타겟 조정
-  - 폰트 크기 스케일링
-  - 패딩/마진 조정
-
-- **Unit 4.1.2.2**: 기능 변형
-  - 모바일 제스처
-  - 데스크톱 호버
-  - 태블릿 혼합 모드
-
-### Task 4.2: 플랫폼별 최적화
-#### Subtask 4.2.1: 네이티브 스타일링
-- **Unit 4.2.1.1**: iOS 최적화
-  - SF Symbols 사용
-  - 햅틱 피드백
-  - Safe Area 처리
-
-- **Unit 4.2.1.2**: Android 최적화
-  - Material Design
-  - 리플 효과
-  - 네비게이션 드로어
-
-#### Subtask 4.2.2: 데스크톱 앱
-- **Unit 4.2.2.1**: Electron 통합
-  - 네이티브 메뉴
-  - 파일 시스템 접근
-  - 시스템 트레이
-
-- **Unit 4.2.2.2**: 성능 최적화
-  - 메모리 관리
-  - GPU 가속
-  - 백그라운드 처리
-
----
-
-## Phase 5: 자동화 파이프라인 (Day 41-50)
-
-### Task 5.1: CI/CD 통합
-#### Subtask 5.1.1: 빌드 파이프라인
-- **Unit 5.1.1.1**: 컴포넌트 빌드
-  - TypeScript 컴파일
-  - 번들 최적화
-  - 트리 쉐이킹
-
-- **Unit 5.1.1.2**: 테스트 자동화
-  - 유닛 테스트
-  - 통합 테스트
-  - E2E 테스트
-
-#### Subtask 5.1.2: 배포 자동화
-- **Unit 5.1.2.1**: 환경별 배포
-  - 개발/스테이징/프로덕션
-  - 블루-그린 배포
-  - 카나리 릴리스
-
-- **Unit 5.1.2.2**: CDN 최적화
-  - 정적 자산 배포
-  - 캐시 무효화
-  - 엣지 로케이션
-
-### Task 5.2: 디자인-코드 동기화
-#### Subtask 5.2.1: 자동 코드 생성
-- **Unit 5.2.1.1**: 컴포넌트 생성
-  - React/Vue/Angular 코드
-  - 스타일 추출
-  - Props 인터페이스
-
-- **Unit 5.2.1.2**: 스토리북 생성
-  - 스토리 파일
-  - 문서 페이지
-  - 플레이그라운드
-
-#### Subtask 5.2.2: 변경사항 추적
-- **Unit 5.2.2.1**: Git 통합
-  - 자동 커밋
-  - PR 생성
-  - 변경 로그
-
-- **Unit 5.2.2.2**: 리뷰 프로세스
-  - 시각적 차이 비교
-  - 승인 워크플로우
-  - 자동 머지
-
----
-
-## Phase 6: 측정 및 최적화 (Day 51-60)
-
-### Task 6.1: 성능 모니터링
-#### Subtask 6.1.1: 메트릭 수집
-- **Unit 6.1.1.1**: 런타임 성능
-  - FCP/LCP/CLS
-  - JavaScript 실행 시간
-  - 메모리 사용량
-
-- **Unit 6.1.1.2**: 빌드 메트릭
-  - 번들 크기
-  - 빌드 시간
-  - 의존성 분석
-
-#### Subtask 6.1.2: 최적화 적용
-- **Unit 6.1.2.1**: 코드 최적화
-  - 코드 스플리팅
-  - 레이지 로딩
-  - 메모이제이션
-
-- **Unit 6.1.2.2**: 자산 최적화
-  - 이미지 압축
-  - 폰트 서브셋
-  - SVG 최적화
-
-### Task 6.2: 사용자 경험 분석
-#### Subtask 6.2.1: 사용성 테스트
-- **Unit 6.2.1.1**: 자동 테스트
-  - 태스크 완료율
-  - 에러율
-  - 학습 곡선
-
-- **Unit 6.2.1.2**: 피드백 수집
-  - 사용자 설문
-  - 히트맵 분석
-  - 세션 리플레이
-
-#### Subtask 6.2.2: 개선 사이클
-- **Unit 6.2.2.1**: 인사이트 도출
-  - AI 패턴 분석
-  - 개선점 식별
-  - 우선순위 결정
-
-- **Unit 6.2.2.2**: 자동 개선
-  - 디자인 진화 적용
-  - A/B 테스트 실행
-  - 결과 배포
-
-### Task 6.3: 보고서 자동화
-#### Subtask 6.3.1: 대시보드 구축
-- **Unit 6.3.1.1**: KPI 시각화
-  - 실시간 차트
-  - 트렌드 분석
-  - 예측 모델
-
-- **Unit 6.3.1.2**: 알림 시스템
-  - 임계값 설정
-  - 이상 탐지
-  - 에스컬레이션
-
-#### Subtask 6.3.2: 리포트 생성
-- **Unit 6.3.2.1**: 정기 리포트
-  - 주간/월간 보고서
-  - 성과 요약
-  - 개선 제안
-
-- **Unit 6.3.2.2**: 배포 채널
-  - 이메일 발송
-  - Slack 통합
-  - 피그마 페이지
-
----
-
-## 📊 마일스톤 및 검증 지표
-
-```yaml
-Phase 1 완료 (Day 10):
-  ✅ 150+ 컴포넌트 라이브러리
-  ✅ 500+ 디자인 토큰
-  ✅ Figma-Code 실시간 동기화
-  ✅ Storybook 100% 커버리지
-
-Phase 2 완료 (Day 20):
-  ✅ 3개 핵심 화면 구현
-  ✅ WebGL 3D 시각화
-  ✅ 실시간 데이터 연동
-  ✅ 드래그앤드롭 워크플로우
-
-Phase 3 완료 (Day 30):
-  ✅ AI 디자인 진화 시스템
-  ✅ 자동 A/B 테스트
-  ✅ WebSocket 실시간 업데이트
-  ✅ 10+ AI 생성 변형/주
-
-Phase 4 완료 (Day 40):
-  ✅ 5개 브레이크포인트 반응형
-  ✅ iOS/Android 네이티브 스타일
-  ✅ Electron 데스크톱 앱
-  ✅ 98/100 성능 점수
-
-Phase 5 완료 (Day 50):
-  ✅ 완전 자동화 CI/CD
-  ✅ 디자인→코드 5분 내 반영
-  ✅ 자동 PR/리뷰 시스템
-  ✅ CDN 글로벌 배포
-
-Phase 6 완료 (Day 60):
-  ✅ 실시간 성능 모니터링
-  ✅ AI 기반 자동 개선
-  ✅ 75% 개발 시간 단축
-  ✅ 40% 사용자 만족도 향상
+## 🎯 Phase 1: Foundation & Core Dashboard (Day 1-5)
+
+### Day 1: 프로젝트 초기화 및 기본 구조
+#### 작업 내용
+```bash
+# 프로젝트 생성
+npx create-next-app@latest frontend --typescript --tailwind --app --src-dir
+
+# 핵심 패키지 설치
+npm install @tanstack/react-query axios socket.io-client zustand
+npm install chart.js react-chartjs-2 date-fns clsx tailwind-merge
+npm install lucide-react @radix-ui/react-* class-variance-authority
+
+# shadcn/ui 초기화
+npx shadcn-ui@latest init
+npx shadcn-ui@latest add button card badge tabs alert dialog toast
 ```
 
-## 🎯 최종 성과 목표
+#### 디렉토리 구조
+```
+frontend/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── (dashboard)/        # Dashboard 레이아웃 그룹
+│   │   │   ├── layout.tsx      
+│   │   │   ├── page.tsx        # 메인 대시보드
+│   │   │   ├── evolution/      # Evolution Engine
+│   │   │   ├── agents/         # Agent Management
+│   │   │   ├── workflows/      # Workflow Studio
+│   │   │   └── analytics/      # Analytics & Reports
+│   │   ├── api/                # API Routes
+│   │   └── globals.css
+│   ├── components/
+│   │   ├── ui/                 # shadcn/ui components
+│   │   ├── dashboard/          # Dashboard 컴포넌트
+│   │   ├── evolution/          # Evolution 관련
+│   │   ├── agents/             # Agent 관련
+│   │   └── common/             # 공통 컴포넌트
+│   ├── lib/
+│   │   ├── api/                # API 클라이언트
+│   │   ├── socket/             # WebSocket 관리
+│   │   ├── store/              # Zustand stores
+│   │   └── utils/              # 유틸리티
+│   ├── hooks/                  # Custom hooks
+│   └── types/                  # TypeScript 타입 정의
+```
 
-| 지표 | 목표 | 측정 방법 |
-|------|------|----------|
-| **개발 효율성** | 75% 단축 | 컴포넌트 개발 시간 |
-| **디자인 일관성** | 100% | 토큰 사용률 |
-| **코드 재사용률** | 95% | 컴포넌트 활용도 |
-| **성능 점수** | 98/100 | Lighthouse |
-| **접근성** | WCAG AAA | axe 검증 |
-| **사용자 만족도** | +40% | NPS 스코어 |
-| **유지보수 비용** | -60% | 수정 소요 시간 |
-| **배포 속도** | 10분→5분 | CI/CD 파이프라인 |
+#### 산출물
+- `package.json`: 의존성 관리
+- `tsconfig.json`: TypeScript 설정
+- `tailwind.config.ts`: Tailwind 커스터마이징
+- `next.config.js`: Next.js 설정
+- `.env.local`: 환경변수
 
-이 구조화된 작업계획을 통해 **피그마 MCP 기반의 완전 자동화된 프론트엔드 시스템**을 체계적으로 구축할 수 있습니다! 🚀
+### Day 2: API 클라이언트 및 상태 관리
+#### API 클라이언트 (`src/lib/api/client.ts`)
+```typescript
+import axios from 'axios';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+export const apiClient = axios.create({
+  baseURL: API_BASE,
+  timeout: 30000,
+});
+
+// Request/Response interceptors
+apiClient.interceptors.request.use(/* ... */);
+apiClient.interceptors.response.use(/* ... */);
+
+// API 엔드포인트 모듈
+export * from './modules/evolution';
+export * from './modules/agents';
+export * from './modules/workflows';
+export * from './modules/analytics';
+```
+
+#### 상태 관리 (`src/lib/store/`)
+```typescript
+// evolutionStore.ts
+import { create } from 'zustand';
+
+interface EvolutionStore {
+  generation: number;
+  fitness: number;
+  agents: Agent[];
+  parameters: EvolutionParams;
+  updateGeneration: (gen: number) => void;
+  updateParameters: (params: Partial<EvolutionParams>) => void;
+}
+
+// agentStore.ts
+// workflowStore.ts
+// notificationStore.ts
+```
+
+#### 산출물
+- API 클라이언트 모듈 (evolution, agents, workflows, analytics)
+- Zustand stores (4개)
+- TypeScript 타입 정의
+- 에러 핸들링 유틸리티
+
+### Day 3: Evolution Dashboard 구현
+#### 메인 대시보드 (`src/app/(dashboard)/page.tsx`)
+```typescript
+export default function DashboardPage() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <MetricCard 
+        title="Generation" 
+        value={generation} 
+        icon={<Brain />}
+        trend="+12%" 
+      />
+      <MetricCard 
+        title="Active Agents" 
+        value={247} 
+        icon={<Activity />}
+        status="healthy" 
+      />
+      <MetricCard 
+        title="Fitness Score" 
+        value="92.5%" 
+        icon={<TrendingUp />}
+        target="95%" 
+      />
+      <MetricCard 
+        title="Performance" 
+        value="2.8μs" 
+        icon={<Zap />}
+        constraint="3μs" 
+      />
+    </div>
+  );
+}
+```
+
+#### Evolution 시각화 컴포넌트
+- `EvolutionChart.tsx`: 세대별 fitness 차트 (Chart.js)
+- `GenerationTree.tsx`: 계보 트리 (D3.js simplified)
+- `ParameterControls.tsx`: 진화 파라미터 조정
+- `SafetyControls.tsx`: 안전 제어 패널
+
+#### 산출물
+- 4개 메트릭 카드 컴포넌트
+- 실시간 차트 (Chart.js)
+- 파라미터 컨트롤 패널
+- WebSocket 연결 설정
+
+### Day 4: Agent Management UI
+#### Agent 목록 (`src/app/(dashboard)/agents/page.tsx`)
+```typescript
+export default function AgentsPage() {
+  const { agents, loading } = useAgents();
+  
+  return (
+    <div className="space-y-4">
+      <AgentFilters />
+      <AgentGrid agents={agents} />
+      <AgentDetails selectedAgent={selectedAgent} />
+    </div>
+  );
+}
+```
+
+#### Agent 관련 컴포넌트
+- `AgentCard.tsx`: 에이전트 카드 (상태, 메트릭, 액션)
+- `AgentGrid.tsx`: 그리드/리스트 뷰 전환
+- `AgentDetails.tsx`: 상세 정보 패널
+- `AgentMetrics.tsx`: 성능 메트릭 차트
+
+#### 산출물
+- 247개 에이전트 관리 인터페이스
+- 필터링/검색 기능
+- 상태별 그룹핑
+- 배치 작업 지원
+
+### Day 5: 실시간 업데이트 및 WebSocket
+#### WebSocket 매니저 (`src/lib/socket/manager.ts`)
+```typescript
+class SocketManager {
+  private socket: Socket | null = null;
+  
+  connect() {
+    this.socket = io(WS_URL, {
+      transports: ['websocket'],
+      reconnection: true
+    });
+    
+    this.setupEventHandlers();
+  }
+  
+  private setupEventHandlers() {
+    this.socket.on('evolution:update', this.handleEvolutionUpdate);
+    this.socket.on('agent:status', this.handleAgentStatus);
+    this.socket.on('metrics:update', this.handleMetricsUpdate);
+  }
+}
+```
+
+#### 실시간 기능
+- Evolution 진행상황 실시간 업데이트
+- Agent 상태 변경 알림
+- 메트릭 실시간 스트리밍
+- 시스템 알림/경고
+
+#### 산출물
+- WebSocket 연결 관리자
+- 실시간 데이터 훅
+- 자동 재연결 로직
+- 이벤트 핸들러
+
+---
+
+## 🎨 Phase 2: Workflow Studio & Visualization (Day 6-10)
+
+### Day 6: Workflow Canvas 기본 구현
+#### React Flow 통합 (`src/components/workflow/Canvas.tsx`)
+```typescript
+import ReactFlow from 'reactflow';
+
+export function WorkflowCanvas() {
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onConnect={onConnect}
+      nodeTypes={nodeTypes}
+    >
+      <Background />
+      <Controls />
+      <MiniMap />
+    </ReactFlow>
+  );
+}
+```
+
+#### 노드 타입 정의
+- `AgentNode`: 에이전트 실행 노드
+- `DecisionNode`: 조건 분기 노드
+- `ParallelNode`: 병렬 실행 노드
+- `LoopNode`: 반복 실행 노드
+
+#### 산출물
+- React Flow 캔버스
+- 4가지 노드 타입
+- 드래그 앤 드롭
+- 커넥션 검증
+
+### Day 7: Agent Library Panel
+#### 에이전트 라이브러리 (`src/components/workflow/Library.tsx`)
+```typescript
+export function AgentLibrary() {
+  const categories = [
+    { name: 'Input', agents: [...] },
+    { name: 'Processing', agents: [...] },
+    { name: 'Analysis', agents: [...] },
+    { name: 'Output', agents: [...] }
+  ];
+  
+  return (
+    <div className="w-64 border-l">
+      <SearchInput />
+      <CategoryAccordion categories={categories} />
+      <FavoriteAgents />
+    </div>
+  );
+}
+```
+
+#### 기능
+- 카테고리별 정리
+- 검색/필터링
+- 즐겨찾기
+- 드래그 가능한 아이템
+
+#### 산출물
+- 에이전트 라이브러리 패널
+- 검색/필터 기능
+- 드래그 소스 구현
+- 템플릿 시스템
+
+### Day 8: Execution Console
+#### 실행 콘솔 (`src/components/workflow/ExecutionConsole.tsx`)
+```typescript
+export function ExecutionConsole({ workflowId }) {
+  const { logs, status, metrics } = useWorkflowExecution(workflowId);
+  
+  return (
+    <div className="h-64 border-t">
+      <Tabs>
+        <TabsList>
+          <TabsTrigger value="logs">Logs</TabsTrigger>
+          <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          <TabsTrigger value="debug">Debug</TabsTrigger>
+        </TabsList>
+        <TabsContent value="logs">
+          <LogViewer logs={logs} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+```
+
+#### 기능
+- 실시간 로그 스트리밍
+- 성능 메트릭 표시
+- 디버그 정보
+- 에러 하이라이팅
+
+#### 산출물
+- 실행 콘솔 UI
+- 로그 뷰어
+- 메트릭 패널
+- 디버그 도구
+
+### Day 9: Advanced Visualizations
+#### 3D Evolution Tree (`src/components/evolution/Tree3D.tsx`)
+```typescript
+// Three.js Fiber를 사용한 간단한 3D 트리
+import { Canvas } from '@react-three/fiber';
+
+export function EvolutionTree3D() {
+  return (
+    <Canvas>
+      <ambientLight />
+      <pointLight position={[10, 10, 10]} />
+      <GenerationNodes generations={data} />
+      <OrbitControls />
+    </Canvas>
+  );
+}
+```
+
+#### 고급 차트
+- Sankey Diagram: 에이전트 플로우
+- Heatmap: 성능 매트릭스
+- Radar Chart: 다차원 평가
+- Timeline: 진화 히스토리
+
+#### 산출물
+- 3D 시각화 (선택적)
+- 4개 고급 차트
+- 인터랙티브 컨트롤
+- 데이터 필터링
+
+### Day 10: Integration & Polish
+#### 통합 작업
+- 모든 컴포넌트 연결
+- 라우팅 완성
+- 에러 바운더리
+- 로딩 상태
+
+#### 성능 최적화
+```typescript
+// 동적 임포트
+const WorkflowStudio = lazy(() => import('./WorkflowStudio'));
+
+// 메모이제이션
+const ExpensiveComponent = memo(({ data }) => {
+  const processed = useMemo(() => processData(data), [data]);
+  return <Chart data={processed} />;
+});
+```
+
+#### 산출물
+- 완전 통합된 앱
+- 코드 스플리팅
+- 최적화된 번들
+- PWA 지원
+
+---
+
+## 📊 Phase 3: Analytics, Testing & Deployment (Day 11-15)
+
+### Day 11: Analytics Dashboard
+#### 비즈니스 메트릭 (`src/app/(dashboard)/analytics/page.tsx`)
+```typescript
+export default function AnalyticsPage() {
+  return (
+    <div className="grid gap-4">
+      <CostSavingsChart />
+      <ROICalculator />
+      <PerformanceComparison />
+      <UsageStatistics />
+    </div>
+  );
+}
+```
+
+#### 분석 컴포넌트
+- `CostAnalysis.tsx`: 비용 절감 분석
+- `ROIDashboard.tsx`: ROI 계산 및 예측
+- `ModelComparison.tsx`: AI 모델 비교
+- `ResourceUsage.tsx`: 리소스 사용량
+
+#### 산출물
+- 4개 분석 대시보드
+- 데이터 export 기능
+- 리포트 생성
+- 예측 모델 시각화
+
+### Day 12: Testing & Quality Assurance
+#### 테스트 구성
+```json
+// package.json
+{
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test"
+  }
+}
+```
+
+#### 테스트 커버리지
+- Unit Tests: 컴포넌트, hooks, utils (80%+)
+- Integration Tests: API 통합, 상태 관리
+- E2E Tests: 주요 사용자 플로우
+- Performance Tests: Lighthouse CI
+
+#### 산출물
+- Jest 설정
+- 테스트 파일 (*.test.tsx)
+- E2E 테스트 시나리오
+- CI/CD 파이프라인
+
+### Day 13: Responsive & Accessibility
+#### 반응형 디자인
+```css
+/* Breakpoints */
+@screen sm { /* 640px */ }
+@screen md { /* 768px */ }
+@screen lg { /* 1024px */ }
+@screen xl { /* 1280px */ }
+@screen 2xl { /* 1536px */ }
+```
+
+#### 접근성 개선
+- ARIA labels
+- 키보드 네비게이션
+- 스크린 리더 지원
+- 색상 대비 검증
+
+#### 산출물
+- 모바일 최적화 UI
+- 태블릿 레이아웃
+- 접근성 검증 보고서
+- 다크모드 지원
+
+### Day 14: Performance Optimization
+#### 최적화 기법
+```typescript
+// Image optimization
+import Image from 'next/image';
+
+// Font optimization
+import { Inter } from 'next/font/google';
+
+// Dynamic imports
+const HeavyComponent = dynamic(() => import('./Heavy'), {
+  loading: () => <Skeleton />,
+  ssr: false
+});
+```
+
+#### 성능 목표
+- Lighthouse Score: 95+
+- FCP: < 1.8s
+- LCP: < 2.5s
+- CLS: < 0.1
+- Bundle Size: < 200KB (initial)
+
+#### 산출물
+- 최적화된 빌드
+- 성능 보고서
+- CDN 설정
+- 캐싱 전략
+
+### Day 15: Production Deployment
+#### 배포 준비
+```bash
+# 환경변수 설정
+NEXT_PUBLIC_API_URL=https://api.t-developer.com
+NEXT_PUBLIC_WS_URL=wss://ws.t-developer.com
+
+# 빌드 및 검증
+npm run build
+npm run analyze
+```
+
+#### 배포 옵션
+1. **Vercel** (권장)
+   ```bash
+   npm i -g vercel
+   vercel --prod
+   ```
+
+2. **AWS Amplify**
+   ```bash
+   amplify init
+   amplify add hosting
+   amplify publish
+   ```
+
+3. **Docker**
+   ```dockerfile
+   FROM node:18-alpine
+   WORKDIR /app
+   COPY . .
+   RUN npm ci --only=production
+   RUN npm run build
+   CMD ["npm", "start"]
+   ```
+
+#### 산출물
+- Production 빌드
+- 배포 스크립트
+- 모니터링 설정
+- 문서화
+
+---
+
+## 📈 성능 지표 및 목표
+
+| 메트릭 | 목표 | 측정 도구 |
+|--------|------|-----------|
+| **개발 속도** | 15일 완성 | GitHub Projects |
+| **코드 커버리지** | 80%+ | Jest Coverage |
+| **번들 크기** | < 200KB | Webpack Analyzer |
+| **Lighthouse Score** | 95+ | Lighthouse CI |
+| **API 응답시간** | < 200ms | Performance API |
+| **실시간 지연** | < 100ms | WebSocket Ping |
+| **사용자 만족도** | 4.5/5 | User Feedback |
+
+## 🔄 백엔드 API 통합 매핑
+
+```typescript
+// 백엔드 모듈 → 프론트엔드 페이지 매핑
+const integration = {
+  // Evolution Engine (backend/src/evolution/)
+  '/evolution/*': '/dashboard/evolution',
+  
+  // Agent System (backend/src/agents/)
+  '/agents/*': '/dashboard/agents',
+  
+  // Workflow Engine (backend/src/workflow/)
+  '/workflows/*': '/dashboard/workflows',
+  
+  // Analytics (backend/src/analytics/)
+  '/analytics/*': '/dashboard/analytics',
+  
+  // Meta Agents (backend/src/meta/)
+  '/meta/*': '/dashboard/meta',
+  
+  // Genetic Algorithms (backend/src/genetic/)
+  '/genetic/*': '/dashboard/evolution/genetic'
+};
+```
+
+## 🚀 즉시 시작 명령어
+
+```bash
+# 1. 프로젝트 생성 (1분)
+cd /home/ec2-user/T-DeveloperMVP
+npx create-next-app@latest frontend --typescript --tailwind --app --src-dir
+
+# 2. 의존성 설치 (2분)
+cd frontend
+npm install @tanstack/react-query axios socket.io-client zustand \
+  chart.js react-chartjs-2 lucide-react \
+  clsx tailwind-merge class-variance-authority
+
+# 3. shadcn/ui 설정 (1분)
+npx shadcn-ui@latest init
+npx shadcn-ui@latest add button card badge tabs alert dialog
+
+# 4. 개발 서버 시작 (즉시)
+npm run dev
+# http://localhost:3000
+```
+
+## 📋 일일 체크리스트
+
+### Day 1 ✅
+- [ ] Next.js 프로젝트 초기화
+- [ ] 패키지 설치
+- [ ] 디렉토리 구조 설정
+- [ ] 환경변수 설정
+
+### Day 2 ✅
+- [ ] API 클라이언트 구현
+- [ ] Zustand stores 설정
+- [ ] TypeScript 타입 정의
+- [ ] 에러 핸들링
+
+### Day 3 ✅
+- [ ] 메인 대시보드 레이아웃
+- [ ] 메트릭 카드 구현
+- [ ] Evolution 차트
+- [ ] 파라미터 컨트롤
+
+### Day 4 ✅
+- [ ] Agent 목록 페이지
+- [ ] Agent 카드 컴포넌트
+- [ ] 필터/검색 기능
+- [ ] 상세 정보 패널
+
+### Day 5 ✅
+- [ ] WebSocket 연결
+- [ ] 실시간 업데이트
+- [ ] 알림 시스템
+- [ ] 재연결 로직
+
+[Day 6-15 체크리스트 계속...]
+
+## 🎯 최종 산출물
+
+```yaml
+완성된 기능:
+  - ✅ Evolution Engine 실시간 모니터링
+  - ✅ 247개 에이전트 관리 시스템
+  - ✅ Workflow 시각적 편집기
+  - ✅ 비즈니스 분석 대시보드
+  - ✅ WebSocket 실시간 통신
+  - ✅ 반응형 디자인
+  - ✅ 다크모드 지원
+  - ✅ PWA 지원
+  
+기술적 성과:
+  - 15일 내 MVP 완성
+  - 80%+ 테스트 커버리지
+  - 95+ Lighthouse Score
+  - 100% 백엔드 API 활용
+```
+
+이 계획을 따라 **실제 작동하는 프론트엔드를 15일 내에 완성**할 수 있습니다! 🚀
