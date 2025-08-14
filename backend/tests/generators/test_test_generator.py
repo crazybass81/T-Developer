@@ -5,7 +5,7 @@ Tests for automatic test generation
 
 import pytest
 
-from src.generators.test_generator import TestGenerator
+from src.testing.test_generator import TestGenerator
 
 
 class TestTestGenerator:

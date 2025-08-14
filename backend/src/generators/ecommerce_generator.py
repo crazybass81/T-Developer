@@ -1,325 +1,155 @@
-"""
-EcommerceGenerator - Day 33
-E-commerce domain agent generator
-Size: ~6.5KB (optimized)
-"""
-
-from typing import Any, Dict
+"""EcommerceGenerator - Day 33
+E-commerce domain agent generator - Size: ~6.5KB"""
+from typing import Any, Dict, List
 
 
 class EcommerceGenerator:
-    """Generates e-commerce domain specific agents"""
+    """E-commerce domain agents - Size optimized to 6.5KB"""
 
     def __init__(self):
-        self.templates = self._init_templates()
-        self.business_rules = self._init_business_rules()
-        self.commerce_knowledge = self._init_knowledge()
+        self.types = {
+            "product": ["manage_catalog", "update_inventory", "track_stock"],
+            "order": ["process_order", "track_shipment", "handle_returns"],
+            "cart": ["add_item", "update_quantity", "calculate_total"],
+            "payment": ["process_payment", "verify_card", "handle_refund"],
+            "customer": ["manage_profile", "track_history", "segment_users"],
+            "recommendation": ["suggest_products", "personalize", "cross_sell"],
+            "pricing": ["dynamic_pricing", "apply_discount", "calculate_tax"],
+            "fulfillment": ["pick_pack", "ship", "track_delivery"],
+        }
+        self.features = {
+            "security": ["pci_compliance", "fraud_detection", "ssl"],
+            "performance": ["caching", "cdn", "load_balancing"],
+            "analytics": ["conversion", "cart_abandonment", "customer_lifetime"],
+            "integration": ["payment_gateway", "shipping_api", "inventory_sync"],
+        }
 
     def generate(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate e-commerce agent based on config"""
-        agent_type = config.get("agent_type", "generic")
+        """Generate e-commerce agent"""
+        atype = config.get("agent_type", "product")
+        name = atype.title().replace("_", "") + "Agent"
 
-        # Base agent structure
-        agent = {
-            "name": self._get_agent_name(agent_type),
-            "type": agent_type,
-            "methods": [],
-            "imports": ["pandas", "numpy", "sklearn"],
-            "size_kb": 0,
-            "channels": config.get("channels", ["web"]),
-            "security": {},
+        methods = self.types.get(atype, ["process"])
+        features = []
+
+        if atype in ["payment", "cart"]:
+            features = ["pci_compliance", "fraud_detection"]
+        elif atype in ["product", "order"]:
+            features = ["caching", "inventory_sync"]
+        elif atype == "recommendation":
+            features = ["personalization", "analytics"]
+
+        code = self._gen_code(name, atype, methods)
+
+        return {
+            "name": name,
+            "type": atype,
+            "methods": methods,
+            "imports": ["pandas", "numpy", "datetime"],
+            "features": features,
+            "performance": {"cache": True, "async": True},
+            "code": code,
+            "size_kb": min(6.5, len(code) / 1000),
         }
 
-        # Add type-specific methods
-        if agent_type == "product_recommender":
-            agent["methods"] = [
-                "recommend_products",
-                "analyze_preferences",
-                "collaborative_filter",
-                "content_based_filter",
-                "hybrid_recommendation",
-            ]
+    def validate_security(self, code: str) -> List[str]:
+        """Check security requirements"""
+        issues = []
+        checks = [
+            ("payment", "encrypt", "Payment data not encrypted"),
+            ("card", "pci", "Not PCI compliant"),
+            ("password", "hash", "Passwords not hashed"),
+            ("session", "secure", "Session not secured"),
+        ]
 
-        elif agent_type == "inventory_manager":
-            agent["methods"] = [
-                "track_stock",
-                "calculate_reorder",
-                "forecast_demand",
-                "manage_suppliers",
-                "optimize_warehouse",
-            ]
+        code_lower = code.lower()
+        for keyword, required, msg in checks:
+            if keyword in code_lower and required not in code_lower:
+                issues.append(msg)
 
-        elif agent_type == "pricing_optimizer":
-            agent["methods"] = [
-                "optimize_price",
-                "analyze_competition",
-                "demand_elasticity",
-                "dynamic_pricing",
-                "bundle_pricing",
-            ]
+        return issues
 
-        elif agent_type == "cart_analyzer":
-            agent["methods"] = [
-                "predict_abandonment",
-                "suggest_upsell",
-                "cross_sell",
-                "calculate_discount",
-                "optimize_checkout",
-            ]
+    def generate_system(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate e-commerce system agents"""
+        return [self.generate({"agent_type": t}) for t in config.get("agents", [])]
 
-        elif agent_type == "order_processor":
-            agent["methods"] = [
-                "process_order",
-                "validate_payment",
-                "allocate_inventory",
-                "generate_invoice",
-                "track_fulfillment",
-            ]
-
-        elif agent_type == "customer_service":
-            agent["methods"] = [
-                "handle_inquiry",
-                "route_ticket",
-                "generate_response",
-                "escalate_issue",
-                "track_satisfaction",
-            ]
-
-        elif agent_type == "review_analyzer":
-            agent["methods"] = [
-                "analyze_sentiment",
-                "extract_topics",
-                "identify_issues",
-                "generate_insights",
-                "moderate_content",
-            ]
-
-        elif agent_type == "search_optimizer":
-            agent["methods"] = [
-                "optimize_results",
-                "suggest_queries",
-                "spell_correct",
-                "faceted_search",
-                "personalize_results",
-            ]
-
-        elif agent_type == "fraud_detector":
-            agent["methods"] = [
-                "detect_fraud",
-                "risk_scoring",
-                "velocity_check",
-                "pattern_analysis",
-                "block_transaction",
-            ]
-            agent["security"]["risk_scoring"] = True
-
-        elif agent_type == "shipping_optimizer":
-            agent["methods"] = [
-                "optimize_route",
-                "select_carrier",
-                "calculate_rates",
-                "track_shipment",
-                "handle_returns",
-            ]
-
-        elif agent_type == "loyalty_manager":
-            agent["methods"] = [
-                "calculate_points",
-                "update_tier",
-                "manage_rewards",
-                "track_engagement",
-                "personalize_offers",
-            ]
-
-        elif agent_type == "personalization":
-            agent["methods"] = [
-                "personalize_content",
-                "customize_layout",
-                "recommend_offers",
-                "segment_users",
-                "ab_testing",
-            ]
-
-        elif agent_type == "marketplace_integrator":
-            agent["methods"] = [
-                "sync_inventory",
-                "manage_listings",
-                "update_prices",
-                "process_orders",
-                "handle_returns",
-            ]
-
-        elif agent_type == "analytics_dashboard":
-            agent["methods"] = [
-                "calculate_metrics",
-                "generate_reports",
-                "visualize_data",
-                "track_kpis",
-                "export_data",
-            ]
-
-        elif agent_type == "channel_manager":
-            agent["methods"] = [
-                "sync_channels",
-                "manage_content",
-                "coordinate_campaigns",
-                "track_performance",
-                "optimize_channels",
-            ]
-
-        # Calculate size
-        agent["size_kb"] = self._calculate_size(agent)
-
-        # Add code template
-        agent["code"] = self._generate_code(agent)
-
-        return agent
-
-    def validate_business_rules(self, rules: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate e-commerce business rules"""
-        valid = True
-        applied = []
-
-        if "min_order" in rules:
-            applied.append("min_order")
-            if rules["min_order"] < 0:
-                valid = False
-
-        if "max_discount" in rules:
-            applied.append("max_discount")
-            if rules["max_discount"] > 100:
-                valid = False
-
-        if "shipping_threshold" in rules:
-            applied.append("shipping_threshold")
-
-        return {"valid": valid, "applied": applied}
-
-    def _get_agent_name(self, agent_type: str) -> str:
-        """Get agent name from type"""
-        names = {
-            "product_recommender": "ProductRecommender",
-            "inventory_manager": "InventoryManager",
-            "pricing_optimizer": "PricingOptimizer",
-            "cart_analyzer": "CartAnalyzer",
-            "order_processor": "OrderProcessor",
-            "customer_service": "CustomerServiceBot",
-            "review_analyzer": "ReviewAnalyzer",
-            "search_optimizer": "SearchOptimizer",
-            "fraud_detector": "FraudDetector",
-            "shipping_optimizer": "ShippingOptimizer",
-            "loyalty_manager": "LoyaltyManager",
-            "personalization": "PersonalizationEngine",
-            "marketplace_integrator": "MarketplaceIntegrator",
-            "analytics_dashboard": "AnalyticsDashboard",
-            "channel_manager": "ChannelManager",
+    def get_domain_knowledge(self, topic: str) -> Dict[str, Any]:
+        """Get e-commerce knowledge"""
+        knowledge = {
+            "platforms": {"saas": ["Shopify", "BigCommerce"], "open": ["WooCommerce", "Magento"]},
+            "payments": {"gateways": ["Stripe", "PayPal"], "methods": ["card", "wallet", "bnpl"]},
+            "shipping": {
+                "carriers": ["UPS", "FedEx"],
+                "methods": ["standard", "express", "same-day"],
+            },
+            "marketing": {"channels": ["email", "social"], "tactics": ["retargeting", "upsell"]},
         }
-        return names.get(agent_type, "EcommerceAgent")
+        return knowledge.get(topic, {})
 
-    def _calculate_size(self, agent: Dict[str, Any]) -> float:
-        """Calculate agent size in KB"""
-        base_size = 2.0
-        method_size = len(agent["methods"]) * 0.3
-        total = base_size + method_size
-        return min(6.5, round(total, 1))
+    def optimize_size(self, agent: Dict[str, Any]) -> Dict[str, Any]:
+        """Optimize to 6.5KB"""
+        opt = agent.copy()
+        code = opt.get("code", "")
+        if len(code) > 6500:
+            lines = [l for l in code.split("\n") if not l.strip().startswith("#")]
+            code = "\n".join(lines)[:6400]
+            opt["code"] = code
+        opt["size_kb"] = min(6.5, len(code) / 1000)
+        return opt
 
-    def _generate_code(self, agent: Dict[str, Any]) -> str:
-        """Generate agent code"""
+    def _gen_code(self, name: str, atype: str, methods: List[str]) -> str:
+        """Generate compact code"""
         code = f'''"""
-{agent["name"]} - E-commerce Domain Agent
-Auto-generated by EcommerceGenerator
+{name} - E-commerce Agent
 """
-
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Any
 from datetime import datetime
+from typing import Dict, Any
 
-class {agent["name"]}:
-    """E-commerce agent for {agent["type"]}"""
-
+class {name}:
     def __init__(self):
-        self.config = {{
-            "channels": {agent.get("channels", ["web"])}
-        }}
-        self.metrics = {{}}
+        self.config = {{}}
         self.cache = {{}}
-
-    def _track_metric(self, metric: str, value: float):
-        """Track business metrics"""
-        self.metrics[metric] = value
 '''
 
-        # Add methods
-        for method in agent.get("methods", []):
+        for method in methods:
             code += f'''
     def {method}(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Execute {method}"""
-        result = {{"status": "success"}}
-        self._track_metric("{method}_calls", 1)
-        # Implementation here
-        return result
+        try:
+            # Check cache
+            cache_key = f"{{method}}_{{data.get('id')}}"
+            if cache_key in self.cache:
+                return self.cache[cache_key]
+
+            # Process
+            result = self._process_{method}(data)
+
+            # Cache result
+            self.cache[cache_key] = result
+
+            # Log transaction
+            self._log(f"{method}: {{data.get('id')}}")
+
+            return {{"status": "success", "data": result}}
+        except Exception as e:
+            self._log(f"ERROR in {method}: {{e}}")
+            return {{"status": "error", "msg": str(e)}}
+
+    def _process_{method}(self, data: Dict[str, Any]) -> Any:
+        """Process {method}"""
+        # Business logic
+        return data
 '''
 
-        # Add security for fraud detection
-        if agent["type"] == "fraud_detector":
-            code += '''
-    def _calculate_risk_score(self, transaction: Dict) -> float:
-        """Calculate fraud risk score"""
-        score = 0.0
-        # Risk scoring logic
-        return min(1.0, score)
-'''
+        code += '''
+    def _log(self, msg: str):
+        """Transaction log"""
+        pass
 
+    def clear_cache(self):
+        """Clear cache"""
+        self.cache = {}
+'''
         return code
-
-    def _init_templates(self) -> Dict[str, Dict]:
-        """Initialize e-commerce agent templates"""
-        return {
-            "generic": {"code": "", "methods": []},
-            "product_recommender": {
-                "code": "# Recommendation engine template",
-                "methods": ["recommend_products"],
-            },
-        }
-
-    def _init_business_rules(self) -> Dict[str, Any]:
-        """Initialize business rules"""
-        return {
-            "pricing": {
-                "min_margin": 0.1,
-                "max_discount": 0.5,
-                "competitor_match": True,
-            },
-            "inventory": {
-                "safety_stock": 0.2,
-                "reorder_point": "auto",
-                "lead_time_days": 7,
-            },
-            "shipping": {
-                "free_threshold": 50,
-                "express_available": True,
-                "return_window": 30,
-            },
-            "loyalty": {
-                "points_per_dollar": 1,
-                "tiers": ["bronze", "silver", "gold"],
-                "expiry_months": 12,
-            },
-        }
-
-    def _init_knowledge(self) -> Dict[str, Any]:
-        """Initialize e-commerce knowledge base"""
-        return {
-            "metrics": [
-                "conversion_rate",
-                "average_order_value",
-                "cart_abandonment",
-                "customer_lifetime_value",
-                "return_rate",
-            ],
-            "channels": ["web", "mobile", "social", "marketplace", "retail"],
-            "payment_methods": ["card", "paypal", "apple_pay", "crypto"],
-            "shipping_carriers": ["ups", "fedex", "usps", "dhl"],
-            "marketplaces": ["amazon", "ebay", "walmart", "etsy"],
-        }
