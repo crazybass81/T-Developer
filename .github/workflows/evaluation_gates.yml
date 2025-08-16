@@ -1,0 +1,260 @@
+name: Evaluation Gates CI
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  test-gate:
+    name: Test Coverage & Mutation Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install coverage pytest pytest-cov mutmut hypothesis
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        
+    - name: Run Test Gate
+      id: test_gate
+      run: |
+        python -c "
+        import asyncio
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, '.')
+        from packages.evaluation.test_gate import TestGate, TestConfig
+        
+        async def main():
+            config = TestConfig(
+                min_coverage=80.0,
+                min_mutation_score=60.0,
+                enable_property_tests=True,
+                enable_mutation_tests=True
+            )
+            gate = TestGate(config)
+            result = await gate.analyze_test_suite(Path('.'))
+            
+            # Generate report
+            report = await gate.generate_report(result)
+            print(report)
+            
+            # Create GitHub comment
+            if '${{ github.event_name }}' == 'pull_request':
+                comment = await gate.create_github_comment(result)
+                with open('test_comment.md', 'w') as f:
+                    f.write(comment)
+            
+            # Exit with error if failed
+            sys.exit(0 if result.passed else 1)
+        
+        asyncio.run(main())
+        "
+        
+    - name: Comment PR (Test Results)
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('test_comment.md')) {
+            const comment = fs.readFileSync('test_comment.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
+
+  quality-gate:
+    name: Code Quality Metrics
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install radon interrogate
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        
+    - name: Run Quality Gate
+      id: quality_gate
+      run: |
+        python -c "
+        import asyncio
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, '.')
+        from packages.evaluation.quality_gate import QualityGate, QualityConfig
+        
+        async def main():
+            config = QualityConfig(
+                min_docstring_coverage=80.0,
+                max_complexity=10,
+                min_maintainability_index=20,
+                check_type_hints=True
+            )
+            gate = QualityGate(config)
+            result = await gate.analyze_codebase(Path('.'))
+            
+            # Generate report
+            report = await gate.generate_report(result)
+            print(report)
+            
+            # Create GitHub comment
+            if '${{ github.event_name }}' == 'pull_request':
+                comment = await gate.create_github_comment(result)
+                with open('quality_comment.md', 'w') as f:
+                    f.write(comment)
+            
+            # Exit with error if failed
+            sys.exit(0 if result.passed else 1)
+        
+        asyncio.run(main())
+        "
+        
+    - name: Comment PR (Quality Results)
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('quality_comment.md')) {
+            const comment = fs.readFileSync('quality_comment.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
+
+  security-gate:
+    name: Security Vulnerability Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install semgrep bandit
+        # Install OSV Scanner
+        curl -sSfL https://github.com/google/osv-scanner/releases/download/v1.4.3/osv-scanner_1.4.3_linux_amd64 -o osv-scanner
+        chmod +x osv-scanner
+        sudo mv osv-scanner /usr/local/bin/
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        
+    - name: Run Security Gate
+      id: security_gate
+      run: |
+        python -c "
+        import asyncio
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, '.')
+        from packages.evaluation.security_gate import SecurityGate, SecurityConfig
+        
+        async def main():
+            config = SecurityConfig(
+                enable_semgrep=True,
+                enable_codeql=False,  # CodeQL requires separate setup
+                enable_osv=True,
+                enable_bandit=True,
+                fail_on_critical=True,
+                fail_on_high_severity=True
+            )
+            gate = SecurityGate(config)
+            result = await gate.scan_codebase(Path('.'))
+            
+            # Generate report
+            report = await gate.generate_report(result)
+            print(report)
+            
+            # Create GitHub comment
+            if '${{ github.event_name }}' == 'pull_request':
+                comment = await gate.create_github_comment(result)
+                with open('security_comment.md', 'w') as f:
+                    f.write(comment)
+            
+            # Exit with error if failed
+            sys.exit(0 if result.passed else 1)
+        
+        asyncio.run(main())
+        "
+        
+    - name: Comment PR (Security Results)
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          if (fs.existsSync('security_comment.md')) {
+            const comment = fs.readFileSync('security_comment.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
+          
+    - name: Upload SARIF results
+      if: always()
+      uses: github/codeql-action/upload-sarif@v2
+      continue-on-error: true
+      with:
+        sarif_file: security-results.sarif
+
+  pr-gate-summary:
+    name: PR Gate Summary
+    runs-on: ubuntu-latest
+    needs: [test-gate, quality-gate, security-gate]
+    if: always()
+    
+    steps:
+    - name: Check gate results
+      run: |
+        echo "Test Gate: ${{ needs.test-gate.result }}"
+        echo "Quality Gate: ${{ needs.quality-gate.result }}"
+        echo "Security Gate: ${{ needs.security-gate.result }}"
+        
+        # Fail if any gate failed
+        if [[ "${{ needs.test-gate.result }}" == "failure" ]] || \
+           [[ "${{ needs.quality-gate.result }}" == "failure" ]] || \
+           [[ "${{ needs.security-gate.result }}" == "failure" ]]; then
+          echo "❌ One or more gates failed. PR cannot be merged."
+          exit 1
+        else
+          echo "✅ All gates passed. PR is ready for review."
+        fi

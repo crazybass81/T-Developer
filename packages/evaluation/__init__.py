@@ -2,6 +2,7 @@
 
 from .quality_gate import QualityConfig, QualityGate, QualityResult
 from .security_gate import ScanResult, SecurityConfig, SecurityGate
+from .test_gate import TestConfig, TestGate, TestResult
 
 __all__ = [
     "SecurityGate",
@@ -10,4 +11,7 @@ __all__ = [
     "QualityGate",
     "QualityConfig",
     "QualityResult",
+    "TestGate",
+    "TestConfig",
+    "TestResult",
 ]
