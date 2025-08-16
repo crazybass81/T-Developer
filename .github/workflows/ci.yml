@@ -2,418 +2,66 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, feature/* ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
-
-permissions:
-  contents: read
-  actions: read
-  checks: write
-  pull-requests: write
-
-env:
-  PYTHON_VERSION: '3.10'
-  AWS_REGION: 'us-east-1'
-  TESTING: 'true'
+    branches: [main]
 
 jobs:
-  backend-lint:
-    name: Backend Linting
+  quality:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        pip install uv
+        uv pip install -r requirements.txt
+    
+    - name: Run Black
+      run: black --check packages/
+    
+    - name: Run Ruff
+      run: ruff check packages/
+    
+    - name: Run MyPy
+      run: mypy packages/
+    
+    - name: Check Docstrings
+      run: interrogate -v packages/
+    
+    - name: Check Complexity
+      run: |
+        radon cc packages/ -nb
+        radon mi packages/ -nb
+    
+    - name: Run Tests
+      run: pytest tests/ -v --cov=packages --cov-report=term-missing
+    
+    - name: Security Scan
+      run: |
+        pip install semgrep
+        semgrep --config=auto packages/
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Install linting tools
-        run: |
-          cd backend
-          export PATH="$HOME/.cargo/bin:$PATH"
-          uv pip install --system flake8 black isort
-
-      - name: Run Black (formatter check)
-        continue-on-error: true
-        run: |
-          cd backend
-          black --check src/ tests/ scripts/
-
-      - name: Run isort (import sort check)
-        continue-on-error: true
-        run: |
-          cd backend
-          isort --check-only src/ tests/ scripts/
-
-      - name: Run Flake8
-        continue-on-error: true
-        run: |
-          cd backend
-          # More lenient flake8 configuration
-          flake8 src/ tests/ scripts/ --max-line-length=120 \
-            --extend-ignore=E203,W503,F401,F541,E722,E402,F841 \
-            --exclude=src/agents/agentcore/,src/migration/,tests/integration/
-
-  backend-test:
-    name: Backend Tests
+  gates:
     runs-on: ubuntu-latest
-    needs: backend-lint
-
-    services:
-      # Redis for caching
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+    needs: quality
+    
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          export PATH="$HOME/.cargo/bin:$PATH"
-          # Install all requirements
-          uv pip install --system -r requirements.txt
-          uv pip install --system pytest pytest-cov pytest-asyncio pytest-mock
-
-      - name: Run unit tests
-        run: |
-          cd backend
-          # Run all tests including integration tests
-          python -m pytest tests/ \
-            -v --tb=short \
-            --ignore=tests/deployment/test_agentcore_deployer.py \
-            --ignore=tests/workflow/test_parser.py \
-            -x || true
-        env:
-          PYTHONPATH: ${{ github.workspace }}/backend
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
-          TESTING: true
-          AWS_ACCESS_KEY_ID: test
-          AWS_SECRET_ACCESS_KEY: test
-          AWS_REGION: us-east-1
-          PORT: 8080
-          BEDROCK_AGENT_ID: NYZHMLSDOJ
-          BEDROCK_AGENT_ALIAS_ID: IBQK7SYNGG
-
-      - name: Run integration tests
-        run: |
-          cd backend
-          python -m pytest tests/integration/test_agent_integration.py -v --tb=short
-        env:
-          PYTHONPATH: ${{ github.workspace }}/backend
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            backend/htmlcov/
-            backend/logs/
-          retention-days: 7
-
-  agent-validation:
-    name: Agent Validation
-    runs-on: ubuntu-latest
-    needs: backend-lint
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Check agent sizes
-        run: |
-          cd backend
-          echo "Checking agent sizes..."
-          for agent_dir in src/agents/agentcore/*/; do
-            if [ -f "$agent_dir/main.py" ]; then
-              size=$(wc -c < "$agent_dir/main.py")
-              size_kb=$(echo "scale=2; $size / 1024" | bc)
-              agent_name=$(basename $agent_dir)
-              echo "$agent_name: ${size_kb}KB"
-              if (( $(echo "$size_kb > 6.5" | bc -l) )); then
-                echo "❌ $agent_name exceeds 6.5KB limit!"
-                exit 1
-              fi
-            fi
-          done
-          echo "✅ All agents under 6.5KB limit"
-
-      - name: Validate agent structure
-        run: |
-          cd backend
-          python << 'EOF'
-          import sys
-          import os
-          from pathlib import Path
-
-          sys.path.insert(0, '.')
-
-          agents = ['nl_input', 'ui_selection', 'parser', 'component_decision', 'match_rate', 'search']
-          errors = []
-
-          for agent in agents:
-              agent_path = Path(f'src/agents/agentcore/{agent}/main.py')
-              if not agent_path.exists():
-                  errors.append(f"Missing agent: {agent}")
-                  continue
-
-              # Check for required methods
-              content = agent_path.read_text()
-              required_methods = ['process', 'validate_input', 'get_metadata', 'handler']
-              for method in required_methods:
-                  if f'def {method}' not in content:
-                      errors.append(f"{agent}: Missing method {method}")
-
-          if errors:
-              print("❌ Agent validation failed:")
-              for error in errors:
-                  print(f"  - {error}")
-              sys.exit(1)
-          else:
-              print("✅ All agents validated successfully")
-          EOF
-
-  performance-benchmark:
-    name: Performance Benchmark
-    runs-on: ubuntu-latest
-    needs: backend-test
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          export PATH="$HOME/.cargo/bin:$PATH"
-          uv pip install --system -r requirements.txt
-
-      - name: Run performance benchmarks
-        run: |
-          cd backend
-          python << 'EOF'
-          import sys
-          import time
-          from pathlib import Path
-
-          sys.path.insert(0, '.')
-
-          # Import agents
-          from src.agents.agentcore.nl_input.main import NLInputAgent
-          from src.agents.agentcore.ui_selection.main import UISelectionAgent
-          from src.agents.agentcore.parser.main import ParserAgent
-
-          agents = [
-              ('NL Input', NLInputAgent),
-              ('UI Selection', UISelectionAgent),
-              ('Parser', ParserAgent)
-          ]
-
-          print("🚀 Performance Benchmark Results")
-          print("=" * 50)
-
-          for name, AgentClass in agents:
-              # Test instantiation time
-              start = time.perf_counter()
-              for _ in range(1000):
-                  agent = AgentClass()
-              end = time.perf_counter()
-
-              avg_time_us = ((end - start) / 1000) * 1_000_000
-              print(f"{name}: {avg_time_us:.2f}μs instantiation")
-
-              # Check against target (3μs * 10 for Python overhead)
-              if avg_time_us > 30:
-                  print(f"  ⚠️ Warning: Exceeds target (30μs)")
-
-          print("=" * 50)
-          print("✅ Benchmark complete")
-          EOF
-
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: backend-lint
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Install security tools
-        run: |
-          cd backend
-          export PATH="$HOME/.cargo/bin:$PATH"
-          uv pip install --system bandit
-
-      - name: Run Bandit (security issues in code)
-        continue-on-error: true
-        run: |
-          cd backend
-          bandit -r src/ -ll \
-            -x src/agents/agentcore/,src/migration/ \
-            -f json -o bandit-report.json || true
-
-          # Parse and display results
-          if [ -f bandit-report.json ]; then
-            python << 'EOF'
-          import json
-          with open('bandit-report.json') as f:
-              report = json.load(f)
-              if report['results']:
-                  print(f"⚠️ Found {len(report['results'])} security issues")
-                  for issue in report['results'][:5]:  # Show first 5
-                      print(f"  - {issue['issue_text']} ({issue['filename']}:{issue['line_number']})")
-              else:
-                  print("✅ No security issues found")
-          EOF
-          fi
-
-  build-validation:
-    name: Build Validation
-    runs-on: ubuntu-latest
-    needs: [backend-test, agent-validation]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Install backend dependencies
-        run: |
-          cd backend
-          export PATH="$HOME/.cargo/bin:$PATH"
-          uv pip install --system -r requirements.txt
-
-      - name: Validate Python imports
-        run: |
-          cd backend
-          python << 'EOF'
-          import sys
-          import os
-          sys.path.insert(0, '.')
-          os.environ['AWS_REGION'] = 'us-east-1'
-
-          errors = []
-
-          # Test core imports
-          try:
-              from src.main_api import app
-              print('✅ API imports successful')
-          except ImportError as e:
-              errors.append(f'API import error: {e}')
-
-          # Test agent imports
-          try:
-              from src.agents.agentcore.nl_input.main import NLInputAgent
-              from src.agents.agentcore.ui_selection.main import UISelectionAgent
-              from src.agents.agentcore.parser.main import ParserAgent
-              print('✅ Agent imports successful')
-          except ImportError as e:
-              errors.append(f'Agent import error: {e}')
-
-          # Test integration imports
-          try:
-              from src.orchestration.agent_squad_core import AgentSquadCore
-              from src.workflow.engine import WorkflowEngine
-              print('✅ Orchestration imports successful')
-          except ImportError as e:
-              errors.append(f'Orchestration import error: {e}')
-
-          if errors:
-              print('❌ Import validation failed:')
-              for error in errors:
-                  print(f'  - {error}')
-              sys.exit(1)
-          else:
-              print('✅ All imports validated successfully')
-          EOF
-
-      - name: Test API startup
-        run: |
-          cd backend
-          timeout 5s python src/main_api.py || true
-        env:
-          TESTING: true
-          AWS_ACCESS_KEY_ID: test
-          AWS_SECRET_ACCESS_KEY: test
-          AWS_REGION: us-east-1
-          PORT: 8080
-
-  summary:
-    name: CI Summary
-    runs-on: ubuntu-latest
-    needs: [backend-test, agent-validation, performance-benchmark, security-scan, build-validation]
-    if: always()
-
-    steps:
-      - name: Summary
-        run: |
-          echo "# CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "- Backend Tests: ${{ needs.backend-test.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Agent Validation: ${{ needs.agent-validation.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Performance Benchmark: ${{ needs.performance-benchmark.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Build Validation: ${{ needs.build-validation.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [[ "${{ needs.backend-test.result }}" == "success" && \
-                "${{ needs.agent-validation.result }}" == "success" && \
-                "${{ needs.build-validation.result }}" == "success" ]]; then
-            echo "✅ **All critical checks passed!**" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ **Some checks failed - review required**" >> $GITHUB_STEP_SUMMARY
-          fi
+    - uses: actions/checkout@v3
+    
+    - name: Validate Evolution Safety
+      run: |
+        echo "Checking evolution constraints..."
+        # Add safety validation scripts here
+    
+    - name: Check PR Standards
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "Validating PR meets self-evolution standards..."
+        # Add PR validation logic here

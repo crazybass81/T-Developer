@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "t-developer-v2"
+version = "2.0.0"
+description = "Self-Evolving Service Factory using AI Agents"
+authors = ["T-Developer Team"]
+readme = "README.md"
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["E501", "B008"]
+target-version = "py39"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --cov=packages --cov-report=term-missing --cov-report=html"
+
+[tool.interrogate]
+ignore-init-method = true
+ignore-init-module = false
+ignore-magic = false
+ignore-semiprivate = false
+ignore-private = false
+ignore-property-decorators = false
+ignore-module = false
+fail-under = 80
+exclude = ["tests", "docs"]
+verbose = 1
+quiet = false
+whitelist-regex = []
+color = true
+
+[tool.radon]
+exclude = "tests/*,docs/*"
+cc_min = "B"
+mi_min = 65
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
