@@ -1,0 +1,502 @@
+# PagerDuty Integration Agent Card
+# Phase 4: A2A External Integration
+
+agent_info:
+  id: "pagerduty-agent"
+  name: "PagerDuty Incident Management Agent"
+  version: "1.0.0"
+  description: "Agent for PagerDuty incident management and alerting"
+  provider: "t-developer"
+  agent_type: "external"
+
+endpoint:
+  base_url: "https://api.pagerduty.com"
+  protocol: "rest"
+  authentication:
+    type: "token"
+    header: "Authorization"
+    prefix: "Token token="
+
+capabilities:
+  - name: "create_incident"
+    version: "1.0.0"
+    description: "Create a new incident"
+    input_schema:
+      type: "object"
+      required: ["incident"]
+      properties:
+        incident:
+          type: "object"
+          required: ["type", "title", "service"]
+          properties:
+            type:
+              type: "string"
+              enum: ["incident"]
+            title:
+              type: "string"
+              description: "Incident title"
+            service:
+              type: "object"
+              required: ["id", "type"]
+              properties:
+                id:
+                  type: "string"
+                type:
+                  type: "string"
+                  enum: ["service_reference"]
+            priority:
+              type: "object"
+              properties:
+                id:
+                  type: "string"
+                type:
+                  type: "string"
+                  enum: ["priority_reference"]
+            incident_key:
+              type: "string"
+              description: "Incident deduplication key"
+            body:
+              type: "object"
+              properties:
+                type:
+                  type: "string"
+                  enum: ["incident_body"]
+                details:
+                  type: "string"
+            escalation_policy:
+              type: "object"
+              properties:
+                id:
+                  type: "string"
+                type:
+                  type: "string"
+                  enum: ["escalation_policy_reference"]
+            assignments:
+              type: "array"
+              items:
+                type: "object"
+                properties:
+                  assignee:
+                    type: "object"
+                    properties:
+                      id:
+                        type: "string"
+                      type:
+                        type: "string"
+                        enum: ["user_reference"]
+    output_schema:
+      type: "object"
+      properties:
+        incident:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+            incident_number:
+              type: "integer"
+            title:
+              type: "string"
+            description:
+              type: "string"
+            created_at:
+              type: "string"
+            status:
+              type: "string"
+            incident_key:
+              type: "string"
+            service:
+              type: "object"
+            priority:
+              type: "object"
+            urgency:
+              type: "string"
+            html_url:
+              type: "string"
+    tags: ["incident", "create", "pagerduty"]
+
+  - name: "update_incident"
+    version: "1.0.0"
+    description: "Update an existing incident"
+    input_schema:
+      type: "object"
+      required: ["id", "incident"]
+      properties:
+        id:
+          type: "string"
+          description: "Incident ID"
+        incident:
+          type: "object"
+          properties:
+            type:
+              type: "string"
+              enum: ["incident"]
+            title:
+              type: "string"
+            status:
+              type: "string"
+              enum: ["acknowledged", "resolved"]
+            priority:
+              type: "object"
+              properties:
+                id:
+                  type: "string"
+                type:
+                  type: "string"
+                  enum: ["priority_reference"]
+            resolution:
+              type: "string"
+              description: "Resolution note"
+            assignments:
+              type: "array"
+              items:
+                type: "object"
+    output_schema:
+      type: "object"
+      properties:
+        incident:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+            incident_number:
+              type: "integer"
+            title:
+              type: "string"
+            status:
+              type: "string"
+            last_status_change_at:
+              type: "string"
+    tags: ["incident", "update", "pagerduty"]
+
+  - name: "get_incident"
+    version: "1.0.0"
+    description: "Get incident details"
+    input_schema:
+      type: "object"
+      required: ["id"]
+      properties:
+        id:
+          type: "string"
+          description: "Incident ID"
+        include:
+          type: "array"
+          items:
+            type: "string"
+          description: "Additional details to include"
+    output_schema:
+      type: "object"
+      properties:
+        incident:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+            incident_number:
+              type: "integer"
+            title:
+              type: "string"
+            description:
+              type: "string"
+            created_at:
+              type: "string"
+            updated_at:
+              type: "string"
+            status:
+              type: "string"
+            incident_key:
+              type: "string"
+            service:
+              type: "object"
+            assignments:
+              type: "array"
+            acknowledgements:
+              type: "array"
+            last_status_change_at:
+              type: "string"
+            first_trigger_log_entry:
+              type: "object"
+            escalation_policy:
+              type: "object"
+            teams:
+              type: "array"
+            priority:
+              type: "object"
+            urgency:
+              type: "string"
+            html_url:
+              type: "string"
+    tags: ["incident", "get", "pagerduty"]
+
+  - name: "list_incidents"
+    version: "1.0.0"
+    description: "List incidents"
+    input_schema:
+      type: "object"
+      properties:
+        limit:
+          type: "integer"
+          default: 25
+          maximum: 100
+        offset:
+          type: "integer"
+          default: 0
+        total:
+          type: "boolean"
+          default: false
+        date_range:
+          type: "string"
+          enum: ["all", "today", "this_week", "this_month"]
+        incident_key:
+          type: "string"
+        service_ids:
+          type: "array"
+          items:
+            type: "string"
+        team_ids:
+          type: "array"
+          items:
+            type: "string"
+        user_ids:
+          type: "array"
+          items:
+            type: "string"
+        urgencies:
+          type: "array"
+          items:
+            type: "string"
+            enum: ["high", "low"]
+        statuses:
+          type: "array"
+          items:
+            type: "string"
+            enum: ["triggered", "acknowledged", "resolved"]
+        sort_by:
+          type: "string"
+          enum: ["incident_number", "created_at", "resolved_at", "urgency"]
+        include:
+          type: "array"
+          items:
+            type: "string"
+    output_schema:
+      type: "object"
+      properties:
+        incidents:
+          type: "array"
+          items:
+            type: "object"
+        limit:
+          type: "integer"
+        offset:
+          type: "integer"
+        total:
+          type: "integer"
+        more:
+          type: "boolean"
+    tags: ["incident", "list", "pagerduty"]
+
+  - name: "create_note"
+    version: "1.0.0"
+    description: "Add a note to an incident"
+    input_schema:
+      type: "object"
+      required: ["id", "note"]
+      properties:
+        id:
+          type: "string"
+          description: "Incident ID"
+        note:
+          type: "object"
+          required: ["content"]
+          properties:
+            content:
+              type: "string"
+              description: "Note content"
+    output_schema:
+      type: "object"
+      properties:
+        note:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+            user:
+              type: "object"
+            content:
+              type: "string"
+            created_at:
+              type: "string"
+    tags: ["incident", "note", "pagerduty"]
+
+  - name: "trigger_incident"
+    version: "1.0.0"
+    description: "Trigger an incident via Events API"
+    input_schema:
+      type: "object"
+      required: ["routing_key", "event_action", "payload"]
+      properties:
+        routing_key:
+          type: "string"
+          description: "Integration key"
+        event_action:
+          type: "string"
+          enum: ["trigger", "acknowledge", "resolve"]
+        dedup_key:
+          type: "string"
+          description: "Deduplication key"
+        payload:
+          type: "object"
+          required: ["summary", "source"]
+          properties:
+            summary:
+              type: "string"
+              description: "Event summary"
+            source:
+              type: "string"
+              description: "Event source"
+            severity:
+              type: "string"
+              enum: ["critical", "error", "warning", "info"]
+              default: "error"
+            component:
+              type: "string"
+              description: "Component"
+            group:
+              type: "string"
+              description: "Logical group"
+            class:
+              type: "string"
+              description: "Event class"
+            custom_details:
+              type: "object"
+              description: "Additional details"
+    output_schema:
+      type: "object"
+      properties:
+        status:
+          type: "string"
+        message:
+          type: "string"
+        dedup_key:
+          type: "string"
+    tags: ["incident", "trigger", "pagerduty"]
+
+  - name: "get_service"
+    version: "1.0.0"
+    description: "Get service details"
+    input_schema:
+      type: "object"
+      required: ["id"]
+      properties:
+        id:
+          type: "string"
+          description: "Service ID"
+        include:
+          type: "array"
+          items:
+            type: "string"
+    output_schema:
+      type: "object"
+      properties:
+        service:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+            name:
+              type: "string"
+            description:
+              type: "string"
+            status:
+              type: "string"
+            created_at:
+              type: "string"
+            updated_at:
+              type: "string"
+            escalation_policy:
+              type: "object"
+            teams:
+              type: "array"
+            html_url:
+              type: "string"
+    tags: ["service", "get", "pagerduty"]
+
+  - name: "list_services"
+    version: "1.0.0"
+    description: "List services"
+    input_schema:
+      type: "object"
+      properties:
+        limit:
+          type: "integer"
+          default: 25
+        offset:
+          type: "integer"
+          default: 0
+        total:
+          type: "boolean"
+          default: false
+        team_ids:
+          type: "array"
+          items:
+            type: "string"
+        time_zone:
+          type: "string"
+        sort_by:
+          type: "string"
+          enum: ["name", "created_at"]
+        query:
+          type: "string"
+          description: "Filter by service name"
+        include:
+          type: "array"
+          items:
+            type: "string"
+    output_schema:
+      type: "object"
+      properties:
+        services:
+          type: "array"
+          items:
+            type: "object"
+        limit:
+          type: "integer"
+        offset:
+          type: "integer"
+        total:
+          type: "integer"
+        more:
+          type: "boolean"
+    tags: ["service", "list", "pagerduty"]
+
+configuration:
+  rate_limits:
+    api_requests_per_minute: 960
+    events_per_minute: 120
+  timeout_seconds: 30
+  retry_attempts: 3
+  retry_delay_seconds: 2
+
+health_check:
+  endpoint: "/users/me"
+  method: "GET"
+  expected_status: 200
+  timeout_seconds: 10
+
+monitoring:
+  metrics:
+    - "incidents_created"
+    - "incidents_updated"
+    - "incidents_resolved"
+    - "events_triggered"
+    - "requests_total"
+    - "requests_duration_seconds"
+    - "rate_limit_remaining"
+    - "errors_total"
+  log_level: "INFO"
+
+security:
+  authentication_required: true
+  rate_limiting: true
+  request_validation: true
+  response_sanitization: true
+  webhook_validation: true

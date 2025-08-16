@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-Developer Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-900 text-white">
+    <!-- Header -->
+    <nav class="bg-gray-800 border-b border-gray-700">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-robot text-3xl text-blue-500"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold">T-Developer Dashboard</h1>
+                        <p class="text-sm text-gray-400">Autonomous Code Evolution System v2.0</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="api-status" class="px-3 py-1 bg-green-600 rounded-full text-sm">
+                        <i class="fas fa-circle text-xs mr-1"></i> API Connected
+                    </span>
+                    <button onclick="refreshData()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Total Tasks</p>
+                        <p class="text-3xl font-bold" id="total-tasks">247</p>
+                    </div>
+                    <i class="fas fa-tasks text-4xl text-blue-500 opacity-50"></i>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Success Rate</p>
+                        <p class="text-3xl font-bold" id="success-rate">94%</p>
+                    </div>
+                    <i class="fas fa-check-circle text-4xl text-green-500 opacity-50"></i>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Code Improved</p>
+                        <p class="text-3xl font-bold" id="code-improved">12.5K</p>
+                    </div>
+                    <i class="fas fa-code text-4xl text-purple-500 opacity-50"></i>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm">Active Agents</p>
+                        <p class="text-3xl font-bold" id="active-agents">4</p>
+                    </div>
+                    <i class="fas fa-robot text-4xl text-yellow-500 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflow Control -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-play-circle mr-2"></i>Run Workflow
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="target-path" placeholder="Target path (e.g., ./src)"
+                    class="px-4 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="problem" placeholder="Problem to solve"
+                    class="px-4 py-2 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="runWorkflow()"
+                    class="px-6 py-2 bg-green-600 hover:bg-green-700 rounded font-semibold">
+                    <i class="fas fa-rocket mr-2"></i>Start Workflow
+                </button>
+            </div>
+        </div>
+
+        <!-- Recent Tasks -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-xl font-bold mb-4">
+                    <i class="fas fa-history mr-2"></i>Recent Tasks
+                </h2>
+                <div class="space-y-3" id="recent-tasks">
+                    <!-- Tasks will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Agent Status -->
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-xl font-bold mb-4">
+                    <i class="fas fa-microchip mr-2"></i>Agent Status
+                </h2>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+                        <div class="flex items-center">
+                            <i class="fas fa-search text-blue-500 mr-3"></i>
+                            <span>Research Agent</span>
+                        </div>
+                        <span class="px-2 py-1 bg-green-600 rounded text-sm">Active</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+                        <div class="flex items-center">
+                            <i class="fas fa-clipboard-list text-purple-500 mr-3"></i>
+                            <span>Planner Agent</span>
+                        </div>
+                        <span class="px-2 py-1 bg-green-600 rounded text-sm">Active</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+                        <div class="flex items-center">
+                            <i class="fas fa-tools text-orange-500 mr-3"></i>
+                            <span>Refactor Agent</span>
+                        </div>
+                        <span class="px-2 py-1 bg-green-600 rounded text-sm">Active</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+                        <div class="flex items-center">
+                            <i class="fas fa-chart-line text-green-500 mr-3"></i>
+                            <span>Evaluator Agent</span>
+                        </div>
+                        <span class="px-2 py-1 bg-green-600 rounded text-sm">Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Chart -->
+        <div class="bg-gray-800 rounded-lg p-6 mt-8">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-chart-area mr-2"></i>Performance Metrics
+            </h2>
+            <canvas id="metricsChart" width="400" height="100"></canvas>
+        </div>
+    </div>
+
+    <!-- Self Evolution Button -->
+    <div class="fixed bottom-8 right-8">
+        <button onclick="selfImprove()"
+            class="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-full font-bold shadow-lg transform hover:scale-105 transition">
+            <i class="fas fa-dna mr-2"></i>Self-Improve
+        </button>
+    </div>
+
+    <script>
+        const API_ENDPOINT = 'https://4sxw6pfgzi.execute-api.us-east-1.amazonaws.com/prod';
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            loadRecentTasks();
+            checkAPIStatus();
+        });
+
+        function initChart() {
+            const ctx = document.getElementById('metricsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Tasks Completed',
+                        data: [32, 45, 38, 52, 48, 61, 55],
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Code Quality Score',
+                        data: [75, 78, 76, 82, 85, 87, 89],
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'white'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadRecentTasks() {
+            const tasks = [
+                { id: 'improve-1755364657', status: 'completed', target: './packages', time: '5 mins ago' },
+                { id: 'analyze-1755364500', status: 'completed', target: './src', time: '1 hour ago' },
+                { id: 'refactor-1755363000', status: 'running', target: './tests', time: '2 hours ago' },
+                { id: 'evaluate-1755360000', status: 'failed', target: './docs', time: '3 hours ago' }
+            ];
+
+            const container = document.getElementById('recent-tasks');
+            container.innerHTML = tasks.map(task => `
+                <div class="flex items-center justify-between p-3 bg-gray-700 rounded">
+                    <div>
+                        <p class="font-semibold">${task.id}</p>
+                        <p class="text-sm text-gray-400">${task.target} • ${task.time}</p>
+                    </div>
+                    <span class="px-2 py-1 rounded text-sm ${
+                        task.status === 'completed' ? 'bg-green-600' :
+                        task.status === 'running' ? 'bg-blue-600' :
+                        'bg-red-600'
+                    }">${task.status}</span>
+                </div>
+            `).join('');
+        }
+
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch(`${API_ENDPOINT}/orchestrate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'health_check' })
+                });
+
+                const statusEl = document.getElementById('api-status');
+                if (response.ok) {
+                    statusEl.className = 'px-3 py-1 bg-green-600 rounded-full text-sm';
+                    statusEl.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i> API Connected';
+                } else {
+                    statusEl.className = 'px-3 py-1 bg-red-600 rounded-full text-sm';
+                    statusEl.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i> API Error';
+                }
+            } catch (error) {
+                console.error('API check failed:', error);
+            }
+        }
+
+        async function runWorkflow() {
+            const targetPath = document.getElementById('target-path').value;
+            const problem = document.getElementById('problem').value;
+
+            if (!targetPath) {
+                alert('Please enter a target path');
+                return;
+            }
+
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Running...';
+
+            try {
+                const response = await fetch(`${API_ENDPOINT}/orchestrate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        workflow: 'full',
+                        task_id: `web-${Date.now()}`,
+                        payload: {
+                            target_path: targetPath,
+                            problem: problem || 'improve code quality'
+                        }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(`✅ Workflow started!\nTask ID: ${result.task_id}`);
+                    refreshData();
+                } else {
+                    alert(`❌ Error: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                alert(`❌ Failed: ${error.message}`);
+            } finally {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-rocket mr-2"></i>Start Workflow';
+            }
+        }
+
+        async function selfImprove() {
+            if (!confirm('Start T-Developer self-improvement cycle?')) return;
+
+            try {
+                const response = await fetch(`${API_ENDPOINT}/orchestrate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        workflow: 'full',
+                        task_id: `self-improve-${Date.now()}`,
+                        payload: {
+                            target_path: '/packages',
+                            problem: 'improve T-Developer agents',
+                            self_evolution: true
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    alert('🧬 Self-improvement initiated! T-Developer is evolving...');
+                }
+            } catch (error) {
+                console.error('Self-improve failed:', error);
+            }
+        }
+
+        function refreshData() {
+            loadRecentTasks();
+            checkAPIStatus();
+
+            // Update stats with random values for demo
+            document.getElementById('total-tasks').textContent =
+                Math.floor(Math.random() * 50 + 200);
+            document.getElementById('success-rate').textContent =
+                Math.floor(Math.random() * 10 + 90) + '%';
+        }
+    </script>
+</body>
+</html>

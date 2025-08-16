@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import aiohttp
 import yaml
@@ -343,6 +343,260 @@ class AuditLogger:
         return results
 
 
+class MessageRouter:
+    """Message routing for A2A communication."""
+
+    def __init__(self):
+        """Initialize message router."""
+        self.routes: dict[str, str] = {}  # capability -> agent_id
+        self.load_balancer = LoadBalancer()
+        self.protocol_translator = ProtocolTranslator()
+
+    def add_route(self, capability: str, agent_id: str) -> None:
+        """Add routing rule for capability."""
+        if capability not in self.routes:
+            self.routes[capability] = []
+        if isinstance(self.routes[capability], str):
+            self.routes[capability] = [self.routes[capability]]
+        self.routes[capability].append(agent_id)
+
+    def route_message(self, capability: str) -> Optional[str]:
+        """Route message to appropriate agent."""
+        if capability not in self.routes:
+            return None
+
+        agents = self.routes[capability]
+        if isinstance(agents, str):
+            return agents
+        if isinstance(agents, list) and agents:
+            return self.load_balancer.select_agent(agents)
+        return None
+
+
+class LoadBalancer:
+    """Load balancer for distributing requests across agents."""
+
+    def __init__(self):
+        """Initialize load balancer."""
+        self.agent_metrics: dict[str, dict[str, Any]] = {}
+        self.strategy = "round_robin"
+        self._counters: dict[str, int] = {}
+
+    def select_agent(self, agent_ids: list[str]) -> str:
+        """Select agent based on load balancing strategy."""
+        if not agent_ids:
+            raise ValueError("No agents available")
+
+        if self.strategy == "round_robin":
+            return self._round_robin_select(agent_ids)
+        elif self.strategy == "least_connections":
+            return self._least_connections_select(agent_ids)
+        elif self.strategy == "response_time":
+            return self._response_time_select(agent_ids)
+        else:
+            return agent_ids[0]  # Default to first
+
+    def _round_robin_select(self, agent_ids: list[str]) -> str:
+        """Round-robin selection."""
+        key = ":".join(sorted(agent_ids))
+        if key not in self._counters:
+            self._counters[key] = 0
+
+        index = self._counters[key] % len(agent_ids)
+        self._counters[key] += 1
+        return agent_ids[index]
+
+    def _least_connections_select(self, agent_ids: list[str]) -> str:
+        """Select agent with least active connections."""
+        min_connections = float("inf")
+        selected_agent = agent_ids[0]
+
+        for agent_id in agent_ids:
+            connections = self.agent_metrics.get(agent_id, {}).get("connections", 0)
+            if connections < min_connections:
+                min_connections = connections
+                selected_agent = agent_id
+
+        return selected_agent
+
+    def _response_time_select(self, agent_ids: list[str]) -> str:
+        """Select agent with best response time."""
+        min_response_time = float("inf")
+        selected_agent = agent_ids[0]
+
+        for agent_id in agent_ids:
+            response_time = self.agent_metrics.get(agent_id, {}).get("avg_response_time", 0)
+            if response_time < min_response_time:
+                min_response_time = response_time
+                selected_agent = agent_id
+
+        return selected_agent
+
+    def update_agent_metrics(self, agent_id: str, metrics: dict[str, Any]) -> None:
+        """Update agent performance metrics."""
+        self.agent_metrics[agent_id] = metrics
+
+
+class ProtocolTranslator:
+    """Protocol translation for different agent communication formats."""
+
+    def __init__(self):
+        """Initialize protocol translator."""
+        self.translators: dict[str, Callable] = {
+            "json": self._json_translator,
+            "grpc": self._grpc_translator,
+            "rest": self._rest_translator,
+        }
+
+    def translate(
+        self, message: dict[str, Any], from_protocol: str, to_protocol: str
+    ) -> dict[str, Any]:
+        """Translate message between protocols."""
+        if from_protocol == to_protocol:
+            return message
+
+        # First convert to common format
+        common_format = self._to_common_format(message, from_protocol)
+
+        # Then convert to target protocol
+        return self._from_common_format(common_format, to_protocol)
+
+    def _to_common_format(self, message: dict[str, Any], protocol: str) -> dict[str, Any]:
+        """Convert message to common internal format."""
+        if protocol in self.translators:
+            return self.translators[protocol](message, "to_common")
+        return message
+
+    def _from_common_format(self, message: dict[str, Any], protocol: str) -> dict[str, Any]:
+        """Convert from common format to target protocol."""
+        if protocol in self.translators:
+            return self.translators[protocol](message, "from_common")
+        return message
+
+    def _json_translator(self, message: dict[str, Any], direction: str) -> dict[str, Any]:
+        """JSON protocol translator."""
+        return message  # JSON is our common format
+
+    def _grpc_translator(self, message: dict[str, Any], direction: str) -> dict[str, Any]:
+        """gRPC protocol translator."""
+        if direction == "to_common":
+            # Convert gRPC message to common format
+            return {
+                "type": message.get("type", "request"),
+                "payload": message.get("data", {}),
+                "metadata": message.get("metadata", {}),
+            }
+        else:
+            # Convert common format to gRPC
+            return {
+                "type": message.get("type", "request"),
+                "data": message.get("payload", {}),
+                "metadata": message.get("metadata", {}),
+            }
+
+    def _rest_translator(self, message: dict[str, Any], direction: str) -> dict[str, Any]:
+        """REST protocol translator."""
+        if direction == "to_common":
+            return {
+                "type": "request",
+                "payload": message.get("body", {}),
+                "metadata": {
+                    "method": message.get("method", "POST"),
+                    "headers": message.get("headers", {}),
+                    "query": message.get("query", {}),
+                },
+            }
+        else:
+            return {
+                "method": message.get("metadata", {}).get("method", "POST"),
+                "body": message.get("payload", {}),
+                "headers": message.get("metadata", {}).get("headers", {}),
+                "query": message.get("metadata", {}).get("query", {}),
+            }
+
+
+class HealthChecker:
+    """Health checking for registered agents."""
+
+    def __init__(self, check_interval: int = 60):
+        """Initialize health checker."""
+        self.check_interval = check_interval
+        self.agent_status: dict[str, dict[str, Any]] = {}
+        self.unhealthy_agents: set[str] = set()
+        self._running = False
+        self._check_task: Optional[asyncio.Task] = None
+
+    async def start(self) -> None:
+        """Start health checking."""
+        if self._running:
+            return
+
+        self._running = True
+        self._check_task = asyncio.create_task(self._health_check_loop())
+        logger.info("Health checker started")
+
+    async def stop(self) -> None:
+        """Stop health checking."""
+        if not self._running:
+            return
+
+        self._running = False
+        if self._check_task:
+            self._check_task.cancel()
+            try:
+                await self._check_task
+            except asyncio.CancelledError:
+                pass
+        logger.info("Health checker stopped")
+
+    async def check_agent_health(self, agent_id: str, endpoint: str) -> bool:
+        """Check health of a specific agent."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{endpoint}/health", timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        self.agent_status[agent_id] = {
+                            "healthy": True,
+                            "last_check": time.time(),
+                            "response_time": time.time() - time.time(),
+                            "details": data,
+                        }
+                        if agent_id in self.unhealthy_agents:
+                            self.unhealthy_agents.remove(agent_id)
+                        return True
+                    else:
+                        self._mark_unhealthy(agent_id, f"HTTP {response.status}")
+                        return False
+
+        except Exception as e:
+            self._mark_unhealthy(agent_id, str(e))
+            return False
+
+    def _mark_unhealthy(self, agent_id: str, reason: str) -> None:
+        """Mark agent as unhealthy."""
+        self.agent_status[agent_id] = {
+            "healthy": False,
+            "last_check": time.time(),
+            "reason": reason,
+        }
+        self.unhealthy_agents.add(agent_id)
+        logger.warning(f"Agent {agent_id} marked unhealthy: {reason}")
+
+    async def _health_check_loop(self) -> None:
+        """Background health checking loop."""
+        while self._running:
+            try:
+                # This would check all registered agents
+                # Implementation depends on registry integration
+                await asyncio.sleep(self.check_interval)
+            except Exception as e:
+                logger.error(f"Error in health check loop: {e}")
+                await asyncio.sleep(self.check_interval)
+
+
 class A2ABroker:
     """Main A2A broker for agent orchestration."""
 
@@ -357,11 +611,124 @@ class A2ABroker:
         self.audit = AuditLogger()
         self._server: Optional[asyncio.Server] = None
 
+        # Enhanced components
+        self.router = MessageRouter()
+        self.health_checker = HealthChecker()
+        self.discovery_service = AgentDiscoveryService()
+
+
+class AgentDiscoveryService:
+    """Service discovery for A2A agents."""
+
+    def __init__(self):
+        """Initialize discovery service."""
+        self.service_registry: dict[str, dict[str, Any]] = {}
+        self.service_tags: dict[str, list[str]] = defaultdict(list)
+        self.heartbeat_interval = 30
+        self.service_ttl = 90
+
+    def register_service(
+        self,
+        service_id: str,
+        service_name: str,
+        endpoint: str,
+        port: int,
+        tags: Optional[list[str]] = None,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """Register a service for discovery."""
+        service_info = {
+            "id": service_id,
+            "name": service_name,
+            "endpoint": endpoint,
+            "port": port,
+            "tags": tags or [],
+            "metadata": metadata or {},
+            "registered_at": time.time(),
+            "last_heartbeat": time.time(),
+            "healthy": True,
+        }
+
+        self.service_registry[service_id] = service_info
+
+        # Index by tags
+        for tag in tags or []:
+            self.service_tags[tag].append(service_id)
+
+        logger.info(f"Registered service: {service_name} ({service_id})")
+
+    def deregister_service(self, service_id: str) -> bool:
+        """Deregister a service."""
+        if service_id not in self.service_registry:
+            return False
+
+        service = self.service_registry[service_id]
+
+        # Remove from tag index
+        for tag in service.get("tags", []):
+            if tag in self.service_tags and service_id in self.service_tags[tag]:
+                self.service_tags[tag].remove(service_id)
+
+        del self.service_registry[service_id]
+        logger.info(f"Deregistered service: {service_id}")
+        return True
+
+    def discover_services(
+        self,
+        service_name: Optional[str] = None,
+        tags: Optional[list[str]] = None,
+        healthy_only: bool = True,
+    ) -> list[dict[str, Any]]:
+        """Discover services by name or tags."""
+        matching_services = []
+
+        for service_id, service in self.service_registry.items():
+            # Filter by health
+            if healthy_only and not service.get("healthy", False):
+                continue
+
+            # Filter by service name
+            if service_name and service.get("name") != service_name:
+                continue
+
+            # Filter by tags
+            if tags:
+                service_tags = set(service.get("tags", []))
+                required_tags = set(tags)
+                if not required_tags.intersection(service_tags):
+                    continue
+
+            matching_services.append(service)
+
+        return matching_services
+
+    def heartbeat(self, service_id: str) -> bool:
+        """Update service heartbeat."""
+        if service_id not in self.service_registry:
+            return False
+
+        self.service_registry[service_id]["last_heartbeat"] = time.time()
+        self.service_registry[service_id]["healthy"] = True
+        return True
+
+    def check_service_health(self) -> None:
+        """Check service health based on heartbeats."""
+        current_time = time.time()
+
+        for service_id, service in self.service_registry.items():
+            last_heartbeat = service.get("last_heartbeat", 0)
+            if current_time - last_heartbeat > self.service_ttl:
+                service["healthy"] = False
+                logger.warning(f"Service {service_id} marked unhealthy due to missing heartbeat")
+
     async def start(self) -> None:
         """Start the broker."""
         self.status = BrokerStatus.STARTING
 
         try:
+            # Start enhanced components
+            await self.health_checker.start()
+
             # Start server (mocked for testing)
             await self._start_server()
             self.status = BrokerStatus.RUNNING
@@ -382,6 +749,9 @@ class A2ABroker:
         self.status = BrokerStatus.STOPPING
 
         try:
+            # Stop enhanced components
+            await self.health_checker.stop()
+
             if self._server:
                 self._server.close()
                 await self._server.wait_closed()
@@ -396,7 +766,7 @@ class A2ABroker:
         return self.status == BrokerStatus.RUNNING
 
     async def handle_request(self, request: AgentRequest) -> AgentResponse:
-        """Handle agent request."""
+        """Handle agent request with enhanced routing."""
         start_time = time.time()
 
         try:
@@ -411,14 +781,22 @@ class A2ABroker:
             # Record request for rate limiting
             await self.limiter.record_request(request.agent_id)
 
-            # Get agent endpoint
-            if not self.registry.is_registered(request.agent_id):
-                return AgentResponse(
-                    success=False, error=f"Agent {request.agent_id} not registered"
-                )
+            # Route request to appropriate agent
+            target_agent_id = self.router.route_message(request.capability)
+            if not target_agent_id:
+                # Fallback to original agent if no route found
+                target_agent_id = request.agent_id
 
-            agent_data = self.registry._agents[request.agent_id]
+            # Get agent endpoint
+            if not self.registry.is_registered(target_agent_id):
+                return AgentResponse(success=False, error=f"Agent {target_agent_id} not registered")
+
+            agent_data = self.registry._agents[target_agent_id]
             endpoint = agent_data["endpoint"]
+
+            # Check agent health
+            if target_agent_id in self.health_checker.unhealthy_agents:
+                return AgentResponse(success=False, error=f"Agent {target_agent_id} is unhealthy")
 
             # Call external agent
             async with aiohttp.ClientSession() as session:
@@ -443,6 +821,17 @@ class A2ABroker:
                             duration_ms=int((time.time() - start_time) * 1000),
                         )
 
+            # Update load balancer metrics
+            duration_ms = int((time.time() - start_time) * 1000)
+            self.router.load_balancer.update_agent_metrics(
+                target_agent_id,
+                {
+                    "avg_response_time": duration_ms,
+                    "connections": 1,  # Simplified metric
+                    "last_request": time.time(),
+                },
+            )
+
         except asyncio.TimeoutError:
             response = AgentResponse(
                 success=False,
@@ -459,3 +848,40 @@ class A2ABroker:
             await self.audit.log_request(request, response)
 
         return response
+
+    def add_route(self, capability: str, agent_id: str) -> None:
+        """Add routing rule for capability."""
+        self.router.add_route(capability, agent_id)
+
+    def discover_agents(self, tags: Optional[list[str]] = None) -> list[dict[str, Any]]:
+        """Discover agents by tags."""
+        return self.discovery_service.discover_services(tags=tags)
+
+    def register_agent_service(
+        self,
+        agent_id: str,
+        agent_name: str,
+        endpoint: str,
+        port: int,
+        capabilities: list[AgentCapability],
+        tags: Optional[list[str]] = None,
+    ) -> str:
+        """Register agent with both registry and discovery service."""
+        # Register with main registry
+        registration_id = self.registry.register(agent_id, endpoint, capabilities)
+
+        # Register with discovery service
+        self.discovery_service.register_service(
+            service_id=agent_id,
+            service_name=agent_name,
+            endpoint=endpoint,
+            port=port,
+            tags=tags or [],
+            metadata={"capabilities": [cap.name for cap in capabilities], "agent_type": "external"},
+        )
+
+        # Add routes for capabilities
+        for capability in capabilities:
+            self.router.add_route(capability.name, agent_id)
+
+        return registration_id

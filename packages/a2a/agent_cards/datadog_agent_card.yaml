@@ -1,0 +1,438 @@
+# Datadog Integration Agent Card
+# Phase 4: A2A External Integration
+
+agent_info:
+  id: "datadog-agent"
+  name: "Datadog Monitoring Agent"
+  version: "1.0.0"
+  description: "Agent for Datadog monitoring and metrics collection"
+  provider: "t-developer"
+  agent_type: "external"
+
+endpoint:
+  base_url: "https://api.datadoghq.com/api/v1"
+  protocol: "rest"
+  authentication:
+    type: "api_key"
+    header: "DD-API-KEY"
+    app_key_header: "DD-APPLICATION-KEY"
+
+capabilities:
+  - name: "submit_metrics"
+    version: "1.0.0"
+    description: "Submit metrics to Datadog"
+    input_schema:
+      type: "object"
+      required: ["series"]
+      properties:
+        series:
+          type: "array"
+          items:
+            type: "object"
+            required: ["metric", "points"]
+            properties:
+              metric:
+                type: "string"
+                description: "Metric name"
+              points:
+                type: "array"
+                items:
+                  type: "array"
+                  description: "[timestamp, value] pairs"
+              tags:
+                type: "array"
+                items:
+                  type: "string"
+                description: "Metric tags"
+              host:
+                type: "string"
+                description: "Host name"
+              type:
+                type: "string"
+                enum: ["gauge", "rate", "count"]
+                default: "gauge"
+              interval:
+                type: "integer"
+                description: "Metric interval in seconds"
+              unit:
+                type: "string"
+                description: "Metric unit"
+    output_schema:
+      type: "object"
+      properties:
+        status:
+          type: "string"
+        errors:
+          type: "array"
+          items:
+            type: "string"
+    tags: ["metrics", "submit", "datadog"]
+
+  - name: "query_metrics"
+    version: "1.0.0"
+    description: "Query metrics from Datadog"
+    input_schema:
+      type: "object"
+      required: ["query", "from", "to"]
+      properties:
+        query:
+          type: "string"
+          description: "Metric query string"
+        from:
+          type: "integer"
+          description: "Start timestamp"
+        to:
+          type: "integer"
+          description: "End timestamp"
+    output_schema:
+      type: "object"
+      properties:
+        status:
+          type: "string"
+        res_type:
+          type: "string"
+        resp_version:
+          type: "integer"
+        query:
+          type: "string"
+        from_date:
+          type: "integer"
+        to_date:
+          type: "integer"
+        series:
+          type: "array"
+          items:
+            type: "object"
+    tags: ["metrics", "query", "datadog"]
+
+  - name: "create_dashboard"
+    version: "1.0.0"
+    description: "Create a new dashboard"
+    input_schema:
+      type: "object"
+      required: ["title", "widgets", "layout_type"]
+      properties:
+        title:
+          type: "string"
+          description: "Dashboard title"
+        description:
+          type: "string"
+          description: "Dashboard description"
+        widgets:
+          type: "array"
+          items:
+            type: "object"
+            description: "Dashboard widgets"
+        layout_type:
+          type: "string"
+          enum: ["ordered", "free"]
+          description: "Dashboard layout type"
+        template_variables:
+          type: "array"
+          items:
+            type: "object"
+          description: "Template variables"
+        is_read_only:
+          type: "boolean"
+          default: false
+        notify_list:
+          type: "array"
+          items:
+            type: "string"
+          description: "Notification list"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+        title:
+          type: "string"
+        description:
+          type: "string"
+        url:
+          type: "string"
+        created_at:
+          type: "string"
+        modified_at:
+          type: "string"
+    tags: ["dashboard", "create", "datadog"]
+
+  - name: "create_monitor"
+    version: "1.0.0"
+    description: "Create a new monitor"
+    input_schema:
+      type: "object"
+      required: ["type", "query", "name"]
+      properties:
+        type:
+          type: "string"
+          enum: ["metric alert", "service check", "event alert", "log alert", "composite"]
+          description: "Monitor type"
+        query:
+          type: "string"
+          description: "Monitor query"
+        name:
+          type: "string"
+          description: "Monitor name"
+        message:
+          type: "string"
+          description: "Monitor message"
+        tags:
+          type: "array"
+          items:
+            type: "string"
+          description: "Monitor tags"
+        options:
+          type: "object"
+          description: "Monitor options"
+        priority:
+          type: "integer"
+          description: "Monitor priority"
+        restricted_roles:
+          type: "array"
+          items:
+            type: "string"
+          description: "Restricted roles"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        name:
+          type: "string"
+        type:
+          type: "string"
+        query:
+          type: "string"
+        message:
+          type: "string"
+        overall_state:
+          type: "string"
+        created:
+          type: "string"
+        modified:
+          type: "string"
+    tags: ["monitor", "create", "datadog"]
+
+  - name: "get_monitor_status"
+    version: "1.0.0"
+    description: "Get monitor status"
+    input_schema:
+      type: "object"
+      required: ["monitor_id"]
+      properties:
+        monitor_id:
+          type: "integer"
+          description: "Monitor ID"
+        group_states:
+          type: "array"
+          items:
+            type: "string"
+          description: "Monitor group states to filter by"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        name:
+          type: "string"
+        type:
+          type: "string"
+        overall_state:
+          type: "string"
+        overall_state_modified:
+          type: "string"
+        groups:
+          type: "object"
+          description: "Monitor group statuses"
+    tags: ["monitor", "status", "datadog"]
+
+  - name: "send_event"
+    version: "1.0.0"
+    description: "Send an event to Datadog"
+    input_schema:
+      type: "object"
+      required: ["title", "text"]
+      properties:
+        title:
+          type: "string"
+          description: "Event title"
+        text:
+          type: "string"
+          description: "Event text"
+        date_happened:
+          type: "integer"
+          description: "Event timestamp"
+        priority:
+          type: "string"
+          enum: ["normal", "low"]
+          default: "normal"
+        host:
+          type: "string"
+          description: "Host name"
+        tags:
+          type: "array"
+          items:
+            type: "string"
+          description: "Event tags"
+        alert_type:
+          type: "string"
+          enum: ["error", "warning", "info", "success"]
+          description: "Alert type"
+        aggregation_key:
+          type: "string"
+          description: "Event aggregation key"
+        source_type_name:
+          type: "string"
+          description: "Source type"
+    output_schema:
+      type: "object"
+      properties:
+        status:
+          type: "string"
+        event:
+          type: "object"
+          properties:
+            id:
+              type: "integer"
+            title:
+              type: "string"
+            text:
+              type: "string"
+            date_happened:
+              type: "integer"
+            handle:
+              type: "string"
+            priority:
+              type: "string"
+            related_event_id:
+              type: "integer"
+            tags:
+              type: "array"
+              items:
+                type: "string"
+    tags: ["event", "send", "datadog"]
+
+  - name: "get_logs"
+    version: "1.0.0"
+    description: "Search logs in Datadog"
+    input_schema:
+      type: "object"
+      required: ["query"]
+      properties:
+        query:
+          type: "string"
+          description: "Log search query"
+        time:
+          type: "object"
+          properties:
+            from:
+              type: "string"
+            to:
+              type: "string"
+          description: "Time range"
+        sort:
+          type: "string"
+          enum: ["timestamp", "-timestamp"]
+          default: "-timestamp"
+        limit:
+          type: "integer"
+          default: 50
+          maximum: 1000
+        startAt:
+          type: "string"
+          description: "Log search cursor for pagination"
+    output_schema:
+      type: "object"
+      properties:
+        data:
+          type: "array"
+          items:
+            type: "object"
+        meta:
+          type: "object"
+        links:
+          type: "object"
+    tags: ["logs", "search", "datadog"]
+
+  - name: "create_slo"
+    version: "1.0.0"
+    description: "Create a Service Level Objective"
+    input_schema:
+      type: "object"
+      required: ["name", "type", "sli_specification", "thresholds"]
+      properties:
+        name:
+          type: "string"
+          description: "SLO name"
+        description:
+          type: "string"
+          description: "SLO description"
+        type:
+          type: "string"
+          enum: ["metric", "monitor"]
+          description: "SLO type"
+        sli_specification:
+          type: "object"
+          description: "SLI specification"
+        thresholds:
+          type: "array"
+          items:
+            type: "object"
+          description: "SLO thresholds"
+        tags:
+          type: "array"
+          items:
+            type: "string"
+          description: "SLO tags"
+    output_schema:
+      type: "object"
+      properties:
+        data:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+            name:
+              type: "string"
+            description:
+              type: "string"
+            type:
+              type: "string"
+            created_at:
+              type: "integer"
+            modified_at:
+              type: "integer"
+    tags: ["slo", "create", "datadog"]
+
+configuration:
+  rate_limits:
+    api_requests_per_hour: 3600
+    metrics_points_per_hour: 300000
+  timeout_seconds: 30
+  retry_attempts: 3
+  retry_delay_seconds: 2
+
+health_check:
+  endpoint: "/validate"
+  method: "GET"
+  expected_status: 200
+  timeout_seconds: 10
+
+monitoring:
+  metrics:
+    - "requests_total"
+    - "requests_duration_seconds"
+    - "metrics_submitted"
+    - "events_sent"
+    - "monitors_created"
+    - "dashboards_created"
+    - "errors_total"
+  log_level: "INFO"
+
+security:
+  authentication_required: true
+  rate_limiting: true
+  request_validation: true
+  response_sanitization: true
+  api_key_rotation: true

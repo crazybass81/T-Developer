@@ -8,6 +8,7 @@ aiosqlite==0.19.0
 
 # AI/LLM
 anthropic==0.7.0
+aws-xray-sdk==2.12.1
 bandit==1.7.6
 black==23.12.0
 

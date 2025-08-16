@@ -1,0 +1,394 @@
+# Slack Integration Agent Card
+# Phase 4: A2A External Integration
+
+agent_info:
+  id: "slack-agent"
+  name: "Slack Communication Agent"
+  version: "1.0.0"
+  description: "Agent for Slack messaging and communication"
+  provider: "t-developer"
+  agent_type: "external"
+
+endpoint:
+  base_url: "https://slack.com/api"
+  protocol: "rest"
+  authentication:
+    type: "bearer"
+    header: "Authorization"
+    prefix: "Bearer"
+
+capabilities:
+  - name: "send_message"
+    version: "1.0.0"
+    description: "Send a message to a Slack channel or user"
+    input_schema:
+      type: "object"
+      required: ["channel", "text"]
+      properties:
+        channel:
+          type: "string"
+          description: "Channel ID or user ID"
+        text:
+          type: "string"
+          description: "Message text"
+        blocks:
+          type: "array"
+          description: "Rich message blocks"
+        attachments:
+          type: "array"
+          description: "Message attachments"
+        thread_ts:
+          type: "string"
+          description: "Thread timestamp for replies"
+        username:
+          type: "string"
+          description: "Custom username"
+        icon_emoji:
+          type: "string"
+          description: "Custom emoji icon"
+        icon_url:
+          type: "string"
+          description: "Custom icon URL"
+    output_schema:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+        channel:
+          type: "string"
+        ts:
+          type: "string"
+        message:
+          type: "object"
+    tags: ["message", "send", "slack"]
+
+  - name: "update_message"
+    version: "1.0.0"
+    description: "Update an existing message"
+    input_schema:
+      type: "object"
+      required: ["channel", "ts", "text"]
+      properties:
+        channel:
+          type: "string"
+        ts:
+          type: "string"
+          description: "Message timestamp"
+        text:
+          type: "string"
+        blocks:
+          type: "array"
+        attachments:
+          type: "array"
+    output_schema:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+        channel:
+          type: "string"
+        ts:
+          type: "string"
+        text:
+          type: "string"
+    tags: ["message", "update", "slack"]
+
+  - name: "delete_message"
+    version: "1.0.0"
+    description: "Delete a message"
+    input_schema:
+      type: "object"
+      required: ["channel", "ts"]
+      properties:
+        channel:
+          type: "string"
+        ts:
+          type: "string"
+    output_schema:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+        channel:
+          type: "string"
+        ts:
+          type: "string"
+    tags: ["message", "delete", "slack"]
+
+  - name: "create_channel"
+    version: "1.0.0"
+    description: "Create a new channel"
+    input_schema:
+      type: "object"
+      required: ["name"]
+      properties:
+        name:
+          type: "string"
+          description: "Channel name"
+        is_private:
+          type: "boolean"
+          default: false
+        user_ids:
+          type: "array"
+          items:
+            type: "string"
+          description: "Initial members for private channels"
+    output_schema:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+        channel:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+            name:
+              type: "string"
+            is_channel:
+              type: "boolean"
+            is_private:
+              type: "boolean"
+    tags: ["channel", "create", "slack"]
+
+  - name: "invite_to_channel"
+    version: "1.0.0"
+    description: "Invite users to a channel"
+    input_schema:
+      type: "object"
+      required: ["channel", "users"]
+      properties:
+        channel:
+          type: "string"
+          description: "Channel ID"
+        users:
+          type: "string"
+          description: "Comma-separated list of user IDs"
+    output_schema:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+        channel:
+          type: "object"
+    tags: ["channel", "invite", "slack"]
+
+  - name: "get_channel_info"
+    version: "1.0.0"
+    description: "Get information about a channel"
+    input_schema:
+      type: "object"
+      required: ["channel"]
+      properties:
+        channel:
+          type: "string"
+        include_locale:
+          type: "boolean"
+          default: false
+    output_schema:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+        channel:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+            name:
+              type: "string"
+            is_channel:
+              type: "boolean"
+            is_private:
+              type: "boolean"
+            is_member:
+              type: "boolean"
+            topic:
+              type: "object"
+            purpose:
+              type: "object"
+            members:
+              type: "array"
+              items:
+                type: "string"
+    tags: ["channel", "info", "slack"]
+
+  - name: "list_channels"
+    version: "1.0.0"
+    description: "List channels"
+    input_schema:
+      type: "object"
+      properties:
+        exclude_archived:
+          type: "boolean"
+          default: true
+        limit:
+          type: "integer"
+          default: 200
+        cursor:
+          type: "string"
+          description: "Pagination cursor"
+        types:
+          type: "string"
+          description: "Channel types to include"
+          default: "public_channel,private_channel"
+    output_schema:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+        channels:
+          type: "array"
+          items:
+            type: "object"
+        response_metadata:
+          type: "object"
+    tags: ["channel", "list", "slack"]
+
+  - name: "upload_file"
+    version: "1.0.0"
+    description: "Upload a file to Slack"
+    input_schema:
+      type: "object"
+      required: ["channels"]
+      properties:
+        channels:
+          type: "string"
+          description: "Comma-separated list of channel IDs"
+        content:
+          type: "string"
+          description: "File content (for text files)"
+        file:
+          type: "string"
+          description: "File path or binary data"
+        filename:
+          type: "string"
+          description: "Filename"
+        filetype:
+          type: "string"
+          description: "File type"
+        initial_comment:
+          type: "string"
+          description: "Initial comment"
+        title:
+          type: "string"
+          description: "File title"
+        thread_ts:
+          type: "string"
+          description: "Thread timestamp"
+    output_schema:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+        file:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+            name:
+              type: "string"
+            title:
+              type: "string"
+            mimetype:
+              type: "string"
+            filetype:
+              type: "string"
+            size:
+              type: "integer"
+            url_private:
+              type: "string"
+    tags: ["file", "upload", "slack"]
+
+  - name: "get_user_info"
+    version: "1.0.0"
+    description: "Get user information"
+    input_schema:
+      type: "object"
+      required: ["user"]
+      properties:
+        user:
+          type: "string"
+          description: "User ID"
+        include_locale:
+          type: "boolean"
+          default: false
+    output_schema:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+        user:
+          type: "object"
+          properties:
+            id:
+              type: "string"
+            name:
+              type: "string"
+            real_name:
+              type: "string"
+            profile:
+              type: "object"
+            is_bot:
+              type: "boolean"
+            is_admin:
+              type: "boolean"
+    tags: ["user", "info", "slack"]
+
+  - name: "set_presence"
+    version: "1.0.0"
+    description: "Set user presence"
+    input_schema:
+      type: "object"
+      required: ["presence"]
+      properties:
+        presence:
+          type: "string"
+          enum: ["auto", "away"]
+          description: "Presence state"
+    output_schema:
+      type: "object"
+      properties:
+        ok:
+          type: "boolean"
+    tags: ["user", "presence", "slack"]
+
+configuration:
+  rate_limits:
+    tier1_requests_per_minute: 100
+    tier2_requests_per_minute: 20
+    tier3_requests_per_minute: 50
+    tier4_requests_per_minute: 100
+  timeout_seconds: 30
+  retry_attempts: 3
+  retry_delay_seconds: 1
+
+health_check:
+  endpoint: "/api.test"
+  method: "GET"
+  expected_status: 200
+  timeout_seconds: 10
+
+monitoring:
+  metrics:
+    - "messages_sent"
+    - "messages_updated"
+    - "files_uploaded"
+    - "channels_created"
+    - "requests_total"
+    - "requests_duration_seconds"
+    - "rate_limit_remaining"
+    - "errors_total"
+  log_level: "INFO"
+
+security:
+  authentication_required: true
+  rate_limiting: true
+  request_validation: true
+  response_sanitization: true
+  scopes_required:
+    - "chat:write"
+    - "channels:read"
+    - "channels:write"
+    - "files:write"
+    - "users:read"

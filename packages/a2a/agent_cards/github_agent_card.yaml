@@ -1,0 +1,267 @@
+# GitHub Integration Agent Card
+# Phase 4: A2A External Integration
+
+agent_info:
+  id: "github-agent"
+  name: "GitHub Integration Agent"
+  version: "1.0.0"
+  description: "Agent for GitHub repository operations and integration"
+  provider: "t-developer"
+  agent_type: "external"
+
+endpoint:
+  base_url: "https://api.github.com"
+  protocol: "rest"
+  authentication:
+    type: "token"
+    header: "Authorization"
+    prefix: "Bearer"
+
+capabilities:
+  - name: "create_repository"
+    version: "1.0.0"
+    description: "Create a new GitHub repository"
+    input_schema:
+      type: "object"
+      required: ["name"]
+      properties:
+        name:
+          type: "string"
+          description: "Repository name"
+        description:
+          type: "string"
+          description: "Repository description"
+        private:
+          type: "boolean"
+          default: false
+        auto_init:
+          type: "boolean"
+          default: true
+        gitignore_template:
+          type: "string"
+          description: "Gitignore template name"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        name:
+          type: "string"
+        full_name:
+          type: "string"
+        html_url:
+          type: "string"
+        clone_url:
+          type: "string"
+    tags: ["repository", "create", "github"]
+
+  - name: "create_pull_request"
+    version: "1.0.0"
+    description: "Create a pull request"
+    input_schema:
+      type: "object"
+      required: ["owner", "repo", "title", "head", "base"]
+      properties:
+        owner:
+          type: "string"
+          description: "Repository owner"
+        repo:
+          type: "string"
+          description: "Repository name"
+        title:
+          type: "string"
+          description: "Pull request title"
+        body:
+          type: "string"
+          description: "Pull request description"
+        head:
+          type: "string"
+          description: "Source branch"
+        base:
+          type: "string"
+          description: "Target branch"
+        draft:
+          type: "boolean"
+          default: false
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        number:
+          type: "integer"
+        title:
+          type: "string"
+        html_url:
+          type: "string"
+        state:
+          type: "string"
+    tags: ["pull-request", "create", "github"]
+
+  - name: "merge_pull_request"
+    version: "1.0.0"
+    description: "Merge a pull request"
+    input_schema:
+      type: "object"
+      required: ["owner", "repo", "pull_number"]
+      properties:
+        owner:
+          type: "string"
+        repo:
+          type: "string"
+        pull_number:
+          type: "integer"
+        commit_title:
+          type: "string"
+        commit_message:
+          type: "string"
+        merge_method:
+          type: "string"
+          enum: ["merge", "squash", "rebase"]
+          default: "merge"
+    output_schema:
+      type: "object"
+      properties:
+        sha:
+          type: "string"
+        merged:
+          type: "boolean"
+        message:
+          type: "string"
+    tags: ["pull-request", "merge", "github"]
+
+  - name: "create_issue"
+    version: "1.0.0"
+    description: "Create a GitHub issue"
+    input_schema:
+      type: "object"
+      required: ["owner", "repo", "title"]
+      properties:
+        owner:
+          type: "string"
+        repo:
+          type: "string"
+        title:
+          type: "string"
+        body:
+          type: "string"
+        labels:
+          type: "array"
+          items:
+            type: "string"
+        assignees:
+          type: "array"
+          items:
+            type: "string"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        number:
+          type: "integer"
+        title:
+          type: "string"
+        html_url:
+          type: "string"
+        state:
+          type: "string"
+    tags: ["issue", "create", "github"]
+
+  - name: "get_repository_info"
+    version: "1.0.0"
+    description: "Get repository information"
+    input_schema:
+      type: "object"
+      required: ["owner", "repo"]
+      properties:
+        owner:
+          type: "string"
+        repo:
+          type: "string"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "integer"
+        name:
+          type: "string"
+        full_name:
+          type: "string"
+        description:
+          type: "string"
+        private:
+          type: "boolean"
+        html_url:
+          type: "string"
+        clone_url:
+          type: "string"
+        default_branch:
+          type: "string"
+        language:
+          type: "string"
+        stargazers_count:
+          type: "integer"
+        forks_count:
+          type: "integer"
+    tags: ["repository", "info", "github"]
+
+  - name: "list_branches"
+    version: "1.0.0"
+    description: "List repository branches"
+    input_schema:
+      type: "object"
+      required: ["owner", "repo"]
+      properties:
+        owner:
+          type: "string"
+        repo:
+          type: "string"
+        protected:
+          type: "boolean"
+          description: "Filter for protected branches only"
+    output_schema:
+      type: "array"
+      items:
+        type: "object"
+        properties:
+          name:
+            type: "string"
+          commit:
+            type: "object"
+            properties:
+              sha:
+                type: "string"
+              url:
+                type: "string"
+          protected:
+            type: "boolean"
+    tags: ["repository", "branches", "github"]
+
+configuration:
+  rate_limits:
+    requests_per_hour: 5000
+    secondary_rate_limit: 100
+  timeout_seconds: 30
+  retry_attempts: 3
+  retry_delay_seconds: 1
+
+health_check:
+  endpoint: "/rate_limit"
+  method: "GET"
+  expected_status: 200
+  timeout_seconds: 10
+
+monitoring:
+  metrics:
+    - "requests_total"
+    - "requests_duration_seconds"
+    - "rate_limit_remaining"
+    - "errors_total"
+  log_level: "INFO"
+
+security:
+  authentication_required: true
+  rate_limiting: true
+  request_validation: true
+  response_sanitization: true

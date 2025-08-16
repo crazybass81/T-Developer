@@ -58,6 +58,8 @@ logs/
 .env
 .env.local
 .env.*.local
+.env.aws
+.env.production
 
 # AWS
 .aws/
@@ -81,6 +83,7 @@ temp/
 
 # Backups
 *.bak
+*.backup
 backup_*
 
 # Terraform/IaC

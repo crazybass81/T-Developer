@@ -1,0 +1,354 @@
+# Jira Integration Agent Card
+# Phase 4: A2A External Integration
+
+agent_info:
+  id: "jira-agent"
+  name: "Jira Integration Agent"
+  version: "1.0.0"
+  description: "Agent for Jira project management and issue tracking"
+  provider: "t-developer"
+  agent_type: "external"
+
+endpoint:
+  base_url: "https://{domain}.atlassian.net/rest/api/3"
+  protocol: "rest"
+  authentication:
+    type: "basic"
+    header: "Authorization"
+    encoding: "base64"
+
+capabilities:
+  - name: "create_issue"
+    version: "1.0.0"
+    description: "Create a new Jira issue"
+    input_schema:
+      type: "object"
+      required: ["project_key", "summary", "issue_type"]
+      properties:
+        project_key:
+          type: "string"
+          description: "Project key"
+        summary:
+          type: "string"
+          description: "Issue summary"
+        description:
+          type: "string"
+          description: "Issue description"
+        issue_type:
+          type: "string"
+          description: "Issue type (Bug, Task, Story, etc.)"
+        priority:
+          type: "string"
+          enum: ["Highest", "High", "Medium", "Low", "Lowest"]
+          default: "Medium"
+        assignee:
+          type: "string"
+          description: "Assignee username"
+        labels:
+          type: "array"
+          items:
+            type: "string"
+        components:
+          type: "array"
+          items:
+            type: "string"
+        custom_fields:
+          type: "object"
+          description: "Custom field values"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+        key:
+          type: "string"
+        self:
+          type: "string"
+        url:
+          type: "string"
+    tags: ["issue", "create", "jira"]
+
+  - name: "update_issue"
+    version: "1.0.0"
+    description: "Update an existing Jira issue"
+    input_schema:
+      type: "object"
+      required: ["issue_key"]
+      properties:
+        issue_key:
+          type: "string"
+          description: "Issue key (e.g., PROJ-123)"
+        summary:
+          type: "string"
+        description:
+          type: "string"
+        priority:
+          type: "string"
+        assignee:
+          type: "string"
+        labels:
+          type: "array"
+          items:
+            type: "string"
+        status:
+          type: "string"
+          description: "New status"
+        custom_fields:
+          type: "object"
+    output_schema:
+      type: "object"
+      properties:
+        success:
+          type: "boolean"
+        updated_fields:
+          type: "array"
+          items:
+            type: "string"
+    tags: ["issue", "update", "jira"]
+
+  - name: "transition_issue"
+    version: "1.0.0"
+    description: "Transition issue to new status"
+    input_schema:
+      type: "object"
+      required: ["issue_key", "transition_id"]
+      properties:
+        issue_key:
+          type: "string"
+        transition_id:
+          type: "string"
+          description: "Transition ID or name"
+        comment:
+          type: "string"
+          description: "Optional comment"
+        fields:
+          type: "object"
+          description: "Additional fields to update"
+    output_schema:
+      type: "object"
+      properties:
+        success:
+          type: "boolean"
+        new_status:
+          type: "string"
+    tags: ["issue", "transition", "jira"]
+
+  - name: "get_issue"
+    version: "1.0.0"
+    description: "Get issue details"
+    input_schema:
+      type: "object"
+      required: ["issue_key"]
+      properties:
+        issue_key:
+          type: "string"
+        expand:
+          type: "array"
+          items:
+            type: "string"
+          description: "Fields to expand"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+        key:
+          type: "string"
+        self:
+          type: "string"
+        fields:
+          type: "object"
+          properties:
+            summary:
+              type: "string"
+            description:
+              type: "string"
+            status:
+              type: "object"
+            priority:
+              type: "object"
+            assignee:
+              type: "object"
+            reporter:
+              type: "object"
+            created:
+              type: "string"
+            updated:
+              type: "string"
+            labels:
+              type: "array"
+              items:
+                type: "string"
+    tags: ["issue", "get", "jira"]
+
+  - name: "search_issues"
+    version: "1.0.0"
+    description: "Search for issues using JQL"
+    input_schema:
+      type: "object"
+      required: ["jql"]
+      properties:
+        jql:
+          type: "string"
+          description: "JQL query string"
+        start_at:
+          type: "integer"
+          default: 0
+        max_results:
+          type: "integer"
+          default: 50
+        fields:
+          type: "array"
+          items:
+            type: "string"
+          description: "Fields to return"
+        expand:
+          type: "array"
+          items:
+            type: "string"
+    output_schema:
+      type: "object"
+      properties:
+        total:
+          type: "integer"
+        start_at:
+          type: "integer"
+        max_results:
+          type: "integer"
+        issues:
+          type: "array"
+          items:
+            type: "object"
+    tags: ["issue", "search", "jira"]
+
+  - name: "add_comment"
+    version: "1.0.0"
+    description: "Add comment to issue"
+    input_schema:
+      type: "object"
+      required: ["issue_key", "body"]
+      properties:
+        issue_key:
+          type: "string"
+        body:
+          type: "string"
+          description: "Comment body"
+        visibility:
+          type: "object"
+          description: "Comment visibility restrictions"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+        self:
+          type: "string"
+        author:
+          type: "object"
+        body:
+          type: "string"
+        created:
+          type: "string"
+    tags: ["comment", "create", "jira"]
+
+  - name: "create_project"
+    version: "1.0.0"
+    description: "Create a new Jira project"
+    input_schema:
+      type: "object"
+      required: ["key", "name", "project_type_key", "lead"]
+      properties:
+        key:
+          type: "string"
+          description: "Project key"
+        name:
+          type: "string"
+          description: "Project name"
+        description:
+          type: "string"
+        project_type_key:
+          type: "string"
+          description: "Project type (software, business, etc.)"
+        lead:
+          type: "string"
+          description: "Project lead username"
+        template_key:
+          type: "string"
+          description: "Template to use"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+        key:
+          type: "string"
+        self:
+          type: "string"
+        name:
+          type: "string"
+    tags: ["project", "create", "jira"]
+
+  - name: "get_project"
+    version: "1.0.0"
+    description: "Get project information"
+    input_schema:
+      type: "object"
+      required: ["project_key"]
+      properties:
+        project_key:
+          type: "string"
+        expand:
+          type: "array"
+          items:
+            type: "string"
+    output_schema:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+        key:
+          type: "string"
+        name:
+          type: "string"
+        description:
+          type: "string"
+        lead:
+          type: "object"
+        components:
+          type: "array"
+        versions:
+          type: "array"
+        issue_types:
+          type: "array"
+    tags: ["project", "get", "jira"]
+
+configuration:
+  rate_limits:
+    requests_per_second: 10
+    concurrent_requests: 20
+  timeout_seconds: 30
+  retry_attempts: 3
+  retry_delay_seconds: 2
+
+health_check:
+  endpoint: "/serverInfo"
+  method: "GET"
+  expected_status: 200
+  timeout_seconds: 10
+
+monitoring:
+  metrics:
+    - "requests_total"
+    - "requests_duration_seconds"
+    - "issues_created"
+    - "issues_updated"
+    - "errors_total"
+  log_level: "INFO"
+
+security:
+  authentication_required: true
+  rate_limiting: true
+  request_validation: true
+  response_sanitization: true
+  allowed_domains:
+    - "*.atlassian.net"

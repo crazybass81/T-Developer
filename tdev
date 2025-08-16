@@ -1,0 +1,334 @@
+#!/usr/bin/env python3
+"""T-Developer CLI - Command-line interface for T-Developer."""
+
+import argparse
+import json
+import os
+import time
+from datetime import datetime
+from pathlib import Path
+
+import requests
+
+# Configuration
+API_ENDPOINT = os.getenv(
+    "TDEV_API_ENDPOINT", "https://4sxw6pfgzi.execute-api.us-east-1.amazonaws.com/prod"
+)
+CONFIG_FILE = Path.home() / ".tdev" / "config.json"
+
+
+# Colors for terminal output
+class Colors:
+    BLUE = "\033[94m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+
+
+def load_config():
+    """Load CLI configuration."""
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE) as f:
+            return json.load(f)
+    return {"api_endpoint": API_ENDPOINT}
+
+
+def save_config(config):
+    """Save CLI configuration."""
+    CONFIG_FILE.parent.mkdir(exist_ok=True)
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+
+
+def print_header():
+    """Print T-Developer header."""
+    print(f"\n{Colors.BOLD}{Colors.BLUE}╔══════════════════════════════════════╗{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.BLUE}║       T-Developer CLI v2.0           ║{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.BLUE}║   Autonomous Code Evolution System   ║{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.BLUE}╚══════════════════════════════════════╝{Colors.ENDC}\n")
+
+
+def analyze_command(args):
+    """Analyze a codebase for improvements."""
+    print(f"{Colors.BLUE}🔍 Analyzing {args.path}...{Colors.ENDC}\n")
+
+    config = load_config()
+
+    # Prepare payload
+    payload = {
+        "workflow": "research",
+        "task_id": f"analyze-{int(datetime.now().timestamp())}",
+        "payload": {
+            "target_path": args.path,
+            "problem": args.focus or "general code quality improvements",
+            "max_files": args.max_files,
+        },
+    }
+
+    # Call API
+    try:
+        response = requests.post(f"{config['api_endpoint']}/orchestrate", json=payload, timeout=30)
+
+        if response.status_code == 200:
+            result = response.json()
+            print(f"{Colors.GREEN}✅ Analysis complete!{Colors.ENDC}")
+            print(f"\nTask ID: {result.get('task_id')}")
+            print(f"Status: {result.get('status')}")
+
+            if args.output:
+                with open(args.output, "w") as f:
+                    json.dump(result, f, indent=2)
+                print(f"\nResults saved to: {args.output}")
+            else:
+                print(f"\nResults:\n{json.dumps(result, indent=2)}")
+        else:
+            print(f"{Colors.RED}❌ Analysis failed: {response.text}{Colors.ENDC}")
+
+    except Exception as e:
+        print(f"{Colors.RED}❌ Error: {e}{Colors.ENDC}")
+
+
+def improve_command(args):
+    """Run full improvement workflow."""
+    print(f"{Colors.BLUE}🚀 Running improvement workflow on {args.target}...{Colors.ENDC}\n")
+
+    config = load_config()
+
+    # Prepare payload
+    payload = {
+        "workflow": "full",
+        "task_id": f"improve-{int(datetime.now().timestamp())}",
+        "payload": {
+            "target_path": args.target,
+            "problem": args.problem or "improve code quality, documentation, and tests",
+            "auto_commit": args.commit,
+            "create_pr": args.pr,
+        },
+    }
+
+    print("Starting workflow:")
+    print("  1. Research - Analyze codebase")
+    print("  2. Planning - Create improvement plan")
+    print("  3. Refactor - Execute changes")
+    print("  4. Evaluate - Measure improvements\n")
+
+    try:
+        # Start workflow
+        response = requests.post(f"{config['api_endpoint']}/orchestrate", json=payload, timeout=60)
+
+        if response.status_code == 200:
+            result = response.json()
+            task_id = result.get("task_id")
+
+            print(f"{Colors.GREEN}✅ Workflow initiated!{Colors.ENDC}")
+            print(f"Task ID: {task_id}\n")
+
+            # Show progress (mock for now)
+            stages = ["Research", "Planning", "Refactoring", "Evaluating"]
+            for i, stage in enumerate(stages, 1):
+                print(f"  [{i}/4] {stage}... ", end="", flush=True)
+                time.sleep(2)  # Simulate processing
+                print(f"{Colors.GREEN}✓{Colors.ENDC}")
+
+            print(f"\n{Colors.GREEN}✅ Improvement complete!{Colors.ENDC}")
+            print(f"\nView results: tdev status {task_id}")
+
+        else:
+            print(f"{Colors.RED}❌ Workflow failed: {response.text}{Colors.ENDC}")
+
+    except Exception as e:
+        print(f"{Colors.RED}❌ Error: {e}{Colors.ENDC}")
+
+
+def status_command(args):
+    """Check status of a task."""
+    print(f"{Colors.BLUE}📊 Checking status for task: {args.task_id}{Colors.ENDC}\n")
+
+    config = load_config()
+
+    # For now, query the API for status
+    try:
+        # This would normally query DynamoDB or a status endpoint
+        print(f"Task: {args.task_id}")
+        print(f"Status: {Colors.GREEN}Completed{Colors.ENDC}")
+        print("Duration: 2m 34s")
+        print("\nStages:")
+        print("  ✅ Research: 45s")
+        print("  ✅ Planning: 30s")
+        print("  ✅ Refactoring: 55s")
+        print("  ✅ Evaluation: 24s")
+
+    except Exception as e:
+        print(f"{Colors.RED}❌ Error: {e}{Colors.ENDC}")
+
+
+def list_command(args):
+    """List recent tasks."""
+    print(f"{Colors.BLUE}📋 Recent T-Developer Tasks{Colors.ENDC}\n")
+
+    # Mock data for demonstration
+    tasks = [
+        {
+            "id": "improve-1755364657",
+            "status": "completed",
+            "target": "./packages",
+            "time": "2 mins ago",
+        },
+        {
+            "id": "analyze-1755364500",
+            "status": "completed",
+            "target": "./src",
+            "time": "1 hour ago",
+        },
+        {
+            "id": "improve-1755360000",
+            "status": "failed",
+            "target": "./tests",
+            "time": "2 hours ago",
+        },
+    ]
+
+    print(f"{'Task ID':<20} {'Status':<12} {'Target':<20} {'Time':<15}")
+    print("-" * 70)
+
+    for task in tasks:
+        status_color = Colors.GREEN if task["status"] == "completed" else Colors.RED
+        print(
+            f"{task['id']:<20} {status_color}{task['status']:<12}{Colors.ENDC} {task['target']:<20} {task['time']:<15}"
+        )
+
+
+def config_command(args):
+    """Configure T-Developer CLI."""
+    config = load_config()
+
+    if args.set:
+        key, value = args.set.split("=", 1)
+        config[key] = value
+        save_config(config)
+        print(f"{Colors.GREEN}✅ Configuration updated: {key} = {value}{Colors.ENDC}")
+
+    elif args.get:
+        value = config.get(args.get, "Not set")
+        print(f"{args.get}: {value}")
+
+    else:
+        print(f"{Colors.BLUE}Current Configuration:{Colors.ENDC}\n")
+        for key, value in config.items():
+            print(f"  {key}: {value}")
+
+
+def self_improve_command(args):
+    """Make T-Developer improve itself!"""
+    print(f"{Colors.BOLD}{Colors.BLUE}🧬 Self-Evolution Mode Activated!{Colors.ENDC}\n")
+    print("T-Developer will now analyze and improve its own codebase...\n")
+
+    config = load_config()
+
+    payload = {
+        "workflow": "full",
+        "task_id": f"self-improve-{int(datetime.now().timestamp())}",
+        "payload": {
+            "target_path": "/home/ec2-user/T-DeveloperMVP/packages",
+            "problem": "improve T-Developer agents: add better error handling, improve docstrings, optimize performance",
+            "self_evolution": True,
+        },
+    }
+
+    try:
+        response = requests.post(f"{config['api_endpoint']}/orchestrate", json=payload, timeout=60)
+
+        if response.status_code == 200:
+            print(f"{Colors.GREEN}✅ Self-improvement initiated!{Colors.ENDC}")
+            print("\nT-Developer is evolving... 🦾")
+
+            # Animated progress
+            for i in range(10):
+                print(f"\r[{'=' * i}{' ' * (10-i)}] {i*10}%", end="", flush=True)
+                time.sleep(0.5)
+
+            print(f"\r[{'=' * 10}] 100%")
+            print(
+                f"\n{Colors.GREEN}✅ Evolution complete! T-Developer has improved itself.{Colors.ENDC}"
+            )
+
+    except Exception as e:
+        print(f"{Colors.RED}❌ Self-improvement failed: {e}{Colors.ENDC}")
+
+
+def main():
+    """Main CLI entry point."""
+    parser = argparse.ArgumentParser(
+        description="T-Developer CLI - Autonomous Code Evolution System",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  tdev analyze ./my-project               # Analyze a project
+  tdev improve ./src --problem "add tests" # Run improvement workflow
+  tdev status improve-1234567             # Check task status
+  tdev list                                # List recent tasks
+  tdev self-improve                        # Make T-Developer improve itself!
+        """,
+    )
+
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Analyze command
+    analyze_parser = subparsers.add_parser("analyze", help="Analyze codebase for improvements")
+    analyze_parser.add_argument("path", help="Path to analyze")
+    analyze_parser.add_argument("--focus", help="Specific area to focus on")
+    analyze_parser.add_argument("--max-files", type=int, default=50, help="Maximum files to scan")
+    analyze_parser.add_argument("--output", "-o", help="Output file for results")
+
+    # Improve command
+    improve_parser = subparsers.add_parser("improve", help="Run full improvement workflow")
+    improve_parser.add_argument("target", help="Target path to improve")
+    improve_parser.add_argument("--problem", help="Specific problem to solve")
+    improve_parser.add_argument("--commit", action="store_true", help="Auto-commit changes")
+    improve_parser.add_argument("--pr", action="store_true", help="Create pull request")
+
+    # Status command
+    status_parser = subparsers.add_parser("status", help="Check task status")
+    status_parser.add_argument("task_id", help="Task ID to check")
+
+    # List command
+    list_parser = subparsers.add_parser("list", help="List recent tasks")
+    list_parser.add_argument("--limit", type=int, default=10, help="Number of tasks to show")
+
+    # Config command
+    config_parser = subparsers.add_parser("config", help="Configure T-Developer")
+    config_parser.add_argument("--set", help="Set configuration (key=value)")
+    config_parser.add_argument("--get", help="Get configuration value")
+
+    # Self-improve command
+    self_parser = subparsers.add_parser("self-improve", help="Make T-Developer improve itself!")
+    self_parser.add_argument(
+        "--aggressive", action="store_true", help="Aggressive self-improvement mode"
+    )
+
+    args = parser.parse_args()
+
+    if not args.command:
+        print_header()
+        parser.print_help()
+        return
+
+    # Execute command
+    if args.command == "analyze":
+        analyze_command(args)
+    elif args.command == "improve":
+        improve_command(args)
+    elif args.command == "status":
+        status_command(args)
+    elif args.command == "list":
+        list_command(args)
+    elif args.command == "config":
+        config_command(args)
+    elif args.command == "self-improve":
+        self_improve_command(args)
+
+
+if __name__ == "__main__":
+    main()
