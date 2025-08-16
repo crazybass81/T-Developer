@@ -1,0 +1,56 @@
+name: Setup GitHub OIDC Provider
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_account_id:
+        description: 'AWS Account ID'
+        required: true
+        type: string
+      aws_region:
+        description: 'AWS Region'
+        required: false
+        type: string
+        default: 'us-east-1'
+
+jobs:
+  setup-oidc:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ inputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/github-actions-setup
+      
+      - name: Create OIDC Provider
+        run: |
+          # Check if OIDC provider already exists
+          if aws iam get-open-id-connect-provider \
+            --open-id-connect-provider-arn "arn:aws:iam::${{ inputs.aws_account_id }}:oidc-provider/token.actions.githubusercontent.com" \
+            2>/dev/null; then
+            echo "OIDC provider already exists"
+          else
+            echo "Creating OIDC provider..."
+            aws iam create-open-id-connect-provider \
+              --url https://token.actions.githubusercontent.com \
+              --client-id-list sts.amazonaws.com \
+              --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
+          fi
+      
+      - name: Display setup instructions
+        run: |
+          echo "✅ OIDC Provider setup complete!"
+          echo ""
+          echo "Next steps:"
+          echo "1. Run the deploy-iam-roles workflow to create the necessary IAM roles"
+          echo "2. Update your .env file with:"
+          echo "   AWS_ACCOUNT_ID=${{ inputs.aws_account_id }}"
+          echo "   AWS_REGION=${{ inputs.aws_region }}"

@@ -1,0 +1,70 @@
+name: Deploy IAM Roles
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_account_id:
+        description: 'AWS Account ID'
+        required: true
+        type: string
+      github_org:
+        description: 'GitHub Organization/Username'
+        required: true
+        type: string
+      github_repo:
+        description: 'GitHub Repository Name'
+        required: true
+        type: string
+        default: 'T-DeveloperMVP'
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-roles:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ inputs.aws_account_id }}:role/github-actions-setup
+      
+      - name: Deploy CloudFormation Stack
+        run: |
+          aws cloudformation deploy \
+            --template-file ./infrastructure/iam/github-actions-role.yml \
+            --stack-name t-developer-github-actions-role \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameter-overrides \
+              GitHubOrg=${{ inputs.github_org }} \
+              GitHubRepo=${{ inputs.github_repo }} \
+            --region ${{ env.AWS_REGION }}
+      
+      - name: Get Role ARN
+        id: get-role
+        run: |
+          ROLE_ARN=$(aws cloudformation describe-stacks \
+            --stack-name t-developer-github-actions-role \
+            --query 'Stacks[0].Outputs[?OutputKey==`RoleArn`].OutputValue' \
+            --output text \
+            --region ${{ env.AWS_REGION }})
+          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "✅ IAM Role created: $ROLE_ARN"
+      
+      - name: Display next steps
+        run: |
+          echo "✅ IAM Roles deployed successfully!"
+          echo ""
+          echo "Add the following to your repository secrets:"
+          echo "AWS_ACCOUNT_ID: ${{ inputs.aws_account_id }}"
+          echo ""
+          echo "Update workflows to use:"
+          echo "role-to-assume: ${{ steps.get-role.outputs.role_arn }}"
