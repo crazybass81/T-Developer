@@ -1,0 +1,314 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types: [completed]
+    branches: [main]
+
+env:
+  AWS_REGION: 'us-east-1'
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  # Job 1: Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main' &&
+      github.event.workflow_run.conclusion == 'success'
+    environment:
+      name: staging
+      url: https://staging.t-developer.ai
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-t-developer
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: t-developer
+          IMAGE_TAG: staging-${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:staging-latest
+      
+      - name: Update Bedrock Agent
+        run: |
+          aws bedrock update-agent \
+            --agent-id ${{ secrets.BEDROCK_AGENT_ID }} \
+            --agent-name "t-developer-staging" \
+            --instruction "Staging deployment of T-Developer v2" \
+            --description "Auto-deployed from GitHub Actions"
+      
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster t-developer-staging \
+            --service t-developer-api \
+            --force-new-deployment \
+            --desired-count 2
+      
+      - name: Update Lambda functions
+        run: |
+          for func in research planner refactor evaluator; do
+            aws lambda update-function-code \
+              --function-name t-developer-${func}-staging \
+              --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:staging-${{ github.sha }}
+          done
+      
+      - name: Run smoke tests
+        run: |
+          echo "Running staging smoke tests..."
+          curl -f https://staging.t-developer.ai/health || exit 1
+      
+      - name: Notify deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Staging deployment completed'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: always()
+
+  # Job 2: Integration Tests on Staging
+  integration-tests:
+    name: Staging Integration Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install test dependencies
+        run: |
+          pip install pytest requests boto3
+      
+      - name: Run integration tests
+        env:
+          STAGING_URL: https://staging.t-developer.ai
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          pytest tests/integration/ \
+            --env staging \
+            --base-url $STAGING_URL \
+            -v
+      
+      - name: Performance tests
+        run: |
+          echo "Running performance benchmarks..."
+          python scripts/performance_test.py --env staging
+
+  # Job 3: Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment:
+      name: production
+      url: https://t-developer.ai
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-t-developer
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Promote staging image to production
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: t-developer
+          VERSION_TAG: ${{ github.ref_name }}
+        run: |
+          # Pull staging image
+          docker pull $ECR_REGISTRY/$ECR_REPOSITORY:staging-${{ github.sha }}
+          
+          # Tag as production
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:staging-${{ github.sha }} \
+            $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:staging-${{ github.sha }} \
+            $ECR_REGISTRY/$ECR_REPOSITORY:production-latest
+          
+          # Push to production
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:production-latest
+      
+      - name: Blue-Green Deployment
+        run: |
+          # Create new task definition
+          aws ecs register-task-definition \
+            --family t-developer-production \
+            --container-definitions file://ecs/task-definition.json
+          
+          # Update service with new task definition
+          aws ecs update-service \
+            --cluster t-developer-production \
+            --service t-developer-api \
+            --task-definition t-developer-production \
+            --deployment-configuration "maximumPercent=200,minimumHealthyPercent=100" \
+            --desired-count 4
+          
+          # Wait for deployment
+          aws ecs wait services-stable \
+            --cluster t-developer-production \
+            --services t-developer-api
+      
+      - name: Update Bedrock Agent Production
+        run: |
+          aws bedrock update-agent \
+            --agent-id ${{ secrets.BEDROCK_AGENT_ID_PROD }} \
+            --agent-name "t-developer-production" \
+            --agent-version "${{ github.ref_name }}"
+      
+      - name: Update Lambda aliases
+        run: |
+          for func in research planner refactor evaluator; do
+            # Update function
+            aws lambda update-function-code \
+              --function-name t-developer-${func}-production \
+              --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.ref_name }}
+            
+            # Update alias
+            aws lambda update-alias \
+              --function-name t-developer-${func}-production \
+              --name live \
+              --function-version \$LATEST
+          done
+      
+      - name: Database migrations
+        run: |
+          echo "Running database migrations..."
+          # Add migration commands here
+      
+      - name: Cache warming
+        run: |
+          echo "Warming up caches..."
+          python scripts/warm_cache.py --env production
+      
+      - name: Smoke tests
+        run: |
+          echo "Running production smoke tests..."
+          python scripts/smoke_tests.py --env production
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+      
+      - name: Notify deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Production deployment ${{ github.ref_name }} completed'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: always()
+
+  # Job 4: Post-Deployment Validation
+  validate-production:
+    name: Validate Production
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Health checks
+        run: |
+          for i in {1..5}; do
+            curl -f https://t-developer.ai/health || exit 1
+            sleep 10
+          done
+      
+      - name: Synthetic monitoring
+        run: |
+          echo "Running synthetic user journeys..."
+          python scripts/synthetic_tests.py --env production
+      
+      - name: Check metrics
+        run: |
+          echo "Validating CloudWatch metrics..."
+          python scripts/check_metrics.py \
+            --metric error-rate --threshold 1 \
+            --metric latency-p99 --threshold 1000
+      
+      - name: Rollback if needed
+        if: failure()
+        run: |
+          echo "⚠️ Validation failed, initiating rollback..."
+          aws ecs update-service \
+            --cluster t-developer-production \
+            --service t-developer-api \
+            --task-definition t-developer-production:PREVIOUS \
+            --force-new-deployment
+
+  # Job 5: Evolution Trigger
+  evolution-trigger:
+    name: Trigger Evolution Cycle
+    runs-on: ubuntu-latest
+    needs: [validate-production]
+    if: github.event_name == 'push' && contains(github.ref, 'tags')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-t-developer
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Trigger evolution analysis
+        run: |
+          # Send message to SQS to trigger evolution
+          aws sqs send-message \
+            --queue-url https://sqs.${AWS_REGION}.amazonaws.com/${{ secrets.AWS_ACCOUNT_ID }}/evolution-trigger \
+            --message-body '{
+              "type": "deployment_complete",
+              "version": "${{ github.ref_name }}",
+              "commit": "${{ github.sha }}",
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+            }'
+      
+      - name: Log evolution trigger
+        run: |
+          echo "✅ Evolution cycle triggered for version ${{ github.ref_name }}"
