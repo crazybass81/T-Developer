@@ -1,0 +1,693 @@
+# Data Pipeline Blueprint
+# Phase 5: P5-T2 - Blueprint Agent
+
+name: data-pipeline
+description: ETL/ELT data pipeline with orchestration
+version: 1.0.0
+
+variables:
+  pipeline_name:
+    type: string
+    description: Name of the data pipeline
+    required: true
+
+  orchestrator:
+    type: string
+    description: Orchestration tool (airflow, prefect, dagster)
+    default: airflow
+    options: [airflow, prefect, dagster]
+
+  data_source:
+    type: string
+    description: Primary data source type (database, api, file, stream)
+    default: database
+    options: [database, api, file, stream]
+
+  data_destination:
+    type: string
+    description: Data destination (warehouse, lake, database)
+    default: warehouse
+    options: [warehouse, lake, database]
+
+  processing_framework:
+    type: string
+    description: Data processing framework (pandas, spark, dask)
+    default: pandas
+    options: [pandas, spark, dask]
+
+structure:
+  directories:
+    - dags
+    - src
+    - src/extractors
+    - src/transformers
+    - src/loaders
+    - src/utils
+    - tests
+    - tests/unit
+    - tests/integration
+    - config
+    - sql
+    - docker
+    - docs
+
+files:
+  # Airflow DAG
+  - path: dags/{{ pipeline_name }}_dag.py
+    condition: orchestrator == "airflow"
+    template: |
+      """{{ pipeline_name }} Airflow DAG"""
+
+      from datetime import datetime, timedelta
+      from airflow import DAG
+      from airflow.operators.python import PythonOperator
+      from airflow.operators.bash import BashOperator
+      from airflow.operators.dummy import DummyOperator
+      {% if data_source == "database" %}
+      from airflow.providers.postgres.operators.postgres import PostgresOperator
+      {% endif %}
+      {% if processing_framework == "spark" %}
+      from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+      {% endif %}
+
+      from src.extractors.{{ data_source }}_extractor import extract_data
+      from src.transformers.data_transformer import transform_data
+      from src.loaders.{{ data_destination }}_loader import load_data
+      from src.utils.data_quality import validate_data_quality
+
+      # Default arguments
+      default_args = {
+          'owner': 'data-team',
+          'depends_on_past': False,
+          'start_date': datetime(2023, 1, 1),
+          'email_on_failure': True,
+          'email_on_retry': False,
+          'retries': 2,
+          'retry_delay': timedelta(minutes=5),
+          'max_active_runs': 1
+      }
+
+      # DAG definition
+      dag = DAG(
+          '{{ pipeline_name }}',
+          default_args=default_args,
+          description='{{ pipeline_name }} data pipeline',
+          schedule_interval='@daily',
+          catchup=False,
+          tags=['data-pipeline', '{{ data_source }}', '{{ data_destination }}']
+      )
+
+      # Task definitions
+      start_task = DummyOperator(
+          task_id='start',
+          dag=dag
+      )
+
+      extract_task = PythonOperator(
+          task_id='extract_data',
+          python_callable=extract_data,
+          op_kwargs={
+              'source_type': '{{ data_source }}',
+              'config': '{{ "{{" }} dag_run.conf {{ "}}" }}'
+          },
+          dag=dag
+      )
+
+      {% if processing_framework == "spark" %}
+      transform_task = SparkSubmitOperator(
+          task_id='transform_data',
+          application='src/transformers/spark_transformer.py',
+          conn_id='spark_default',
+          dag=dag
+      )
+      {% else %}
+      transform_task = PythonOperator(
+          task_id='transform_data',
+          python_callable=transform_data,
+          op_kwargs={
+              'framework': '{{ processing_framework }}'
+          },
+          dag=dag
+      )
+      {% endif %}
+
+      quality_check_task = PythonOperator(
+          task_id='data_quality_check',
+          python_callable=validate_data_quality,
+          dag=dag
+      )
+
+      load_task = PythonOperator(
+          task_id='load_data',
+          python_callable=load_data,
+          op_kwargs={
+              'destination_type': '{{ data_destination }}'
+          },
+          dag=dag
+      )
+
+      end_task = DummyOperator(
+          task_id='end',
+          dag=dag
+      )
+
+      # Task dependencies
+      start_task >> extract_task >> transform_task >> quality_check_task >> load_task >> end_task
+
+  # Data extractor
+  - path: src/extractors/{{ data_source }}_extractor.py
+    template: |
+      """{{ data_source|title }} data extractor"""
+
+      import logging
+      from typing import Dict, Any, Optional
+      {% if processing_framework == "pandas" %}
+      import pandas as pd
+      {% elif processing_framework == "spark" %}
+      from pyspark.sql import SparkSession
+      {% endif %}
+      {% if data_source == "database" %}
+      import psycopg2
+      from sqlalchemy import create_engine
+      {% elif data_source == "api" %}
+      import requests
+      import json
+      {% elif data_source == "file" %}
+      import os
+      from pathlib import Path
+      {% endif %}
+
+      from ..utils.config import get_config
+      from ..utils.logging import setup_logger
+
+      logger = setup_logger(__name__)
+
+
+      class {{ data_source|title }}Extractor:
+          """Extract data from {{ data_source }}"""
+
+          def __init__(self, config: Dict[str, Any]):
+              """Initialize extractor with configuration"""
+              self.config = config
+              {% if data_source == "database" %}
+              self.connection_string = config.get('database_url')
+              {% elif data_source == "api" %}
+              self.api_base_url = config.get('api_base_url')
+              self.api_key = config.get('api_key')
+              {% elif data_source == "file" %}
+              self.file_path = config.get('file_path')
+              {% endif %}
+
+          {% if processing_framework == "pandas" %}
+          def extract(self, **kwargs) -> pd.DataFrame:
+              """Extract data and return as pandas DataFrame"""
+              logger.info(f"Starting data extraction from {{ data_source }}")
+
+              try:
+                  {% if data_source == "database" %}
+                  query = kwargs.get('query', 'SELECT * FROM source_table')
+                  engine = create_engine(self.connection_string)
+                  df = pd.read_sql_query(query, engine)
+                  {% elif data_source == "api" %}
+                  endpoint = kwargs.get('endpoint', '/data')
+                  headers = {'Authorization': f'Bearer {self.api_key}'}
+                  response = requests.get(f"{self.api_base_url}{endpoint}", headers=headers)
+                  response.raise_for_status()
+                  data = response.json()
+                  df = pd.DataFrame(data)
+                  {% elif data_source == "file" %}
+                  file_format = kwargs.get('format', 'csv')
+                  if file_format.lower() == 'csv':
+                      df = pd.read_csv(self.file_path)
+                  elif file_format.lower() == 'json':
+                      df = pd.read_json(self.file_path)
+                  elif file_format.lower() == 'parquet':
+                      df = pd.read_parquet(self.file_path)
+                  else:
+                      raise ValueError(f"Unsupported file format: {file_format}")
+                  {% endif %}
+
+                  logger.info(f"Extracted {len(df)} rows from {{ data_source }}")
+                  return df
+
+              except Exception as e:
+                  logger.error(f"Error extracting data from {{ data_source }}: {e}")
+                  raise
+          {% endif %}
+
+
+      def extract_data(source_type: str, config: Dict[str, Any], **kwargs) -> None:
+          """Airflow task function for data extraction"""
+          extractor_config = get_config()['extractors'][source_type]
+          extractor = {{ data_source|title }}Extractor(extractor_config)
+
+          data = extractor.extract(**kwargs)
+
+          # Save extracted data for next task
+          output_path = f"/tmp/{{ pipeline_name }}_extracted_data.parquet"
+          {% if processing_framework == "pandas" %}
+          data.to_parquet(output_path, index=False)
+          {% endif %}
+
+          logger.info(f"Data saved to {output_path}")
+
+  # Data transformer
+  - path: src/transformers/data_transformer.py
+    template: |
+      """Data transformation logic"""
+
+      import logging
+      from typing import Dict, Any, List
+      {% if processing_framework == "pandas" %}
+      import pandas as pd
+      import numpy as np
+      {% elif processing_framework == "spark" %}
+      from pyspark.sql import SparkSession, DataFrame
+      from pyspark.sql.functions import *
+      {% elif processing_framework == "dask" %}
+      import dask.dataframe as dd
+      {% endif %}
+
+      from ..utils.logging import setup_logger
+
+      logger = setup_logger(__name__)
+
+
+      class DataTransformer:
+          """Transform extracted data"""
+
+          def __init__(self, framework: str = "{{ processing_framework }}"):
+              """Initialize transformer"""
+              self.framework = framework
+              {% if processing_framework == "spark" %}
+              self.spark = SparkSession.builder.appName("{{ pipeline_name }}_transformer").getOrCreate()
+              {% endif %}
+
+          {% if processing_framework == "pandas" %}
+          def transform(self, df: pd.DataFrame, transformations: List[str]) -> pd.DataFrame:
+              """Apply transformations to pandas DataFrame"""
+              logger.info(f"Starting data transformation with {len(transformations)} steps")
+
+              for transformation in transformations:
+                  if transformation == "clean_nulls":
+                      df = self._clean_nulls(df)
+                  elif transformation == "normalize_columns":
+                      df = self._normalize_columns(df)
+                  elif transformation == "add_derived_columns":
+                      df = self._add_derived_columns(df)
+                  elif transformation == "filter_data":
+                      df = self._filter_data(df)
+                  else:
+                      logger.warning(f"Unknown transformation: {transformation}")
+
+              logger.info(f"Transformation complete. Output shape: {df.shape}")
+              return df
+
+          def _clean_nulls(self, df: pd.DataFrame) -> pd.DataFrame:
+              """Clean null values"""
+              logger.info("Cleaning null values")
+              # Remove rows where critical columns are null
+              critical_columns = ['id', 'timestamp']
+              df = df.dropna(subset=[col for col in critical_columns if col in df.columns])
+
+              # Fill remaining nulls
+              for col in df.select_dtypes(include=[np.number]).columns:
+                  df[col] = df[col].fillna(0)
+
+              for col in df.select_dtypes(include=['object']).columns:
+                  df[col] = df[col].fillna('unknown')
+
+              return df
+
+          def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+              """Normalize column names and types"""
+              logger.info("Normalizing columns")
+              # Standardize column names
+              df.columns = df.columns.str.lower().str.replace(' ', '_')
+
+              # Convert data types
+              for col in df.columns:
+                  if 'date' in col or 'time' in col:
+                      df[col] = pd.to_datetime(df[col], errors='coerce')
+                  elif col.endswith('_id'):
+                      df[col] = df[col].astype(str)
+
+              return df
+
+          def _add_derived_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+              """Add derived columns"""
+              logger.info("Adding derived columns")
+
+              # Add processing timestamp
+              df['processed_at'] = pd.Timestamp.now()
+
+              # Add data quality score (example)
+              df['quality_score'] = df.isnull().sum(axis=1) / len(df.columns)
+
+              return df
+
+          def _filter_data(self, df: pd.DataFrame) -> pd.DataFrame:
+              """Filter data based on business rules"""
+              logger.info("Applying data filters")
+
+              # Remove test data
+              if 'email' in df.columns:
+                  df = df[~df['email'].str.contains('test', case=False, na=False)]
+
+              # Remove duplicates
+              df = df.drop_duplicates()
+
+              return df
+          {% endif %}
+
+
+      def transform_data(framework: str = "{{ processing_framework }}", **kwargs) -> None:
+          """Airflow task function for data transformation"""
+          input_path = f"/tmp/{{ pipeline_name }}_extracted_data.parquet"
+          output_path = f"/tmp/{{ pipeline_name }}_transformed_data.parquet"
+
+          {% if processing_framework == "pandas" %}
+          # Load data
+          df = pd.read_parquet(input_path)
+
+          # Apply transformations
+          transformer = DataTransformer(framework)
+          transformations = ["clean_nulls", "normalize_columns", "add_derived_columns", "filter_data"]
+          transformed_df = transformer.transform(df, transformations)
+
+          # Save transformed data
+          transformed_df.to_parquet(output_path, index=False)
+          {% endif %}
+
+          logger.info(f"Transformed data saved to {output_path}")
+
+  # Data loader
+  - path: src/loaders/{{ data_destination }}_loader.py
+    template: |
+      """{{ data_destination|title }} data loader"""
+
+      import logging
+      from typing import Dict, Any
+      {% if processing_framework == "pandas" %}
+      import pandas as pd
+      {% endif %}
+      {% if data_destination == "warehouse" %}
+      from sqlalchemy import create_engine
+      {% elif data_destination == "lake" %}
+      import boto3
+      {% endif %}
+
+      from ..utils.config import get_config
+      from ..utils.logging import setup_logger
+
+      logger = setup_logger(__name__)
+
+
+      class {{ data_destination|title }}Loader:
+          """Load data to {{ data_destination }}"""
+
+          def __init__(self, config: Dict[str, Any]):
+              """Initialize loader with configuration"""
+              self.config = config
+              {% if data_destination == "warehouse" %}
+              self.connection_string = config.get('warehouse_url')
+              {% elif data_destination == "lake" %}
+              self.bucket_name = config.get('s3_bucket')
+              self.s3_client = boto3.client('s3')
+              {% endif %}
+
+          {% if processing_framework == "pandas" %}
+          def load(self, df: pd.DataFrame, table_name: str, **kwargs) -> None:
+              """Load DataFrame to destination"""
+              logger.info(f"Loading {len(df)} rows to {{ data_destination }}")
+
+              try:
+                  {% if data_destination == "warehouse" %}
+                  engine = create_engine(self.connection_string)
+                  df.to_sql(
+                      table_name,
+                      engine,
+                      if_exists=kwargs.get('if_exists', 'replace'),
+                      index=False,
+                      chunksize=kwargs.get('chunksize', 10000)
+                  )
+                  {% elif data_destination == "lake" %}
+                  # Save to S3 as parquet
+                  output_key = f"data/{table_name}/year={df['processed_at'].dt.year.iloc[0]}/month={df['processed_at'].dt.month.iloc[0]}/data.parquet"
+
+                  # Convert to parquet and upload
+                  buffer = df.to_parquet(index=False)
+                  self.s3_client.put_object(
+                      Bucket=self.bucket_name,
+                      Key=output_key,
+                      Body=buffer
+                  )
+                  {% elif data_destination == "database" %}
+                  engine = create_engine(self.connection_string)
+                  df.to_sql(
+                      table_name,
+                      engine,
+                      if_exists=kwargs.get('if_exists', 'append'),
+                      index=False
+                  )
+                  {% endif %}
+
+                  logger.info(f"Successfully loaded data to {{ data_destination }}")
+
+              except Exception as e:
+                  logger.error(f"Error loading data to {{ data_destination }}: {e}")
+                  raise
+          {% endif %}
+
+
+      def load_data(destination_type: str, **kwargs) -> None:
+          """Airflow task function for data loading"""
+          input_path = f"/tmp/{{ pipeline_name }}_transformed_data.parquet"
+
+          loader_config = get_config()['loaders'][destination_type]
+          loader = {{ data_destination|title }}Loader(loader_config)
+
+          {% if processing_framework == "pandas" %}
+          # Load transformed data
+          df = pd.read_parquet(input_path)
+
+          # Load to destination
+          table_name = kwargs.get('table_name', '{{ pipeline_name }}_data')
+          loader.load(df, table_name, **kwargs)
+          {% endif %}
+
+          logger.info("Data loading completed")
+
+  # Requirements
+  - path: requirements.txt
+    template: |
+      # Core dependencies
+      {% if orchestrator == "airflow" %}
+      apache-airflow==2.7.0
+      apache-airflow-providers-postgres==5.6.0
+      {% if processing_framework == "spark" %}
+      apache-airflow-providers-apache-spark==4.1.3
+      {% endif %}
+      {% elif orchestrator == "prefect" %}
+      prefect==2.10.0
+      {% elif orchestrator == "dagster" %}
+      dagster==1.4.0
+      dagster-webserver==1.4.0
+      {% endif %}
+
+      # Data processing
+      {% if processing_framework == "pandas" %}
+      pandas==2.1.0
+      numpy==1.24.0
+      {% elif processing_framework == "spark" %}
+      pyspark==3.4.0
+      {% elif processing_framework == "dask" %}
+      dask==2023.7.0
+      {% endif %}
+
+      # Data sources and destinations
+      {% if data_source == "database" or data_destination == "database" or data_destination == "warehouse" %}
+      sqlalchemy==2.0.0
+      psycopg2-binary==2.9.0
+      {% endif %}
+      {% if data_destination == "lake" %}
+      boto3==1.28.0
+      {% endif %}
+      {% if data_source == "api" %}
+      requests==2.31.0
+      {% endif %}
+
+      # File formats
+      pyarrow==12.0.0
+      fastparquet==2023.7.0
+
+      # Utilities
+      pyyaml==6.0
+      python-dotenv==1.0.0
+
+      # Testing
+      pytest==7.4.0
+      pytest-mock==3.11.0
+
+      # Data quality
+      great-expectations==0.17.0
+
+  # Configuration
+  - path: config/config.yaml
+    template: |
+      # {{ pipeline_name }} Configuration
+
+      pipeline:
+        name: {{ pipeline_name }}
+        version: "1.0.0"
+        schedule: "@daily"
+        max_active_runs: 1
+        retries: 2
+        retry_delay_minutes: 5
+
+      extractors:
+        {{ data_source }}:
+          {% if data_source == "database" %}
+          database_url: "${DATABASE_URL}"
+          default_query: "SELECT * FROM source_table WHERE updated_at >= '{{ "{{" }} ds {{ "}}" }}'"
+          {% elif data_source == "api" %}
+          api_base_url: "${API_BASE_URL}"
+          api_key: "${API_KEY}"
+          rate_limit: 100
+          timeout: 30
+          {% elif data_source == "file" %}
+          file_path: "${FILE_PATH}"
+          file_format: "csv"
+          {% endif %}
+
+      transformers:
+        {{ processing_framework }}:
+          {% if processing_framework == "spark" %}
+          spark_config:
+            spark.sql.adaptive.enabled: true
+            spark.sql.adaptive.coalescePartitions.enabled: true
+          {% endif %}
+          transformations:
+            - clean_nulls
+            - normalize_columns
+            - add_derived_columns
+            - filter_data
+
+      loaders:
+        {{ data_destination }}:
+          {% if data_destination == "warehouse" %}
+          warehouse_url: "${WAREHOUSE_URL}"
+          batch_size: 10000
+          {% elif data_destination == "lake" %}
+          s3_bucket: "${S3_BUCKET}"
+          partition_by: ["year", "month"]
+          file_format: "parquet"
+          {% elif data_destination == "database" %}
+          database_url: "${DATABASE_URL}"
+          if_exists: "append"
+          {% endif %}
+
+      data_quality:
+        enabled: true
+        expectations_suite: "{{ pipeline_name }}_expectations"
+        fail_on_error: true
+
+      monitoring:
+        enabled: true
+        alerts:
+          email: ["data-team@company.com"]
+          slack_webhook: "${SLACK_WEBHOOK_URL}"
+
+      logging:
+        level: INFO
+        format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+ci_cd:
+  github_actions:
+    - name: Data Pipeline CI/CD
+      path: .github/workflows/data-pipeline.yml
+      template: |
+        name: Data Pipeline CI/CD
+
+        on:
+          push:
+            branches: [main, develop]
+          pull_request:
+            branches: [main]
+
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+
+            services:
+              postgres:
+                image: postgres:15
+                env:
+                  POSTGRES_PASSWORD: postgres
+                options: >-
+                  --health-cmd pg_isready
+                  --health-interval 10s
+                  --health-timeout 5s
+                  --health-retries 5
+
+            steps:
+              - uses: actions/checkout@v3
+
+              - name: Set up Python
+                uses: actions/setup-python@v4
+                with:
+                  python-version: '3.11'
+
+              - name: Install dependencies
+                run: |
+                  python -m pip install --upgrade pip
+                  pip install -r requirements.txt
+
+              - name: Run unit tests
+                run: |
+                  pytest tests/unit/ --cov=src --cov-report=xml
+
+              - name: Run integration tests
+                env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+                run: |
+                  pytest tests/integration/
+
+              - name: Data quality tests
+                run: |
+                  # Run Great Expectations validation
+                  great_expectations checkpoint run {{ pipeline_name }}_checkpoint
+
+          deploy:
+            needs: test
+            runs-on: ubuntu-latest
+            if: github.ref == 'refs/heads/main'
+
+            steps:
+              - uses: actions/checkout@v3
+
+              - name: Deploy to Airflow
+                run: |
+                  # Deploy DAGs to Airflow
+                  echo "Deploying to Airflow environment"
+                  # rsync or copy DAGs to Airflow server
+
+              - name: Run smoke tests
+                run: |
+                  # Trigger pipeline and verify it runs successfully
+                  echo "Running smoke tests"
+
+deployment:
+  orchestrator:
+    - name: Airflow Deployment
+      platform: airflow
+      config:
+        dag_folder: /opt/airflow/dags
+        connections:
+          - conn_id: postgres_default
+            conn_type: postgres
+          - conn_id: aws_default
+            conn_type: aws
+        variables:
+          - key: {{ pipeline_name }}_config
+            value: config/config.yaml

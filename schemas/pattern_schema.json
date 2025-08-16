@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pattern Schema",
+  "description": "Schema for T-Developer evolution patterns",
+  "type": "object",
+  "required": [
+    "id",
+    "category",
+    "context",
+    "action",
+    "outcome",
+    "success_rate",
+    "usage_count",
+    "created_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^pattern_[a-f0-9]{8}$",
+      "description": "Unique pattern identifier"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "improvement",
+        "fix",
+        "optimization",
+        "refactoring",
+        "testing",
+        "security",
+        "documentation",
+        "performance"
+      ],
+      "description": "Pattern category"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Human-readable pattern name"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "Pattern description"
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "file_types": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "code_patterns": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "min_complexity": {"type": "number"},
+            "max_complexity": {"type": "number"},
+            "min_coverage": {"type": "number"},
+            "max_coverage": {"type": "number"}
+          }
+        },
+        "conditions": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "description": "Context when pattern applies"
+    },
+    "action": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["code_change", "test_addition", "refactor", "optimization"]
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": {"type": "string"},
+              "command": {"type": "string"},
+              "expected_result": {"type": "string"}
+            },
+            "required": ["description"]
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "required": ["type", "steps"],
+      "description": "Actions to take when pattern is applied"
+    },
+    "outcome": {
+      "type": "object",
+      "properties": {
+        "metrics_improvement": {
+          "type": "object",
+          "properties": {
+            "coverage_delta": {"type": "number"},
+            "complexity_delta": {"type": "number"},
+            "performance_delta": {"type": "number"},
+            "security_delta": {"type": "number"}
+          }
+        },
+        "success_indicators": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "side_effects": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "description": "Expected outcome when pattern is applied"
+    },
+    "success_rate": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Historical success rate (0-1)"
+    },
+    "usage_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of times pattern has been used"
+    },
+    "last_used": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time pattern was used"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When pattern was created"
+    },
+    "tags": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Tags for categorizing patterns"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence in pattern effectiveness"
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Prerequisites for applying pattern"
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Patterns that conflict with this one"
+    }
+  }
+}

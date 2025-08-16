@@ -1,0 +1,501 @@
+# Web Application Blueprint
+# Phase 5: P5-T2 - Blueprint Agent
+
+name: web-app
+description: Full-stack web application with frontend and backend
+version: 1.0.0
+
+variables:
+  service_name:
+    type: string
+    description: Name of the web application
+    required: true
+
+  frontend_framework:
+    type: string
+    description: Frontend framework (react, vue, angular)
+    default: react
+    options: [react, vue, angular]
+
+  backend_framework:
+    type: string
+    description: Backend framework (express, fastapi, django)
+    default: express
+    options: [express, fastapi, django]
+
+  database_type:
+    type: string
+    description: Database type (postgres, mysql, mongodb)
+    default: postgres
+    options: [postgres, mysql, mongodb]
+
+  auth_provider:
+    type: string
+    description: Authentication provider (auth0, firebase, custom)
+    default: custom
+    options: [auth0, firebase, custom]
+
+structure:
+  directories:
+    - frontend
+    - frontend/src
+    - frontend/src/components
+    - frontend/src/pages
+    - frontend/src/services
+    - frontend/src/utils
+    - frontend/public
+    - backend
+    - backend/src
+    - backend/src/controllers
+    - backend/src/models
+    - backend/src/routes
+    - backend/src/middleware
+    - backend/tests
+    - shared
+    - shared/types
+    - docs
+
+files:
+  # Frontend files
+  - path: frontend/package.json
+    condition: frontend_framework == "react"
+    template: |
+      {
+        "name": "{{ service_name }}-frontend",
+        "version": "1.0.0",
+        "description": "{{ service_name }} Frontend",
+        "main": "src/index.js",
+        "scripts": {
+          "start": "react-scripts start",
+          "build": "react-scripts build",
+          "test": "react-scripts test",
+          "eject": "react-scripts eject"
+        },
+        "dependencies": {
+          "react": "^18.2.0",
+          "react-dom": "^18.2.0",
+          "react-router-dom": "^6.14.0",
+          "axios": "^1.4.0"{% if auth_provider == "auth0" %},
+          "@auth0/auth0-react": "^2.2.0"{% elif auth_provider == "firebase" %},
+          "firebase": "^10.1.0"{% endif %}
+        },
+        "devDependencies": {
+          "react-scripts": "^5.0.1",
+          "@testing-library/react": "^13.4.0",
+          "@testing-library/jest-dom": "^5.16.5"
+        },
+        "browserslist": {
+          "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+          ],
+          "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+          ]
+        }
+      }
+
+  - path: frontend/src/App.js
+    condition: frontend_framework == "react"
+    template: |
+      import React from 'react';
+      import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+      import './App.css';
+
+      import Home from './pages/Home';
+      import About from './pages/About';
+
+      function App() {
+        return (
+          <Router>
+            <div className="App">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/about" element={<About />} />
+              </Routes>
+            </div>
+          </Router>
+        );
+      }
+
+      export default App;
+
+  - path: frontend/src/pages/Home.js
+    condition: frontend_framework == "react"
+    template: |
+      import React, { useState, useEffect } from 'react';
+      import axios from 'axios';
+
+      const Home = () => {
+        const [data, setData] = useState(null);
+        const [loading, setLoading] = useState(true);
+
+        useEffect(() => {
+          const fetchData = async () => {
+            try {
+              const response = await axios.get('/api/health');
+              setData(response.data);
+            } catch (error) {
+              console.error('Error fetching data:', error);
+            } finally {
+              setLoading(false);
+            }
+          };
+
+          fetchData();
+        }, []);
+
+        if (loading) return <div>Loading...</div>;
+
+        return (
+          <div>
+            <h1>Welcome to {{ service_name }}</h1>
+            <p>Status: {data?.status || 'Unknown'}</p>
+          </div>
+        );
+      };
+
+      export default Home;
+
+  # Backend files
+  - path: backend/package.json
+    condition: backend_framework == "express"
+    template: |
+      {
+        "name": "{{ service_name }}-backend",
+        "version": "1.0.0",
+        "description": "{{ service_name }} Backend API",
+        "main": "src/index.js",
+        "scripts": {
+          "start": "node src/index.js",
+          "dev": "nodemon src/index.js",
+          "test": "jest"
+        },
+        "dependencies": {
+          "express": "^4.18.0",
+          "cors": "^2.8.5",
+          "helmet": "^7.0.0",
+          "dotenv": "^16.0.0",
+          "express-rate-limit": "^6.8.0"{% if database_type == "postgres" %},
+          "pg": "^8.11.0",
+          "sequelize": "^6.32.0"{% elif database_type == "mongodb" %},
+          "mongoose": "^7.3.0"{% endif %}{% if auth_provider == "custom" %},
+          "jsonwebtoken": "^9.0.0",
+          "bcrypt": "^5.1.0"{% endif %}
+        },
+        "devDependencies": {
+          "jest": "^29.5.0",
+          "nodemon": "^2.0.22",
+          "supertest": "^6.3.0"
+        }
+      }
+
+  - path: backend/src/index.js
+    condition: backend_framework == "express"
+    template: |
+      const express = require('express');
+      const cors = require('cors');
+      const helmet = require('helmet');
+      const rateLimit = require('express-rate-limit');
+      require('dotenv').config();
+
+      const app = express();
+      const PORT = process.env.PORT || 3001;
+
+      // Security middleware
+      app.use(helmet());
+      app.use(cors({
+        origin: process.env.FRONTEND_URL || 'http://localhost:3000'
+      }));
+
+      // Rate limiting
+      const limiter = rateLimit({
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        max: 100 // limit each IP to 100 requests per windowMs
+      });
+      app.use(limiter);
+
+      // Body parsing
+      app.use(express.json());
+      app.use(express.urlencoded({ extended: true }));
+
+      // Routes
+      app.get('/api/health', (req, res) => {
+        res.json({
+          status: 'healthy',
+          service: '{{ service_name }}',
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      app.get('/api', (req, res) => {
+        res.json({ message: 'Welcome to {{ service_name }} API' });
+      });
+
+      // Error handling
+      app.use((err, req, res, next) => {
+        console.error(err.stack);
+        res.status(500).json({ error: 'Something went wrong!' });
+      });
+
+      // 404 handler
+      app.use('*', (req, res) => {
+        res.status(404).json({ error: 'Route not found' });
+      });
+
+      app.listen(PORT, () => {
+        console.log(`{{ service_name }} backend running on port ${PORT}`);
+      });
+
+  # Docker files
+  - path: docker-compose.yml
+    template: |
+      version: '3.8'
+
+      services:
+        frontend:
+          build:
+            context: ./frontend
+            dockerfile: Dockerfile
+          ports:
+            - "3000:3000"
+          environment:
+            - REACT_APP_API_URL=http://localhost:3001
+          depends_on:
+            - backend
+
+        backend:
+          build:
+            context: ./backend
+            dockerfile: Dockerfile
+          ports:
+            - "3001:3001"
+          environment:
+            - NODE_ENV=development
+            - FRONTEND_URL=http://localhost:3000
+          {% if database_type == "postgres" %}
+          depends_on:
+            - postgres
+          {% elif database_type == "mongodb" %}
+          depends_on:
+            - mongodb
+          {% endif %}
+
+        {% if database_type == "postgres" %}
+        postgres:
+          image: postgres:15
+          environment:
+            POSTGRES_DB: {{ service_name }}
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: password
+          volumes:
+            - postgres_data:/var/lib/postgresql/data
+          ports:
+            - "5432:5432"
+        {% elif database_type == "mongodb" %}
+        mongodb:
+          image: mongo:6
+          volumes:
+            - mongo_data:/data/db
+          ports:
+            - "27017:27017"
+        {% endif %}
+
+      {% if database_type == "postgres" %}
+      volumes:
+        postgres_data:
+      {% elif database_type == "mongodb" %}
+      volumes:
+        mongo_data:
+      {% endif %}
+
+  - path: frontend/Dockerfile
+    template: |
+      FROM node:18-alpine AS build
+
+      WORKDIR /app
+
+      COPY package*.json ./
+      RUN npm ci
+
+      COPY . .
+      RUN npm run build
+
+      FROM nginx:alpine
+      COPY --from=build /app/build /usr/share/nginx/html
+      COPY nginx.conf /etc/nginx/nginx.conf
+
+      EXPOSE 3000
+
+      CMD ["nginx", "-g", "daemon off;"]
+
+  - path: backend/Dockerfile
+    template: |
+      FROM node:18-alpine
+
+      WORKDIR /app
+
+      COPY package*.json ./
+      RUN npm ci --only=production
+
+      COPY src/ ./src/
+
+      EXPOSE 3001
+
+      CMD ["node", "src/index.js"]
+
+ci_cd:
+  github_actions:
+    - name: Web App CI/CD
+      path: .github/workflows/webapp.yml
+      template: |
+        name: Web App CI/CD
+
+        on:
+          push:
+            branches: [main, develop]
+          pull_request:
+            branches: [main]
+
+        jobs:
+          test-frontend:
+            runs-on: ubuntu-latest
+            defaults:
+              run:
+                working-directory: ./frontend
+
+            steps:
+              - uses: actions/checkout@v3
+
+              - name: Setup Node.js
+                uses: actions/setup-node@v3
+                with:
+                  node-version: '18'
+                  cache: 'npm'
+                  cache-dependency-path: frontend/package-lock.json
+
+              - name: Install dependencies
+                run: npm ci
+
+              - name: Run tests
+                run: npm test -- --coverage --watchAll=false
+
+              - name: Build
+                run: npm run build
+
+          test-backend:
+            runs-on: ubuntu-latest
+            defaults:
+              run:
+                working-directory: ./backend
+
+            steps:
+              - uses: actions/checkout@v3
+
+              - name: Setup Node.js
+                uses: actions/setup-node@v3
+                with:
+                  node-version: '18'
+                  cache: 'npm'
+                  cache-dependency-path: backend/package-lock.json
+
+              - name: Install dependencies
+                run: npm ci
+
+              - name: Run tests
+                run: npm test
+
+          build-and-deploy:
+            needs: [test-frontend, test-backend]
+            runs-on: ubuntu-latest
+            if: github.ref == 'refs/heads/main'
+
+            steps:
+              - uses: actions/checkout@v3
+
+              - name: Build and push Docker images
+                run: |
+                  docker build -t {{ service_name }}-frontend:${{ github.sha }} ./frontend
+                  docker build -t {{ service_name }}-backend:${{ github.sha }} ./backend
+                  echo "Push to registry here"
+
+deployment:
+  kubernetes:
+    - name: Frontend Deployment
+      path: k8s/frontend-deployment.yaml
+      template: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: {{ service_name }}-frontend
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              app: {{ service_name }}-frontend
+          template:
+            metadata:
+              labels:
+                app: {{ service_name }}-frontend
+            spec:
+              containers:
+              - name: frontend
+                image: {{ service_name }}-frontend:latest
+                ports:
+                - containerPort: 3000
+                env:
+                - name: REACT_APP_API_URL
+                  value: "http://{{ service_name }}-backend:3001"
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ service_name }}-frontend
+        spec:
+          ports:
+          - port: 3000
+            targetPort: 3000
+          selector:
+            app: {{ service_name }}-frontend
+
+    - name: Backend Deployment
+      path: k8s/backend-deployment.yaml
+      template: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: {{ service_name }}-backend
+        spec:
+          replicas: 3
+          selector:
+            matchLabels:
+              app: {{ service_name }}-backend
+          template:
+            metadata:
+              labels:
+                app: {{ service_name }}-backend
+            spec:
+              containers:
+              - name: backend
+                image: {{ service_name }}-backend:latest
+                ports:
+                - containerPort: 3001
+                env:
+                - name: NODE_ENV
+                  value: production
+                - name: FRONTEND_URL
+                  value: "http://{{ service_name }}-frontend:3000"
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {{ service_name }}-backend
+        spec:
+          ports:
+          - port: 3001
+            targetPort: 3001
+          selector:
+            app: {{ service_name }}-backend

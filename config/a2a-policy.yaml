@@ -1,0 +1,190 @@
+# A2A Broker Policy Configuration
+# Phase 4: P4-T1-S2 - Policy Configuration
+
+# Whitelist of allowed capabilities and agents
+whitelist:
+  capabilities:
+    # Security capabilities
+    - security_scan
+    - vulnerability_detection
+    - compliance_check
+    - secret_detection
+    - dependency_scan
+
+    # Testing capabilities
+    - test_generation
+    - mutation_testing
+    - property_testing
+    - coverage_analysis
+    - test_optimization
+
+    # Code review capabilities
+    - code_review
+    - quality_analysis
+    - complexity_check
+    - style_check
+    - documentation_check
+
+    # Build/Deploy capabilities
+    - build_verification
+    - deployment_check
+    - environment_validation
+
+  agents:
+    # Security agents
+    - security-scanner-*
+    - semgrep-agent-*
+    - codeql-agent-*
+    - osv-scanner-*
+
+    # Test generation agents
+    - test-gen-*
+    - pynguin-agent-*
+    - hypothesis-agent-*
+    - mutation-test-*
+
+    # Code review agents
+    - review-agent-*
+    - quality-checker-*
+
+    # Official T-Developer agents
+    - t-developer-*
+
+# Blacklist of dangerous capabilities and malicious agents
+blacklist:
+  capabilities:
+    # Dangerous operations
+    - system_exec
+    - file_delete_all
+    - network_scan
+    - privilege_escalation
+    - data_exfiltration
+
+    # Untrusted operations
+    - direct_database_access
+    - credential_harvesting
+    - backdoor_installation
+
+  agents:
+    # Known malicious patterns
+    - malicious-*
+    - untrusted-*
+    - test-malware-*
+    - exploit-*
+
+# Rate limiting configuration
+rate_limits:
+  # Default rate limit for all agents
+  default: 60  # requests per minute
+
+  # Specific limits by capability
+  by_capability:
+    security_scan: 10  # Heavy operation
+    vulnerability_detection: 15
+    test_generation: 30
+    mutation_testing: 5  # Very heavy
+    code_review: 20
+    build_verification: 10
+
+  # Specific limits by agent
+  by_agent:
+    security-scanner-v1: 20
+    test-gen-v1: 40
+    pynguin-agent-v1: 15
+
+# Timeout configuration (seconds)
+timeouts:
+  default: 30
+  by_capability:
+    security_scan: 120  # 2 minutes for deep scans
+    mutation_testing: 300  # 5 minutes for mutation tests
+    test_generation: 60
+    code_review: 45
+
+# Retry configuration
+retry:
+  max_attempts: 3
+  base_delay_ms: 1000
+  max_delay_ms: 10000
+  exponential_backoff: true
+
+# Audit configuration
+audit:
+  enabled: true
+  log_level: INFO
+  log_requests: true
+  log_responses: true
+  log_errors: true
+  retention_days: 30
+
+# Authentication configuration
+authentication:
+  mtls:
+    enabled: true
+    cert_path: /etc/a2a/certs/broker.crt
+    key_path: /etc/a2a/certs/broker.key
+    ca_path: /etc/a2a/certs/ca.crt
+    verify_client: true
+
+  api_keys:
+    enabled: true
+    rotation_days: 90
+
+# Circuit breaker configuration
+circuit_breaker:
+  enabled: true
+  failure_threshold: 5
+  recovery_timeout_seconds: 60
+  half_open_requests: 3
+
+# Monitoring configuration
+monitoring:
+  metrics:
+    enabled: true
+    port: 9090
+    endpoint: /metrics
+
+  health_check:
+    enabled: true
+    endpoint: /health
+    interval_seconds: 30
+
+  tracing:
+    enabled: true
+    sampling_rate: 0.1  # 10% sampling
+
+# Resource limits
+resources:
+  max_concurrent_requests: 100
+  max_request_size_mb: 10
+  max_response_size_mb: 50
+  connection_pool_size: 50
+
+# Environment-specific overrides
+environments:
+  development:
+    rate_limits:
+      default: 120  # More lenient in dev
+    timeouts:
+      default: 60
+    authentication:
+      mtls:
+        enabled: false  # Easier local testing
+
+  staging:
+    rate_limits:
+      default: 80
+    monitoring:
+      tracing:
+        sampling_rate: 0.5  # More sampling in staging
+
+  production:
+    rate_limits:
+      default: 60
+    authentication:
+      mtls:
+        enabled: true
+        verify_client: true
+    monitoring:
+      tracing:
+        sampling_rate: 0.01  # 1% in production

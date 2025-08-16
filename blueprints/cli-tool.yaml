@@ -1,0 +1,545 @@
+# CLI Tool Blueprint
+# Phase 5: P5-T2 - Blueprint Agent
+
+name: cli-tool
+description: Command-line interface tool with subcommands
+version: 1.0.0
+
+variables:
+  tool_name:
+    type: string
+    description: Name of the CLI tool
+    required: true
+
+  language:
+    type: string
+    description: Programming language (python, go, rust, node)
+    default: python
+    options: [python, go, rust, node]
+
+  package_manager:
+    type: string
+    description: Package manager for distribution (pip, npm, cargo, go)
+    default: pip
+    options: [pip, npm, cargo, go]
+
+  config_format:
+    type: string
+    description: Configuration file format (yaml, json, toml)
+    default: yaml
+    options: [yaml, json, toml]
+
+structure:
+  directories:
+    - src
+    - src/commands
+    - src/utils
+    - src/config
+    - tests
+    - tests/unit
+    - tests/integration
+    - docs
+    - examples
+
+files:
+  # Python CLI files
+  - path: pyproject.toml
+    condition: language == "python"
+    template: |
+      [build-system]
+      requires = ["setuptools>=61.0", "wheel"]
+      build-backend = "setuptools.build_meta"
+
+      [project]
+      name = "{{ tool_name }}"
+      version = "1.0.0"
+      description = "{{ tool_name }} command-line tool"
+      readme = "README.md"
+      authors = [
+        {name = "Your Name", email = "your.email@example.com"}
+      ]
+      classifiers = [
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+      ]
+      dependencies = [
+        "click>=8.1.0",
+        {% if config_format == "yaml" %}"pyyaml>=6.0",{% endif %}
+        {% if config_format == "toml" %}"tomli>=2.0.0",{% endif %}
+        "rich>=13.0.0",
+        "typer>=0.9.0"
+      ]
+      requires-python = ">=3.8"
+
+      [project.optional-dependencies]
+      dev = [
+        "pytest>=7.0",
+        "pytest-cov>=4.0",
+        "black>=23.0",
+        "flake8>=5.0",
+        "mypy>=1.0"
+      ]
+
+      [project.scripts]
+      {{ tool_name }} = "src.main:main"
+
+      [project.urls]
+      Homepage = "https://github.com/username/{{ tool_name }}"
+      Repository = "https://github.com/username/{{ tool_name }}"
+      Issues = "https://github.com/username/{{ tool_name }}/issues"
+
+  - path: src/main.py
+    condition: language == "python"
+    template: |
+      """{{ tool_name }} - Main CLI entry point"""
+
+      import sys
+      from pathlib import Path
+      from typing import Optional
+
+      import typer
+      from rich.console import Console
+      from rich.table import Table
+
+      from .commands import init, config, process
+      from .config.manager import ConfigManager
+
+      app = typer.Typer(
+          name="{{ tool_name }}",
+          help="{{ tool_name }} command-line tool",
+          add_completion=False
+      )
+      console = Console()
+
+      # Add subcommands
+      app.add_typer(init.app, name="init", help="Initialize {{ tool_name }}")
+      app.add_typer(config.app, name="config", help="Manage configuration")
+      app.add_typer(process.app, name="process", help="Process operations")
+
+      @app.command()
+      def version():
+          """Show version information"""
+          console.print("{{ tool_name }} v1.0.0", style="bold green")
+
+      @app.command()
+      def status():
+          """Show status information"""
+          config_manager = ConfigManager()
+
+          table = Table(title="{{ tool_name }} Status")
+          table.add_column("Property", style="cyan")
+          table.add_column("Value", style="magenta")
+
+          table.add_row("Config File", str(config_manager.config_file))
+          table.add_row("Config Exists", "Yes" if config_manager.config_exists() else "No")
+
+          console.print(table)
+
+      def main():
+          """Main entry point"""
+          try:
+              app()
+          except KeyboardInterrupt:
+              console.print("\n[red]Operation cancelled by user[/red]")
+              sys.exit(1)
+          except Exception as e:
+              console.print(f"[red]Error: {e}[/red]")
+              sys.exit(1)
+
+      if __name__ == "__main__":
+          main()
+
+  - path: src/commands/init.py
+    condition: language == "python"
+    template: |
+      """Initialize command"""
+
+      import typer
+      from rich.console import Console
+      from pathlib import Path
+
+      from ..config.manager import ConfigManager
+
+      app = typer.Typer()
+      console = Console()
+
+      @app.command()
+      def project(
+          name: str = typer.Argument(..., help="Project name"),
+          path: Path = typer.Option(Path.cwd(), "--path", "-p", help="Project path")
+      ):
+          """Initialize a new project"""
+          project_path = path / name
+
+          if project_path.exists():
+              console.print(f"[red]Directory {project_path} already exists[/red]")
+              raise typer.Exit(1)
+
+          # Create project structure
+          project_path.mkdir(parents=True)
+          (project_path / "src").mkdir()
+          (project_path / "tests").mkdir()
+          (project_path / "docs").mkdir()
+
+          # Create config file
+          config_manager = ConfigManager(project_path / "{{ tool_name }}.{{ config_format }}")
+          config_manager.create_default_config({"project_name": name})
+
+          console.print(f"[green]Project {name} initialized at {project_path}[/green]")
+
+      @app.command()
+      def config(
+          path: Path = typer.Option(Path.cwd(), "--path", "-p", help="Config file path")
+      ):
+          """Initialize configuration file"""
+          config_manager = ConfigManager(path / "{{ tool_name }}.{{ config_format }}")
+
+          if config_manager.config_exists():
+              console.print("[yellow]Config file already exists[/yellow]")
+              return
+
+          config_manager.create_default_config()
+          console.print(f"[green]Config file created at {config_manager.config_file}[/green]")
+
+  # Go CLI files
+  - path: go.mod
+    condition: language == "go"
+    template: |
+      module {{ tool_name }}
+
+      go 1.21
+
+      require (
+          github.com/spf13/cobra v1.7.0
+          github.com/spf13/viper v1.16.0
+          {% if config_format == "yaml" %}gopkg.in/yaml.v3 v3.0.1{% endif %}
+      )
+
+  - path: main.go
+    condition: language == "go"
+    template: |
+      package main
+
+      import (
+          "fmt"
+          "os"
+
+          "{{ tool_name }}/cmd"
+      )
+
+      func main() {
+          if err := cmd.Execute(); err != nil {
+              fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+              os.Exit(1)
+          }
+      }
+
+  - path: cmd/root.go
+    condition: language == "go"
+    template: |
+      package cmd
+
+      import (
+          "fmt"
+          "os"
+
+          "github.com/spf13/cobra"
+          "github.com/spf13/viper"
+      )
+
+      var cfgFile string
+
+      var rootCmd = &cobra.Command{
+          Use:   "{{ tool_name }}",
+          Short: "{{ tool_name }} command-line tool",
+          Long:  `{{ tool_name }} is a CLI tool for managing your workflow.`,
+      }
+
+      func Execute() error {
+          return rootCmd.Execute()
+      }
+
+      func init() {
+          cobra.OnInitialize(initConfig)
+
+          rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.{{ tool_name }}.{{ config_format }})")
+          rootCmd.AddCommand(versionCmd)
+          rootCmd.AddCommand(initCmd)
+          rootCmd.AddCommand(configCmd)
+      }
+
+      func initConfig() {
+          if cfgFile != "" {
+              viper.SetConfigFile(cfgFile)
+          } else {
+              home, err := os.UserHomeDir()
+              if err != nil {
+                  fmt.Fprintf(os.Stderr, "Error getting home directory: %v\n", err)
+                  os.Exit(1)
+              }
+
+              viper.AddConfigPath(home)
+              viper.SetConfigType("{{ config_format }}")
+              viper.SetConfigName(".{{ tool_name }}")
+          }
+
+          viper.AutomaticEnv()
+
+          if err := viper.ReadInConfig(); err == nil {
+              fmt.Fprintf(os.Stderr, "Using config file: %s\n", viper.ConfigFileUsed())
+          }
+      }
+
+      var versionCmd = &cobra.Command{
+          Use:   "version",
+          Short: "Print the version number",
+          Run: func(cmd *cobra.Command, args []string) {
+              fmt.Println("{{ tool_name }} v1.0.0")
+          },
+      }
+
+  # Dockerfile
+  - path: Dockerfile
+    template: |
+      {% if language == "python" %}
+      FROM python:3.11-slim
+
+      WORKDIR /app
+
+      COPY pyproject.toml .
+      RUN pip install .
+
+      COPY src/ ./src/
+
+      ENTRYPOINT ["{{ tool_name }}"]
+      {% elif language == "go" %}
+      FROM golang:1.21 AS builder
+
+      WORKDIR /app
+      COPY go.* ./
+      RUN go mod download
+
+      COPY . .
+      RUN CGO_ENABLED=0 GOOS=linux go build -o {{ tool_name }} .
+
+      FROM alpine:latest
+      RUN apk --no-cache add ca-certificates
+      WORKDIR /root/
+      COPY --from=builder /app/{{ tool_name }} .
+
+      ENTRYPOINT ["./{{ tool_name }}"]
+      {% elif language == "node" %}
+      FROM node:18-alpine
+
+      WORKDIR /app
+
+      COPY package*.json ./
+      RUN npm ci --only=production
+
+      COPY . .
+      RUN npm link
+
+      ENTRYPOINT ["{{ tool_name }}"]
+      {% elif language == "rust" %}
+      FROM rust:1.70 AS builder
+
+      WORKDIR /app
+      COPY Cargo.* ./
+      RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --release
+
+      COPY . .
+      RUN cargo build --release
+
+      FROM debian:bookworm-slim
+      RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+      COPY --from=builder /app/target/release/{{ tool_name }} /usr/local/bin/{{ tool_name }}
+
+      ENTRYPOINT ["{{ tool_name }}"]
+      {% endif %}
+
+  # Configuration examples
+  - path: examples/config.{{ config_format }}
+    template: |
+      {% if config_format == "yaml" %}
+      # {{ tool_name }} configuration
+      project:
+        name: "example-project"
+        version: "1.0.0"
+
+      settings:
+        debug: false
+        output_format: "json"
+        timeout: 30
+
+      defaults:
+        author: "Your Name"
+        license: "MIT"
+      {% elif config_format == "json" %}
+      {
+        "project": {
+          "name": "example-project",
+          "version": "1.0.0"
+        },
+        "settings": {
+          "debug": false,
+          "output_format": "json",
+          "timeout": 30
+        },
+        "defaults": {
+          "author": "Your Name",
+          "license": "MIT"
+        }
+      }
+      {% elif config_format == "toml" %}
+      [project]
+      name = "example-project"
+      version = "1.0.0"
+
+      [settings]
+      debug = false
+      output_format = "json"
+      timeout = 30
+
+      [defaults]
+      author = "Your Name"
+      license = "MIT"
+      {% endif %}
+
+ci_cd:
+  github_actions:
+    - name: CLI Tool CI/CD
+      path: .github/workflows/cli.yml
+      template: |
+        name: CLI Tool CI/CD
+
+        on:
+          push:
+            branches: [main]
+            tags: ['v*']
+          pull_request:
+            branches: [main]
+
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            strategy:
+              matrix:
+                {% if language == "python" %}
+                python-version: ['3.8', '3.9', '3.10', '3.11']
+
+            steps:
+              - uses: actions/checkout@v3
+
+              - name: Set up Python ${{ matrix.python-version }}
+                uses: actions/setup-python@v4
+                with:
+                  python-version: ${{ matrix.python-version }}
+
+              - name: Install dependencies
+                run: |
+                  python -m pip install --upgrade pip
+                  pip install -e .[dev]
+
+              - name: Run tests
+                run: |
+                  pytest tests/ --cov=src --cov-report=xml
+
+              - name: Lint
+                run: |
+                  flake8 src tests
+                  black --check src tests
+                  mypy src
+                {% elif language == "go" %}
+                go-version: ['1.20', '1.21']
+
+            steps:
+              - uses: actions/checkout@v3
+
+              - name: Set up Go ${{ matrix.go-version }}
+                uses: actions/setup-go@v4
+                with:
+                  go-version: ${{ matrix.go-version }}
+
+              - name: Build
+                run: go build -v ./...
+
+              - name: Test
+                run: go test -v ./...
+
+              - name: Lint
+                uses: golangci/golangci-lint-action@v3
+                {% endif %}
+
+          release:
+            needs: test
+            runs-on: ubuntu-latest
+            if: startsWith(github.ref, 'refs/tags/v')
+
+            steps:
+              - uses: actions/checkout@v3
+
+              {% if language == "python" %}
+              - name: Set up Python
+                uses: actions/setup-python@v4
+                with:
+                  python-version: '3.11'
+
+              - name: Build package
+                run: |
+                  python -m pip install --upgrade pip build
+                  python -m build
+
+              - name: Publish to PyPI
+                uses: pypa/gh-action-pypi-publish@release/v1
+                with:
+                  password: ${{ secrets.PYPI_API_TOKEN }}
+              {% elif language == "go" %}
+              - name: Set up Go
+                uses: actions/setup-go@v4
+                with:
+                  go-version: '1.21'
+
+              - name: Build for multiple platforms
+                run: |
+                  GOOS=linux GOARCH=amd64 go build -o {{ tool_name }}-linux-amd64 .
+                  GOOS=darwin GOARCH=amd64 go build -o {{ tool_name }}-darwin-amd64 .
+                  GOOS=windows GOARCH=amd64 go build -o {{ tool_name }}-windows-amd64.exe .
+
+              - name: Create Release
+                uses: softprops/action-gh-release@v1
+                with:
+                  files: |
+                    {{ tool_name }}-linux-amd64
+                    {{ tool_name }}-darwin-amd64
+                    {{ tool_name }}-windows-amd64.exe
+              {% endif %}
+
+deployment:
+  package_managers:
+    {% if language == "python" %}
+    - name: PyPI Package
+      platform: pypi
+      config:
+        package_name: {{ tool_name }}
+        description: "{{ tool_name }} command-line tool"
+        keywords: ["cli", "tool", "automation"]
+    {% elif language == "go" %}
+    - name: Go Module
+      platform: go_module
+      config:
+        module_name: github.com/username/{{ tool_name }}
+        description: "{{ tool_name }} command-line tool"
+    {% elif language == "node" %}
+    - name: NPM Package
+      platform: npm
+      config:
+        package_name: {{ tool_name }}
+        description: "{{ tool_name }} command-line tool"
+        keywords: ["cli", "tool", "automation"]
+    {% endif %}

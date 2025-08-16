@@ -1,0 +1,784 @@
+# Serverless Function Blueprint
+# Phase 5: P5-T2 - Blueprint Agent
+
+name: serverless-function
+description: Serverless function with cloud deployment
+version: 1.0.0
+
+variables:
+  function_name:
+    type: string
+    description: Name of the serverless function
+    required: true
+
+  cloud_provider:
+    type: string
+    description: Cloud provider (aws, gcp, azure)
+    default: aws
+    options: [aws, gcp, azure]
+
+  runtime:
+    type: string
+    description: Runtime environment (python, node, go, java)
+    default: python
+    options: [python, node, go, java]
+
+  trigger_type:
+    type: string
+    description: Function trigger type (http, event, schedule)
+    default: http
+    options: [http, event, schedule]
+
+  memory_size:
+    type: integer
+    description: Memory allocation in MB
+    default: 128
+
+  timeout:
+    type: integer
+    description: Function timeout in seconds
+    default: 30
+
+structure:
+  directories:
+    - src
+    - tests
+    - infrastructure
+    - docs
+    - events
+
+files:
+  # Python AWS Lambda
+  - path: src/handler.py
+    condition: runtime == "python" and cloud_provider == "aws"
+    template: |
+      """{{ function_name }} AWS Lambda Handler"""
+
+      import json
+      import logging
+      import os
+      from typing import Dict, Any
+
+      # Configure logging
+      logger = logging.getLogger()
+      logger.setLevel(logging.INFO)
+
+      def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+          """
+          AWS Lambda handler function
+
+          Args:
+              event: Lambda event data
+              context: Lambda context object
+
+          Returns:
+              Response dictionary with statusCode and body
+          """
+          logger.info(f"Received event: {json.dumps(event)}")
+
+          try:
+              # Extract relevant data from event
+              {% if trigger_type == "http" %}
+              http_method = event.get('httpMethod', 'GET')
+              path = event.get('path', '/')
+              query_params = event.get('queryStringParameters') or {}
+              body = event.get('body')
+
+              # Process HTTP request
+              response_body = {
+                  "message": "Hello from {{ function_name }}!",
+                  "method": http_method,
+                  "path": path,
+                  "query": query_params,
+                  "function": "{{ function_name }}",
+                  "requestId": context.aws_request_id
+              }
+
+              if body:
+                  try:
+                      response_body["received_data"] = json.loads(body)
+                  except json.JSONDecodeError:
+                      response_body["received_data"] = body
+
+              return {
+                  "statusCode": 200,
+                  "headers": {
+                      "Content-Type": "application/json",
+                      "Access-Control-Allow-Origin": "*"
+                  },
+                  "body": json.dumps(response_body)
+              }
+              {% elif trigger_type == "event" %}
+              # Process event data
+              records = event.get('Records', [])
+              processed_records = []
+
+              for record in records:
+                  # Process each record
+                  processed_record = {
+                      "eventSource": record.get('eventSource'),
+                      "eventName": record.get('eventName'),
+                      "timestamp": record.get('eventTime'),
+                      "processed": True
+                  }
+                  processed_records.append(processed_record)
+                  logger.info(f"Processed record: {processed_record}")
+
+              return {
+                  "processedRecords": len(processed_records),
+                  "records": processed_records
+              }
+              {% elif trigger_type == "schedule" %}
+              # Process scheduled event
+              logger.info("Scheduled function execution")
+
+              # Your scheduled logic here
+              result = {
+                  "message": "Scheduled task completed",
+                  "function": "{{ function_name }}",
+                  "timestamp": event.get('time'),
+                  "requestId": context.aws_request_id
+              }
+
+              return result
+              {% endif %}
+
+          except Exception as e:
+              logger.error(f"Error processing event: {str(e)}")
+              {% if trigger_type == "http" %}
+              return {
+                  "statusCode": 500,
+                  "headers": {
+                      "Content-Type": "application/json"
+                  },
+                  "body": json.dumps({
+                      "error": "Internal server error",
+                      "message": str(e)
+                  })
+              }
+              {% else %}
+              raise e
+              {% endif %}
+
+      # Health check function for monitoring
+      def health_check_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+          """Health check endpoint"""
+          return {
+              "statusCode": 200,
+              "body": json.dumps({
+                  "status": "healthy",
+                  "function": "{{ function_name }}",
+                  "version": "1.0.0"
+              })
+          }
+
+  - path: requirements.txt
+    condition: runtime == "python"
+    template: |
+      # Core dependencies
+      boto3>=1.28.0
+      botocore>=1.31.0
+
+      # Development dependencies
+      pytest>=7.4.0
+      pytest-mock>=3.11.0
+      moto>=4.2.0
+
+      # Optional dependencies based on use case
+      # requests>=2.31.0  # For HTTP calls
+      # pandas>=2.0.0     # For data processing
+      # numpy>=1.24.0     # For numerical computing
+
+  # Node.js AWS Lambda
+  - path: src/index.js
+    condition: runtime == "node" and cloud_provider == "aws"
+    template: |
+      /**
+       * {{ function_name }} AWS Lambda Handler
+       */
+
+      const AWS = require('aws-sdk');
+
+      {% if trigger_type == "http" %}
+      exports.handler = async (event, context) => {
+          console.log('Received event:', JSON.stringify(event, null, 2));
+
+          try {
+              const { httpMethod, path, queryStringParameters, body } = event;
+
+              const response = {
+                  message: 'Hello from {{ function_name }}!',
+                  method: httpMethod,
+                  path: path,
+                  query: queryStringParameters || {},
+                  function: '{{ function_name }}',
+                  requestId: context.awsRequestId
+              };
+
+              if (body) {
+                  try {
+                      response.receivedData = JSON.parse(body);
+                  } catch (e) {
+                      response.receivedData = body;
+                  }
+              }
+
+              return {
+                  statusCode: 200,
+                  headers: {
+                      'Content-Type': 'application/json',
+                      'Access-Control-Allow-Origin': '*'
+                  },
+                  body: JSON.stringify(response)
+              };
+          } catch (error) {
+              console.error('Error:', error);
+              return {
+                  statusCode: 500,
+                  headers: {
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                      error: 'Internal server error',
+                      message: error.message
+                  })
+              };
+          }
+      };
+      {% elif trigger_type == "event" %}
+      exports.handler = async (event, context) => {
+          console.log('Received event:', JSON.stringify(event, null, 2));
+
+          try {
+              const records = event.Records || [];
+              const processedRecords = [];
+
+              for (const record of records) {
+                  const processedRecord = {
+                      eventSource: record.eventSource,
+                      eventName: record.eventName,
+                      timestamp: record.eventTime,
+                      processed: true
+                  };
+                  processedRecords.push(processedRecord);
+                  console.log('Processed record:', processedRecord);
+              }
+
+              return {
+                  processedRecords: processedRecords.length,
+                  records: processedRecords
+              };
+          } catch (error) {
+              console.error('Error:', error);
+              throw error;
+          }
+      };
+      {% endif %}
+
+  - path: package.json
+    condition: runtime == "node"
+    template: |
+      {
+        "name": "{{ function_name }}",
+        "version": "1.0.0",
+        "description": "{{ function_name }} serverless function",
+        "main": "src/index.js",
+        "scripts": {
+          "test": "jest",
+          "deploy": "serverless deploy",
+          "local": "serverless invoke local -f {{ function_name }}"
+        },
+        "dependencies": {
+          {% if cloud_provider == "aws" %}"aws-sdk": "^2.1400.0"{% endif %}
+        },
+        "devDependencies": {
+          "jest": "^29.5.0",
+          "serverless": "^3.33.0",
+          {% if cloud_provider == "aws" %}"serverless-offline": "^12.0.4"{% endif %}
+        }
+      }
+
+  # Infrastructure as Code
+  - path: infrastructure/serverless.yml
+    condition: cloud_provider == "aws"
+    template: |
+      service: {{ function_name }}
+
+      frameworkVersion: '3'
+
+      provider:
+        name: aws
+        runtime: {% if runtime == "python" %}python3.11{% elif runtime == "node" %}nodejs18.x{% elif runtime == "go" %}go1.x{% elif runtime == "java" %}java11{% endif %}
+        stage: ${opt:stage, 'dev'}
+        region: ${opt:region, 'us-east-1'}
+        memorySize: {{ memory_size }}
+        timeout: {{ timeout }}
+
+        environment:
+          STAGE: ${self:provider.stage}
+          FUNCTION_NAME: {{ function_name }}
+
+        iam:
+          role:
+            statements:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+
+      functions:
+        {{ function_name }}:
+          {% if runtime == "python" %}handler: src.handler.lambda_handler{% elif runtime == "node" %}handler: src/index.handler{% endif %}
+          {% if trigger_type == "http" %}
+          events:
+            - http:
+                path: /
+                method: ANY
+                cors: true
+            - http:
+                path: /{proxy+}
+                method: ANY
+                cors: true
+          {% elif trigger_type == "schedule" %}
+          events:
+            - schedule:
+                rate: rate(5 minutes)
+                enabled: true
+          {% elif trigger_type == "event" %}
+          events:
+            - s3:
+                bucket: ${self:service}-${self:provider.stage}-bucket
+                event: s3:ObjectCreated:*
+          {% endif %}
+
+        healthCheck:
+          {% if runtime == "python" %}handler: src.handler.health_check_handler{% elif runtime == "node" %}handler: src/health.handler{% endif %}
+          events:
+            - http:
+                path: /health
+                method: GET
+                cors: true
+
+      {% if trigger_type == "event" %}
+      resources:
+        Resources:
+          S3Bucket:
+            Type: AWS::S3::Bucket
+            Properties:
+              BucketName: ${self:service}-${self:provider.stage}-bucket
+      {% endif %}
+
+      plugins:
+        - serverless-offline
+
+      custom:
+        serverless-offline:
+          httpPort: 3000
+          lambdaPort: 3002
+
+  - path: infrastructure/terraform/main.tf
+    condition: cloud_provider == "aws"
+    template: |
+      terraform {
+        required_version = ">= 1.0"
+
+        required_providers {
+          aws = {
+            source  = "hashicorp/aws"
+            version = "~> 5.0"
+          }
+        }
+
+        backend "s3" {
+          bucket = "{{ function_name }}-terraform-state"
+          key    = "terraform.tfstate"
+          region = "us-east-1"
+        }
+      }
+
+      provider "aws" {
+        region = var.aws_region
+      }
+
+      # IAM role for Lambda
+      resource "aws_iam_role" "lambda_role" {
+        name = "{{ function_name }}-lambda-role"
+
+        assume_role_policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            {
+              Action = "sts:AssumeRole"
+              Effect = "Allow"
+              Principal = {
+                Service = "lambda.amazonaws.com"
+              }
+            }
+          ]
+        })
+      }
+
+      # Attach basic execution role policy
+      resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+        policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        role       = aws_iam_role.lambda_role.name
+      }
+
+      # Lambda function
+      resource "aws_lambda_function" "{{ function_name }}" {
+        filename         = "{{ function_name }}.zip"
+        function_name    = "{{ function_name }}"
+        role            = aws_iam_role.lambda_role.arn
+        handler         = {% if runtime == "python" %}"handler.lambda_handler"{% elif runtime == "node" %}"index.handler"{% endif %}
+        runtime         = {% if runtime == "python" %}"python3.11"{% elif runtime == "node" %}"nodejs18.x"{% endif %}
+        memory_size     = {{ memory_size }}
+        timeout         = {{ timeout }}
+
+        environment {
+          variables = {
+            STAGE = var.stage
+            FUNCTION_NAME = "{{ function_name }}"
+          }
+        }
+
+        tags = var.tags
+      }
+
+      {% if trigger_type == "http" %}
+      # API Gateway
+      resource "aws_api_gateway_rest_api" "{{ function_name }}_api" {
+        name        = "{{ function_name }}-api"
+        description = "API for {{ function_name }}"
+
+        tags = var.tags
+      }
+
+      resource "aws_api_gateway_resource" "{{ function_name }}_resource" {
+        rest_api_id = aws_api_gateway_rest_api.{{ function_name }}_api.id
+        parent_id   = aws_api_gateway_rest_api.{{ function_name }}_api.root_resource_id
+        path_part   = "{proxy+}"
+      }
+
+      resource "aws_api_gateway_method" "{{ function_name }}_method" {
+        rest_api_id   = aws_api_gateway_rest_api.{{ function_name }}_api.id
+        resource_id   = aws_api_gateway_resource.{{ function_name }}_resource.id
+        http_method   = "ANY"
+        authorization = "NONE"
+      }
+
+      resource "aws_api_gateway_integration" "{{ function_name }}_integration" {
+        rest_api_id = aws_api_gateway_rest_api.{{ function_name }}_api.id
+        resource_id = aws_api_gateway_resource.{{ function_name }}_resource.id
+        http_method = aws_api_gateway_method.{{ function_name }}_method.http_method
+
+        integration_http_method = "POST"
+        type                   = "AWS_PROXY"
+        uri                    = aws_lambda_function.{{ function_name }}.invoke_arn
+      }
+
+      resource "aws_lambda_permission" "api_gateway" {
+        statement_id  = "AllowExecutionFromAPIGateway"
+        action        = "lambda:InvokeFunction"
+        function_name = aws_lambda_function.{{ function_name }}.function_name
+        principal     = "apigateway.amazonaws.com"
+        source_arn    = "${aws_api_gateway_rest_api.{{ function_name }}_api.execution_arn}/*/*"
+      }
+
+      resource "aws_api_gateway_deployment" "{{ function_name }}_deployment" {
+        depends_on = [
+          aws_api_gateway_integration.{{ function_name }}_integration
+        ]
+
+        rest_api_id = aws_api_gateway_rest_api.{{ function_name }}_api.id
+        stage_name  = var.stage
+      }
+      {% endif %}
+
+  # Tests
+  - path: tests/test_handler.py
+    condition: runtime == "python"
+    template: |
+      """Tests for {{ function_name }} handler"""
+
+      import json
+      import pytest
+      from unittest.mock import Mock
+
+      from src.handler import lambda_handler, health_check_handler
+
+
+      class TestLambdaHandler:
+          """Test Lambda handler function"""
+
+          def test_{% if trigger_type == "http" %}http_get_request{% else %}event_processing{% endif %}(self):
+              """Test {% if trigger_type == "http" %}HTTP GET request{% else %}event processing{% endif %}"""
+              {% if trigger_type == "http" %}
+              # Arrange
+              event = {
+                  "httpMethod": "GET",
+                  "path": "/test",
+                  "queryStringParameters": {"param": "value"},
+                  "body": None
+              }
+              context = Mock()
+              context.aws_request_id = "test-request-id"
+
+              # Act
+              response = lambda_handler(event, context)
+
+              # Assert
+              assert response["statusCode"] == 200
+              assert "application/json" in response["headers"]["Content-Type"]
+
+              body = json.loads(response["body"])
+              assert body["message"] == "Hello from {{ function_name }}!"
+              assert body["method"] == "GET"
+              assert body["path"] == "/test"
+              assert body["query"] == {"param": "value"}
+              {% else %}
+              # Arrange
+              event = {
+                  "Records": [
+                      {
+                          "eventSource": "aws:s3",
+                          "eventName": "ObjectCreated:Put",
+                          "eventTime": "2023-07-01T12:00:00.000Z"
+                      }
+                  ]
+              }
+              context = Mock()
+              context.aws_request_id = "test-request-id"
+
+              # Act
+              response = lambda_handler(event, context)
+
+              # Assert
+              assert response["processedRecords"] == 1
+              assert len(response["records"]) == 1
+              assert response["records"][0]["processed"] is True
+              {% endif %}
+
+          {% if trigger_type == "http" %}
+          def test_http_post_request_with_body(self):
+              """Test HTTP POST request with JSON body"""
+              # Arrange
+              event = {
+                  "httpMethod": "POST",
+                  "path": "/test",
+                  "queryStringParameters": None,
+                  "body": json.dumps({"key": "value"})
+              }
+              context = Mock()
+              context.aws_request_id = "test-request-id"
+
+              # Act
+              response = lambda_handler(event, context)
+
+              # Assert
+              assert response["statusCode"] == 200
+              body = json.loads(response["body"])
+              assert body["received_data"] == {"key": "value"}
+
+          def test_http_request_error_handling(self):
+              """Test error handling in HTTP request"""
+              # Arrange
+              event = {}  # Invalid event
+              context = Mock()
+              context.aws_request_id = "test-request-id"
+
+              # Act
+              response = lambda_handler(event, context)
+
+              # Assert
+              assert response["statusCode"] == 500
+              body = json.loads(response["body"])
+              assert "error" in body
+          {% endif %}
+
+          def test_health_check_handler(self):
+              """Test health check handler"""
+              # Arrange
+              event = {}
+              context = Mock()
+
+              # Act
+              response = health_check_handler(event, context)
+
+              # Assert
+              assert response["statusCode"] == 200
+              body = json.loads(response["body"])
+              assert body["status"] == "healthy"
+              assert body["function"] == "{{ function_name }}"
+
+  # Event examples
+  - path: events/{% if trigger_type == "http" %}http-get.json{% elif trigger_type == "event" %}s3-event.json{% elif trigger_type == "schedule" %}schedule-event.json{% endif %}
+    template: |
+      {% if trigger_type == "http" %}
+      {
+        "httpMethod": "GET",
+        "path": "/test",
+        "queryStringParameters": {
+          "param1": "value1",
+          "param2": "value2"
+        },
+        "headers": {
+          "Content-Type": "application/json",
+          "User-Agent": "test-client"
+        },
+        "body": null,
+        "isBase64Encoded": false
+      }
+      {% elif trigger_type == "event" %}
+      {
+        "Records": [
+          {
+            "eventVersion": "2.1",
+            "eventSource": "aws:s3",
+            "awsRegion": "us-east-1",
+            "eventTime": "2023-07-01T12:00:00.000Z",
+            "eventName": "ObjectCreated:Put",
+            "s3": {
+              "bucket": {
+                "name": "test-bucket"
+              },
+              "object": {
+                "key": "test-file.txt",
+                "size": 1024
+              }
+            }
+          }
+        ]
+      }
+      {% elif trigger_type == "schedule" %}
+      {
+        "id": "cdc73f9d-aea9-11e3-9d5a-835b769c0d9c",
+        "detail-type": "Scheduled Event",
+        "source": "aws.events",
+        "account": "123456789012",
+        "time": "2023-07-01T12:00:00Z",
+        "region": "us-east-1",
+        "detail": {}
+      }
+      {% endif %}
+
+ci_cd:
+  github_actions:
+    - name: Serverless Function CI/CD
+      path: .github/workflows/serverless.yml
+      template: |
+        name: Serverless Function CI/CD
+
+        on:
+          push:
+            branches: [main, develop]
+          pull_request:
+            branches: [main]
+
+        env:
+          AWS_REGION: us-east-1
+
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+
+            steps:
+              - uses: actions/checkout@v3
+
+              {% if runtime == "python" %}
+              - name: Set up Python
+                uses: actions/setup-python@v4
+                with:
+                  python-version: '3.11'
+
+              - name: Install dependencies
+                run: |
+                  python -m pip install --upgrade pip
+                  pip install -r requirements.txt
+
+              - name: Run tests
+                run: |
+                  pytest tests/ --cov=src --cov-report=xml
+              {% elif runtime == "node" %}
+              - name: Set up Node.js
+                uses: actions/setup-node@v3
+                with:
+                  node-version: '18'
+                  cache: 'npm'
+
+              - name: Install dependencies
+                run: npm ci
+
+              - name: Run tests
+                run: npm test
+              {% endif %}
+
+          deploy:
+            needs: test
+            runs-on: ubuntu-latest
+            if: github.ref == 'refs/heads/main'
+
+            steps:
+              - uses: actions/checkout@v3
+
+              - name: Configure AWS credentials
+                uses: aws-actions/configure-aws-credentials@v2
+                with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-region: ${{ env.AWS_REGION }}
+
+              {% if runtime == "python" %}
+              - name: Set up Python
+                uses: actions/setup-python@v4
+                with:
+                  python-version: '3.11'
+              {% elif runtime == "node" %}
+              - name: Set up Node.js
+                uses: actions/setup-node@v3
+                with:
+                  node-version: '18'
+                  cache: 'npm'
+              {% endif %}
+
+              - name: Install Serverless Framework
+                run: npm install -g serverless
+
+              {% if runtime == "python" %}
+              - name: Install Python dependencies
+                run: |
+                  python -m pip install --upgrade pip
+                  pip install -r requirements.txt
+              {% elif runtime == "node" %}
+              - name: Install dependencies
+                run: npm ci
+              {% endif %}
+
+              - name: Deploy to AWS
+                run: |
+                  cd infrastructure
+                  serverless deploy --stage prod --region ${{ env.AWS_REGION }}
+
+              - name: Run smoke tests
+                run: |
+                  # Add smoke tests against deployed function
+                  echo "Running smoke tests..."
+
+deployment:
+  serverless:
+    - name: AWS Lambda Deployment
+      platform: aws_lambda
+      config:
+        function_name: {{ function_name }}
+        runtime: {% if runtime == "python" %}python3.11{% elif runtime == "node" %}nodejs18.x{% endif %}
+        memory_size: {{ memory_size }}
+        timeout: {{ timeout }}
+        trigger_type: {{ trigger_type }}
+
+    - name: Terraform Deployment
+      platform: terraform
+      config:
+        state_backend: s3
+        region: us-east-1
+        function_name: {{ function_name }}

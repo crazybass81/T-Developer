@@ -1,0 +1,451 @@
+# T-Developer Service Level Objectives (SLOs)
+# Phase 6: P6-T2 - Reliability Engineering
+#
+# Service Level Objectives define the target reliability metrics for T-Developer
+
+apiVersion: v1
+kind: SLODefinitions
+metadata:
+  name: t-developer-slos
+  version: "1.0.0"
+  description: "Service Level Objectives for T-Developer system"
+  owner: "reliability-team"
+  created: "2024-01-15"
+
+# Global SLO configuration
+global:
+  measurement_window: "28d"  # 28-day rolling window
+  error_budget_burn_rate_alert: 2.0  # Alert if burning error budget 2x faster
+
+# Service Level Objectives
+slos:
+
+  # === AVAILABILITY SLOs ===
+
+  - name: "system_availability"
+    description: "Overall system availability"
+    service: "t-developer"
+    category: "availability"
+    target: 99.9  # 99.9% uptime
+    measurement:
+      type: "availability"
+      query: |
+        (
+          sum(rate(http_requests_total{job="t-developer"}[5m])) -
+          sum(rate(http_requests_total{job="t-developer",code=~"5.."}[5m]))
+        ) / sum(rate(http_requests_total{job="t-developer"}[5m])) * 100
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"  # 1.0 = normal consumption
+    alerts:
+      - name: "availability_burn_rate_high"
+        condition: "burn_rate > 2.0"
+        severity: "critical"
+      - name: "availability_burn_rate_medium"
+        condition: "burn_rate > 1.5"
+        severity: "warning"
+
+  - name: "api_availability"
+    description: "API endpoint availability"
+    service: "t-developer-api"
+    category: "availability"
+    target: 99.95  # Higher target for API
+    measurement:
+      type: "availability"
+      query: |
+        (
+          sum(rate(http_requests_total{job="t-developer",handler=~"/api/.*"}[5m])) -
+          sum(rate(http_requests_total{job="t-developer",handler=~"/api/.*",code=~"5.."}[5m]))
+        ) / sum(rate(http_requests_total{job="t-developer",handler=~"/api/.*"}[5m])) * 100
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+
+  # === LATENCY SLOs ===
+
+  - name: "api_latency_p95"
+    description: "95th percentile API response latency"
+    service: "t-developer-api"
+    category: "latency"
+    target: 200  # 200ms P95 latency
+    unit: "milliseconds"
+    measurement:
+      type: "latency"
+      percentile: 95
+      query: |
+        histogram_quantile(0.95,
+          sum(rate(http_request_duration_seconds_bucket{job="t-developer",handler=~"/api/.*"}[5m]))
+          by (le)
+        ) * 1000
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+    alerts:
+      - name: "latency_p95_degraded"
+        condition: "value > 200"
+        severity: "warning"
+      - name: "latency_p95_critical"
+        condition: "value > 500"
+        severity: "critical"
+
+  - name: "api_latency_p99"
+    description: "99th percentile API response latency"
+    service: "t-developer-api"
+    category: "latency"
+    target: 500  # 500ms P99 latency
+    unit: "milliseconds"
+    measurement:
+      type: "latency"
+      percentile: 99
+      query: |
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{job="t-developer",handler=~"/api/.*"}[5m]))
+          by (le)
+        ) * 1000
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+
+  - name: "agent_processing_latency"
+    description: "Agent processing time for service generation"
+    service: "t-developer-agents"
+    category: "latency"
+    target: 30000  # 30 seconds for complex operations
+    unit: "milliseconds"
+    measurement:
+      type: "latency"
+      percentile: 95
+      query: |
+        histogram_quantile(0.95,
+          sum(rate(agent_processing_duration_seconds_bucket{job="t-developer"}[5m]))
+          by (le, agent_type)
+        ) * 1000
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+
+  # === THROUGHPUT SLOs ===
+
+  - name: "api_throughput"
+    description: "API request throughput"
+    service: "t-developer-api"
+    category: "throughput"
+    target: 100  # 100 requests per second
+    unit: "requests_per_second"
+    measurement:
+      type: "throughput"
+      query: |
+        sum(rate(http_requests_total{job="t-developer",handler=~"/api/.*"}[5m]))
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+    alerts:
+      - name: "throughput_below_target"
+        condition: "value < 100"
+        severity: "warning"
+
+  - name: "service_generation_throughput"
+    description: "Service generation completion rate"
+    service: "t-developer-agents"
+    category: "throughput"
+    target: 10  # 10 services per hour
+    unit: "services_per_hour"
+    measurement:
+      type: "throughput"
+      query: |
+        sum(rate(services_generated_total{job="t-developer"}[1h]))
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+
+  # === QUALITY SLOs ===
+
+  - name: "cache_hit_rate"
+    description: "Cache hit rate for performance optimization"
+    service: "t-developer-cache"
+    category: "quality"
+    target: 70  # 70% cache hit rate
+    unit: "percentage"
+    measurement:
+      type: "ratio"
+      query: |
+        (
+          sum(rate(cache_hits_total{job="t-developer"}[5m])) /
+          sum(rate(cache_requests_total{job="t-developer"}[5m]))
+        ) * 100
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+    alerts:
+      - name: "cache_hit_rate_low"
+        condition: "value < 70"
+        severity: "warning"
+
+  - name: "service_success_rate"
+    description: "Service generation success rate"
+    service: "t-developer-agents"
+    category: "quality"
+    target: 95  # 95% success rate
+    unit: "percentage"
+    measurement:
+      type: "ratio"
+      query: |
+        (
+          sum(rate(services_generated_total{job="t-developer",status="success"}[5m])) /
+          sum(rate(services_generated_total{job="t-developer"}[5m]))
+        ) * 100
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+    alerts:
+      - name: "service_success_rate_low"
+        condition: "value < 95"
+        severity: "critical"
+
+  - name: "test_coverage"
+    description: "Generated code test coverage"
+    service: "t-developer-quality"
+    category: "quality"
+    target: 85  # 85% test coverage
+    unit: "percentage"
+    measurement:
+      type: "gauge"
+      query: |
+        avg(test_coverage_percentage{job="t-developer"})
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+
+  # === RESOURCE SLOs ===
+
+  - name: "memory_utilization"
+    description: "Memory utilization across all services"
+    service: "t-developer-infrastructure"
+    category: "resource"
+    target: 80  # 80% memory utilization threshold
+    unit: "percentage"
+    measurement:
+      type: "resource"
+      query: |
+        (
+          (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) /
+          node_memory_MemTotal_bytes
+        ) * 100
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+    alerts:
+      - name: "memory_utilization_high"
+        condition: "value > 80"
+        severity: "warning"
+      - name: "memory_utilization_critical"
+        condition: "value > 90"
+        severity: "critical"
+
+  - name: "cpu_utilization"
+    description: "CPU utilization across all services"
+    service: "t-developer-infrastructure"
+    category: "resource"
+    target: 70  # 70% CPU utilization threshold
+    unit: "percentage"
+    measurement:
+      type: "resource"
+      query: |
+        100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+    alerts:
+      - name: "cpu_utilization_high"
+        condition: "value > 70"
+        severity: "warning"
+      - name: "cpu_utilization_critical"
+        condition: "value > 85"
+        severity: "critical"
+
+  # === BUSINESS SLOs ===
+
+  - name: "customer_satisfaction"
+    description: "Customer satisfaction with generated services"
+    service: "t-developer-business"
+    category: "business"
+    target: 4.5  # 4.5/5.0 satisfaction score
+    unit: "score"
+    measurement:
+      type: "gauge"
+      query: |
+        avg(customer_satisfaction_score{job="t-developer"})
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+
+  - name: "service_deployment_success"
+    description: "Successful deployment rate of generated services"
+    service: "t-developer-deployment"
+    category: "business"
+    target: 90  # 90% deployment success rate
+    unit: "percentage"
+    measurement:
+      type: "ratio"
+      query: |
+        (
+          sum(rate(deployments_total{job="t-developer",status="success"}[5m])) /
+          sum(rate(deployments_total{job="t-developer"}[5m]))
+        ) * 100
+    error_budget:
+      window: "28d"
+      consumption_rate: "1.0"
+
+# Error Budget Policies
+error_budget_policies:
+
+  - name: "critical_services"
+    description: "Policy for critical services (API, agents)"
+    applies_to:
+      - "system_availability"
+      - "api_availability"
+      - "service_success_rate"
+
+    burn_rate_alerts:
+      - name: "fast_burn"
+        window: "1h"
+        threshold: 14.4  # 2% budget in 1 hour (for 99.9% SLO)
+        severity: "critical"
+        action: "page_oncall"
+
+      - name: "slow_burn"
+        window: "6h"
+        threshold: 6  # 2% budget in 6 hours
+        severity: "warning"
+        action: "create_incident"
+
+    error_budget_exhausted:
+      action: "freeze_releases"
+      override_approval: "reliability_lead"
+
+  - name: "performance_services"
+    description: "Policy for performance-related SLOs"
+    applies_to:
+      - "api_latency_p95"
+      - "api_latency_p99"
+      - "cache_hit_rate"
+
+    burn_rate_alerts:
+      - name: "performance_degradation"
+        window: "30m"
+        threshold: 3  # Allow faster burn for performance issues
+        severity: "warning"
+        action: "notify_team"
+
+    error_budget_exhausted:
+      action: "trigger_optimization_cycle"
+
+# Dashboard Configuration
+dashboards:
+
+  - name: "slo_overview"
+    description: "High-level SLO dashboard"
+    panels:
+      - name: "availability_summary"
+        type: "stat"
+        targets:
+          - "system_availability"
+          - "api_availability"
+
+      - name: "latency_summary"
+        type: "graph"
+        targets:
+          - "api_latency_p95"
+          - "api_latency_p99"
+
+      - name: "error_budget_burn"
+        type: "heatmap"
+        query: "error_budget_burn_rate"
+
+  - name: "service_quality"
+    description: "Service quality metrics"
+    panels:
+      - name: "success_rates"
+        type: "stat"
+        targets:
+          - "service_success_rate"
+          - "service_deployment_success"
+
+      - name: "performance_metrics"
+        type: "graph"
+        targets:
+          - "cache_hit_rate"
+          - "test_coverage"
+
+# Notification Channels
+notifications:
+
+  - name: "slack_reliability"
+    type: "slack"
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    channel: "#reliability"
+    template: |
+      🚨 SLO Alert: {{ .SLOName }}
+      Current: {{ .CurrentValue }}{{ .Unit }}
+      Target: {{ .Target }}{{ .Unit }}
+      Error Budget Remaining: {{ .ErrorBudgetRemaining }}%
+
+  - name: "pagerduty_oncall"
+    type: "pagerduty"
+    integration_key: "${PAGERDUTY_INTEGRATION_KEY}"
+    severity_mapping:
+      critical: "critical"
+      warning: "warning"
+
+  - name: "email_team"
+    type: "email"
+    recipients:
+      - "reliability@t-developer.ai"
+      - "oncall@t-developer.ai"
+    template: |
+      Subject: T-Developer SLO Alert - {{ .SLOName }}
+
+      Service: {{ .Service }}
+      SLO: {{ .SLOName }}
+      Current Value: {{ .CurrentValue }}{{ .Unit }}
+      Target: {{ .Target }}{{ .Unit }}
+
+      Error Budget:
+      - Remaining: {{ .ErrorBudgetRemaining }}%
+      - Burn Rate: {{ .BurnRate }}x
+
+      Runbook: https://runbooks.t-developer.ai/slo/{{ .SLOName }}
+
+# Compliance and Reporting
+compliance:
+
+  reports:
+    - name: "monthly_slo_report"
+      frequency: "monthly"
+      recipients:
+        - "leadership@t-developer.ai"
+        - "reliability@t-developer.ai"
+
+      include:
+        - slo_performance
+        - error_budget_usage
+        - incident_correlation
+        - improvement_recommendations
+
+    - name: "quarterly_business_review"
+      frequency: "quarterly"
+      recipients:
+        - "executives@t-developer.ai"
+
+      include:
+        - business_slo_performance
+        - customer_impact_analysis
+        - cost_of_reliability
+        - strategic_recommendations
+
+  audit:
+    retention_period: "2y"
+    export_format: "json"
+    compliance_standards:
+      - "SOC2"
+      - "ISO27001"
