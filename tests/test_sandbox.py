@@ -255,19 +255,30 @@ print("Hello from Python!")
             assert result.error == "Test error"
     
     @pytest.mark.asyncio
-    async def test_concurrent_execution(self, sandbox):
+    async def test_concurrent_execution(self):
         """Test concurrent sandbox execution."""
+        # Create separate sandboxes for concurrent execution
+        sandboxes = [DockerSandbox(SandboxConfig()) for _ in range(5)]
+        
         with patch('docker.from_env') as mock_docker:
-            mock_container = Mock()
-            mock_container.exec_run.return_value = (0, b"Success\n")
+            # Create separate mock containers for each execution
+            mock_containers = []
+            for i in range(5):
+                mock_container = Mock()
+                mock_container.exec_run.return_value = (0, f"Task {i}\n".encode())
+                mock_container.short_id = f"abc{i:03d}"
+                mock_container.stop = Mock()
+                mock_container.remove = Mock()
+                mock_containers.append(mock_container)
             
             mock_client = Mock()
-            mock_client.containers.run.return_value = mock_container
+            # Return different container for each call
+            mock_client.containers.run.side_effect = mock_containers
             mock_docker.return_value = mock_client
             
-            # Run multiple commands concurrently
+            # Run multiple commands concurrently with separate sandboxes
             tasks = [
-                sandbox.execute(f"echo 'Task {i}'", timeout=10)
+                sandboxes[i].execute(f"echo 'Task {i}'", timeout=10)
                 for i in range(5)
             ]
             
@@ -275,6 +286,10 @@ print("Hello from Python!")
             
             assert len(results) == 5
             assert all(r.exit_code == 0 for r in results)
+            
+            # Cleanup
+            for sandbox in sandboxes:
+                sandbox.cleanup()
 
 
 class TestSandboxSecurity:

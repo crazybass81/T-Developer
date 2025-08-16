@@ -144,6 +144,7 @@ class TestTracingManager:
         result = test_func(1, 2)
         assert result == 3
     
+    @pytest.mark.asyncio
     async def test_async_trace_decorator(self, tracer):
         """Test async trace decorator."""
         @tracer.trace("async_test_function")

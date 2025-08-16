@@ -241,7 +241,7 @@ class DockerSandbox:
                     stderr="",
                     metrics={
                         "timeout": timeout,
-                        "container_id": self._container.short_id
+                        "container_id": self._container.short_id if self._container else "unknown"
                     }
                 )
                 
@@ -270,7 +270,7 @@ class DockerSandbox:
                     self._container.remove()
                 except:
                     pass
-                self._container = None
+                # Don't set to None here - let cleanup() handle it
     
     async def execute_python(
         self,

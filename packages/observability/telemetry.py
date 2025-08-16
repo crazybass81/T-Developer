@@ -191,7 +191,7 @@ class MetricsCollector:
             "memory_mb": process.memory_info().rss / 1024 / 1024,
             "cpu_percent": process.cpu_percent(),
             "open_files": len(process.open_files()),
-            "connections": len(process.connections())
+            "connections": len(process.net_connections())
         }
     
     def collect_agent_metrics(
