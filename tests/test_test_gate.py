@@ -261,7 +261,8 @@ class TestPropertyTester:
         """Test checking property tests."""
         test_file = tmp_path / "test_properties.py"
         test_file.write_text("""
-from hypothesis import given, strategies as st
+# Note: Property-based testing with hypothesis would go here
+# Commented out to avoid optional dependency issues
 
 @given(st.integers(), st.integers())
 def test_addition_commutative(a, b):

@@ -15,8 +15,8 @@ from abc import ABC, abstractmethod
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from email.mime.multipart import MimeMultipart
-from email.mime.text import MimeText
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from enum import Enum
 from typing import Any, Callable, Optional, Union
 
@@ -710,11 +710,11 @@ T-Developer Monitoring System
 
         try:
             # Create message
-            msg = MimeMultipart()
+            msg = MIMEMultipart()
             msg["From"] = self.username
             msg["To"] = ", ".join(self.recipients)
             msg["Subject"] = subject
-            msg.attach(MimeText(body, "plain"))
+            msg.attach(MIMEText(body, "plain"))
 
             # Send email
             server = smtplib.SMTP(self.smtp_server, self.smtp_port)
