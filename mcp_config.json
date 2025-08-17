@@ -1,0 +1,164 @@
+{
+  "name": "T-Developer MCP Server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol configuration for T-Developer v2",
+
+  "servers": {
+    "filesystem": {
+      "type": "mcp-server-filesystem",
+      "config": {
+        "root_path": "/home/ec2-user/T-DeveloperMVP",
+        "allowed_paths": [
+          "backend/",
+          "frontend/src/",
+          "tests/",
+          "docs/"
+        ],
+        "forbidden_paths": [
+          ".env",
+          "secrets/",
+          ".git/",
+          "node_modules/",
+          "__pycache__/"
+        ],
+        "read_only": false,
+        "sandbox_mode": true
+      }
+    },
+
+    "git": {
+      "type": "mcp-server-git",
+      "config": {
+        "repo_path": "/home/ec2-user/T-DeveloperMVP",
+        "allowed_operations": [
+          "branch",
+          "commit",
+          "diff",
+          "status",
+          "log"
+        ],
+        "forbidden_operations": [
+          "push",
+          "force-push",
+          "reset --hard"
+        ],
+        "pr_only_mode": true,
+        "auto_branch": true,
+        "branch_prefix": "tdev-auto-"
+      }
+    },
+
+    "github": {
+      "type": "mcp-server-github",
+      "config": {
+        "auth_method": "token",
+        "permissions": {
+          "pull_requests": "write",
+          "contents": "read",
+          "issues": "write",
+          "actions": "read"
+        },
+        "pr_template": ".github/pull_request_template.md",
+        "require_review": true,
+        "auto_merge": false,
+        "protected_branches": ["main", "master", "production"]
+      }
+    },
+
+    "shell": {
+      "type": "mcp-server-shell",
+      "config": {
+        "allowed_commands": [
+          "pytest",
+          "python -m pytest",
+          "ruff",
+          "mypy",
+          "black",
+          "isort",
+          "autopep8",
+          "doq",
+          "pyupgrade",
+          "autoflake",
+          "radon",
+          "interrogate"
+        ],
+        "forbidden_commands": [
+          "rm -rf",
+          "sudo",
+          "chmod",
+          "chown",
+          "kill",
+          "pkill"
+        ],
+        "working_directory": "/home/ec2-user/T-DeveloperMVP",
+        "timeout": 300,
+        "max_output_size": 10000,
+        "environment": {
+          "PYTHONPATH": "/home/ec2-user/T-DeveloperMVP",
+          "ENV": "development"
+        }
+      }
+    }
+  },
+
+  "tools": {
+    "filesystem": {
+      "enabled": true,
+      "permissions": ["read", "write", "create", "delete"],
+      "rate_limit": 100
+    },
+    "git": {
+      "enabled": true,
+      "permissions": ["read", "write"],
+      "rate_limit": 50
+    },
+    "github": {
+      "enabled": true,
+      "permissions": ["read", "write"],
+      "rate_limit": 30
+    },
+    "shell": {
+      "enabled": true,
+      "permissions": ["execute"],
+      "rate_limit": 20
+    }
+  },
+
+  "security": {
+    "sandbox": true,
+    "isolation_level": "strict",
+    "resource_limits": {
+      "max_file_size_mb": 10,
+      "max_files_per_operation": 100,
+      "max_execution_time_seconds": 300,
+      "max_memory_mb": 512,
+      "max_cpu_percent": 50
+    },
+    "audit_logging": true,
+    "require_approval": false
+  },
+
+  "integrations": {
+    "claude_code": {
+      "enabled": true,
+      "mode": "pr_only",
+      "auto_format": true,
+      "auto_test": true,
+      "quality_checks": [
+        "syntax",
+        "imports",
+        "docstrings",
+        "type_hints",
+        "complexity"
+      ]
+    }
+  },
+
+  "logging": {
+    "level": "INFO",
+    "file": "logs/mcp_server.log",
+    "max_size_mb": 100,
+    "rotation": "daily",
+    "retention_days": 30
+  }
+}

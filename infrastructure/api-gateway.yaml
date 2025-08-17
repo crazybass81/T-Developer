@@ -1,0 +1,544 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'T-Developer API Gateway Configuration'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+
+  DomainName:
+    Type: String
+    Default: ''
+    Description: Custom domain name (optional)
+
+  CertificateArn:
+    Type: String
+    Default: ''
+    Description: ACM certificate ARN for custom domain (optional)
+
+Resources:
+  # REST API
+  TDeveloperRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub 't-developer-api-${EnvironmentName}'
+      Description: T-Developer REST API
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Policy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: 'execute-api:Invoke'
+            Resource: '*'
+
+  # API Key for authentication
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: !Sub 't-developer-api-key-${EnvironmentName}'
+      Description: API key for T-Developer
+      Enabled: true
+      StageKeys:
+        - RestApiId: !Ref TDeveloperRestApi
+          StageName: !Ref ApiDeploymentStage
+
+  # Usage Plan
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ApiDeployment
+    Properties:
+      UsagePlanName: !Sub 't-developer-usage-plan-${EnvironmentName}'
+      Description: Usage plan for T-Developer API
+      ApiStages:
+        - ApiId: !Ref TDeveloperRestApi
+          Stage: !Ref ApiDeploymentStage
+      Throttle:
+        BurstLimit: 500
+        RateLimit: 100
+      Quota:
+        Limit: 10000
+        Period: DAY
+
+  # Usage Plan Key
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref UsagePlan
+
+  # Request Validator
+  RequestValidator:
+    Type: AWS::ApiGateway::RequestValidator
+    Properties:
+      Name: RequestValidator
+      RestApiId: !Ref TDeveloperRestApi
+      ValidateRequestBody: true
+      ValidateRequestParameters: true
+
+  # CORS Options Method Template
+  OptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ResourceId: !GetAtt TDeveloperRestApi.RootResourceId
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Evolution Resource
+  EvolutionResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ParentId: !GetAtt TDeveloperRestApi.RootResourceId
+      PathPart: evolution
+
+  # Evolution Start Resource
+  EvolutionStartResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ParentId: !Ref EvolutionResource
+      PathPart: start
+
+  # Evolution Start Method
+  EvolutionStartMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ResourceId: !Ref EvolutionStartResource
+      HttpMethod: POST
+      AuthorizationType: API_KEY
+      ApiKeyRequired: true
+      RequestValidatorId: !Ref RequestValidator
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EvolutionLambdaFunction.Arn}/invocations'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Evolution Status Resource
+  EvolutionStatusResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ParentId: !Ref EvolutionResource
+      PathPart: '{evolutionId}'
+
+  # Evolution Status Method
+  EvolutionStatusMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ResourceId: !Ref EvolutionStatusResource
+      HttpMethod: GET
+      AuthorizationType: API_KEY
+      ApiKeyRequired: true
+      RequestParameters:
+        method.request.path.evolutionId: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EvolutionLambdaFunction.Arn}/invocations'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Agents Resource
+  AgentsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ParentId: !GetAtt TDeveloperRestApi.RootResourceId
+      PathPart: agents
+
+  # Agents List Method
+  AgentsListMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ResourceId: !Ref AgentsResource
+      HttpMethod: GET
+      AuthorizationType: API_KEY
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AgentLambdaFunction.Arn}/invocations'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Agents Create Resource
+  AgentsCreateResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ParentId: !Ref AgentsResource
+      PathPart: create
+
+  # Agents Create Method
+  AgentsCreateMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ResourceId: !Ref AgentsCreateResource
+      HttpMethod: POST
+      AuthorizationType: API_KEY
+      ApiKeyRequired: true
+      RequestValidatorId: !Ref RequestValidator
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AgentLambdaFunction.Arn}/invocations'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Agents Execute Resource
+  AgentsExecuteResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ParentId: !Ref AgentsResource
+      PathPart: execute
+
+  # Agents Execute Method
+  AgentsExecuteMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ResourceId: !Ref AgentsExecuteResource
+      HttpMethod: POST
+      AuthorizationType: API_KEY
+      ApiKeyRequired: true
+      RequestValidatorId: !Ref RequestValidator
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AgentLambdaFunction.Arn}/invocations'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Metrics Resource
+  MetricsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ParentId: !GetAtt TDeveloperRestApi.RootResourceId
+      PathPart: metrics
+
+  # Metrics GET Method
+  MetricsGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ResourceId: !Ref MetricsResource
+      HttpMethod: GET
+      AuthorizationType: API_KEY
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MetricsLambdaFunction.Arn}/invocations'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Metrics POST Method
+  MetricsPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ResourceId: !Ref MetricsResource
+      HttpMethod: POST
+      AuthorizationType: API_KEY
+      ApiKeyRequired: true
+      RequestValidatorId: !Ref RequestValidator
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MetricsLambdaFunction.Arn}/invocations'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # Metrics Summary Resource
+  MetricsSummaryResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ParentId: !Ref MetricsResource
+      PathPart: summary
+
+  # Metrics Summary Method
+  MetricsSummaryMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      ResourceId: !Ref MetricsSummaryResource
+      HttpMethod: GET
+      AuthorizationType: API_KEY
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MetricsLambdaFunction.Arn}/invocations'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # API Deployment
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - EvolutionStartMethod
+      - EvolutionStatusMethod
+      - AgentsListMethod
+      - AgentsCreateMethod
+      - AgentsExecuteMethod
+      - MetricsGetMethod
+      - MetricsPostMethod
+      - MetricsSummaryMethod
+    Properties:
+      RestApiId: !Ref TDeveloperRestApi
+      Description: !Sub 'Deployment for ${EnvironmentName} environment'
+
+  # API Stage
+  ApiDeploymentStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref EnvironmentName
+      RestApiId: !Ref TDeveloperRestApi
+      DeploymentId: !Ref ApiDeployment
+      Description: !Sub '${EnvironmentName} stage'
+      TracingEnabled: true
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          LoggingLevel: INFO
+          DataTraceEnabled: true
+          MetricsEnabled: true
+          ThrottlingRateLimit: 100
+          ThrottlingBurstLimit: 200
+      Variables:
+        environment: !Ref EnvironmentName
+
+  # CloudWatch Log Group for API Gateway
+  ApiGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/t-developer-${EnvironmentName}'
+      RetentionInDays: 30
+
+  # Lambda Functions (Placeholders - should be created in lambda.yaml)
+  EvolutionLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 't-developer-evolution-${EnvironmentName}'
+      Runtime: python3.9
+      Handler: evolution_handler.handler
+      Code:
+        ZipFile: |
+          import json
+          def handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({'message': 'Evolution Lambda'})
+              }
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  AgentLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 't-developer-agent-${EnvironmentName}'
+      Runtime: python3.9
+      Handler: agent_handler.handler
+      Code:
+        ZipFile: |
+          import json
+          def handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({'message': 'Agent Lambda'})
+              }
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  MetricsLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 't-developer-metrics-${EnvironmentName}'
+      Runtime: python3.9
+      Handler: metrics_handler.handler
+      Code:
+        ZipFile: |
+          import json
+          def handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps({'message': 'Metrics Lambda'})
+              }
+      Role: !GetAtt LambdaExecutionRole.Arn
+
+  # Lambda Execution Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+
+  # Lambda Permissions for API Gateway
+  EvolutionLambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref EvolutionLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TDeveloperRestApi}/*/*'
+
+  AgentLambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AgentLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TDeveloperRestApi}/*/*'
+
+  MetricsLambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref MetricsLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${TDeveloperRestApi}/*/*'
+
+  # Custom Domain (Optional)
+  CustomDomain:
+    Type: AWS::ApiGateway::DomainName
+    Condition: HasCustomDomain
+    Properties:
+      DomainName: !Ref DomainName
+      RegionalCertificateArn: !Ref CertificateArn
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      SecurityPolicy: TLS_1_2
+
+  # Base Path Mapping
+  BasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Condition: HasCustomDomain
+    DependsOn: ApiDeploymentStage
+    Properties:
+      DomainName: !Ref CustomDomain
+      RestApiId: !Ref TDeveloperRestApi
+      Stage: !Ref EnvironmentName
+
+Conditions:
+  HasCustomDomain: !Not [!Equals [!Ref DomainName, '']]
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway URL
+    Value: !Sub 'https://${TDeveloperRestApi}.execute-api.${AWS::Region}.amazonaws.com/${EnvironmentName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+
+  ApiId:
+    Description: API Gateway ID
+    Value: !Ref TDeveloperRestApi
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiId'
+
+  ApiKeyId:
+    Description: API Key ID
+    Value: !Ref ApiKey
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiKeyId'
+
+  CustomDomainUrl:
+    Condition: HasCustomDomain
+    Description: Custom Domain URL
+    Value: !Sub 'https://${DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-CustomDomainUrl'

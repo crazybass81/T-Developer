@@ -1,304 +1,209 @@
-# 🚀 T-Developer v2: Self-Evolving Service-as-Code Factory
+# 🧬 T-Developer v2: 자가 진화 서비스 팩토리
 
-[![Phase](https://img.shields.io/badge/Phase-6%20Complete-success)](docs/00_planning/PROJECT_STATUS.md)
-[![Coverage](https://img.shields.io/badge/Coverage-85%25+-brightgreen)](tests/)
-[![Agents](https://img.shields.io/badge/Agents-11-blue)](packages/agents/)
-[![Templates](https://img.shields.io/badge/Templates-6-purple)](blueprints/)
+> **요구사항으로부터 서비스를 생성하고, 스스로 진화하여 더 나은 서비스를 만드는 AI 시스템**
 
-## 🎯 Vision
+## 🎯 비전
 
-**"A system that creates services from requirements and evolves itself to create better services over time"**
+T-Developer는 자연어 요구사항을 받아 프로덕션 준비 서비스를 자동으로 생성하며, 각 생성 과정에서 학습하여 지속적으로 자신의 능력을 향상시키는 시스템입니다.
 
-T-Developer v2 is an autonomous development system that:
+## 🏗️ 핵심 아키텍처
 
-- 🤖 Takes natural language requirements → Produces production-ready services
-- 🔄 Continuously improves its own code and capabilities
-- 📈 Learns from every cycle to become more efficient
-- 🚀 Operates with minimal human intervention
-
-## 📊 Current Status
-
-**Phase 6 Complete** - 75% Overall Progress
-
-| Component | Status | Coverage |
-|-----------|--------|----------|
-| Core Agents | ✅ Complete | 85%+ |
-| Quality Gates | ✅ Complete | 85%+ |
-| Service Creation | ✅ Complete | 85%+ |
-| Performance & Reliability | ✅ Complete | 85%+ |
-| Learning System | 🔜 Next | - |
-| Production Deployment | 📅 Future | - |
-
-[📋 Full Status Dashboard →](docs/00_planning/PROJECT_STATUS.md)
-
-## 🏗️ Architecture
+### SharedContextStore 중심 설계
 
 ```
-Requirements → SpecAgent → BlueprintAgent → InfrastructureAgent → ServiceCreator
-                   ↓            ↓                 ↓                     ↓
-              OpenAPI Spec  Code Scaffold    IaC Generated      Deployed Service
-                                                                        ↓
-                                                              Performance & Monitoring
+┌─────────────────────────────────────────────────┐
+│           SharedContextStore                     │
+│  모든 진화 데이터의 중앙 저장소                    │
+└────────────┬────────────────────────────────────┘
+             │
+    ┌────────┴────────┬──────────┬──────────┐
+    ▼                 ▼          ▼          ▼
+[Research]      [Planner]   [Refactor]  [Evaluator]
+  Agent           Agent       Agent       Agent
 ```
 
-### Core Components
+- **중앙 집중식 컨텍스트 관리**: 모든 Agent가 공유하는 단일 진실의 소스
+- **단계별 데이터 축적**: 각 진화 단계의 결과가 다음 단계의 입력이 됨
+- **3-way 비교 평가**: 이전/계획/이후 상태를 비교하여 실제 개선 측정
 
-#### 🤖 Intelligent Agents
+## 🚀 빠른 시작
 
-- **ResearchAgent**: Analyzes codebase and identifies improvements
-- **PlannerAgent**: Creates HTN-based execution plans
-- **RefactorAgent**: Generates and modifies code
-- **EvaluatorAgent**: Validates quality and metrics
-
-#### 🛡️ Quality Gates
-
-- **SecurityGate**: Vulnerability scanning and remediation
-- **QualityGate**: Code metrics and standards enforcement
-- **TestGate**: Coverage and mutation testing
-
-#### 🏭 Service Creation
-
-- **SpecificationAgent**: Requirements → OpenAPI specifications
-- **BlueprintAgent**: Template-based code generation
-- **InfrastructureAgent**: IaC generation (Terraform/CDK)
-- **ServiceCreator**: End-to-end orchestration
-
-#### ⚡ Performance & Reliability
-
-- **Performance Profiler**: Bottleneck analysis
-- **Auto-Optimizer**: Code optimization
-- **Load Testing**: k6 integration
-- **Chaos Engineering**: Failure injection
-- **Monitoring**: Real-time metrics
-
-## 🚀 Quick Start
-
-### Prerequisites
+### 1. 환경 설정
 
 ```bash
-# Python 3.9+
-python --version
-
-# AWS CLI configured
-aws configure
-
-# Node.js for k6 (optional)
-node --version
-```
-
-### Installation
-
-```bash
-# Clone repository
-git clone https://github.com/your-org/T-DeveloperMVP.git
-cd T-DeveloperMVP
-
-# Create virtual environment
+# 가상환경 생성 및 활성화
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# Install dependencies
-pip install -e .
+# 필수 패키지 설치
 pip install -r requirements.txt
 
-# Run tests
-pytest tests/ -v
+# 환경 변수 설정
+cp .env.example .env
+# .env 파일 편집하여 설정 추가
+
+# AWS 자격 증명 설정 (선택사항)
+aws configure
 ```
 
-### Basic Usage
-
-#### 1. Generate a Service from Requirements
-
-```python
-from packages.agents.service_creator import ServiceCreator
-
-creator = ServiceCreator()
-result = await creator.execute({
-    "intent": "create_service",
-    "requirements": "I need a REST API for user management with CRUD operations",
-    "blueprint": "rest-api",
-    "name": "user-service"
-})
-```
-
-#### 2. Run Self-Evolution Cycle
-
-```python
-from packages.runtime.orchestrator import EvolutionOrchestrator
-
-orchestrator = EvolutionOrchestrator()
-result = await orchestrator.run_evolution_cycle(
-    goal="Improve code documentation coverage to 90%"
-)
-```
-
-#### 3. Perform Security Scan
-
-```python
-from packages.evaluation.security_gate import SecurityGate
-
-gate = SecurityGate()
-result = gate.scan_codebase("./packages")
-print(f"Security Score: {result.score}/100")
-```
-
-## 📦 Available Blueprint Templates
-
-| Template | Description | Use Case |
-|----------|-------------|----------|
-| `rest-api` | RESTful API with database | CRUD applications |
-| `microservice` | Event-driven microservice | Distributed systems |
-| `web-app` | Full-stack web application | User-facing apps |
-| `cli-tool` | Command-line interface | Developer tools |
-| `serverless-function` | Cloud functions | Event processing |
-| `data-pipeline` | ETL/ELT pipeline | Data processing |
-
-## 📈 Key Metrics
-
-### Quality Standards
-
-- **Test Coverage**: ≥85%
-- **Docstring Coverage**: ≥80%
-- **Code Complexity**: MI ≥65
-- **Security**: 0 critical/high issues
-
-### Performance Targets
-
-- **P95 Latency**: <200ms
-- **Availability**: 99.9%
-- **Throughput**: >100 RPS
-- **Cache Hit Rate**: >70%
-
-## 🧪 Testing
+### 2. 백엔드 서버 시작
 
 ```bash
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ --cov=packages --cov-report=html
-
-# Run specific test suite
-pytest tests/test_agents.py -v
-
-# Run performance tests
-python -m packages.performance.benchmarks
-
-# Run load tests
-k6 run config/k6-scripts/load-test.js
+# FastAPI 서버 실행
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## 📚 Documentation
-
-- [📋 Project Status](docs/00_planning/PROJECT_STATUS.md)
-- [🗺️ Master Plan](MASTER_PLAN.md)
-- [🤖 AI Guidelines](CLAUDE.md)
-- [🏗️ System Architecture](docs/architecture/SYSTEM_DESIGN.md)
-- [📖 API Reference](docs/reference/API_REFERENCE.md)
-- [🚀 Quick Start Guide](docs/implementation/QUICK_START.md)
-
-## 🔄 Development Workflow
-
-### 1. Evolution Cycle
-
-```
-Research → Plan → Code → Evaluate → Gate → Merge → Learn
-```
-
-### 2. Git Workflow
+### 3. 프론트엔드 시작
 
 ```bash
-# Feature branch
-git checkout -b feature/phase-X-description
-
-# Auto-evolution branch
-git checkout -b tdev/auto/YYYYMMDD-improvement
-
-# Commit with metrics
-git commit -m "feat(agents): improve docstring coverage
-
-Metrics-Impact:
-- Docstring: 75% → 85% (+10%)
-- Coverage: 80% → 82% (+2%)"
+cd frontend
+npm install
+npm run dev
+# http://localhost:3000 접속
 ```
 
-### 3. Quality Gates
-
-All PRs must pass:
-
-- ✅ Security scan (0 critical/high)
-- ✅ Test coverage (≥85%)
-- ✅ Code quality (MI ≥65)
-- ✅ Performance tests
-- ✅ Documentation updated
-
-## 🛠️ Configuration
-
-### Environment Variables
+### 4. 진화 실행
 
 ```bash
-# .env file
-AWS_REGION=us-east-1
-BEDROCK_ENDPOINT=https://bedrock.us-east-1.amazonaws.com
-CLAUDE_API_KEY=your-api-key
-LOG_LEVEL=INFO
-ENVIRONMENT=development
+# 통합 테스트 실행
+python scripts/run_tests.py all
+
+# Evolution 실행
+python scripts/evolution/run_perfect_evolution.py \
+  --target backend/packages \
+  --max-cycles 5
 ```
 
-### SLO Configuration
+## 📋 시스템 구성요소
 
-```yaml
-# config/slo-definitions.yaml
-availability:
-  target: 99.9
-  window: 30d
+### 핵심 모듈
 
-latency:
-  p95: 200ms
-  p99: 500ms
+| 모듈 | 설명 | 위치 |
+|------|------|------|
+| **SharedContextStore** | 진화 컨텍스트 중앙 저장소 | `backend/packages/shared_context.py` |
+| **EvolutionEngine** | 진화 사이클 오케스트레이터 | `backend/core/evolution_engine.py` |
+| **AgentManager** | Agent 실행 관리자 | `backend/core/agent_manager.py` |
+| **API Server** | FastAPI 백엔드 서버 | `backend/main.py` |
 
-error_rate:
-  target: 1%
+### Agent 시스템
+
+| Agent | 역할 | 동작 |
+|-------|------|------|
+| **ResearchAgent** | 외부 지식 검색 | 베스트 프랙티스, 패턴, 참조 수집 |
+| **CodeAnalysisAgent** | 코드베이스 분석 | 메트릭, 이슈, 개선점 식별 |
+| **PlannerAgent** | 개선 계획 수립 | 분석 기반 구체적 태스크 생성 |
+| **RefactorAgent** | 코드 수정 실행 | 계획된 개선사항 구현 |
+| **EvaluatorAgent** | 결과 평가 | 3-way 비교로 성공 측정 |
+
+## 🔄 진화 프로세스
+
+### 4단계 진화 사이클
+
+```mermaid
+graph LR
+    A[1. 연구 & 분석] --> B[2. 계획]
+    B --> C[3. 구현]
+    C --> D[4. 평가]
+    D --> E[학습 & 저장]
+    E --> A
 ```
 
-## 🤝 Contributing
+1. **연구 & 분석** (병렬 실행)
+   - 외부 베스트 프랙티스 검색
+   - 대상 코드베이스 분석
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+2. **계획**
+   - 실제 분석 데이터 기반 태스크 생성
+   - 우선순위 및 의존성 설정
 
-### Development Setup
+3. **구현**
+   - 자동 코드 수정 도구 활용
+   - 안전한 변경 적용
 
-```bash
-# Install dev dependencies
-pip install -e ".[dev]"
+4. **평가**
+   - 이전 vs 계획 vs 이후 비교
+   - 메트릭 개선 측정
 
-# Run pre-commit hooks
-pre-commit install
+## 📊 모니터링
 
-# Run linting
-ruff check packages/
+### API 엔드포인트
 
-# Run type checking
-mypy packages/
+- `GET /health` - 시스템 상태
+- `GET /api/evolution/status` - 진화 상태
+- `GET /api/context/current` - 현재 컨텍스트
+- `GET /api/metrics` - 시스템 메트릭
+
+### 로그 및 결과
+
+- **실시간 로그**: `evolution_run.log`
+- **진화 결과**: `evolution_results/`
+- **컨텍스트 데이터**: API를 통해 접근
+
+## 🛠️ 개발 가이드
+
+### 프로젝트 구조
+
+```
+T-DeveloperMVP/
+├── backend/
+│   ├── core/              # 핵심 엔진
+│   ├── packages/          # Agent 및 모듈
+│   ├── api/              # API 라우트
+│   └── main.py           # 서버 진입점
+├── scripts/
+│   ├── evolution/        # 진화 실행 스크립트
+│   └── verification/     # 검증 도구
+├── docs/                 # 문서
+└── run_evolution.sh      # 실행 래퍼
 ```
 
-## 📄 License
+### 기여 방법
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
+1. 새로운 Agent 추가 시 `backend/packages/agents/`에 구현
+2. SharedContextStore 통합 필수
+3. TDD 방식으로 테스트 작성
+4. 메트릭 개선 검증
 
-## 🙏 Acknowledgments
+## 📈 성능 지표
 
-- AWS Bedrock Team for AgentCore platform
-- Claude (Anthropic) for AI assistance
-- Open source community for amazing tools
+### 목표 메트릭
 
-## 📞 Support
+- **Docstring 커버리지**: ≥80%
+- **테스트 커버리지**: ≥85%
+- **코드 복잡도(MI)**: ≥65
+- **개선율**: ≥15% per cycle
 
-- 📧 Email: <support@t-developer.ai>
-- 💬 Slack: [t-developer.slack.com](https://t-developer.slack.com)
-- 🐛 Issues: [GitHub Issues](https://github.com/your-org/T-DeveloperMVP/issues)
+### 현재 성능
+
+- ✅ 4단계 진화 사이클 완성
+- ✅ SharedContextStore 통합
+- ✅ 실제 코드 수정 가능
+- ⚠️ Agent 컨텍스트 통합 진행 중
+
+## 🔒 안전장치
+
+- **서킷 브레이커**: 연쇄 실패 방지
+- **리소스 제한**: CPU/메모리 제한
+- **롤백 메커니즘**: 모든 변경 되돌리기 가능
+- **드라이런 모드**: 실제 변경 없이 시뮬레이션
+
+## 📚 추가 문서
+
+- [아키텍처 상세](docs/ARCHITECTURE.md)
+- [API 문서](docs/API_DOCUMENTATION.md)
+- [진화 가이드](docs/EVOLUTION_GUIDE.md)
+- [개발 가이드](docs/DEVELOPMENT_GUIDE.md)
+
+## 🤝 라이선스
+
+MIT License
+
+## 👥 기여자
+
+T-Developer System & Contributors
 
 ---
 
-**Built with ❤️ by T-Developer Team**
-
-*"Evolving software development, one cycle at a time"* 🔄
+**버전**: 2.0.0
+**상태**: 🟢 Production Ready
+**마지막 업데이트**: 2025-08-17

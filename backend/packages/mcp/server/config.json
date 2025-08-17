@@ -1,0 +1,221 @@
+{
+  "name": "t-developer-mcp-server",
+  "version": "2.0.0",
+  "description": "MCP Server for T-Developer v2 - Safe tool access for AI agents",
+  "protocol": "stdio",
+  "transport": {
+    "type": "stdio",
+    "command": "python",
+    "args": ["-m", "packages.mcp.server.main"]
+  },
+  "tools": {
+    "filesystem": {
+      "enabled": true,
+      "permissions": {
+        "read": {
+          "allowed_paths": [
+            "${WORKSPACE_DIR}/**",
+            "${PROJECT_ROOT}/packages/**",
+            "${PROJECT_ROOT}/tests/**"
+          ],
+          "denied_paths": [
+            "**/.env",
+            "**/.git/**",
+            "**/node_modules/**",
+            "**/__pycache__/**",
+            "**/*.pem",
+            "**/*.key"
+          ]
+        },
+        "write": {
+          "allowed_paths": [
+            "${WORKSPACE_DIR}/**",
+            "${PROJECT_ROOT}/packages/**",
+            "${PROJECT_ROOT}/tests/**"
+          ],
+          "denied_paths": [
+            "${PROJECT_ROOT}/.env",
+            "${PROJECT_ROOT}/.git/**",
+            "${PROJECT_ROOT}/infrastructure/**",
+            "**/*.pem",
+            "**/*.key"
+          ]
+        },
+        "execute": {
+          "allowed_commands": [
+            "python",
+            "pytest",
+            "black",
+            "ruff",
+            "mypy",
+            "git",
+            "npm",
+            "docker"
+          ],
+          "denied_commands": [
+            "rm -rf /",
+            "sudo",
+            "chmod 777",
+            "curl | bash",
+            "wget | sh"
+          ]
+        }
+      }
+    },
+    "git": {
+      "enabled": true,
+      "permissions": {
+        "allowed_operations": [
+          "status",
+          "diff",
+          "add",
+          "commit",
+          "push",
+          "pull",
+          "branch",
+          "checkout",
+          "merge"
+        ],
+        "denied_operations": [
+          "force-push",
+          "reset --hard",
+          "filter-branch"
+        ],
+        "protected_branches": [
+          "main",
+          "master",
+          "production"
+        ]
+      }
+    },
+    "web": {
+      "enabled": true,
+      "permissions": {
+        "allowed_domains": [
+          "docs.anthropic.com",
+          "docs.aws.amazon.com",
+          "github.com",
+          "pypi.org",
+          "registry.npmjs.org"
+        ],
+        "denied_domains": [
+          "malware.com",
+          "phishing.site"
+        ],
+        "max_request_size_mb": 10,
+        "timeout_seconds": 30
+      }
+    },
+    "database": {
+      "enabled": false,
+      "permissions": {
+        "allowed_operations": [
+          "SELECT",
+          "INSERT",
+          "UPDATE"
+        ],
+        "denied_operations": [
+          "DROP",
+          "TRUNCATE",
+          "ALTER"
+        ]
+      }
+    },
+    "aws": {
+      "enabled": true,
+      "permissions": {
+        "allowed_services": [
+          "bedrock",
+          "s3",
+          "dynamodb",
+          "sqs",
+          "cloudwatch",
+          "secretsmanager"
+        ],
+        "denied_services": [
+          "iam",
+          "ec2",
+          "rds"
+        ],
+        "resource_patterns": [
+          "arn:aws:*:*:*:t-developer-*"
+        ]
+      }
+    },
+    "docker": {
+      "enabled": true,
+      "permissions": {
+        "allowed_operations": [
+          "build",
+          "run",
+          "ps",
+          "logs",
+          "stop"
+        ],
+        "denied_operations": [
+          "rm -f",
+          "system prune -a"
+        ],
+        "resource_limits": {
+          "cpu": "1.0",
+          "memory": "512m",
+          "network": "none"
+        }
+      }
+    }
+  },
+  "security": {
+    "authentication": {
+      "enabled": true,
+      "method": "token",
+      "token_env_var": "MCP_SECURITY_TOKEN"
+    },
+    "rate_limiting": {
+      "enabled": true,
+      "requests_per_minute": 100,
+      "burst_size": 20
+    },
+    "audit_logging": {
+      "enabled": true,
+      "log_level": "INFO",
+      "log_file": "${LOG_DIR}/mcp-audit.log",
+      "include_payloads": false
+    },
+    "sandboxing": {
+      "enabled": true,
+      "container_runtime": "docker",
+      "isolation_level": "strict"
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "enabled": true,
+      "export_interval_seconds": 60,
+      "exporters": ["cloudwatch", "prometheus"]
+    },
+    "tracing": {
+      "enabled": true,
+      "sample_rate": 0.1,
+      "exporter": "otlp"
+    },
+    "health_check": {
+      "enabled": true,
+      "port": 8080,
+      "path": "/health"
+    }
+  },
+  "limits": {
+    "max_concurrent_requests": 10,
+    "max_request_size_mb": 10,
+    "max_response_size_mb": 50,
+    "request_timeout_seconds": 300,
+    "max_file_size_mb": 100,
+    "max_memory_usage_mb": 1024
+  },
+  "environment": {
+    "PROJECT_ROOT": "${PROJECT_ROOT}",
+    "WORKSPACE_DIR": "${WORKSPACE_DIR}",
+    "LOG_DIR": "${LOG_DIR}",
+    "TEMP_DIR": "${TEMP_DIR}"
+  }
+}

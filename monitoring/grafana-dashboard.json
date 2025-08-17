@@ -1,0 +1,311 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "t-developer-main",
+    "title": "T-Developer Monitoring Dashboard",
+    "tags": ["t-developer", "evolution", "agents", "metrics"],
+    "timezone": "browser",
+    "schemaVersion": 30,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "type": "graph",
+        "title": "Evolution Progress",
+        "targets": [
+          {
+            "expr": "evolution_cycles_completed",
+            "legendFormat": "Cycles Completed",
+            "refId": "A"
+          },
+          {
+            "expr": "evolution_improvement_rate",
+            "legendFormat": "Improvement Rate (%)",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          { "format": "short", "show": true },
+          { "format": "percent", "show": true }
+        ]
+      },
+      {
+        "id": 2,
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "type": "graph",
+        "title": "Agent Performance",
+        "targets": [
+          {
+            "expr": "agent_execution_time_seconds",
+            "legendFormat": "{{agent_type}} - Execution Time",
+            "refId": "A"
+          },
+          {
+            "expr": "agent_success_rate",
+            "legendFormat": "{{agent_type}} - Success Rate",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+        "type": "stat",
+        "title": "System Health",
+        "targets": [
+          {
+            "expr": "system_cpu_usage_percent",
+            "legendFormat": "CPU Usage",
+            "refId": "A"
+          },
+          {
+            "expr": "system_memory_usage_percent",
+            "legendFormat": "Memory Usage",
+            "refId": "B"
+          },
+          {
+            "expr": "system_disk_usage_percent",
+            "legendFormat": "Disk Usage",
+            "refId": "C"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+        "type": "table",
+        "title": "Recent Evolution Cycles",
+        "targets": [
+          {
+            "expr": "evolution_cycle_info",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "displayName": "Started",
+              "desc": true
+            }
+          ]
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "status" },
+              "properties": [
+                {
+                  "id": "custom.displayMode",
+                  "value": "color-background"
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    { "type": "value", "value": "running", "color": "blue" },
+                    { "type": "value", "value": "completed", "color": "green" },
+                    { "type": "value", "value": "failed", "color": "red" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+        "type": "piechart",
+        "title": "Agent Distribution",
+        "targets": [
+          {
+            "expr": "count by (agent_type) (agent_status)",
+            "legendFormat": "{{agent_type}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "pieType": "donut",
+          "tooltipDisplayMode": "single",
+          "legendDisplayMode": "list",
+          "legendPlacement": "right",
+          "legendValues": ["value", "percent"]
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+        "type": "heatmap",
+        "title": "API Response Times",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(api_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{endpoint}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "calculate": true,
+          "calculation": {
+            "xBuckets": { "mode": "count", "value": "30" },
+            "yBuckets": { "mode": "count", "value": "10" }
+          },
+          "color": {
+            "mode": "spectrum",
+            "scheme": "Spectral",
+            "steps": 128
+          },
+          "exemplars": { "color": "rgba(255,0,255,0.7)" },
+          "filterValues": { "le": 1e-9 },
+          "rowsFrame": { "layout": "auto" },
+          "showValue": "never",
+          "tooltip": { "show": true, "yHistogram": false },
+          "yAxis": { "axisPlacement": "left", "reverse": false }
+        }
+      },
+      {
+        "id": 7,
+        "gridPos": { "h": 6, "w": 12, "x": 0, "y": 24 },
+        "type": "alertlist",
+        "title": "Active Alerts",
+        "options": {
+          "showOptions": "current",
+          "maxItems": 10,
+          "sortOrder": 1,
+          "dashboardAlerts": false,
+          "alertName": "",
+          "dashboardTitle": "",
+          "tags": ["t-developer"]
+        }
+      },
+      {
+        "id": 8,
+        "gridPos": { "h": 6, "w": 12, "x": 12, "y": 24 },
+        "type": "logs",
+        "title": "System Logs",
+        "targets": [
+          {
+            "expr": "{app=\"t-developer\"} |= \"error\"",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": false,
+          "showCommonLabels": false,
+          "wrapLogMessage": false,
+          "sortOrder": "Descending",
+          "dedupStrategy": "none",
+          "enableLogDetails": true,
+          "prettifyLogMessage": false
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "type": "custom",
+          "current": {
+            "selected": false,
+            "text": "dev",
+            "value": "dev"
+          },
+          "options": [
+            { "selected": true, "text": "dev", "value": "dev" },
+            { "selected": false, "text": "staging", "value": "staging" },
+            { "selected": false, "text": "prod", "value": "prod" }
+          ],
+          "query": "dev,staging,prod",
+          "hide": 0,
+          "includeAll": false,
+          "multi": false
+        },
+        {
+          "name": "agent_type",
+          "type": "query",
+          "datasource": "Prometheus",
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "options": [],
+          "query": "label_values(agent_status, agent_type)",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 1,
+          "hide": 0,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        },
+        {
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "evolution_started",
+          "iconColor": "green",
+          "name": "Evolution Started",
+          "tagKeys": "evolution_id,target",
+          "textFormat": "Evolution {{evolution_id}} started for {{target}}"
+        },
+        {
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "evolution_completed",
+          "iconColor": "blue",
+          "name": "Evolution Completed",
+          "tagKeys": "evolution_id,improvement",
+          "textFormat": "Evolution {{evolution_id}} completed with {{improvement}}% improvement"
+        }
+      ]
+    },
+    "links": [
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": true,
+        "keepTime": true,
+        "tags": ["t-developer"],
+        "targetBlank": true,
+        "title": "Dashboards",
+        "type": "dashboards"
+      }
+    ]
+  }
+}

@@ -1,0 +1,329 @@
+---
+# MCP Security Policy for T-Developer v2
+# This policy enforces strict security controls for MCP operations
+
+version: "1.0.0"
+name: "T-Developer MCP Security Policy"
+
+# File System Access Control
+filesystem:
+  access_control:
+    # Paths that can be read and written
+    allowed_paths:
+      - pattern: "backend/packages/**/*.py"
+        permissions: ["read", "write"]
+        description: "Agent code modification"
+
+      - pattern: "frontend/src/**/*.{ts,tsx,js,jsx}"
+        permissions: ["read", "write"]
+        description: "Frontend code modification"
+
+      - pattern: "tests/**/*.py"
+        permissions: ["read", "write"]
+        description: "Test code modification"
+
+      - pattern: "docs/**/*.md"
+        permissions: ["read", "write"]
+        description: "Documentation updates"
+
+    # Paths that are read-only
+    readonly_paths:
+      - pattern: ".github/workflows/**"
+        description: "CI/CD workflows must not be modified"
+
+      - pattern: "scripts/security/**"
+        description: "Security scripts are protected"
+
+      - pattern: "config/production/**"
+        description: "Production configs are immutable"
+
+    # Paths that are completely forbidden
+    forbidden_paths:
+      - pattern: "**/.env*"
+        description: "Environment files with secrets"
+
+      - pattern: "**/secrets/**"
+        description: "Secret storage directories"
+
+      - pattern: "**/*.key"
+        description: "Private key files"
+
+      - pattern: "**/*.pem"
+        description: "Certificate files"
+
+      - pattern: ".git/config"
+        description: "Git configuration"
+
+  # File operation limits
+  operation_limits:
+    max_file_size_kb: 10240  # 10MB
+    max_files_per_operation: 100
+    max_directory_depth: 10
+    forbidden_extensions:
+      - ".exe"
+      - ".dll"
+      - ".so"
+      - ".dylib"
+      - ".zip"
+      - ".tar"
+      - ".gz"
+
+# Git Operations Control
+git:
+  allowed_operations:
+    - operation: "branch"
+      restrictions:
+        prefix_required: "tdev-auto-"
+        protected_branches: ["main", "master", "production", "staging"]
+
+    - operation: "commit"
+      restrictions:
+        require_message: true
+        require_signature: false
+        max_files_per_commit: 50
+
+    - operation: "diff"
+      restrictions:
+        max_diff_size_kb: 1024
+
+    - operation: "status"
+      restrictions: {}
+
+    - operation: "log"
+      restrictions:
+        max_entries: 100
+
+  forbidden_operations:
+    - "push --force"
+    - "reset --hard"
+    - "merge main"
+    - "rebase -i"
+    - "filter-branch"
+    - "gc"
+    - "prune"
+
+  commit_hooks:
+    pre_commit:
+      - check: "no_secrets"
+        command: "detect-secrets scan"
+      - check: "syntax_valid"
+        command: "python -m py_compile"
+      - check: "imports_sorted"
+        command: "isort --check-only"
+
+# GitHub Integration Control
+github:
+  permissions:
+    pull_requests:
+      create: true
+      merge: false  # Must be done by human
+      close: false
+      approve: false
+
+    issues:
+      create: true
+      comment: true
+      close: false
+      assign: false
+
+    actions:
+      trigger: false
+      cancel: false
+
+    releases:
+      create: false
+      delete: false
+
+  pr_requirements:
+    required_reviewers: 1
+    required_checks:
+      - "tests"
+      - "security"
+      - "quality"
+    branch_protection:
+      enforce_admins: true
+      dismiss_stale_reviews: true
+      require_code_owner_reviews: false
+
+# Shell Command Execution Control
+shell:
+  allowed_commands:
+    # Testing
+    - command: "pytest"
+      args_pattern: "^[\\w\\-\\./ ]+$"
+      timeout: 300
+
+    # Code Quality
+    - command: "ruff"
+      args_pattern: "^[\\w\\-\\./ ]+$"
+      timeout: 60
+
+    - command: "mypy"
+      args_pattern: "^[\\w\\-\\./ ]+$"
+      timeout: 120
+
+    - command: "black"
+      args_pattern: "^[\\w\\-\\./ ]+$"
+      timeout: 60
+
+    # Code Modification
+    - command: "autopep8"
+      args_pattern: "^[\\w\\-\\./ ]+$"
+      timeout: 60
+
+    - command: "isort"
+      args_pattern: "^[\\w\\-\\./ ]+$"
+      timeout: 60
+
+  forbidden_patterns:
+    - pattern: ".*\\|.*"  # No pipe operations
+      description: "Piping commands is forbidden"
+
+    - pattern: ".*;.*"  # No command chaining
+      description: "Command chaining is forbidden"
+
+    - pattern: ".*>.*"  # No output redirection
+      description: "Output redirection is forbidden"
+
+    - pattern: ".*&.*"  # No background processes
+      description: "Background processes are forbidden"
+
+    - pattern: ".*sudo.*"  # No privilege escalation
+      description: "Privilege escalation is forbidden"
+
+  resource_limits:
+    max_cpu_percent: 50
+    max_memory_mb: 512
+    max_execution_time: 300
+    max_processes: 10
+    max_open_files: 100
+
+# Sandbox Configuration
+sandbox:
+  enabled: true
+  type: "docker"  # or "microvm"
+
+  container:
+    image: "python:3.9-slim"
+    network_mode: "none"  # No network access
+    read_only_root: true
+    no_new_privileges: true
+
+    mounts:
+      - source: "/home/ec2-user/T-DeveloperMVP"
+        target: "/workspace"
+        readonly: false
+
+    limits:
+      cpu: "2"
+      memory: "4g"
+      pids: 100
+
+    security_opts:
+      - "no-new-privileges:true"
+      - "apparmor:docker-default"
+      - "seccomp:default"
+
+# Rate Limiting
+rate_limits:
+  global:
+    requests_per_minute: 60
+    requests_per_hour: 1000
+
+  per_tool:
+    filesystem:
+      operations_per_minute: 100
+      bytes_per_hour: 104857600  # 100MB
+
+    git:
+      operations_per_minute: 30
+      commits_per_hour: 10
+
+    github:
+      api_calls_per_minute: 10
+      pr_creates_per_day: 5
+
+    shell:
+      commands_per_minute: 20
+      total_cpu_seconds_per_hour: 1800
+
+# Audit and Logging
+audit:
+  enabled: true
+
+  log_events:
+    - file_read
+    - file_write
+    - file_delete
+    - git_commit
+    - git_branch
+    - pr_create
+    - shell_execute
+    - permission_denied
+    - rate_limit_exceeded
+
+  retention:
+    days: 90
+    max_size_gb: 10
+
+  alerts:
+    - event: "permission_denied"
+      threshold: 5
+      window: "5m"
+      action: "block"
+
+    - event: "rate_limit_exceeded"
+      threshold: 3
+      window: "1h"
+      action: "throttle"
+
+    - event: "forbidden_path_access"
+      threshold: 1
+      window: "1m"
+      action: "alert_and_block"
+
+# Compliance and Standards
+compliance:
+  standards:
+    - "SOC2"
+    - "ISO27001"
+    - "GDPR"
+
+  requirements:
+    - id: "SEC-001"
+      description: "No plaintext secrets in code"
+      enforcement: "automatic"
+
+    - id: "SEC-002"
+      description: "All changes must be reviewed"
+      enforcement: "pr_only"
+
+    - id: "SEC-003"
+      description: "Audit trail for all operations"
+      enforcement: "logging"
+
+    - id: "SEC-004"
+      description: "Resource limits enforced"
+      enforcement: "sandbox"
+
+# Emergency Controls
+emergency:
+  kill_switch:
+    enabled: true
+    trigger_conditions:
+      - "cpu_percent > 90"
+      - "memory_percent > 90"
+      - "disk_writes_per_second > 1000"
+      - "security_violations > 10"
+
+  rollback:
+    enabled: true
+    auto_rollback_on_failure: true
+    max_rollback_depth: 5
+
+  notifications:
+    channels:
+      - type: "log"
+        level: "ERROR"
+      - type: "metrics"
+        tags: ["security", "emergency"]

@@ -1,0 +1,52 @@
+[
+  {
+    "cycle": 1,
+    "files_modified": 3,
+    "quality_score": 85,
+    "improvements": {
+      "docstring_coverage": "+10%",
+      "type_coverage": "+5%",
+      "complexity": "-15%"
+    }
+  },
+  {
+    "cycle": 2,
+    "files_modified": 3,
+    "quality_score": 85,
+    "improvements": {
+      "docstring_coverage": "+10%",
+      "type_coverage": "+5%",
+      "complexity": "-15%"
+    }
+  },
+  {
+    "cycle": 3,
+    "files_modified": 3,
+    "quality_score": 85,
+    "improvements": {
+      "docstring_coverage": "+10%",
+      "type_coverage": "+5%",
+      "complexity": "-15%"
+    }
+  },
+  {
+    "cycle": 4,
+    "files_modified": 3,
+    "quality_score": 85,
+    "improvements": {
+      "docstring_coverage": "+10%",
+      "type_coverage": "+5%",
+      "complexity": "-15%"
+    }
+  },
+  {
+    "cycle": 5,
+    "files_modified": 3,
+    "quality_score": 85,
+    "improvements": {
+      "docstring_coverage": "+10%",
+      "type_coverage": "+5%",
+      "complexity": "-15%"
+    }
+  }
+]

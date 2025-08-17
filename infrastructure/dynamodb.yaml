@@ -1,0 +1,487 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'T-Developer DynamoDB Tables Configuration'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+
+  ReadCapacityUnits:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 40000
+    Description: Read capacity units for DynamoDB tables
+
+  WriteCapacityUnits:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 40000
+    Description: Write capacity units for DynamoDB tables
+
+Resources:
+  # Evolution Table
+  EvolutionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 't-developer-evolution-${EnvironmentName}'
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref ReadCapacityUnits
+        WriteCapacityUnits: !Ref WriteCapacityUnits
+      AttributeDefinitions:
+        - AttributeName: evolution_id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+        - AttributeName: target_path
+          AttributeType: S
+      KeySchema:
+        - AttributeName: evolution_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-created_at-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+        - IndexName: target_path-created_at-index
+          KeySchema:
+            - AttributeName: target_path
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Service
+          Value: T-Developer
+
+  # Agents Table
+  AgentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 't-developer-agents-${EnvironmentName}'
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref ReadCapacityUnits
+        WriteCapacityUnits: !Ref WriteCapacityUnits
+      AttributeDefinitions:
+        - AttributeName: agent_id
+          AttributeType: S
+        - AttributeName: type
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: agent_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: type-status-index
+          KeySchema:
+            - AttributeName: type
+              KeyType: HASH
+            - AttributeName: status
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+        - IndexName: status-created_at-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Service
+          Value: T-Developer
+
+  # Executions Table
+  ExecutionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 't-developer-executions-${EnvironmentName}'
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref ReadCapacityUnits
+        WriteCapacityUnits: !Ref WriteCapacityUnits
+      AttributeDefinitions:
+        - AttributeName: execution_id
+          AttributeType: S
+        - AttributeName: agent_id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: execution_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: agent_id-created_at-index
+          KeySchema:
+            - AttributeName: agent_id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+        - IndexName: status-created_at-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Service
+          Value: T-Developer
+
+  # Metrics Table
+  MetricsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 't-developer-metrics-${EnvironmentName}'
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref ReadCapacityUnits
+        WriteCapacityUnits: !Ref WriteCapacityUnits
+      AttributeDefinitions:
+        - AttributeName: metric_id
+          AttributeType: S
+        - AttributeName: metric_name
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: metric_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: metric_name-timestamp-index
+          KeySchema:
+            - AttributeName: metric_name
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false  # Disabled for metrics to save costs
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Service
+          Value: T-Developer
+
+  # Memory/Context Table
+  MemoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 't-developer-memory-${EnvironmentName}'
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref ReadCapacityUnits
+        WriteCapacityUnits: !Ref WriteCapacityUnits
+      AttributeDefinitions:
+        - AttributeName: memory_id
+          AttributeType: S
+        - AttributeName: category
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+        - AttributeName: relevance_score
+          AttributeType: N
+      KeySchema:
+        - AttributeName: memory_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: category-timestamp-index
+          KeySchema:
+            - AttributeName: category
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+        - IndexName: category-relevance-index
+          KeySchema:
+            - AttributeName: category
+              KeyType: HASH
+            - AttributeName: relevance_score
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Service
+          Value: T-Developer
+
+  # Patterns Table
+  PatternsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 't-developer-patterns-${EnvironmentName}'
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref ReadCapacityUnits
+        WriteCapacityUnits: !Ref WriteCapacityUnits
+      AttributeDefinitions:
+        - AttributeName: pattern_id
+          AttributeType: S
+        - AttributeName: category
+          AttributeType: S
+        - AttributeName: success_rate
+          AttributeType: N
+        - AttributeName: usage_count
+          AttributeType: N
+      KeySchema:
+        - AttributeName: pattern_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: category-success_rate-index
+          KeySchema:
+            - AttributeName: category
+              KeyType: HASH
+            - AttributeName: success_rate
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+        - IndexName: category-usage_count-index
+          KeySchema:
+            - AttributeName: category
+              KeyType: HASH
+            - AttributeName: usage_count
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref ReadCapacityUnits
+            WriteCapacityUnits: !Ref WriteCapacityUnits
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Service
+          Value: T-Developer
+
+  # Auto-scaling for Evolution Table
+  EvolutionTableWriteCapacityScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      ServiceNamespace: dynamodb
+      ResourceId: !Sub 'table/${EvolutionTable}'
+      ScalableDimension: dynamodb:table:WriteCapacityUnits
+      MinCapacity: !Ref WriteCapacityUnits
+      MaxCapacity: 40000
+      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/dynamodb.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_DynamoDBTable'
+
+  EvolutionTableWriteScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      ServiceNamespace: dynamodb
+      ResourceId: !Sub 'table/${EvolutionTable}'
+      ScalableDimension: dynamodb:table:WriteCapacityUnits
+      PolicyName: WriteAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref EvolutionTableWriteCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization
+
+  EvolutionTableReadCapacityScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      ServiceNamespace: dynamodb
+      ResourceId: !Sub 'table/${EvolutionTable}'
+      ScalableDimension: dynamodb:table:ReadCapacityUnits
+      MinCapacity: !Ref ReadCapacityUnits
+      MaxCapacity: 40000
+      RoleARN: !Sub 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/dynamodb.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_DynamoDBTable'
+
+  EvolutionTableReadScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      ServiceNamespace: dynamodb
+      ResourceId: !Sub 'table/${EvolutionTable}'
+      ScalableDimension: dynamodb:table:ReadCapacityUnits
+      PolicyName: ReadAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref EvolutionTableReadCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBReadCapacityUtilization
+
+Outputs:
+  EvolutionTableName:
+    Description: Evolution Table Name
+    Value: !Ref EvolutionTable
+    Export:
+      Name: !Sub '${AWS::StackName}-EvolutionTable'
+
+  EvolutionTableArn:
+    Description: Evolution Table ARN
+    Value: !GetAtt EvolutionTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-EvolutionTableArn'
+
+  EvolutionTableStreamArn:
+    Description: Evolution Table Stream ARN
+    Value: !GetAtt EvolutionTable.StreamArn
+    Export:
+      Name: !Sub '${AWS::StackName}-EvolutionTableStreamArn'
+
+  AgentsTableName:
+    Description: Agents Table Name
+    Value: !Ref AgentsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-AgentsTable'
+
+  AgentsTableArn:
+    Description: Agents Table ARN
+    Value: !GetAtt AgentsTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AgentsTableArn'
+
+  ExecutionsTableName:
+    Description: Executions Table Name
+    Value: !Ref ExecutionsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-ExecutionsTable'
+
+  ExecutionsTableArn:
+    Description: Executions Table ARN
+    Value: !GetAtt ExecutionsTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ExecutionsTableArn'
+
+  MetricsTableName:
+    Description: Metrics Table Name
+    Value: !Ref MetricsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-MetricsTable'
+
+  MetricsTableArn:
+    Description: Metrics Table ARN
+    Value: !GetAtt MetricsTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-MetricsTableArn'
+
+  MemoryTableName:
+    Description: Memory Table Name
+    Value: !Ref MemoryTable
+    Export:
+      Name: !Sub '${AWS::StackName}-MemoryTable'
+
+  MemoryTableArn:
+    Description: Memory Table ARN
+    Value: !GetAtt MemoryTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-MemoryTableArn'
+
+  PatternsTableName:
+    Description: Patterns Table Name
+    Value: !Ref PatternsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-PatternsTable'
+
+  PatternsTableArn:
+    Description: Patterns Table ARN
+    Value: !GetAtt PatternsTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-PatternsTableArn'
