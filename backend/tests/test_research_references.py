@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from packages.agents.research_references import (
+from packages.agents.analysis_research.external_research import (
     EnhancedResearchAgent,
     ReferenceLibrary,
     ReferenceSearcher,

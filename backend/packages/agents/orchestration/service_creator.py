@@ -12,15 +12,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from .base import AgentInput, AgentOutput, AgentStatus, Artifact, BaseAgent
-from .blueprint_agent import BlueprintAgent
-from .infrastructure_agent import (
+from ..base import AgentInput, AgentOutput, AgentStatus, Artifact, BaseAgent
+from ..generation.blueprint import BlueprintAgent
+from ..generation.infrastructure import (
     CloudProvider,
     Environment,
     InfrastructureAgent,
     InfrastructureSpec,
 )
-from .spec_agent import ServiceSpecification, SpecificationAgent
+from ..specification.spec_agent import ServiceSpecification, SpecificationAgent
 
 
 @dataclass
@@ -180,7 +180,7 @@ class ServiceGenerationPipeline:
 
             # Add database if needed
             if any(m.name in ["User", "Product", "Order"] for m in spec.data_models):
-                from .infrastructure_agent import DatabaseConfig
+                from ..generation.infrastructure import DatabaseConfig
 
                 env.database = DatabaseConfig()
 

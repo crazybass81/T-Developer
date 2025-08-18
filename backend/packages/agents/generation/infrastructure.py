@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 import yaml
 
-from .base import AgentInput, AgentOutput, AgentStatus, Artifact, BaseAgent
+from ..base import AgentInput, AgentOutput, AgentStatus, Artifact, BaseAgent
 
 
 class CloudProvider(Enum):

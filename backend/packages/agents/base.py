@@ -46,6 +46,7 @@ class AgentOutput:
     events: list[Event] = field(default_factory=list)
     next_tasks: list[dict[str, Any]] = field(default_factory=list)
     error: Optional[str] = None
+    context: Optional[dict[str, Any]] = None  # Added for evolution_id passing
 
 
 @dataclass

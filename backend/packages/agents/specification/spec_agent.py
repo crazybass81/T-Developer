@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
 
-from .base import AgentInput, AgentOutput, AgentStatus, Artifact, BaseAgent
+from ..base import AgentInput, AgentOutput, AgentStatus, Artifact, BaseAgent
 
 
 class RequirementType(Enum):

@@ -1,20 +1,176 @@
 """Refactor Agent - Executes code modifications using Claude Code and MCP tools."""
 
+import ast
 import json
 import logging
+import os
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+import aiohttp
+
 from backend.core.shared_context import SharedContextStore
 from backend.packages.agents.base import AgentInput, AgentOutput, AgentStatus, Artifact, BaseAgent
-from backend.packages.agents.bedrock_code_service import apply_bedrock_service
-from backend.packages.agents.external_code_services import apply_external_services
-from backend.packages.agents.simple_code_modifier import modify_code_safely
 from backend.packages.learning.memory_curator import MemoryCurator
 
 logger = logging.getLogger("agents.refactor")
+
+
+class UnifiedAIService:
+    """Unified AI service for code modification.
+
+    Supports:
+    - AWS Bedrock (Claude)
+    - OpenAI (GPT-4)
+    - Anthropic (Claude API)
+    """
+
+    def __init__(self, provider: str = "auto", model: Optional[str] = None):
+        """Initialize AI service.
+
+        Args:
+            provider: AI provider (auto, bedrock, openai, anthropic)
+            model: Specific model to use
+        """
+        self.provider = provider
+        self.model = model
+        self.available_providers = []
+
+        # Check available providers
+        if os.getenv("AWS_ACCESS_KEY_ID"):
+            self.available_providers.append("bedrock")
+        if os.getenv("OPENAI_API_KEY"):
+            self.available_providers.append("openai")
+        if os.getenv("ANTHROPIC_API_KEY"):
+            self.available_providers.append("anthropic")
+
+    async def modify_code(self, code: str, instruction: str) -> Optional[str]:
+        """Modify code using AI.
+
+        Args:
+            code: Source code to modify
+            instruction: Modification instruction
+
+        Returns:
+            Modified code or None
+        """
+        # Auto-select provider if needed
+        if self.provider == "auto":
+            if "anthropic" in self.available_providers:
+                return await self._use_anthropic(code, instruction)
+            elif "openai" in self.available_providers:
+                return await self._use_openai(code, instruction)
+            elif "bedrock" in self.available_providers:
+                return await self._use_bedrock(code, instruction)
+            else:
+                logger.warning("No AI provider available")
+                return None
+
+        # Use specific provider
+        if self.provider == "bedrock":
+            return await self._use_bedrock(code, instruction)
+        elif self.provider == "openai":
+            return await self._use_openai(code, instruction)
+        elif self.provider == "anthropic":
+            return await self._use_anthropic(code, instruction)
+
+        return None
+
+    async def _use_bedrock(self, code: str, instruction: str) -> Optional[str]:
+        """Use AWS Bedrock for code modification."""
+        try:
+            import boto3
+
+            bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
+
+            prompt = f"\n\nHuman: {instruction}\n\n{code}\n\nAssistant:"
+            body = json.dumps({"prompt": prompt, "max_tokens_to_sample": 2000, "temperature": 0.2})
+
+            response = bedrock.invoke_model(
+                body=body,
+                modelId=self.model or "anthropic.claude-v2",
+                accept="application/json",
+                contentType="application/json",
+            )
+
+            result = json.loads(response["body"].read())
+            return result.get("completion")
+
+        except Exception as e:
+            logger.error(f"Bedrock error: {e}")
+            return None
+
+    async def _use_openai(self, code: str, instruction: str) -> Optional[str]:
+        """Use OpenAI for code modification."""
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return None
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+                payload = {
+                    "model": self.model or "gpt-4",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a code improvement assistant. Return only the modified code.",
+                        },
+                        {"role": "user", "content": f"{instruction}\n\nCode:\n{code}"},
+                    ],
+                    "temperature": 0.2,
+                }
+
+                async with session.post(
+                    "https://api.openai.com/v1/chat/completions", json=payload, headers=headers
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        return result["choices"][0]["message"]["content"]
+
+        except Exception as e:
+            logger.error(f"OpenAI error: {e}")
+            return None
+
+    async def _use_anthropic(self, code: str, instruction: str) -> Optional[str]:
+        """Use Anthropic API for code modification."""
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            return None
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                }
+
+                payload = {
+                    "model": self.model or "claude-3-sonnet-20240229",
+                    "max_tokens": 2000,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": f"{instruction}\n\nCode:\n{code}\n\nReturn only the modified code.",
+                        }
+                    ],
+                    "temperature": 0.2,
+                }
+
+                async with session.post(
+                    "https://api.anthropic.com/v1/messages", json=payload, headers=headers
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        return result["content"][0]["text"]
+
+        except Exception as e:
+            logger.error(f"Anthropic error: {e}")
+            return None
 
 
 @dataclass
@@ -100,18 +256,44 @@ class RefactorTask:
 class RefactorConfig:
     """Configuration for refactor agent."""
 
-    use_claude_code: bool = True  # Use Claude Code CLI
+    # Primary strategy
+    use_claude_code: bool = True  # Use Claude Code CLI (primary)
     claude_code_path: str = "claude"  # Path to Claude Code CLI
+
+    # Fallback strategies
+    fallback_strategies: list[str] = field(
+        default_factory=lambda: [
+            "ast_improver",  # AST-based improvements
+            "ai_service",  # AI service (Bedrock/OpenAI/Anthropic)
+            "external_tools",  # External tools (Black, autopep8, etc.)
+            "simple_regex",  # Simple regex-based modifications
+        ]
+    )
+
+    # AI service configuration
+    ai_provider: str = "auto"  # auto, bedrock, openai, anthropic
+    ai_model: Optional[str] = None  # Model to use for AI provider
+
+    # Git/PR configuration
     mcp_server_url: Optional[str] = None  # MCP server URL if remote
     create_pull_request: bool = True
     auto_commit: bool = True
     branch_prefix: str = "refactor/"
+
+    # Testing configuration
     run_tests_before: bool = True
     run_tests_after: bool = True
     test_command: str = "pytest"
+
+    # Safety configuration
     max_changes_per_pr: int = 50
     sandbox_mode: bool = False  # Run in sandbox for safety
     enable_ai_review: bool = True
+
+    # External tools configuration
+    enable_black: bool = True
+    enable_autopep8: bool = False
+    enable_ruff: bool = True
 
 
 class ClaudeCodeClient:
@@ -536,7 +718,11 @@ class CodeModifier:
 
 
 class RefactorAgent(BaseAgent):
-    """Agent that executes code refactoring using Claude Code."""
+    """Unified agent for code refactoring with multiple strategies.
+
+    Primary: Claude Code CLI
+    Fallbacks: AST improvements, AI services, external tools, regex
+    """
 
     def __init__(self, name: str, config: Optional[RefactorConfig] = None):
         """Initialize refactor agent.
@@ -555,6 +741,194 @@ class RefactorAgent(BaseAgent):
         # Enhanced with context and memory systems
         self.context_store = SharedContextStore()
         self.memory_curator = MemoryCurator()
+
+        # Initialize AI service if configured
+        self.ai_service = UnifiedAIService(provider=self.config.ai_provider)
+
+    async def _execute_with_fallbacks(
+        self, target_path: str, tasks: list, instructions: str
+    ) -> dict[str, Any]:
+        """Execute refactoring using fallback strategies.
+
+        Args:
+            target_path: Path to target file/directory
+            tasks: List of refactoring tasks
+            instructions: Refactoring instructions
+
+        Returns:
+            Refactoring results
+        """
+        results = {"success": False, "changes": []}
+
+        for strategy in self.config.fallback_strategies:
+            logger.info(f"Trying fallback strategy: {strategy}")
+
+            if strategy == "ast_improver":
+                results = await self._use_ast_improver(target_path, instructions)
+            elif strategy == "ai_service":
+                results = await self._use_ai_service(target_path, instructions)
+            elif strategy == "external_tools":
+                results = await self._use_external_tools(target_path)
+            elif strategy == "simple_regex":
+                results = await self._use_simple_regex(target_path, tasks)
+
+            if results.get("success"):
+                logger.info(f"Strategy {strategy} succeeded")
+                break
+            else:
+                logger.warning(f"Strategy {strategy} failed, trying next...")
+
+        return results
+
+    async def _use_ast_improver(self, file_path: str, instructions: str) -> dict[str, Any]:
+        """Use AST-based code improvements."""
+        try:
+            # Read the file
+            with open(file_path) as f:
+                code = f.read()
+
+            # Parse AST
+            tree = ast.parse(code)
+            modified = False
+
+            # Add docstrings and type hints
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef):
+                    if not ast.get_docstring(node):
+                        # Add basic docstring
+                        docstring = ast.Constant(
+                            value=f"""{node.name} function.\n\nTODO: Add description.\n"""
+                        )
+                        node.body.insert(0, ast.Expr(value=docstring))
+                        modified = True
+
+            if modified:
+                # Convert back to code
+                new_code = ast.unparse(tree)
+
+                # Write back
+                with open(file_path, "w") as f:
+                    f.write(new_code)
+
+                return {
+                    "success": True,
+                    "changes": [{"file": file_path, "type": "ast_improvement"}],
+                }
+
+        except Exception as e:
+            logger.error(f"AST improver failed: {e}")
+
+        return {"success": False}
+
+    async def _use_ai_service(self, file_path: str, instructions: str) -> dict[str, Any]:
+        """Use AI service for code modification."""
+        try:
+            with open(file_path) as f:
+                code = f.read()
+
+            # Use unified AI service
+            modified_code = await self.ai_service.modify_code(code, instructions)
+
+            if modified_code:
+                with open(file_path, "w") as f:
+                    f.write(modified_code)
+
+                return {
+                    "success": True,
+                    "changes": [{"file": file_path, "type": "ai_modification"}],
+                }
+
+        except Exception as e:
+            logger.error(f"AI service failed: {e}")
+
+        return {"success": False}
+
+    async def _use_external_tools(self, file_path: str) -> dict[str, Any]:
+        """Use external tools like Black, Ruff, etc."""
+        success = False
+        tools_used = []
+
+        try:
+            # Try Black formatter
+            if self.config.enable_black:
+                result = subprocess.run(["black", file_path], capture_output=True, text=True)
+                if result.returncode == 0:
+                    success = True
+                    tools_used.append("black")
+
+            # Try Ruff
+            if self.config.enable_ruff:
+                result = subprocess.run(
+                    ["ruff", "check", "--fix", file_path], capture_output=True, text=True
+                )
+                if result.returncode == 0:
+                    success = True
+                    tools_used.append("ruff")
+
+            if success:
+                return {
+                    "success": True,
+                    "changes": [{"file": file_path, "type": "external_tools", "tools": tools_used}],
+                }
+
+        except Exception as e:
+            logger.error(f"External tools failed: {e}")
+
+        return {"success": False}
+
+    async def _use_simple_regex(self, file_path: str, tasks: list) -> dict[str, Any]:
+        """Use simple regex-based modifications."""
+        try:
+            import re
+
+            with open(file_path) as f:
+                code = f.read()
+
+            modified = False
+
+            for task in tasks:
+                task_str = str(task).lower()
+
+                # Add TODO comments for missing docstrings
+                if "docstring" in task_str:
+                    pattern = r'(def\s+\w+\([^)]*\):\s*\n)(?!\s*["\'\"]\{3})'
+                    replacement = r'\1    """TODO: Add docstring."""\n'
+                    code, count = re.subn(pattern, replacement, code)
+                    if count > 0:
+                        modified = True
+
+                # Add basic type hints
+                if "type" in task_str or "hint" in task_str:
+                    # Add -> None to functions without return type
+                    pattern = r"(def\s+\w+\([^)]*\))(:)"
+                    replacement = r"\1 -> None\2"
+                    code, count = re.subn(pattern, replacement, code)
+                    if count > 0:
+                        modified = True
+
+            if modified:
+                with open(file_path, "w") as f:
+                    f.write(code)
+
+                return {
+                    "success": True,
+                    "changes": [{"file": file_path, "type": "regex_modification"}],
+                }
+
+        except Exception as e:
+            logger.error(f"Simple regex modifier failed: {e}")
+
+        return {"success": False}
+
+    def _tasks_to_instructions(self, tasks: list) -> str:
+        """Convert tasks list to instruction string."""
+        instructions = []
+        for task in tasks:
+            if isinstance(task, dict):
+                instructions.append(task.get("description", str(task)))
+            else:
+                instructions.append(str(task))
+        return " ".join(instructions)
 
     async def execute(self, input: AgentInput) -> AgentOutput:
         """Execute refactoring task.
@@ -607,44 +981,14 @@ class RefactorAgent(BaseAgent):
 
             # NEW: Use external services for actual code improvements
             if enable_modification and not self.config.use_claude_code:
-                logger.info(f"Using external code services for {target_path}")
-                logger.info(
-                    f"Enable modification: {enable_modification}, Use Claude: {self.config.use_claude_code}"
+                # Use fallback strategies if Claude Code is not available
+                logger.info(f"Claude Code disabled, using fallback strategies for {target_path}")
+
+                results = await self._execute_with_fallbacks(
+                    target_path=target_path,
+                    tasks=tasks,
+                    instructions=self._tasks_to_instructions(tasks),
                 )
-
-                # Try Bedrock first (AWS native)
-                results = await apply_bedrock_service(target_path)
-
-                # If Bedrock didn't work, try other external services
-                if not results.get("success", False):
-                    logger.info("Bedrock not available, trying other external services...")
-                    results = await apply_external_services(target_path)
-
-                logger.info(f"External services results: {results}")
-
-                # If external services didn't work, try our simple modifier
-                if not results.get("success", False):
-                    logger.info("External services failed, trying simple modifier...")
-
-                    # Determine modifications from tasks
-                    modifications = []
-                    for t in tasks:
-                        task_str = str(t).lower()
-                        if "docstring" in task_str:
-                            modifications.append("docstrings")
-                        if "type" in task_str or "hint" in task_str:
-                            modifications.append("type_hints")
-                        if "format" in task_str:
-                            modifications.append("format")
-
-                    # Default modifications if none specified
-                    if not modifications:
-                        modifications = ["docstrings", "type_hints"]
-
-                    # Execute modifications using simple_code_modifier
-                    results = await modify_code_safely(
-                        file_path=target_path, modifications=modifications
-                    )
 
                 logger.info(f"Final modification results: {results}")
 

@@ -1,0 +1,378 @@
+"""Research Agent - Combines internal code analysis with external research."""
+
+import json
+import logging
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from packages.agents.base import AgentInput, AgentOutput, AgentStatus, Artifact, BaseAgent
+from packages.agents.code_analysis import CodeAnalysisAgent, CodeAnalysisConfig
+from packages.agents.research_references import (
+    EnhancedResearchAgent as ReferenceResearcher,
+    ReferenceLibrary
+)
+
+logger = logging.getLogger("agents.research")
+
+
+@dataclass
+class ResearchConfig:
+    """Configuration for research agent."""
+
+    # Code analysis settings (delegated to CodeAnalysisAgent)
+    max_files_to_scan: int = 100
+    max_file_size_mb: float = 10
+    ignore_patterns: List[str] = field(
+        default_factory=lambda: ["__pycache__", ".git", "node_modules", ".venv", "dist", "build"]
+    )
+    focus_patterns: List[str] = field(default_factory=lambda: ["*.py", "*.js", "*.ts"])
+    min_improvement_score: float = 0.3
+
+    # External research settings
+    enable_ai_analysis: bool = True
+    ai_model: str = "claude-3-sonnet"
+    enable_reference_search: bool = True
+    save_to_library: bool = True
+    reference_library_path: str = "backend/references"
+
+
+class ResearchAgent(BaseAgent):
+    """Agent that combines internal code analysis with external research.
+
+    This agent orchestrates both internal code analysis (via CodeAnalysisAgent)
+    and external reference research to provide comprehensive insights.
+    """
+
+    def __init__(self, name: str = "research", config: Optional[ResearchConfig] = None):
+        """Initialize research agent.
+
+        Args:
+            name: Agent name
+            config: Research configuration
+        """
+        super().__init__(name, {"timeout": 600})
+        self.config = config or ResearchConfig()
+
+        # Create code analysis agent for internal analysis
+        code_analysis_config = CodeAnalysisConfig(
+            max_files_to_scan=self.config.max_files_to_scan,
+            max_file_size_mb=self.config.max_file_size_mb,
+            ignore_patterns=self.config.ignore_patterns,
+            focus_patterns=self.config.focus_patterns,
+            min_improvement_score=self.config.min_improvement_score,
+        )
+        self.code_analyzer = CodeAnalysisAgent(config=code_analysis_config)
+
+        # External research components
+        self.reference_researcher = ReferenceResearcher()
+        self.library = ReferenceLibrary(self.config.reference_library_path)
+
+    async def execute(self, input: AgentInput) -> AgentOutput:
+        """Execute combined research task.
+
+        Args:
+            input: Agent input with target_path and optional problem/requirements
+
+        Returns:
+            Comprehensive research results
+        """
+        evolution_id = None
+
+        try:
+            # Phase 1: Internal Code Analysis
+            # Use CodeAnalysisAgent for internal analysis
+            code_analysis_result = await self.code_analyzer.execute(input)
+
+            # Extract evolution_id from code analysis result
+            if code_analysis_result.context:
+                evolution_id = code_analysis_result.context.get("evolution_id")
+
+            if not evolution_id:
+                # If code analysis didn't create evolution_id, something went wrong
+                logger.error("Code analysis didn't create evolution_id")
+                return code_analysis_result
+
+            internal_report = {}
+            if code_analysis_result.status == AgentStatus.OK and code_analysis_result.artifacts:
+                # Extract internal analysis from artifacts
+                for artifact in code_analysis_result.artifacts:
+                    if hasattr(artifact, "content"):
+                        internal_report = artifact.content
+                        break
+
+            # Phase 2: External Research (if enabled)
+            external_references = {}
+            if self.config.enable_reference_search:
+                problem = input.payload.get("problem", "")
+                requirements = input.payload.get("requirements", [])
+                constraints = input.payload.get("constraints", {})
+
+                if problem:
+                    external_references = await self.reference_researcher.research_solution(
+                        problem=problem,
+                        requirements=requirements,
+                        constraints=constraints
+                    )
+
+                    # Save to library if configured
+                    if self.config.save_to_library and external_references:
+                        category = input.payload.get("category", "general")
+                        await self.reference_researcher.save_research(external_references, category)
+                        logger.info(f"Saved research to library under category: {category}")
+
+            # Phase 3: AI-Enhanced Analysis (if enabled)
+            ai_insights = {}
+            if self.config.enable_ai_analysis and input.payload.get("use_ai"):
+                # Get top improvements from internal analysis
+                improvements = internal_report.get("improvements", [])[:10]
+                if improvements:
+                    ai_insights = await self._ai_analysis(
+                        Path(input.payload.get("target_path", ".")),
+                        improvements
+                    )
+
+            # Phase 4: Combine Results
+            comprehensive_report = {
+                "summary": {
+                    "internal_analysis": internal_report.get("summary", {}),
+                    "external_references_found": len(
+                        external_references.get("external_references", {}).get("github", [])
+                    ) if external_references else 0,
+                    "ai_insights_available": bool(ai_insights),
+                },
+                "internal_analysis": {
+                    "improvements": internal_report.get("improvements", []),
+                    "code_smells": internal_report.get("code_smells", []),
+                    "patterns": internal_report.get("patterns", []),
+                    "antipatterns": internal_report.get("antipatterns", []),
+                    "metrics": internal_report.get("summary", {}),
+                },
+                "external_research": external_references if external_references else {
+                    "problem": input.payload.get("problem", ""),
+                    "no_results": "No external research performed"
+                },
+                "ai_insights": ai_insights if ai_insights else {},
+                "recommendations": self._generate_recommendations(
+                    internal_report,
+                    external_references,
+                    ai_insights
+                ),
+            }
+
+            # Store external research in context store
+            if self.config.enable_reference_search and external_references and evolution_id:
+                best_practices = external_references.get("best_practices", [])
+                references = external_references.get("external_references", {})
+                patterns = external_references.get("patterns", [])
+
+                # Get context_store - ResearchAgent should inherit from BaseAgent
+                context_store = self.context_store if hasattr(self, 'context_store') else None
+                if not context_store:
+                    from backend.core.shared_context import get_context_store
+                    context_store = get_context_store()
+
+                await context_store.store_external_research(
+                    best_practices=best_practices,
+                    references=[references] if references else [],
+                    patterns=patterns,
+                    evolution_id=evolution_id
+                )
+                logger.info(f"Stored external research in context for evolution {evolution_id}")
+
+            # Create output artifact
+            report_artifact = Artifact(
+                kind="report",
+                ref="research-report.json",
+                content=comprehensive_report
+            )
+
+            return AgentOutput(
+                task_id=input.task_id,
+                status=AgentStatus.OK,
+                artifacts=[report_artifact],
+                metrics={
+                    "evolution_id": evolution_id,
+                    "files_analyzed": internal_report.get("summary", {}).get("files_analyzed", 0),
+                    "improvements_found": len(internal_report.get("improvements", [])),
+                    "external_references": len(
+                        external_references.get("external_references", {}).get("github", [])
+                    ) if external_references else 0,
+                    "execution_time": 0,  # Would be tracked
+                },
+                context={"evolution_id": evolution_id}  # Pass evolution_id forward
+            )
+
+        except Exception as e:
+            logger.error(f"Research execution failed: {e}")
+            return AgentOutput(
+                task_id=input.task_id,
+                status=AgentStatus.FAIL,
+                error=str(e),
+                context={"evolution_id": evolution_id} if evolution_id else None
+            )
+
+    async def _ai_analysis(
+        self, target_path: Path, improvements: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """Use AI for deeper analysis.
+
+        Args:
+            target_path: Path being analyzed
+            improvements: Initial improvements found
+
+        Returns:
+            AI insights or None
+        """
+        try:
+            import anthropic
+
+            client = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+            prompt = f"""Analyze this codebase research:
+
+Target: {target_path}
+Initial improvements found: {json.dumps(improvements, indent=2)}
+
+Please provide:
+1. Additional improvement suggestions
+2. Patterns you notice
+3. Priority ranking
+4. Estimated impact score (0-1)
+
+Return as JSON with keys: improvements, patterns, priorities, impact_score"""
+
+            response = await client.messages.create(
+                model=self.config.ai_model,
+                max_tokens=2000,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            # Parse response
+            content = response.content[0].text
+            return json.loads(content)
+
+        except Exception as e:
+            logger.warning(f"AI analysis failed: {e}")
+            return None
+
+    def _generate_recommendations(
+        self,
+        internal_report: Dict[str, Any],
+        external_references: Dict[str, Any],
+        ai_insights: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Generate actionable recommendations.
+
+        Args:
+            internal_report: Internal code analysis
+            external_references: External research
+            ai_insights: AI analysis
+
+        Returns:
+            Recommendations dictionary
+        """
+        recommendations = {
+            "immediate_actions": [],
+            "short_term": [],
+            "long_term": [],
+            "tools_to_consider": [],
+        }
+
+        # Process internal improvements
+        improvements = internal_report.get("improvements", [])
+        for imp in improvements[:5]:  # Top 5
+            if imp.get("priority") == "high":
+                recommendations["immediate_actions"].append({
+                    "action": imp.get("type"),
+                    "location": imp.get("location"),
+                    "impact": imp.get("impact"),
+                    "effort": imp.get("effort"),
+                })
+            else:
+                recommendations["short_term"].append({
+                    "action": imp.get("type"),
+                    "impact": imp.get("impact"),
+                })
+
+        # Process external recommendations
+        if external_references and "recommendations" in external_references:
+            ext_rec = external_references["recommendations"]
+            if ext_rec.get("recommended"):
+                recommendations["tools_to_consider"].append(ext_rec["recommended"])
+
+        # Process AI insights
+        if ai_insights:
+            if "priorities" in ai_insights:
+                recommendations["immediate_actions"].extend(ai_insights["priorities"][:3])
+
+        # Add antipattern fixes to long-term
+        antipatterns = internal_report.get("antipatterns", [])
+        if antipatterns:
+            recommendations["long_term"].append({
+                "action": "refactor_antipatterns",
+                "patterns": antipatterns[:3],
+                "impact": "high",
+            })
+
+        return recommendations
+
+    async def validate(self, output: AgentOutput) -> bool:
+        """Validate research output.
+
+        Args:
+            output: Output to validate
+
+        Returns:
+            True if valid
+        """
+        if output.status != AgentStatus.OK:
+            return False
+
+        if not output.artifacts:
+            return False
+
+        # Check for report artifact
+        for artifact in output.artifacts:
+            if isinstance(artifact, dict):
+                if artifact.get("kind") == "report":
+                    return True
+            elif hasattr(artifact, "kind") and artifact.kind == "report":
+                return True
+
+        return False
+
+    def get_capabilities(self) -> Dict[str, Any]:
+        """Get agent capabilities.
+
+        Returns:
+            Capabilities dictionary
+        """
+        return {
+            "name": self.name,
+            "version": "3.0.0",
+            "supported_intents": ["research", "analyze", "scan", "reference", "trend"],
+            "features": [
+                # Internal analysis features (from CodeAnalysisAgent)
+                "code_analysis",
+                "pattern_detection",
+                "code_smells",
+                "improvements",
+                "metrics",
+                # External research features
+                "external_references",
+                "technology_trends",
+                "solution_recommendations",
+                "knowledge_library",
+                # AI features
+                "ai_insights",
+                "priority_ranking",
+            ],
+            "config": {
+                "max_files": self.config.max_files_to_scan,
+                "ai_enabled": self.config.enable_ai_analysis,
+                "reference_search_enabled": self.config.enable_reference_search,
+                "library_enabled": self.config.save_to_library,
+            }
+        }

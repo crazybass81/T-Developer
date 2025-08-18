@@ -294,6 +294,90 @@ code_review_checklist:
 
 ---
 
+## 🧹 파일 정리 및 구조 개선 규칙
+
+### 파일 구조 변경 시 필수 정리 작업
+
+#### 1. 파일 이동/재구성 시 체크리스트
+
+```python
+def restructure_with_cleanup():
+    """파일 구조 변경 시 정리 작업."""
+
+    # 1. 이동 전 상태 기록
+    before_state = capture_directory_state()
+
+    # 2. 파일 이동/재구성 실행
+    perform_restructuring()
+
+    # 3. 불필요한 파일 정리
+    cleanup_tasks = [
+        remove_deprecated_files(),      # .deprecated 파일 제거
+        remove_empty_directories(),      # 빈 디렉토리 제거
+        remove_duplicate_files(),        # 중복 파일 제거
+        cleanup_temp_files(),           # 임시 파일 정리
+        remove_unused_imports()         # 사용하지 않는 import 제거
+    ]
+
+    # 4. 정리 결과 검증
+    verify_cleanup_complete()
+
+    # 5. 변경 사항 문서화
+    document_restructuring_changes()
+```
+
+#### 2. 파일 정리 규칙
+
+```yaml
+cleanup_rules:
+  deprecated_files:
+    - pattern: "*.deprecated"
+    - action: "Move to deprecated/ folder or delete after 30 days"
+    - log: "Record deprecation date and reason"
+
+  duplicate_files:
+    - detection: "Same functionality in different files"
+    - action: "Merge and keep only one"
+    - update: "Fix all imports referencing removed files"
+
+  empty_directories:
+    - detection: "Directories with no files"
+    - action: "Remove unless intentionally kept (with .gitkeep)"
+
+  unused_code:
+    - detection: "Functions/classes not imported anywhere"
+    - action: "Mark as deprecated → Remove after verification"
+
+  old_backups:
+    - pattern: "*.backup, *.old, *.tmp"
+    - action: "Remove if older than 7 days"
+```
+
+#### 3. 구조 변경 워크플로우
+
+```python
+# 필수 실행 순서
+restructuring_workflow = [
+    "1. 현재 구조 분석 및 문제점 파악",
+    "2. 새로운 구조 설계",
+    "3. 파일 이동 계획 수립",
+    "4. Import 의존성 확인",
+    "5. 파일 이동 실행",
+    "6. Import 경로 업데이트",
+    "7. 불필요한 파일 정리",  # 필수!
+    "8. 빈 디렉토리 제거",     # 필수!
+    "9. 테스트 실행",
+    "10. 문서 업데이트"
+]
+```
+
+#### 4. 자동 정리 트리거
+
+- 파일 이동 시 → 원본 위치 정리
+- 파일 병합 시 → 중복 파일 제거
+- 리팩토링 후 → 사용하지 않는 코드 제거
+- 구조 개선 후 → 빈 디렉토리 제거
+
 ## 🚫 중복 개발 방지 규칙 (최우선 사항)
 
 ### 파일 작업 전 필수 확인 사항

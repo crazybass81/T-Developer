@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from packages.agents.base import AgentInput, AgentOutput, AgentStatus, Artifact, BaseAgent
+from ..base import AgentInput, AgentOutput, AgentStatus, Artifact, BaseAgent
 
 logger = logging.getLogger("agents.evaluator")
 
