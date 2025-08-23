@@ -5,14 +5,11 @@ Bedrock AgentCore 런타임과 통합하여 에이전트 실행을 관리합니�
 """
 
 from .agent_runtime import AgentRuntime, RuntimeConfig
-from .squad_orchestrator import SquadOrchestrator
-from .agent_lifecycle import AgentLifecycle
-from .communication import AgentCommunication
+from .squad_orchestrator import SquadOrchestrator, SquadConfig
 
 __all__ = [
     "AgentRuntime",
     "RuntimeConfig", 
     "SquadOrchestrator",
-    "AgentLifecycle",
-    "AgentCommunication"
+    "SquadConfig"
 ]

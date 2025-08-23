@@ -25,7 +25,7 @@ import re
 
 from .base import BaseAgent, AgentTask, AgentResult
 from .personas import get_persona
-from ..ai_providers import BedrockAIProvider
+from .ai_providers import BedrockAIProvider
 
 logger = logging.getLogger(__name__)
 
