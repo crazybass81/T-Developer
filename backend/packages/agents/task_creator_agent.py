@@ -128,16 +128,18 @@ class TaskCreatorAgent(BaseAgent):
     5. 실행 최적화
     """
     
-    def __init__(self, memory_hub=None):
+    def __init__(self, memory_hub=None, document_context=None):
         """TaskCreatorAgent 초기화.
         
         Args:
             memory_hub: 메모리 허브 인스턴스
+            document_context: SharedDocumentContext 인스턴스
         """
         super().__init__(
             name="TaskCreatorAgent",
             version="1.0.0",
-            memory_hub=memory_hub
+            memory_hub=memory_hub,
+            document_context=document_context
         )
         
         # AI Provider 초기화 - 실제 AWS Bedrock 사용
@@ -149,6 +151,13 @@ class TaskCreatorAgent(BaseAgent):
         # Safety mechanisms
         self.circuit_breaker = CircuitBreaker(name="TaskCreatorAgent")
         self.resource_limiter = ResourceLimiter()
+        
+        # 페르소나 적용 - TaskCreatorAgent
+        from .personas import get_persona
+        self.persona = get_persona("TaskCreatorAgent")
+        if self.persona:
+            logger.info(f"🎭 {self.persona.name}: {self.persona.catchphrase}")
+
     
     async def _get_external_and_gap_reports(self) -> Dict[str, Any]:
         """Fetch external researcher and gap analyzer reports from memory.

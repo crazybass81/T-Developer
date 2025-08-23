@@ -36,6 +36,7 @@ from backend.packages.agents.system_architect import SystemArchitect
 from backend.packages.agents.orchestrator_designer import OrchestratorDesigner
 from backend.packages.memory.hub import MemoryHub
 from backend.packages.memory.contexts import ContextType
+from backend.packages.memory.document_context import SharedDocumentContext
 from backend.packages.safety import CircuitBreaker, CircuitBreakerConfig, ResourceLimiter, ResourceLimit
 
 # Agno 통합 - 자동 에이전트 생성
@@ -67,6 +68,10 @@ class UpgradeConfig:
     auto_generate_agents: bool = False  # Agno를 통한 자동 에이전트 생성
     auto_implement_code: bool = False  # CodeGenerator를 통한 자동 코드 구현
     evolution_convergence_threshold: float = 0.95  # 수렴 임계값 (갭 해소율)
+    
+    # AI 드리븐 동적 워크플로우 설정
+    ai_driven_workflow: bool = True  # AI가 에이전트 실행 순서 결정
+    allow_parallel_execution: bool = True  # 병렬 실행 허용
 
 
 @dataclass
@@ -202,6 +207,10 @@ class UpgradeReport:
     phases_completed: int = 0
     phases_failed: int = 0
     tasks_breakdown: List[Dict[str, Any]] = field(default_factory=list)  # 5~20분 태스크
+    
+    # Evolution Loop metadata
+    evolution_iterations: int = 0  # Evolution Loop 반복 횟수
+    agents_created: List[str] = field(default_factory=list)  # Agno로 생성된 에이전트 목록
 
 
 class UpgradeOrchestrator:
@@ -226,6 +235,7 @@ class UpgradeOrchestrator:
         self.config = config
         self.memory_hub = None
         self.phases: List[AnalysisPhase] = []
+        self.document_context = SharedDocumentContext()  # 공유 문서 컨텍스트
         
         # Initialize agents (will be created when needed)
         self.planner_agent = None
@@ -255,6 +265,12 @@ class UpgradeOrchestrator:
             region="us-east-1"
         )
         
+        # 페르소나 설정 - 진화 마에스트로
+        from backend.packages.agents.personas import get_persona
+        self.persona = get_persona("UpgradeOrchestrator")
+        if self.persona:
+            logger.info(f"🎭 페르소나 활성화: {self.persona.name} - '{self.persona.catchphrase}'")
+        
         # Safety mechanisms
         self.circuit_breaker = CircuitBreaker(
             name="UpgradeOrchestrator",
@@ -282,23 +298,24 @@ class UpgradeOrchestrator:
         self.memory_hub = MemoryHub()
         await self.memory_hub.initialize()
         
-        # Initialize all agents with memory hub
-        self.planner_agent = PlannerAgent(memory_hub=self.memory_hub)
-        self.task_creator_agent = TaskCreatorAgent(memory_hub=self.memory_hub)
-        self.requirement_analyzer = RequirementAnalyzer(memory_hub=self.memory_hub)
-        self.external_researcher = ExternalResearcher(memory_hub=self.memory_hub)
-        self.static_analyzer = StaticAnalyzer(memory_hub=self.memory_hub)
-        self.code_analyzer = CodeAnalysisAgent(memory_hub=self.memory_hub)
-        self.gap_analyzer = GapAnalyzer(memory_hub=self.memory_hub)
-        self.behavior_analyzer = BehaviorAnalyzer(memory_hub=self.memory_hub)
+        # Initialize all agents with memory hub and shared document context
+        self.planner_agent = PlannerAgent(memory_hub=self.memory_hub, document_context=self.document_context)
+        self.task_creator_agent = TaskCreatorAgent(memory_hub=self.memory_hub, document_context=self.document_context)
+        self.requirement_analyzer = RequirementAnalyzer(memory_hub=self.memory_hub, document_context=self.document_context)
+        self.external_researcher = ExternalResearcher(memory_hub=self.memory_hub, document_context=self.document_context)
+        self.static_analyzer = StaticAnalyzer(memory_hub=self.memory_hub, document_context=self.document_context)
+        self.code_analyzer = CodeAnalysisAgent(memory_hub=self.memory_hub, document_context=self.document_context)
+        self.gap_analyzer = GapAnalyzer(memory_hub=self.memory_hub, document_context=self.document_context)
+        self.behavior_analyzer = BehaviorAnalyzer(memory_hub=self.memory_hub, document_context=self.document_context)
         self.impact_analyzer = ImpactAnalyzer(
             memory_hub=self.memory_hub,
-            static_analyzer=self.static_analyzer
+            static_analyzer=self.static_analyzer,
+            document_context=self.document_context
         )
-        self.system_architect = SystemArchitect(memory_hub=self.memory_hub)
-        self.orchestrator_designer = OrchestratorDesigner(memory_hub=self.memory_hub)
-        self.code_generator = CodeGenerator(memory_hub=self.memory_hub)
-        self.quality_gate = QualityGate(memory_hub=self.memory_hub)
+        self.system_architect = SystemArchitect(memory_hub=self.memory_hub, document_context=self.document_context)
+        self.orchestrator_designer = OrchestratorDesigner(memory_hub=self.memory_hub, document_context=self.document_context)
+        self.code_generator = CodeGenerator(memory_hub=self.memory_hub, document_context=self.document_context)
+        self.quality_gate = QualityGate(memory_hub=self.memory_hub, document_context=self.document_context)
         # self.report_generator = ReportGenerator(memory_hub=self.memory_hub)  # Not implemented yet
         
         # Agno 초기화 (Evolution Loop용)
@@ -319,10 +336,11 @@ class UpgradeOrchestrator:
         logger.info("Orchestrator initialized successfully")
     
     async def analyze(self, requirements: str, include_research: bool = True) -> UpgradeReport:
-        """AI-드리븐 업그레이드 분석 실행.
+        """AI-드리븐 업그레이드 분석 실행 (Evolution Loop 통합).
         
         정해진 기본 순서에 따라 에이전트들을 실행하지만,
         요구사항에 따라 AI가 동적으로 순서와 에이전트를 조정할 수 있음.
+        Evolution Loop이 활성화되면 갭이 해소될 때까지 자동으로 반복.
         
         기본 실행 순서:
         1. RequirementAnalyzer - 요구사항 분석/문서화
@@ -333,9 +351,9 @@ class UpgradeOrchestrator:
         6. OrchestratorDesigner - 오케스트레이터/에이전트 디자인
         7. PlannerAgent - Phase 단위 계획
         8. TaskCreatorAgent - 세부 태스크 계획
-        9. CodeGenerator - 코드 생성
+        9. CodeGenerator - 코드 생성 (Agno 통합)
         10. 테스트 실행
-        11. 갭 재확인 (루프 종료 조건)
+        11. 갭 재확인 및 Evolution Loop (갭이 0이 될 때까지 반복)
         
         Args:
             requirements: 자연어 요구사항
@@ -345,6 +363,7 @@ class UpgradeOrchestrator:
             종합 업그레이드 보고서
         """
         logger.info(f"Starting AI-driven upgrade analysis for: {self.config.project_path}")
+        logger.info(f"Evolution Loop enabled: {self.config.enable_evolution_loop}")
         start_time = datetime.now()
         
         # Initialize report
@@ -361,94 +380,148 @@ class UpgradeOrchestrator:
             })
             return report
         
+        # Evolution Loop 카운터
+        evolution_iteration = 0
+        max_iterations = self.config.max_evolution_iterations if self.config.enable_evolution_loop else 1
+        
         try:
-            # Phase 1: 요구사항 분석
+            # 초기 요구사항 분석은 한 번만 수행
             logger.info("Phase 1: Analyzing requirements...")
             requirement_result = await self._execute_requirement_analysis(requirements)
             report.requirement_analysis = requirement_result
             
-            # Phase 2: 현재 상태 분석 (병렬 실행)
-            logger.info("Phase 2: Analyzing current state...")
-            current_state_results = await self._execute_current_state_analysis()
-            report.static_analysis = current_state_results.get('static')
-            report.code_analysis = current_state_results.get('code')
-            report.behavior_analysis = current_state_results.get('behavior')
-            report.impact_analysis = current_state_results.get('impact')
-            report.quality_metrics = current_state_results.get('quality')
-            
-            # Phase 3: 외부 리서치
-            if include_research:
-                logger.info("Phase 3: Conducting external research...")
-                research_result = await self._execute_external_research(
-                    requirement_result,
-                    current_state_results
-                )
-                report.research_pack = research_result
-            
-            # Phase 4: 갭 분석
-            logger.info("Phase 4: Analyzing gaps...")
-            gap_result = await self._execute_gap_analysis(
-                requirement_result,
-                current_state_results,
-                report.research_pack
-            )
-            report.gap_analysis = gap_result
-            
-            # Phase 5: 아키텍처 설계
-            logger.info("Phase 5: Designing architecture...")
-            architecture_design = await self._execute_architecture_design(
-                requirement_result,
-                gap_result
-            )
-            
-            # Phase 6: 오케스트레이터 디자인
-            logger.info("Phase 6: Designing orchestrator...")
-            orchestrator_design = await self._execute_orchestrator_design(
-                architecture_design,
-                requirement_result
-            )
-            
-            # Phase 7: 실행 계획 수립
-            logger.info("Phase 7: Creating execution plan...")
-            execution_plan = await self._execute_planning(
-                architecture_design,
-                orchestrator_design,
-                requirement_result
-            )
-            
-            # Phase 8: 세부 태스크 생성
-            logger.info("Phase 8: Creating detailed tasks...")
-            detailed_tasks = await self._execute_task_creation(
-                execution_plan,
-                orchestrator_design
-            )
-            report.tasks_breakdown = detailed_tasks
-            
-            # Phase 9: 코드 생성 (자동 구현이 활성화된 경우)
-            if self.config.auto_implement_code:
-                logger.info("Phase 9: Generating code...")
-                code_generation_result = await self._execute_code_generation(
-                    detailed_tasks,
-                    architecture_design
-                )
+            # Evolution Loop 시작
+            while evolution_iteration < max_iterations:
+                evolution_iteration += 1
+                logger.info(f"\n{'='*80}")
+                logger.info(f"🔄 Evolution Loop Iteration {evolution_iteration}/{max_iterations}")
+                logger.info(f"{'='*80}\n")
                 
-                # Phase 10: 테스트 실행
-                logger.info("Phase 10: Running tests...")
-                test_result = await self._execute_tests(code_generation_result)
+                # 새 루프 시작 - 문서 컨텍스트 초기화
+                self.document_context.start_new_loop()
                 
-                # Phase 11: 갭 재확인 (Evolution Loop)
-                if self.config.enable_evolution_loop:
-                    logger.info("Phase 11: Re-checking gaps for evolution loop...")
-                    remaining_gaps = await self._recheck_gaps(
+                # 요구사항을 문서 컨텍스트에 추가
+                self.document_context.add_document("RequirementAnalyzer", requirement_result, "requirement")
+                
+                # AI 드리븐 동적 워크플로우 사용 여부 결정
+                if self.config.ai_driven_workflow:
+                    # AI가 다음 실행할 에이전트를 동적으로 결정
+                    logger.info("🤖 AI-driven dynamic workflow enabled")
+                    await self._execute_dynamic_workflow(report, evolution_iteration)
+                else:
+                    # 기존 정적 워크플로우 실행
+                    # Phase 2: 현재 상태 분석 (병렬 실행)
+                    logger.info(f"Phase 2 (Iteration {evolution_iteration}): Analyzing current state...")
+                    current_state_results = await self._execute_current_state_analysis()
+                    report.static_analysis = current_state_results.get('static')
+                    report.code_analysis = current_state_results.get('code')
+                    report.behavior_analysis = current_state_results.get('behavior')
+                    report.impact_analysis = current_state_results.get('impact')
+                    report.quality_metrics = current_state_results.get('quality')
+                    
+                    # 결과를 문서 컨텍스트에 추가
+                    for agent_name, result in current_state_results.items():
+                        if result:
+                            self.document_context.add_document(f"{agent_name}_analyzer", result, "analysis")
+                
+                # Phase 3: 외부 리서치 (첫 반복에서만)
+                if include_research and evolution_iteration == 1:
+                    logger.info("Phase 3: Conducting external research...")
+                    research_result = await self._execute_external_research(
                         requirement_result,
-                        test_result
+                        current_state_results
+                    )
+                    report.research_pack = research_result
+                
+                # Phase 4: 갭 분석 (매 반복마다 수행)
+                logger.info(f"Phase 4 (Iteration {evolution_iteration}): Analyzing gaps...")
+                gap_result = await self._execute_gap_analysis(
+                    requirement_result,
+                    current_state_results,
+                    report.research_pack
+                )
+                report.gap_analysis = gap_result
+                
+                # 갭 체크 - Evolution Loop 종료 조건
+                gaps = gap_result.get('gaps', []) if gap_result else []
+                gap_score = gap_result.get('gap_score', 0) if gap_result else 0
+                
+                # 갭이 해소되었거나 수렴 임계값에 도달한 경우
+                if not gaps or gap_score >= self.config.evolution_convergence_threshold:
+                    logger.info(f"✅ All gaps resolved or convergence reached (score: {gap_score:.2%})")
+                    break
+                
+                logger.info(f"📊 Remaining gaps: {len(gaps)}, Gap score: {gap_score:.2%}")
+                
+                # Phase 5: 아키텍처 설계
+                logger.info(f"Phase 5 (Iteration {evolution_iteration}): Designing architecture...")
+                architecture_design = await self._execute_architecture_design(
+                    requirement_result,
+                    gap_result
+                )
+                
+                # Phase 6: 오케스트레이터 디자인
+                logger.info(f"Phase 6 (Iteration {evolution_iteration}): Designing orchestrator...")
+                orchestrator_design = await self._execute_orchestrator_design(
+                    architecture_design,
+                    requirement_result
+                )
+                
+                # Agno를 통한 자동 에이전트 생성 (활성화된 경우)
+                if self.config.auto_generate_agents and self.config.enable_evolution_loop:
+                    logger.info("🤖 Auto-generating agents with Agno...")
+                    generated_agents = await self._generate_agents_with_agno(
+                        orchestrator_design,
+                        gaps
+                    )
+                    if generated_agents:
+                        logger.info(f"Generated {len(generated_agents)} new agents")
+                        report.agents_created = report.agents_created or []
+                        report.agents_created.extend(generated_agents)
+                
+                # Phase 7: 실행 계획 수립
+                logger.info(f"Phase 7 (Iteration {evolution_iteration}): Creating execution plan...")
+                execution_plan = await self._execute_planning(
+                    architecture_design,
+                    orchestrator_design,
+                    requirement_result
+                )
+                
+                # Phase 8: 세부 태스크 생성
+                logger.info(f"Phase 8 (Iteration {evolution_iteration}): Creating detailed tasks...")
+                detailed_tasks = await self._execute_task_creation(
+                    execution_plan,
+                    orchestrator_design
+                )
+                report.tasks_breakdown = detailed_tasks
+                
+                # Phase 9: 코드 생성 (자동 구현이 활성화된 경우)
+                if self.config.auto_implement_code:
+                    logger.info(f"Phase 9 (Iteration {evolution_iteration}): Generating code...")
+                    code_generation_result = await self._execute_code_generation(
+                        detailed_tasks,
+                        architecture_design
                     )
                     
-                    if remaining_gaps and len(remaining_gaps) > 0:
-                        logger.info(f"Remaining gaps found: {len(remaining_gaps)}")
-                        # Evolution loop would continue here
-                    else:
-                        logger.info("All gaps resolved!")
+                    # Phase 10: 테스트 실행
+                    logger.info(f"Phase 10 (Iteration {evolution_iteration}): Running tests...")
+                    test_result = await self._execute_tests(code_generation_result)
+                    
+                    # Phase 11: Evolution Loop 종료 여부 결정
+                    if not self.config.enable_evolution_loop:
+                        logger.info("Evolution Loop disabled, stopping after first iteration")
+                        break
+                
+                # Evolution Loop이 활성화되지 않은 경우 첫 반복 후 종료
+                if not self.config.enable_evolution_loop:
+                    break
+            
+            # Evolution Loop 완료 로그
+            if self.config.enable_evolution_loop:
+                logger.info(f"\n{'='*80}")
+                logger.info(f"🧬 Evolution Loop completed after {evolution_iteration} iterations")
+                logger.info(f"{'='*80}\n")
+                report.evolution_iterations = evolution_iteration
             
             # Aggregate results
             self._aggregate_results(report)
@@ -484,10 +557,121 @@ class UpgradeOrchestrator:
         return report
     
     async def _define_phases_with_ai(self, requirements: str) -> List[AnalysisPhase]:
-        """Use AI to intelligently select and order analysis phases."""
-        # For now, fallback to default phases
-        # TODO: Implement AI-driven phase selection
-        return self._define_phases(requirements)
+        """AI를 사용한 지능적인 분석 단계 선택 및 순서 결정.
+        
+        요구사항을 분석하여 필요한 에이전트와 실행 순서를 동적으로 결정합니다.
+        기본 순서를 따르되, 요구사항의 특성에 따라 조정합니다.
+        
+        Args:
+            requirements: 사용자 요구사항
+            
+        Returns:
+            최적화된 분석 단계 목록
+        """
+        try:
+            # AI Provider 초기화
+            ai_provider = get_ai_provider()
+            
+            # AI에게 요구사항 분석 및 최적 실행 계획 수립 요청
+            prompt = f"""
+            Analyze these requirements and determine the optimal agent execution order:
+            
+            Requirements: {requirements[:1000]}
+            
+            Available agents:
+            1. RequirementAnalyzer - Parses and documents requirements
+            2. StaticAnalyzer - Analyzes code structure and complexity
+            3. CodeAnalysisAgent - AI-based code understanding
+            4. BehaviorAnalyzer - Analyzes runtime behavior from logs
+            5. ImpactAnalyzer - Analyzes change impact and dependencies
+            6. QualityGate - Checks code quality metrics
+            7. ExternalResearcher - Searches external resources
+            8. GapAnalyzer - Identifies gaps between current and desired state
+            9. SystemArchitect - Designs system architecture
+            10. OrchestratorDesigner - Designs orchestrator flow
+            11. PlannerAgent - Creates phase-level plans
+            12. TaskCreatorAgent - Creates detailed tasks
+            13. CodeGenerator - Generates code
+            
+            Based on the requirements, determine:
+            1. Which agents are essential (must run)
+            2. Which agents are optional (can be skipped)
+            3. Optimal execution order
+            4. Which agents can run in parallel
+            
+            Consider:
+            - If requirements mention "debug" or "fix", prioritize analysis agents
+            - If requirements mention "new feature", prioritize design agents
+            - If requirements mention "refactor", prioritize quality and impact agents
+            - If requirements mention "upgrade", run all agents
+            
+            Return a structured JSON response with:
+            {{
+                "essential_agents": ["agent1", "agent2", ...],
+                "optional_agents": ["agent3", ...],
+                "execution_order": [
+                    {{"phase": 1, "agents": ["agent1"], "parallel": false}},
+                    {{"phase": 2, "agents": ["agent2", "agent3"], "parallel": true}},
+                    ...
+                ],
+                "reasoning": "Brief explanation of choices"
+            }}
+            """
+            
+            response = await ai_provider.complete(prompt)
+            
+            # Parse AI response
+            import json
+            try:
+                ai_plan = json.loads(response)
+                logger.info(f"AI-driven phase selection: {ai_plan.get('reasoning', 'No reasoning provided')}")
+                
+                # Convert AI plan to AnalysisPhase objects
+                phases = []
+                for phase_info in ai_plan.get('execution_order', []):
+                    for agent_name in phase_info.get('agents', []):
+                        # Map agent names to phase names
+                        phase_name = self._get_phase_name_for_agent(agent_name)
+                        if phase_name:
+                            phases.append(AnalysisPhase(
+                                name=phase_name,
+                                agent=agent_name,
+                                status="pending"
+                            ))
+                
+                # If AI planning failed or returned empty, fallback to default
+                if not phases:
+                    logger.warning("AI phase planning returned empty, using default phases")
+                    return self._define_phases(requirements)
+                
+                return phases
+                
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse AI response, using default phases")
+                return self._define_phases(requirements)
+                
+        except Exception as e:
+            logger.error(f"AI-driven phase selection failed: {e}, falling back to default")
+            return self._define_phases(requirements)
+    
+    def _get_phase_name_for_agent(self, agent_name: str) -> Optional[str]:
+        """에이전트 이름을 phase 이름으로 매핑."""
+        mapping = {
+            "RequirementAnalyzer": "requirement_analysis",
+            "StaticAnalyzer": "static_analysis",
+            "CodeAnalysisAgent": "code_analysis",
+            "BehaviorAnalyzer": "behavior_analysis",
+            "ImpactAnalyzer": "impact_analysis",
+            "QualityGate": "quality_gate",
+            "ExternalResearcher": "external_research",
+            "GapAnalyzer": "gap_analysis",
+            "SystemArchitect": "architecture_design",
+            "OrchestratorDesigner": "orchestrator_design",
+            "PlannerAgent": "planning",
+            "TaskCreatorAgent": "task_creation",
+            "CodeGenerator": "code_generation"
+        }
+        return mapping.get(agent_name)
     
     def _define_phases(self, requirements: str) -> List[AnalysisPhase]:
         """Define analysis phases based on configuration.
@@ -2222,43 +2406,7 @@ TTL: {urp.ttl_days} days
             "user_flows": behavior_data.get('user_flows', []),
             "performance_score": max(0, 100 - (performance_data.get('p95_latency', 0) / 10))
         }
-
-
-async def main():
-    """Example usage."""
-    config = UpgradeConfig(
-        project_path="/path/to/project",
-        enable_dynamic_analysis=False,
-        include_behavior_analysis=True,
-        generate_impact_matrix=True
-    )
     
-    orchestrator = UpgradeOrchestrator(config)
-    await orchestrator.initialize()
-    
-    requirements = """
-    Analyze the current system and provide upgrade recommendations.
-    Focus on improving test coverage, reducing technical debt, and
-    identifying performance bottlenecks.
-    """
-    
-    report = await orchestrator.analyze(requirements)
-    
-    # Print summary
-    print(f"System Health Score: {report.system_health_score:.1f}/100")
-    print(f"Upgrade Risk Score: {report.upgrade_risk_score:.1f}/100")
-    print(f"Total Issues Found: {report.total_issues_found}")
-    print(f"Critical Issues: {len(report.critical_issues)}")
-    
-    print("\nImmediate Actions:")
-    for action in report.immediate_actions:
-        print(f"  - {action}")
-    
-    print("\nShort-term Goals:")
-    for goal in report.short_term_goals:
-        print(f"  - {goal}")
-
-
     # ===============================================
     # Evolution Loop 구현 - 갭이 0이 될 때까지 반복
     # ===============================================
@@ -2326,9 +2474,36 @@ async def main():
             }
             
             try:
-                # Step 1: 전체 분석 실행
-                logger.info("📊 Running complete analysis...")
-                report = await self.analyze(requirements, include_research=True)
+                # 새 루프 시작 - SharedDocumentContext 초기화
+                if self.document_context:
+                    self.document_context.start_new_loop()
+                
+                # AI 드리븐 워크플로우 사용 여부 확인
+                if self.config.ai_driven_workflow and self.document_context:
+                    # Step 1: AI 드리븐 동적 워크플로우 실행
+                    logger.info("🤖 Using AI-driven dynamic workflow...")
+                    workflow_results = await self._execute_dynamic_workflow(requirements, iteration)
+                    
+                    # 워크플로우 결과를 리포트로 변환
+                    report = UpgradeReport(
+                        timestamp=datetime.now().isoformat(),
+                        success=True,
+                        phase_results=workflow_results
+                    )
+                    
+                    # 갭 분석 결과 추출
+                    gap_data = workflow_results.get("GapAnalyzer_step1", {})
+                    if gap_data and "gaps" in gap_data:
+                        report.gap_report = GapAnalysisReport(
+                            gaps=gap_data["gaps"],
+                            gap_score=gap_data.get("gap_score", 0),
+                            priority_gaps=gap_data.get("priority_gaps", []),
+                            execution_plan=gap_data.get("execution_plan", {})
+                        )
+                else:
+                    # Step 1: 표준 분석 실행
+                    logger.info("📊 Running standard complete analysis...")
+                    report = await self.analyze(requirements, include_research=True)
                 
                 # Step 2: 갭 추출
                 current_gaps = []
@@ -2644,6 +2819,340 @@ async def main():
             )
         return None
     
+    async def _execute_dynamic_workflow(
+        self,
+        requirements: str,
+        iteration: int = 1
+    ) -> Dict[str, Any]:
+        """AI 드리븐 동적 워크플로우 실행.
+        
+        SharedDocumentContext의 모든 문서를 참조하여 AI가 다음 실행할 에이전트를 결정합니다.
+        이를 통해 진정한 AI 드리븐 오케스트레이션이 가능합니다.
+        
+        Args:
+            requirements: 요구사항
+            iteration: 현재 반복 번호
+            
+        Returns:
+            실행 결과
+        """
+        logger.info(f"🤖 Executing AI-driven dynamic workflow (iteration {iteration})")
+        
+        if not self.document_context:
+            logger.warning("No document context available, falling back to standard workflow")
+            return await self._execute_standard_workflow(requirements)
+        
+        # AI Provider 준비
+        from backend.packages.agents.ai_providers import BedrockAIProvider
+        ai_provider = BedrockAIProvider(
+            model="claude-3-sonnet",
+            region="us-east-1"
+        )
+        
+        # 현재까지의 모든 문서 컨텍스트 가져오기
+        context_for_ai = self.document_context.get_context_for_ai(
+            include_history=True,
+            max_history_loops=2
+        )
+        
+        # 사용 가능한 에이전트 목록
+        available_agents = [
+            "RequirementAnalyzer",
+            "StaticAnalyzer", 
+            "CodeAnalysisAgent",
+            "BehaviorAnalyzer",
+            "ImpactAnalyzer",
+            "QualityGate",
+            "ExternalResearcher",
+            "GapAnalyzer",
+            "SystemArchitect",
+            "OrchestratorDesigner",
+            "PlannerAgent",
+            "TaskCreatorAgent",
+            "CodeGenerator"
+        ]
+        
+        workflow_results = {}
+        max_steps = 10  # 한 iteration 내 최대 실행 단계
+        
+        for step in range(1, max_steps + 1):
+            # AI에게 다음 에이전트 선택 요청
+            prompt = f"""
+            You are an AI orchestrator managing an evolution loop for project upgrade.
+            Current iteration: {iteration}, Step: {step}
+            
+            Requirements: {requirements}
+            
+            Available agents: {available_agents}
+            
+            Current loop documents:
+            {context_for_ai}
+            
+            Based on the current state and documents, determine:
+            1. Which agent(s) should execute next (can be multiple for parallel execution)
+            2. Whether we should continue or stop this iteration
+            3. Reasoning for your decision
+            
+            Rules:
+            - RequirementAnalyzer must run first if no requirement analysis exists
+            - Some agents can run in parallel (e.g., StaticAnalyzer, CodeAnalysisAgent, BehaviorAnalyzer)
+            - GapAnalyzer needs requirement and state analysis results
+            - Stop when gaps are resolved or no meaningful progress can be made
+            
+            Return JSON:
+            {{
+                "continue": true/false,
+                "next_agents": ["agent1", "agent2"],
+                "parallel": true/false,
+                "reasoning": "explanation",
+                "expected_outcome": "what we expect from these agents"
+            }}
+            """
+            
+            try:
+                response = await ai_provider.complete(prompt)
+                decision = json.loads(response)
+                
+                logger.info(f"AI Decision - Step {step}: {decision.get('reasoning', 'No reasoning')}")
+                
+                if not decision.get("continue", False):
+                    logger.info("AI decided to stop the iteration")
+                    break
+                
+                next_agents = decision.get("next_agents", [])
+                is_parallel = decision.get("parallel", False)
+                
+                if not next_agents:
+                    logger.warning("AI returned no agents to execute, stopping")
+                    break
+                
+                # 에이전트 실행
+                if is_parallel and len(next_agents) > 1:
+                    logger.info(f"Executing agents in parallel: {next_agents}")
+                    tasks = []
+                    for agent_name in next_agents:
+                        task = self._execute_single_agent(agent_name, requirements)
+                        tasks.append(task)
+                    
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+                    
+                    for agent_name, result in zip(next_agents, results):
+                        if isinstance(result, Exception):
+                            logger.error(f"Agent {agent_name} failed: {result}")
+                            workflow_results[f"{agent_name}_step{step}"] = {"error": str(result)}
+                        else:
+                            workflow_results[f"{agent_name}_step{step}"] = result
+                            # 문서 컨텍스트에 추가
+                            if result and self.document_context:
+                                self.document_context.add_document(
+                                    agent_name,
+                                    result,
+                                    document_type="analysis"
+                                )
+                else:
+                    # 순차 실행
+                    for agent_name in next_agents:
+                        logger.info(f"Executing agent: {agent_name}")
+                        result = await self._execute_single_agent(agent_name, requirements)
+                        workflow_results[f"{agent_name}_step{step}"] = result
+                        
+                        # 문서 컨텍스트에 추가
+                        if result and self.document_context:
+                            self.document_context.add_document(
+                                agent_name,
+                                result,
+                                document_type="analysis"
+                            )
+                
+            except Exception as e:
+                logger.error(f"Dynamic workflow step {step} failed: {e}")
+                break
+        
+        logger.info(f"Dynamic workflow completed with {len(workflow_results)} agent executions")
+        return workflow_results
+    
+    async def _execute_single_agent(self, agent_name: str, requirements: str) -> Dict[str, Any]:
+        """단일 에이전트 실행.
+        
+        Args:
+            agent_name: 실행할 에이전트 이름
+            requirements: 요구사항
+            
+        Returns:
+            실행 결과
+        """
+        try:
+            # 에이전트별 실행 로직
+            if agent_name == "RequirementAnalyzer":
+                return await self._execute_requirement_analysis(requirements)
+            elif agent_name == "StaticAnalyzer":
+                return await self._run_static_analysis()
+            elif agent_name == "CodeAnalysisAgent":
+                return await self._run_code_analysis()
+            elif agent_name == "BehaviorAnalyzer":
+                return await self._run_behavior_analysis()
+            elif agent_name == "ImpactAnalyzer":
+                return await self._run_impact_analysis()
+            elif agent_name == "QualityGate":
+                return await self._run_quality_analysis()
+            elif agent_name == "ExternalResearcher":
+                req_result = self.document_context.get_document("RequirementAnalyzer") if self.document_context else {}
+                state_results = self.document_context.get_all_documents() if self.document_context else {}
+                research = await self._execute_external_research(
+                    req_result.get("content", {}) if req_result else {},
+                    state_results
+                )
+                return asdict(research) if research else {}
+            elif agent_name == "GapAnalyzer":
+                docs = self.document_context.get_all_documents() if self.document_context else {}
+                return await self._execute_gap_analysis(
+                    docs.get("RequirementAnalyzer", {}).get("content", {}),
+                    docs,
+                    None  # Research pack will be in documents
+                )
+            elif agent_name == "SystemArchitect":
+                return await self._execute_architecture_design()
+            elif agent_name == "OrchestratorDesigner":
+                return await self._execute_orchestrator_design()
+            elif agent_name == "PlannerAgent":
+                return await self._execute_planning()
+            elif agent_name == "TaskCreatorAgent":
+                return await self._execute_task_creation()
+            elif agent_name == "CodeGenerator":
+                return await self._execute_code_generation_batch()
+            else:
+                logger.warning(f"Unknown agent: {agent_name}")
+                return {"error": f"Unknown agent: {agent_name}"}
+                
+        except Exception as e:
+            logger.error(f"Failed to execute agent {agent_name}: {e}")
+            return {"error": str(e)}
+    
+    async def _execute_standard_workflow(self, requirements: str) -> Dict[str, Any]:
+        """표준 워크플로우 실행 (fallback).
+        
+        Args:
+            requirements: 요구사항
+            
+        Returns:
+            실행 결과
+        """
+        logger.info("Executing standard workflow...")
+        
+        results = {}
+        
+        # 1. 요구사항 분석
+        results["requirement"] = await self._execute_requirement_analysis(requirements)
+        
+        # 2. 현재 상태 분석 (병렬)
+        state_results = await self._execute_current_state_analysis()
+        results["current_state"] = state_results
+        
+        # 3. 외부 리서치
+        research = await self._execute_external_research(
+            results["requirement"],
+            state_results
+        )
+        if research:
+            results["research"] = asdict(research)
+        
+        # 4. 갭 분석
+        results["gap"] = await self._execute_gap_analysis(
+            results["requirement"],
+            state_results,
+            research
+        )
+        
+        return results
+    
+    async def _execute_architecture_design(self) -> Dict[str, Any]:
+        """아키텍처 설계 실행"""
+        if not self.system_architect:
+            return {"error": "SystemArchitect not initialized"}
+        
+        task = AgentTask(
+            task_id="architecture_design",
+            intent="design_architecture",
+            inputs={
+                "documents": self.document_context.get_all_documents() if self.document_context else {}
+            }
+        )
+        result = await self.system_architect.execute(task)
+        return result.data if result.success else {}
+    
+    async def _execute_orchestrator_design(self) -> Dict[str, Any]:
+        """오케스트레이터 설계 실행"""
+        if not self.orchestrator_designer:
+            return {"error": "OrchestratorDesigner not initialized"}
+        
+        task = AgentTask(
+            task_id="orchestrator_design",
+            intent="design_orchestrator",
+            inputs={
+                "documents": self.document_context.get_all_documents() if self.document_context else {}
+            }
+        )
+        result = await self.orchestrator_designer.execute(task)
+        return result.data if result.success else {}
+    
+    async def _execute_planning(self) -> Dict[str, Any]:
+        """계획 수립 실행"""
+        if not self.planner_agent:
+            return {"error": "PlannerAgent not initialized"}
+        
+        task = AgentTask(
+            task_id="planning",
+            intent="create_plan",
+            inputs={
+                "documents": self.document_context.get_all_documents() if self.document_context else {}
+            }
+        )
+        result = await self.planner_agent.execute(task)
+        return result.data if result.success else {}
+    
+    async def _execute_task_creation(self) -> Dict[str, Any]:
+        """태스크 생성 실행"""
+        if not self.task_creator_agent:
+            return {"error": "TaskCreatorAgent not initialized"}
+        
+        task = AgentTask(
+            task_id="task_creation",
+            intent="create_tasks",
+            inputs={
+                "documents": self.document_context.get_all_documents() if self.document_context else {}
+            }
+        )
+        result = await self.task_creator_agent.execute(task)
+        return result.data if result.success else {}
+    
+    async def _execute_code_generation_batch(self) -> Dict[str, Any]:
+        """코드 생성 배치 실행"""
+        if not self.code_generator:
+            return {"error": "CodeGenerator not initialized"}
+        
+        # 태스크 목록에서 코드 생성이 필요한 것들 추출
+        tasks_doc = self.document_context.get_document("TaskCreatorAgent") if self.document_context else None
+        if not tasks_doc:
+            return {"error": "No tasks available for code generation"}
+        
+        tasks = tasks_doc.get("content", {}).get("tasks", [])
+        code_tasks = [t for t in tasks if t.get("type") in ["code_generation", "code_modification"]]
+        
+        results = []
+        for code_task in code_tasks[:5]:  # 최대 5개씩 처리
+            task = AgentTask(
+                task_id=f"code_gen_{code_task.get('id', 'unknown')}",
+                intent="generate_code",
+                inputs=code_task
+            )
+            result = await self.code_generator.execute(task)
+            results.append(result.data if result.success else {"error": "Failed"})
+        
+        return {
+            "generated_count": len(results),
+            "results": results
+        }
+
     async def _execute_gap_analysis(
         self,
         requirement_result: Dict[str, Any],
@@ -2761,6 +3270,78 @@ async def main():
         
         result = await self.code_generator.execute(task)
         return result.data if result.success else {}
+    
+    async def _generate_agents_with_agno(
+        self,
+        orchestrator_design: Dict[str, Any],
+        gaps: List[Dict[str, Any]]
+    ) -> List[str]:
+        """Agno를 통한 자동 에이전트 생성.
+        
+        오케스트레이터 디자인과 갭 분석 결과를 바탕으로
+        필요한 에이전트를 자동으로 생성합니다.
+        
+        Args:
+            orchestrator_design: 오케스트레이터 디자인 문서
+            gaps: 해결해야 할 갭 목록
+            
+        Returns:
+            생성된 에이전트 이름 목록
+        """
+        generated_agents = []
+        
+        if not hasattr(self, 'agno_manager'):
+            logger.warning("Agno not initialized, skipping agent generation")
+            return generated_agents
+        
+        try:
+            # 갭 분석을 통해 필요한 에이전트 식별
+            for gap in gaps[:5]:  # 최대 5개 갭에 대해서만 에이전트 생성
+                gap_type = gap.get('type', 'unknown')
+                gap_description = gap.get('description', '')
+                
+                # AI를 통해 에이전트 스펙 생성
+                agent_spec_prompt = f"""
+                Based on this gap in our system:
+                Type: {gap_type}
+                Description: {gap_description}
+                
+                Design an agent specification to address this gap.
+                Include name, purpose, capabilities, and implementation approach.
+                """
+                
+                # Agno 스펙 생성
+                from backend.packages.agno.spec import AgentSpec as AgnoSpec
+                
+                spec = AgnoSpec(
+                    name=f"{gap_type}_resolver_agent",
+                    description=f"Agent to resolve {gap_type} gaps",
+                    purpose=f"Address gaps related to {gap_type}",
+                    capabilities=[
+                        f"analyze_{gap_type}",
+                        f"resolve_{gap_type}",
+                        f"validate_{gap_type}_resolution"
+                    ],
+                    inputs={"gap": "Gap information to resolve"},
+                    outputs={"resolution": "Resolution details and status"},
+                    dependencies=["backend.packages.agents.base"],
+                    ai_enabled=True
+                )
+                
+                # Agno를 통한 에이전트 코드 생성
+                try:
+                    agent_name = await self.agno_manager.create_agent(spec)
+                    if agent_name:
+                        generated_agents.append(agent_name)
+                        logger.info(f"Generated agent: {agent_name}")
+                except Exception as e:
+                    logger.error(f"Failed to generate agent for {gap_type}: {e}")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"Agent generation failed: {e}")
+        
+        return generated_agents
     
     async def _execute_tests(self, code_generation_result: Dict[str, Any]) -> Dict[str, Any]:
         """테스트 실행"""
@@ -2998,6 +3579,43 @@ async def main():
         
         with open(path, 'w', encoding='utf-8') as f:
             f.write(content)
+
+
+async def main():
+    """Example usage."""
+    config = UpgradeConfig(
+        project_path="/home/ec2-user/T-Developer",
+        enable_dynamic_analysis=False,
+        include_behavior_analysis=True,
+        generate_impact_matrix=True,
+        generate_recommendations=True,
+        safe_mode=True
+    )
+    
+    orchestrator = UpgradeOrchestrator(config)
+    await orchestrator.initialize()
+    
+    requirements = """
+    Analyze the current system and provide upgrade recommendations.
+    Focus on improving test coverage, reducing technical debt, and
+    identifying performance bottlenecks.
+    """
+    
+    report = await orchestrator.analyze(requirements)
+    
+    # Print summary
+    print(f"System Health Score: {report.system_health_score:.1f}/100")
+    print(f"Upgrade Risk Score: {report.upgrade_risk_score:.1f}/100")
+    print(f"Total Issues Found: {report.total_issues_found}")
+    print(f"Critical Issues: {len(report.critical_issues)}")
+    
+    print("\nImmediate Actions:")
+    for action in report.immediate_actions:
+        print(f"  - {action}")
+    
+    print("\nShort-term Goals:")
+    for goal in report.short_term_goals:
+        print(f"  - {goal}")
 
 
 if __name__ == "__main__":

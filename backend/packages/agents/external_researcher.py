@@ -203,20 +203,29 @@ class ExternalResearcher(BaseAgent):
         }
     }
     
-    def __init__(self, memory_hub=None, config: Optional[ResearchConfig] = None):
+    def __init__(self, memory_hub=None, document_context=None, config: Optional[ResearchConfig] = None):
         """Initialize External Researcher.
         
         Args:
             memory_hub: Memory hub instance
+            document_context: SharedDocumentContext 인스턴스
             config: Research configuration
         """
         super().__init__(
             name="ExternalResearcher",
             version="3.0.0",  # Unified version
-            memory_hub=memory_hub
+            memory_hub=memory_hub,
+            document_context=document_context
         )
         
         self.config = config or ResearchConfig()
+
+        
+        # 페르소나 적용 - ExternalResearcher
+        from .personas import get_persona
+        self.persona = get_persona("ExternalResearcher")
+        if self.persona:
+            logger.info(f"🎭 {self.persona.name}: {self.persona.catchphrase}")
         
         # Load API keys from AWS Secrets Manager if configured
         self.api_keys = {}

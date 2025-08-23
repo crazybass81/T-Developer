@@ -152,20 +152,29 @@ class QualityGate(BaseAgent):
     4. 자동 수정 가능한 이슈 수정
     """
     
-    def __init__(self, memory_hub=None, config: Optional[QualityConfig] = None):
+    def __init__(self, memory_hub=None, document_context=None, config: Optional[QualityConfig] = None):
         """QualityGate 초기화.
         
         Args:
             memory_hub: 메모리 허브 인스턴스
+            document_context: SharedDocumentContext 인스턴스
             config: 품질 검사 설정
         """
         super().__init__(
             name="QualityGate",
+            document_context=document_context,
             version="2.0.0",  # AI-enhanced version
             memory_hub=memory_hub
         )
         
         self.config = config or QualityConfig()
+
+        
+        # 페르소나 적용 - QualityGate
+        from .personas import get_persona
+        self.persona = get_persona("QualityGate")
+        if self.persona:
+            logger.info(f"🎭 {self.persona.name}: {self.persona.catchphrase}")
         self.ai_provider = None  # Lazy load AI provider
         
         # Safety mechanisms

@@ -51,10 +51,13 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 import json
 import asyncio
+import logging
 
 from .base import BaseAgent
 from .ai_providers import BedrockAIProvider
 from ..memory import MemoryHub, ContextType
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutionStrategy(str, Enum):
@@ -208,13 +211,21 @@ class OrchestratorDesignDocument(BaseModel):
 class OrchestratorDesigner(BaseAgent):
     """오케스트레이터 디자이너 에이전트"""
     
-    def __init__(self, memory_hub: Optional[MemoryHub] = None):
+    def __init__(self, memory_hub: Optional[MemoryHub] = None, document_context=None):
         super().__init__(
             name="OrchestratorDesigner",
-            memory_hub=memory_hub
+            memory_hub=memory_hub,
+            document_context=document_context
         )
         self.role = "Orchestrator Implementation Designer"
         self.capabilities = ["design", "specify", "validate"]
+
+        
+        # 페르소나 적용 - OrchestratorDesigner
+        from .personas import get_persona
+        self.persona = get_persona("OrchestratorDesigner")
+        if self.persona:
+            logger.info(f"🎭 {self.persona.name}: {self.persona.catchphrase}")
         self.ai_provider = BedrockAIProvider(
             model="anthropic.claude-3-sonnet-20240229-v1:0"
         )

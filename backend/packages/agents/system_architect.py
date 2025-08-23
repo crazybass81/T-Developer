@@ -75,8 +75,11 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 import json
 import asyncio
+import logging
 
 from .base import BaseAgent
+
+logger = logging.getLogger(__name__)
 from .ai_providers import BedrockAIProvider
 from ..memory import MemoryHub, ContextType
 
@@ -147,13 +150,21 @@ class ArchitectureDesign(BaseModel):
 class SystemArchitect(BaseAgent):
     """시스템 아키텍트 에이전트"""
     
-    def __init__(self, memory_hub: Optional[MemoryHub] = None):
+    def __init__(self, memory_hub: Optional[MemoryHub] = None, document_context=None):
         super().__init__(
             name="SystemArchitect",
-            memory_hub=memory_hub
+            memory_hub=memory_hub,
+            document_context=document_context
         )
         self.role = "System Architecture Designer"
         self.capabilities = ["design", "analyze", "optimize"]
+
+        
+        # 페르소나 적용 - SystemArchitect
+        from .personas import get_persona
+        self.persona = get_persona("SystemArchitect")
+        if self.persona:
+            logger.info(f"🎭 {self.persona.name}: {self.persona.catchphrase}")
         self.ai_provider = BedrockAIProvider(
             model="anthropic.claude-3-sonnet-20240229-v1:0"
         )

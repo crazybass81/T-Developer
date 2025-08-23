@@ -189,6 +189,7 @@ class ImpactAnalyzer(BaseAgent):
         self,
         memory_hub: Optional[MemoryHub] = None,
         static_analyzer: Optional[StaticAnalyzer] = None,
+        document_context=None,
         **kwargs: Any
     ) -> None:
         """Initialize the Impact Analyzer.
@@ -196,12 +197,14 @@ class ImpactAnalyzer(BaseAgent):
         Args:
             memory_hub: Memory Hub instance
             static_analyzer: Static analyzer instance
+            document_context: SharedDocumentContext 인스턴스
             **kwargs: Additional arguments for BaseAgent
         """
         super().__init__(
             name="ImpactAnalyzer",
             version="2.0.0",  # AI-enhanced version
             memory_hub=memory_hub,
+            document_context=document_context,
             **kwargs
         )
         

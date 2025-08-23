@@ -146,18 +146,21 @@ class GapAnalyzer(BaseAgent):
     def __init__(
         self,
         memory_hub: Optional[MemoryHub] = None,
+        document_context=None,
         **kwargs: Any
     ) -> None:
         """Initialize the Gap Analyzer.
         
         Args:
             memory_hub: Memory Hub instance
+            document_context: SharedDocumentContext 인스턴스
             **kwargs: Additional arguments for BaseAgent
         """
         super().__init__(
             name="GapAnalyzer",
             version="2.0.0",  # AI-enhanced version
             memory_hub=memory_hub,
+            document_context=document_context,
             **kwargs
         )
         

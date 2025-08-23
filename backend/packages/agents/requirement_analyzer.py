@@ -1,6 +1,45 @@
-"""Requirement Analyzer Agent.
+"""요구사항 분석 에이전트 (RequirementAnalyzer)
 
-자연어 요구사항을 분석하여 구조화된 명세로 변환합니다.
+이 에이전트는 자연어로 작성된 요구사항을 분석하여 구조화된 명세로 변환합니다.
+요구사항의 모호성을 제거하고, 기능적/비기능적 요구사항을 분류하며,
+구현에 필요한 컴포넌트와 의존성을 식별합니다.
+
+주요 기능:
+1. 자연어 요구사항 파싱 및 분석
+   - 핵심 의도 파악
+   - 구체적인 기능 요구사항 추출
+   - 제약사항 및 가정 식별
+   
+2. 요구사항 분류
+   - 기능적 요구사항 (Functional Requirements)
+   - 비기능적 요구사항 (Non-functional Requirements)
+   - 기술적 제약사항 (Constraints)
+   - 비즈니스 가정 (Assumptions)
+   
+3. 컴포넌트 도출
+   - 필요한 컴포넌트 식별
+   - 컴포넌트 간 의존성 분석
+   - 외부 의존성 파악
+
+입력:
+- requirements (str): 자연어 요구사항 텍스트
+- context (Dict, optional): 추가 컨텍스트 정보
+
+출력:
+- RequirementSpec: 구조화된 요구사항 명세
+  * functional_requirements: 기능 요구사항 목록
+  * non_functional_requirements: 비기능 요구사항 목록
+  * constraints: 제약사항 목록
+  * assumptions: 가정 목록
+  * components: 필요 컴포넌트 정의
+  * dependencies: 외부 의존성 목록
+
+문서 참조 관계:
+- 출력 참조:
+  * ExternalResearcher: 관련 기술 조사
+  * GapAnalyzer: 현재와 목표 상태 비교
+  * SystemArchitect: 아키텍처 설계
+  * PlannerAgent: 구현 계획 수립
 """
 
 from __future__ import annotations
@@ -46,22 +85,30 @@ class RequirementAnalyzer(BaseAgent):
     4. 필요한 컴포넌트 식별
     """
     
-    def __init__(self, memory_hub=None, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, memory_hub=None, config: Optional[Dict[str, Any]] = None, document_context=None):
         """RequirementAnalyzer 초기화.
         
         Args:
             memory_hub: 메모리 허브 인스턴스
             config: 에이전트 설정
+            document_context: SharedDocumentContext 인스턴스
         """
         super().__init__(
             name="RequirementAnalyzer",
             version="1.0.0",
-            memory_hub=memory_hub
+            memory_hub=memory_hub,
+            document_context=document_context
         )
         
         # 설정 저장
         self.config = config or {}
         self.capabilities = ["analyze", "structure", "evaluate"]
+        
+        # 페르소나 적용 - 요구사항 해석가
+        from .personas import get_persona
+        self.persona = get_persona("RequirementAnalyzer")
+        if self.persona:
+            logger.info(f"🎭 {self.persona.name}: {self.persona.catchphrase}")
         
         # AI Provider 초기화
         self.ai_provider = get_ai_provider("bedrock", {
@@ -210,7 +257,12 @@ Please analyze and provide a JSON response with:
 
 Ensure the response is valid JSON."""
 
-        system_prompt = """You are an expert software architect and requirement analyst.
+        # 페르소나 적용
+        persona_prompt = self.persona.to_prompt() if self.persona else ""
+        
+        system_prompt = f"""{persona_prompt}
+
+You are an expert software architect and requirement analyst.
 Analyze requirements thoroughly and provide structured, actionable specifications.
 Focus on clarity, completeness, and implementability."""
 

@@ -50,11 +50,16 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Protocol
 from uuid import uuid4
+import json
+import logging
 
 from pydantic import BaseModel, Field
 
 from ..memory import MemoryHub
 from ..memory.contexts import ContextType
+from ..memory.document_context import SharedDocumentContext
+
+logger = logging.getLogger(__name__)
 
 
 class TaskStatus(Enum):
@@ -200,7 +205,9 @@ class BaseAgent(ABC):
         memory_hub: Optional[MemoryHub] = None,
         ai_provider: Optional[AIProvider] = None,
         max_retries: int = 3,
-        timeout_seconds: int = 300
+        timeout_seconds: int = 300,
+        document_context: Optional[SharedDocumentContext] = None,
+        persona: Optional['AgentPersona'] = None
     ) -> None:
         """Initialize the base agent.
         
@@ -212,6 +219,8 @@ class BaseAgent(ABC):
             ai_provider: AI provider for intelligent processing
             max_retries: Maximum retry attempts
             timeout_seconds: Default timeout
+            document_context: Shared document context for all agents
+            persona: Agent persona for consistent behavior
         """
         self.agent_id = agent_id or str(uuid4())
         self.name = name
@@ -220,6 +229,13 @@ class BaseAgent(ABC):
         self.ai_provider = ai_provider
         self.max_retries = max_retries
         self.timeout_seconds = timeout_seconds
+        self.document_context = document_context
+        self.persona = persona
+        
+        # 페르소나가 없으면 자동으로 로드
+        if not self.persona and name != "BaseAgent":
+            from .personas import get_persona
+            self.persona = get_persona(name)
     
     async def generate_report(self, analysis_result: AgentResult, report_format: str = "markdown") -> Dict[str, Any]:
         """Generate a report from analysis results using real AI analysis.
@@ -536,6 +552,55 @@ You always base your analysis on actual data and provide specific, measurable re
             # Fallback to basic report if AI fails
             print(f"AI report generation failed: {e}, falling back to basic format")
             return self._format_report(result, format_type)
+    
+    def get_all_context_for_prompt(self) -> str:
+        """모든 공유 문서를 AI 프롬프트용으로 가져오기
+        
+        Returns:
+            AI가 참조할 수 있는 모든 문서 컨텍스트
+        """
+        if self.document_context:
+            return self.document_context.get_context_for_ai(include_history=True, max_history_loops=2)
+        return "{}"
+    
+    def add_document_to_context(self, document: Dict[str, Any], document_type: str = "analysis") -> None:
+        """현재 에이전트의 문서를 공유 컨텍스트에 추가
+        
+        Args:
+            document: 추가할 문서
+            document_type: 문서 타입
+        """
+        if self.document_context:
+            self.document_context.add_document(self.name, document, document_type)
+            logger.info(f"{self.name} added {document_type} document to shared context")
+    
+    async def execute_with_context(self, task: AgentTask) -> AgentResult:
+        """모든 공유 문서 컨텍스트를 활용하여 태스크 실행
+        
+        이 메서드는 execute()를 래핑하여 모든 공유 문서를 참조할 수 있게 합니다.
+        
+        Args:
+            task: 실행할 태스크
+            
+        Returns:
+            실행 결과
+        """
+        # 태스크에 모든 공유 문서 컨텍스트 추가
+        if self.document_context:
+            all_docs = self.document_context.get_all_documents()
+            task.context["shared_documents"] = all_docs
+            task.context["document_summary"] = self.document_context.get_analysis_summary()
+            
+            logger.info(f"{self.name} has access to {len(all_docs)} shared documents")
+        
+        # 실제 execute 메서드 호출
+        result = await self.execute(task)
+        
+        # 결과를 공유 컨텍스트에 추가
+        if result.success and result.data:
+            self.add_document_to_context(result.data, document_type="analysis")
+        
+        return result
     
     @abstractmethod
     async def execute(self, task: AgentTask) -> AgentResult:

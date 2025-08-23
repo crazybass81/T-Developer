@@ -154,20 +154,29 @@ class CodeGenerator(BaseAgent):
     5. 문서화 생성
     """
     
-    def __init__(self, memory_hub=None, config: Optional[GenerationConfig] = None):
+    def __init__(self, memory_hub=None, document_context=None, config: Optional[GenerationConfig] = None):
         """CodeGenerator 초기화.
         
         Args:
             memory_hub: 메모리 허브 인스턴스
+            document_context: SharedDocumentContext 인스턴스
             config: 생성 설정
         """
         super().__init__(
             name="CodeGenerator",
             version="1.0.0",
-            memory_hub=memory_hub
+            memory_hub=memory_hub,
+            document_context=document_context
         )
         
         self.config = config or GenerationConfig()
+
+        
+        # 페르소나 적용 - CodeGenerator
+        from .personas import get_persona
+        self.persona = get_persona("CodeGenerator")
+        if self.persona:
+            logger.info(f"🎭 {self.persona.name}: {self.persona.catchphrase}")
         self.templates: Dict[str, CodeTemplate] = {}
         
         # AI Provider 초기화
@@ -447,7 +456,12 @@ Additional Context:
 
 Generate production-ready code for this component. Return ONLY the code without explanations."""
 
-        system_prompt = f"""You are an expert {target_language} developer.
+                # 페르소나 적용
+        persona_prompt = self.persona.to_prompt() if self.persona else ""
+        
+        system_prompt = f"""{persona_prompt}
+
+"You are an expert {target_language} developer.
 Generate clean, efficient, and well-structured code following best practices.
 Focus on maintainability, readability, and performance."""
 

@@ -27,11 +27,8 @@ async def test_upgrade_orchestrator():
     print("🚀 Testing UpgradeOrchestrator with All Agents")
     print("=" * 80)
     
-    # 테스트 프로젝트 경로 설정
-    test_project_path = "/home/ec2-user/T-Developer-TEST"
-    if not Path(test_project_path).exists():
-        # T-Developer-TEST가 없으면 현재 프로젝트 사용
-        test_project_path = "/home/ec2-user/T-Developer"
+    # 테스트 프로젝트 경로 설정 (T-Developer 사용)
+    test_project_path = "/home/ec2-user/T-Developer"
     
     print(f"📁 Project Path: {test_project_path}")
     
