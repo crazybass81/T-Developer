@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+*.env
+
+# Reports (keep structure but not content)
+reports/**/*.json
+reports/**/*.md
+test_outputs/
+docs/reports/**/*.json
+docs/reports/**/*.md
+
+# Temporary
+/tmp/
+*.tmp
+.DS_Store
+
+# AWS
+.aws/
+
+# Node modules (if any)
+node_modules/
+
+# Secrets
+*secrets*
+*credentials*
