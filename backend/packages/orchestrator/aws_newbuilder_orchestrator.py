@@ -227,27 +227,47 @@ class AWSNewBuilderOrchestrator:
                 # 에이전트 실행 함수 생성
                 async def agent_execute(task, context, agent=agent_instance):
                     """에이전트 실행 래퍼."""
-                    # AWS Agent Squad 태스크를 기존 에이전트 태스크로 변환
                     from ..agents.base import AgentTask
-                    agent_task = AgentTask(
-                        type=task.get('type', 'default'),
-                        description=task.get('description', ''),
-                        input_data=task.get('input_data', {}),
-                        config=task.get('config', {})
-                    )
+                    
+                    # task는 이미 runtime에서 AgentTask로 변환되어 옴
+                    # 하지만 혹시 dict가 올 수도 있으니 체크
+                    if hasattr(task, 'inputs'):
+                        # 이미 AgentTask 객체
+                        agent_task = task
+                    elif isinstance(task, dict):
+                        # AWS Agent Squad 태스크를 기존 에이전트 태스크로 변환
+                        agent_task = AgentTask(
+                            intent=task.get('type', 'default'),  # intent 필드 필수
+                            inputs={
+                                'type': task.get('type', 'default'),
+                                'description': task.get('description', ''),
+                                'input_data': task.get('input_data', {}),
+                                'config': task.get('config', {})
+                            }
+                        )
+                    else:
+                        # 기본 태스크 생성
+                        agent_task = AgentTask(
+                            intent=str(task),
+                            inputs={'raw_task': task}
+                        )
                     
                     # 에이전트 실행
+                    logger.info(f"📍 Wrapper executing {agent_name} with task")
                     result = await agent.execute(agent_task)
+                    logger.info(f"📍 Wrapper completed {agent_name}")
                     
                     # 결과를 문서 컨텍스트에 추가
                     if context.get('share_all_documents', True):
+                        # task가 AgentTask면 inputs에서 type 가져오기
+                        doc_type = agent_task.inputs.get('type', 'default') if hasattr(agent_task, 'inputs') else 'default'
                         self.document_context.add_document(
                             agent_name,
-                            result.output_data,
-                            document_type=task.get('type', 'default')
+                            result.data if hasattr(result, 'data') else result,
+                            document_type=doc_type
                         )
                     
-                    return result.output_data
+                    return result.data if hasattr(result, 'data') else result
                 
                 # 페르소나 가져오기
                 persona = None
@@ -372,12 +392,25 @@ class AWSNewBuilderOrchestrator:
         }
         
         if 'RequirementAnalyzer' in self.squad.agents:
-            req_result = await self.runtime.execute_agent(
-                'RequirementAnalyzer',
-                self.squad.agents['RequirementAnalyzer'],
-                req_task
-            )
-            result['requirements'] = req_result
+            logger.info("📍 RequirementAnalyzer를 실행합니다...")
+            print(f"🔍 [DEBUG] RequirementAnalyzer 실행 시작: {requirements[:50]}...")
+            try:
+                import asyncio
+                # 타임아웃 추가
+                req_result = await asyncio.wait_for(
+                    self.runtime.execute_agent(
+                        'RequirementAnalyzer',
+                        self.squad.agents['RequirementAnalyzer'],
+                        req_task
+                    ),
+                    timeout=30.0  # 30초 타임아웃
+                )
+                print(f"🔍 [DEBUG] RequirementAnalyzer 실행 완료")
+                logger.info("✅ RequirementAnalyzer 완료")
+                result['requirements'] = req_result
+            except Exception as e:
+                logger.error(f"❌ RequirementAnalyzer 실패: {str(e)}")
+                raise
         
         # 2. 외부 리서치
         logger.info("2️⃣ 외부 리서치")
@@ -392,12 +425,25 @@ class AWSNewBuilderOrchestrator:
         }
         
         if 'ExternalResearcher' in self.squad.agents:
-            research_result = await self.runtime.execute_agent(
-                'ExternalResearcher',
-                self.squad.agents['ExternalResearcher'],
-                research_task
-            )
-            result['research'] = research_result
+            print(f"🔍 [DEBUG] ExternalResearcher 실행 시작...")
+            try:
+                import asyncio
+                research_result = await asyncio.wait_for(
+                    self.runtime.execute_agent(
+                        'ExternalResearcher',
+                        self.squad.agents['ExternalResearcher'],
+                        research_task
+                    ),
+                    timeout=30.0
+                )
+                print(f"🔍 [DEBUG] ExternalResearcher 실행 완료")
+                result['research'] = research_result
+            except asyncio.TimeoutError:
+                print(f"⚠️ [DEBUG] ExternalResearcher 타임아웃!")
+                logger.error("ExternalResearcher 타임아웃")
+            except Exception as e:
+                print(f"❌ [DEBUG] ExternalResearcher 에러: {e}")
+                logger.error(f"ExternalResearcher 실패: {e}")
         
         # 3. 갭 분석 (우선순위 결정용)
         logger.info("3️⃣ 갭 분석 (우선순위 결정)")

@@ -70,7 +70,7 @@ class CodeAnalysisAgent(BaseAgent):
             **kwargs: Additional arguments for BaseAgent
         """
         # Initialize AI provider
-        ai_provider = BedrockAIProvider(model=model, region=region)
+        ai_provider = BedrockAIProvider(model="claude-3-sonnet", region=region)
         
         super().__init__(
             name="CodeAnalysisAgent",

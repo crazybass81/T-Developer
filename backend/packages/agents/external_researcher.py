@@ -370,11 +370,11 @@ class ExternalResearcher(BaseAgent):
         
         return reports
     
-    async def execute(self, task: AgentTask) -> AgentResult:
+    async def execute(self, task: Any) -> AgentResult:
         """Execute unified external research.
         
         Args:
-            task: Research task with inputs including:
+            task: Research task (AgentTask or dict) with inputs including:
                 - topic: Research topic
                 - focus_areas: Specific areas to investigate
                 - mode: Research mode (optional)
@@ -383,12 +383,31 @@ class ExternalResearcher(BaseAgent):
         Returns:
             Comprehensive research result
         """
+        # dict를 AgentTask로 변환
+        if isinstance(task, dict):
+            from .base import AgentTask
+            task = AgentTask(
+                intent=task.get('type', 'research_external'),
+                inputs=task
+            )
+        
         logger.info(f"Starting unified external research: {task.intent}")
         
         try:
-            # Get reports from other agents
-            requirement_reports = await self._get_requirement_reports()
-            analysis_reports = await self._get_analysis_reports()
+            # Get reports from other agents (skip if no memory_hub)
+            requirement_reports = {}
+            analysis_reports = {}
+            
+            if self.memory_hub:
+                logger.info("Getting requirement reports...")
+                requirement_reports = await self._get_requirement_reports()
+                logger.info(f"Got requirement reports: {bool(requirement_reports)}")
+                
+                logger.info("Getting analysis reports...")
+                analysis_reports = await self._get_analysis_reports()
+                logger.info(f"Got analysis reports: {bool(analysis_reports)}")
+            else:
+                logger.info("No memory_hub available, skipping report retrieval")
             
             # Enrich task inputs with reports
             if requirement_reports:
@@ -398,7 +417,15 @@ class ExternalResearcher(BaseAgent):
             
             # Extract configuration from task
             if 'config' in task.inputs:
-                self.config = task.inputs['config']
+                # config가 dict인 경우 처리
+                config_data = task.inputs['config']
+                if isinstance(config_data, dict):
+                    # dict에서 mode 추출
+                    mode_value = config_data.get('mode', 'quick')
+                    if isinstance(mode_value, str):
+                        self.config.mode = ResearchMode(mode_value)
+                else:
+                    self.config = config_data
             elif 'mode' in task.inputs:
                 self.config.mode = ResearchMode(task.inputs['mode'])
             

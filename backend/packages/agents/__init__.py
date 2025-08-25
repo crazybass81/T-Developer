@@ -22,6 +22,7 @@ from .planner_agent import PlannerAgent
 from .task_creator_agent import TaskCreatorAgent
 from .code_generator import CodeGenerator
 from .test_agent import TestAgent
+from .agno_manager import AgnoManager
 
 __all__ = [
     "BaseAgent",
@@ -41,5 +42,6 @@ __all__ = [
     "PlannerAgent",
     "TaskCreatorAgent",
     "CodeGenerator",
-    "TestAgent"
+    "TestAgent",
+    "AgnoManager"
 ]

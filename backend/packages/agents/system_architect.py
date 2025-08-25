@@ -166,7 +166,7 @@ class SystemArchitect(BaseAgent):
         if self.persona:
             logger.info(f"🎭 {self.persona.name}: {self.persona.catchphrase}")
         self.ai_provider = BedrockAIProvider(
-            model="anthropic.claude-3-sonnet-20240229-v1:0"
+            model="claude-3-sonnet"  # MODELS 딕셔너리의 키 사용
         )
     
     async def design_architecture(
@@ -198,8 +198,9 @@ class SystemArchitect(BaseAgent):
         # 설계 파싱 및 검증
         design = self._parse_architecture_design(response)
         
-        # 메모리에 저장
-        await self._store_design_in_memory(design)
+        # 메모리에 저장 (메모리 허브가 있는 경우만)
+        if self.memory_hub:
+            await self._store_design_in_memory(design)
         
         return design
     
@@ -361,7 +362,7 @@ class SystemArchitect(BaseAgent):
             )
             
         except Exception as e:
-            self.logger.error(f"Failed to parse architecture design: {e}")
+            logger.error(f"Failed to parse architecture design: {e}")
             return self._create_fallback_design()
     
     def _create_fallback_design(self) -> ArchitectureDesign:
@@ -453,8 +454,16 @@ class SystemArchitect(BaseAgent):
         # 구현 예정
         return self._create_fallback_design()
     
-    async def execute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, task) -> Dict[str, Any]:
         """에이전트 실행"""
+        # task가 AgentTask인 경우 inputs 추출
+        if hasattr(task, 'inputs'):
+            inputs = task.inputs
+        elif isinstance(task, dict):
+            inputs = task
+        else:
+            inputs = {}
+        
         mode = inputs.get("mode", "design")
         
         if mode == "design":

@@ -242,7 +242,7 @@ class CodeGenerator(BaseAgent):
         
         return reports
     
-    async def execute(self, task: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, task) -> Dict[str, Any]:
         """코드 생성 실행.
         
         Args:
@@ -259,18 +259,26 @@ class CodeGenerator(BaseAgent):
         logger.info("Starting code generation...")
         
         try:
+            # task가 AgentTask인 경우 inputs 추출
+            if hasattr(task, 'inputs'):
+                inputs = task.inputs
+            elif isinstance(task, dict):
+                inputs = task
+            else:
+                inputs = {}
+            
             # Get reports from planner and task creator
             plan_task_reports = await self._get_planner_and_task_reports()
             
-            # Enrich task with reports
+            # Enrich inputs with reports
             if plan_task_reports:
                 if "planner" in plan_task_reports:
-                    task["execution_plans"] = plan_task_reports["planner"]
+                    inputs["execution_plans"] = plan_task_reports["planner"]
                 if "tasks" in plan_task_reports:
-                    task["executable_tasks"] = plan_task_reports["tasks"]
+                    inputs["executable_tasks"] = plan_task_reports["tasks"]
             
             # 메모리에서 요구사항 읽기
-            requirements = await self._get_requirements(task)
+            requirements = await self._get_requirements(inputs)
             if not requirements:
                 return {
                     "success": False,
@@ -637,17 +645,17 @@ Generated at: {datetime.now().isoformat()}
         
         return f"generated/{name}{ext}"
     
-    async def _get_requirements(self, task: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def _get_requirements(self, inputs: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """요구사항 가져오기.
         
         Args:
-            task: 태스크 정보
+            inputs: 입력 정보
             
         Returns:
             요구사항 명세
         """
-        if task.get("read_from_memory") and self.memory_hub:
-            key = task.get("memory_key", "requirements:latest")
+        if inputs.get("read_from_memory") and self.memory_hub:
+            key = inputs.get("memory_key", "requirements:latest")
             requirements = await self.memory_hub.get(
                 context_type=ContextType.S_CTX,
                 key=key

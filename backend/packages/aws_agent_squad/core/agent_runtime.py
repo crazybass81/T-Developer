@@ -13,6 +13,7 @@
 
 import asyncio
 import logging
+import os
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -31,11 +32,11 @@ class RuntimeConfig:
     런타임 환경 설정을 정의합니다.
     """
     
-    # Bedrock 설정
-    region: str = "us-east-1"
-    model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
-    max_tokens: int = 4096
-    temperature: float = 0.7
+    # Bedrock 설정 (환경 변수에서 로드)
+    region: str = os.getenv("BEDROCK_REGION", "us-east-1")
+    model_id: str = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-sonnet-20240229-v1:0")
+    max_tokens: int = int(os.getenv("BEDROCK_MAX_TOKENS", "4096"))
+    temperature: float = float(os.getenv("BEDROCK_TEMPERATURE", "0.7"))
     
     # 실행 설정
     max_parallel_agents: int = 5
@@ -125,10 +126,24 @@ class AgentRuntime:
         start_time = datetime.now()
         
         try:
+            # AgentTask 객체 생성 (dict를 AgentTask로 변환)
+            from backend.packages.agents.base import AgentTask
+            
+            if isinstance(task, dict):
+                # dict를 AgentTask로 변환
+                agent_task = AgentTask(
+                    intent=task.get('type', 'default'),
+                    inputs=task
+                )
+            else:
+                agent_task = task
+            
             # 페르소나 적용
             if agent_name in self.personas:
                 persona = self.personas[agent_name]
-                task = self._apply_persona(task, persona)
+                # 페르소나를 inputs에 적용
+                if hasattr(agent_task, 'inputs'):
+                    agent_task.inputs = self._apply_persona(agent_task.inputs, persona)
             
             # 공유 문서 컨텍스트 추가
             if context is None:
@@ -142,14 +157,32 @@ class AgentRuntime:
             }
             
             # Bedrock을 통한 AI 추론 (필요한 경우)
-            if task.get('requires_ai', False):
-                task['ai_response'] = await self._invoke_bedrock(
-                    prompt=task.get('prompt', ''),
-                    context=context
-                )
+            if hasattr(agent_task, 'inputs') and agent_task.inputs.get('requires_ai', False):
+                logger.info(f"🤖 Invoking Bedrock AI for {agent_name}")
+                try:
+                    ai_response = await self._invoke_bedrock(
+                        prompt=agent_task.inputs.get('prompt', ''),
+                        context=context
+                    )
+                    agent_task.inputs['ai_response'] = ai_response
+                    logger.info(f"🤖 Bedrock AI response received for {agent_name}")
+                except Exception as e:
+                    logger.error(f"❌ Bedrock AI invocation failed for {agent_name}: {str(e)}")
+                    raise
             
             # 에이전트 실행
-            result = await agent_callable(task, context)
+            logger.info(f"🚀 Executing {agent_name} with task type: {agent_task.inputs.get('type', 'unknown') if hasattr(agent_task, 'inputs') else 'unknown'}")
+            # agent_callable이 agent_execute 래퍼인 경우 context도 전달
+            # agent_execute는 (task, context) 두 개의 인자를 받음
+            import inspect
+            sig = inspect.signature(agent_callable)
+            if len(sig.parameters) > 1:
+                # agent_execute 래퍼 (2개 인자)
+                result = await agent_callable(agent_task, context)
+            else:
+                # 일반 execute 메서드 (1개 인자)
+                result = await agent_callable(agent_task)
+            logger.info(f"✅ {agent_name} completed execution")
             
             # 결과를 공유 문서 컨텍스트에 추가
             self.shared_document_context[agent_name] = {
@@ -159,9 +192,10 @@ class AgentRuntime:
             
             # 실행 기록
             execution_time = (datetime.now() - start_time).total_seconds()
+            task_type = agent_task.inputs.get('type', 'unknown') if hasattr(agent_task, 'inputs') else 'unknown'
             self.execution_history.append({
                 'agent': agent_name,
-                'task': task.get('type', 'unknown'),
+                'task': task_type,
                 'duration': execution_time,
                 'status': 'success',
                 'timestamp': start_time.isoformat()
@@ -187,11 +221,15 @@ class AgentRuntime:
             }
             
             # 재시도 로직
-            if task.get('retry_count', 0) < self.config.retry_count:
-                task['retry_count'] = task.get('retry_count', 0) + 1
-                logger.info(f"🔄 {agent_name} 재시도 {task['retry_count']}/{self.config.retry_count}")
+            retry_count = agent_task.inputs.get('retry_count', 0) if hasattr(agent_task, 'inputs') else 0
+            if retry_count < self.config.retry_count:
+                if hasattr(agent_task, 'inputs'):
+                    agent_task.inputs['retry_count'] = retry_count + 1
+                logger.info(f"🔄 {agent_name} 재시도 {retry_count + 1}/{self.config.retry_count}")
                 await asyncio.sleep(self.config.retry_delay_seconds)
-                return await self.execute_agent(agent_name, agent_callable, task, context)
+                # 원래 task dict를 다시 전달 (재변환을 위해)
+                original_task = agent_task.inputs if hasattr(agent_task, 'inputs') else {}
+                return await self.execute_agent(agent_name, agent_callable, original_task, context)
             
             raise
     
@@ -248,22 +286,36 @@ class AgentRuntime:
             full_prompt = self._build_prompt_with_context(prompt, context)
             
             # Bedrock Runtime 호출
+            request_body = {
+                'anthropic_version': 'bedrock-2023-05-31',
+                'max_tokens': self.config.max_tokens,
+                'temperature': self.config.temperature,
+                'messages': [
+                    {
+                        'role': 'user',
+                        'content': full_prompt
+                    }
+                ]
+            }
+            
+            # JSON serialization with datetime handling
+            import json
+            from datetime import datetime
+            
+            def json_serial(obj):
+                """JSON serializer for objects not serializable by default json code"""
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                raise TypeError(f"Type {type(obj)} not serializable")
+            
+            logger.info(f"🌐 Bedrock API 호출 중... (model: {self.config.model_id})")
             response = self.bedrock_runtime.invoke_model(
                 modelId=self.config.model_id,
                 contentType='application/json',
                 accept='application/json',
-                body=json.dumps({
-                    'anthropic_version': 'bedrock-2023-05-31',
-                    'max_tokens': self.config.max_tokens,
-                    'temperature': self.config.temperature,
-                    'messages': [
-                        {
-                            'role': 'user',
-                            'content': full_prompt
-                        }
-                    ]
-                })
+                body=json.dumps(request_body, default=json_serial)
             )
+            logger.info("🌐 Bedrock API 응답 수신")
             
             # 응답 파싱
             response_body = json.loads(response['body'].read())
@@ -287,10 +339,18 @@ class AgentRuntime:
         
         # 공유 문서 컨텍스트 추가
         if 'shared_documents' in context:
+            from datetime import datetime
+            
+            def json_serial(obj):
+                """JSON serializer for objects not serializable by default json code"""
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                return str(obj)
+            
             context_str += "\n### 공유 문서 컨텍스트:\n"
             for agent, doc in context['shared_documents'].items():
                 if isinstance(doc, dict) and 'result' in doc:
-                    context_str += f"\n**{agent}:**\n{json.dumps(doc['result'], indent=2, ensure_ascii=False)}\n"
+                    context_str += f"\n**{agent}:**\n{json.dumps(doc['result'], indent=2, ensure_ascii=False, default=json_serial)}\n"
         
         # 기타 컨텍스트 추가
         for key, value in context.items():

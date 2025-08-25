@@ -227,7 +227,7 @@ class OrchestratorDesigner(BaseAgent):
         if self.persona:
             logger.info(f"🎭 {self.persona.name}: {self.persona.catchphrase}")
         self.ai_provider = BedrockAIProvider(
-            model="anthropic.claude-3-sonnet-20240229-v1:0"
+            model="claude-3-sonnet"  # MODELS 딕셔너리의 키 사용
         )
     
     async def design_orchestrator(
@@ -261,8 +261,9 @@ class OrchestratorDesigner(BaseAgent):
             # 설계 수정
             design_doc = await self._refine_design(design_doc, validation_result)
         
-        # 메모리에 저장
-        await self._store_design_in_memory(design_doc)
+        # 메모리에 저장 (메모리 허브가 있는 경우만)
+        if self.memory_hub:
+            await self._store_design_in_memory(design_doc)
         
         return design_doc
     
@@ -382,7 +383,7 @@ class OrchestratorDesigner(BaseAgent):
                 return self._create_fallback_design()
                 
         except Exception as e:
-            self.logger.error(f"Failed to parse design response: {e}")
+            logger.error(f"Failed to parse design response: {e}")
             return self._create_fallback_design()
     
     def _create_fallback_design(self) -> OrchestratorDesignDocument:
@@ -403,7 +404,12 @@ class OrchestratorDesigner(BaseAgent):
             agent_specs=[],
             integration_specs=[],
             design_rationale="Fallback design due to parsing error",
-            implementation_order=[]
+            implementation_order=[],
+            estimated_effort={
+                "hours": 8,
+                "complexity": "medium",
+                "risk_level": "low"
+            }
         )
     
     async def _validate_design(
@@ -454,8 +460,16 @@ class OrchestratorDesigner(BaseAgent):
             tags=["orchestrator", "design", "implementation"]
         )
     
-    async def execute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, task) -> Dict[str, Any]:
         """에이전트 실행"""
+        # task가 AgentTask인 경우 inputs 추출
+        if hasattr(task, 'inputs'):
+            inputs = task.inputs
+        elif isinstance(task, dict):
+            inputs = task
+        else:
+            inputs = {}
+        
         design_doc = await self.design_orchestrator(
             architecture_design=inputs.get("architecture_design", {}),
             requirements=inputs.get("requirements", {}),

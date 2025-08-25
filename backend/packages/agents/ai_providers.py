@@ -127,9 +127,9 @@ class BedrockAIProvider(AIProvider):
     
     # Available models in AWS Bedrock (실제 작동하는 모델 ID)
     MODELS = {
-        "claude-3-sonnet": "anthropic.claude-3-sonnet-20240229-v1:0",  # 작동 확인됨
-        "claude-3-haiku": "anthropic.claude-3-haiku-20240307-v1:0",
-        "claude-3-5-sonnet": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        "claude-3-sonnet": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",  # Cross-region Claude 3.5 Sonnet
+        "claude-3-haiku": "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+        "claude-3-5-sonnet": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
         "claude-2": "anthropic.claude-v2",
         "claude-2.1": "anthropic.claude-v2:1",
         "claude-instant": "anthropic.claude-instant-v1",
@@ -150,7 +150,7 @@ class BedrockAIProvider(AIProvider):
             aws_profile: Optional AWS profile name
         """
         self.region = region
-        self.default_model_id = self.MODELS.get(model, self.MODELS["claude-3-haiku"])
+        self.default_model_id = self.MODELS.get(model, self.MODELS["claude-3-sonnet"])
         
         # Initialize Bedrock client
         session = boto3.Session(profile_name=aws_profile) if aws_profile else boto3.Session()
@@ -173,9 +173,10 @@ class BedrockAIProvider(AIProvider):
         system: Optional[str] = None,
         max_tokens: int = 4096,
         temperature: float = 0.7,
-        model_id: Optional[str] = None
+        model_id: Optional[str] = None,
+        max_retries: int = 3
     ) -> str:
-        """Generate AI completion using AWS Bedrock.
+        """Generate AI completion using AWS Bedrock with retry logic.
         
         Args:
             prompt: The user prompt
@@ -183,57 +184,74 @@ class BedrockAIProvider(AIProvider):
             max_tokens: Maximum tokens to generate
             temperature: Temperature for generation
             model_id: Optional specific model ID to use
+            max_retries: Maximum number of retries for throttling errors
             
         Returns:
             The generated text
             
         Raises:
-            Exception: If API call fails
+            Exception: If API call fails after all retries
         """
         model_id = model_id or self.default_model_id
         
-        try:
-            # Prepare request based on model type
-            if "claude" in model_id:
-                request_body = self._prepare_claude_request(
-                    prompt, system, max_tokens, temperature
-                )
-            elif "titan" in model_id:
-                request_body = self._prepare_titan_request(
-                    prompt, max_tokens, temperature
-                )
-            else:
-                raise ValueError(f"Unsupported model: {model_id}")
-            
-            # Invoke model (동기 호출을 비동기로 래핑)
-            import asyncio
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.client.invoke_model(
-                    modelId=model_id,
-                    contentType="application/json",
-                    accept="application/json",
-                    body=json.dumps(request_body)
-                )
-            )
-            
-            # Parse response
-            response_body = json.loads(response["body"].read())
-            
-            if "claude" in model_id:
-                return response_body.get("content", [{}])[0].get("text", "")
-            elif "titan" in model_id:
-                return response_body.get("results", [{}])[0].get("outputText", "")
-            else:
-                return str(response_body)
+        import asyncio
+        import time
+        
+        for attempt in range(max_retries):
+            try:
+                # Prepare request based on model type
+                if "claude" in model_id:
+                    request_body = self._prepare_claude_request(
+                        prompt, system, max_tokens, temperature
+                    )
+                elif "titan" in model_id:
+                    request_body = self._prepare_titan_request(
+                        prompt, max_tokens, temperature
+                    )
+                else:
+                    raise ValueError(f"Unsupported model: {model_id}")
                 
-        except ClientError as e:
-            error_code = e.response["Error"]["Code"]
-            error_message = e.response["Error"]["Message"]
-            raise Exception(f"Bedrock API error ({error_code}): {error_message}")
-        except Exception as e:
-            raise Exception(f"Error calling Bedrock: {str(e)}")
+                # Invoke model (동기 호출을 비동기로 래핑)
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: self.client.invoke_model(
+                        modelId=model_id,
+                        contentType="application/json",
+                        accept="application/json",
+                        body=json.dumps(request_body)
+                    )
+                )
+                
+                # Parse response
+                response_body = json.loads(response["body"].read())
+                
+                if "claude" in model_id:
+                    return response_body.get("content", [{}])[0].get("text", "")
+                elif "titan" in model_id:
+                    return response_body.get("results", [{}])[0].get("outputText", "")
+                else:
+                    return str(response_body)
+                    
+            except ClientError as e:
+                error_code = e.response["Error"]["Code"]
+                error_message = e.response["Error"]["Message"]
+                
+                # Throttling 에러 처리
+                if error_code == "ThrottlingException" and attempt < max_retries - 1:
+                    # Exponential backoff: 2^attempt seconds
+                    wait_time = 2 ** attempt
+                    logger.warning(f"Throttled by Bedrock API. Retrying in {wait_time} seconds... (attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(wait_time)
+                    continue
+                    
+                raise Exception(f"Bedrock API error ({error_code}): {error_message}")
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logger.warning(f"Bedrock call failed: {str(e)}. Retrying... (attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                raise Exception(f"Error calling Bedrock after {max_retries} attempts: {str(e)}")
     
     def _prepare_claude_request(
         self,

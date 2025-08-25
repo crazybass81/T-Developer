@@ -190,14 +190,28 @@ class AWSUpgradeOrchestrator:
                 # 에이전트 실행 함수 생성
                 async def agent_execute(task, context, agent=agent_instance):
                     """에이전트 실행 래퍼."""
-                    # AWS Agent Squad 태스크를 기존 에이전트 태스크로 변환
                     from ..agents.base import AgentTask
-                    agent_task = AgentTask(
-                        type=task.get('type', 'default'),
-                        description=task.get('description', ''),
-                        input_data=task.get('input_data', {}),
-                        config=task.get('config', {})
-                    )
+                    
+                    # task가 이미 AgentTask인지 확인
+                    if isinstance(task, AgentTask):
+                        agent_task = task
+                    elif isinstance(task, dict):
+                        # AWS Agent Squad 태스크를 기존 에이전트 태스크로 변환
+                        agent_task = AgentTask(
+                            intent=task.get('type', 'default'),  # intent 필드 필수
+                            inputs={
+                                'type': task.get('type', 'default'),
+                                'description': task.get('description', ''),
+                                'input_data': task.get('input_data', {}),
+                                'config': task.get('config', {})
+                            }
+                        )
+                    else:
+                        # 기본 태스크 생성
+                        agent_task = AgentTask(
+                            intent=str(task),
+                            inputs={'raw_task': task}
+                        )
                     
                     # 에이전트 실행
                     result = await agent.execute(agent_task)
@@ -206,11 +220,11 @@ class AWSUpgradeOrchestrator:
                     if context.get('share_all_documents', True):
                         self.document_context.add_document(
                             agent_name,
-                            result.output_data,
+                            result.data if hasattr(result, 'data') else result,
                             document_type=task.get('type', 'default')
                         )
                     
-                    return result.output_data
+                    return result.data if hasattr(result, 'data') else result
                 
                 # 페르소나 가져오기
                 persona = None
