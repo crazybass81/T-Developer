@@ -16,7 +16,7 @@
 import json
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +137,10 @@ class SharedDocumentContext:
         Returns:
             AI가 참조할 수 있는 형식의 문서 컨텍스트
         """
-        context = {"current_loop": self.current_loop_number, "current_documents": {}}
+        context: Dict[str, Any] = {
+            "current_loop": self.current_loop_number,
+            "current_documents": {},
+        }
 
         # 현재 루프 문서 추가
         for agent_name, doc in self.current_loop_documents.items():
@@ -152,7 +155,7 @@ class SharedDocumentContext:
             context["previous_loops"] = []
             start_idx = max(0, len(self.all_documents_history) - max_history_loops)
             for idx in range(start_idx, len(self.all_documents_history)):
-                loop_data = {"loop_number": idx, "documents": {}}
+                loop_data: Dict[str, Any] = {"loop_number": idx, "documents": {}}
                 for agent_name, doc in self.all_documents_history[idx].items():
                     loop_data["documents"][agent_name] = {
                         "type": doc.get("type"),
